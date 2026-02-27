@@ -3,6 +3,7 @@ import {
 	getRandomIngredientPool,
 	CATEGORY_COLORS,
 } from "../src/engine/Ingredients";
+import { getIngredientTags } from "../src/engine/IngredientMatcher";
 
 describe("INGREDIENTS data integrity", () => {
 	it("has at least 12 ingredients (enough for a full pool)", () => {
@@ -98,6 +99,15 @@ describe("getRandomIngredientPool", () => {
 		const pool = getRandomIngredientPool(12);
 		for (const ing of pool) {
 			expect(masterNames.has(ing.name)).toBe(true);
+		}
+	});
+});
+
+describe("ingredient tag coverage", () => {
+	it("every ingredient has at least one tag", () => {
+		for (const ing of INGREDIENTS) {
+			const tags = getIngredientTags(ing);
+			expect(tags.length).toBeGreaterThan(0);
 		}
 	});
 });

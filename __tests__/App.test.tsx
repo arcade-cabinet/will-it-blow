@@ -14,7 +14,25 @@ import {
 	checkBurst,
 } from "../src/engine/SausagePhysics";
 import { INGREDIENTS } from "../src/engine/Ingredients";
-import { TASTE_QUOTES, TITLE_TIERS } from "../src/engine/Constants";
+// These constants were previously in Constants.ts (now deleted).
+// Inlined here since the scoring pipeline tests still need them for validation.
+const TASTE_QUOTES = [
+	"May God have mercy on my soul!",
+	"It's... it's not great.",
+	"Ehh, I've had worse.",
+	"Hey, that's actually pretty decent!",
+	"That's a darn good sausage!",
+	"THIS IS THE GREATEST SAUSAGE EVER MADE!",
+];
+
+const TITLE_TIERS = [
+	"Sausage Disaster",
+	"Sausage Apprentice",
+	"Sausage Maker",
+	"Sausage Chef",
+	"Sausage Master",
+	"THE SAUSAGE KING",
+];
 
 describe("Full game scoring pipeline", () => {
 	it("produces valid results for every possible ingredient combination of 1", () => {

@@ -80,3 +80,6 @@ dist/
 # Dev screenshots / Playwright
 /*.png
 .playwright-mcp/
+
+# Worktrees
+.worktrees/

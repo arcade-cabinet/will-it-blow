@@ -1,63 +1,108 @@
-import React from "react";
+import React, { useCallback, useState } from "react";
 import { SafeAreaView, StyleSheet, View } from "react-native";
 import { GameWorld } from "./src/components/GameWorld";
-import { GameProvider, useGame } from "./src/engine/GameEngine";
-import { TitleOverlay } from "./src/components/ui/TitleOverlay";
-import { IngredientSelect } from "./src/components/ui/IngredientSelect";
-import { GrindOverlay } from "./src/components/ui/GrindOverlay";
-import { StuffOverlay } from "./src/components/ui/StuffOverlay";
-import { BlowOverlay } from "./src/components/ui/BlowOverlay";
-import { CookOverlay } from "./src/components/ui/CookOverlay";
-import { TasteOverlay } from "./src/components/ui/TasteOverlay";
-import { ResultsScreen } from "./src/components/ui/ResultsScreen";
-import { MrSausageAvatar } from "./src/components/ui/MrSausageAvatar";
-import { ButFirstEvent } from "./src/components/ui/ButFirstEvent";
-import { PhaseTracker } from "./src/components/ui/PhaseTracker";
+import { useGameStore } from "./src/store/gameStore";
+import { useNavigationStore } from "./src/store/navigationStore";
+import { TitleScreen } from "./src/components/ui/TitleScreen";
+import { StrikeCounter } from "./src/components/ui/StrikeCounter";
+import { HintButton } from "./src/components/ui/HintButton";
+import { ChallengeHeader } from "./src/components/ui/ChallengeHeader";
+import { GameOverScreen } from "./src/components/ui/GameOverScreen";
+import { WaypointNavigator } from "./src/components/navigation/WaypointNavigator";
+import { IngredientChallenge } from "./src/components/challenges/IngredientChallenge";
+import { GrindingChallenge } from "./src/components/challenges/GrindingChallenge";
+import { StuffingChallenge } from "./src/components/challenges/StuffingChallenge";
+import { CookingChallenge } from "./src/components/challenges/CookingChallenge";
+import { TastingChallenge } from "./src/components/challenges/TastingChallenge";
+import type { Reaction } from "./src/components/characters/reactions";
 
 const GameUI = () => {
-	const { phase, showButFirst } = useGame();
-	const isPlaying =
-		phase !== "title" && phase !== "results" && phase !== "select";
+	const { gameStatus, currentChallenge, completeChallenge } = useGameStore();
+	const { currentWaypoint, navigateTo } = useNavigationStore();
+	const [mrSausageReaction, setMrSausageReaction] = useState<Reaction>("idle");
+
+	const handleIngredientReaction = useCallback((reaction: Reaction) => {
+		setMrSausageReaction(reaction);
+	}, []);
+
+	const isIngredientChallenge =
+		gameStatus === "playing" && currentChallenge === 0;
+	const isGrindingChallenge =
+		gameStatus === "playing" && currentChallenge === 1;
+	const isStuffingChallenge =
+		gameStatus === "playing" && currentChallenge === 2;
+	const isCookingChallenge =
+		gameStatus === "playing" && currentChallenge === 3;
+	const isTastingChallenge =
+		gameStatus === "playing" && currentChallenge === 4;
 
 	return (
 		<View style={styles.overlay} pointerEvents="box-none">
-			{/* Phase tracker — visible during active gameplay */}
-			{isPlaying && (
-				<View style={styles.trackerContainer}>
-					<PhaseTracker />
-				</View>
+			{gameStatus === "menu" && <TitleScreen />}
+
+			{gameStatus === "playing" && (
+				<>
+					<ChallengeHeader />
+					<StrikeCounter />
+					{!isIngredientChallenge && !isGrindingChallenge && !isStuffingChallenge && !isCookingChallenge && !isTastingChallenge && (
+						<HintButton
+							onHint={() => {
+								/* TODO: trigger hint glow in scene */
+							}}
+						/>
+					)}
+					<WaypointNavigator
+						currentWaypoint={currentWaypoint}
+						onNavigate={(id) => navigateTo?.(id)}
+					/>
+
+					{/* Challenge overlays */}
+					{isIngredientChallenge && (
+						<IngredientChallenge
+							onComplete={completeChallenge}
+							onReaction={handleIngredientReaction}
+						/>
+					)}
+					{isGrindingChallenge && (
+						<GrindingChallenge
+							onComplete={completeChallenge}
+							onReaction={handleIngredientReaction}
+						/>
+					)}
+					{isStuffingChallenge && (
+						<StuffingChallenge
+							onComplete={completeChallenge}
+							onReaction={handleIngredientReaction}
+						/>
+					)}
+					{isCookingChallenge && (
+						<CookingChallenge
+							onComplete={completeChallenge}
+							onReaction={handleIngredientReaction}
+						/>
+					)}
+					{isTastingChallenge && (
+						<TastingChallenge
+							onComplete={completeChallenge}
+							onReaction={handleIngredientReaction}
+						/>
+					)}
+				</>
 			)}
 
-			{/* Phase-specific overlays */}
-			{phase === "title" && <TitleOverlay />}
-			{phase === "select" && <IngredientSelect />}
-			{phase === "grind" && <GrindOverlay />}
-			{phase === "stuff" && <StuffOverlay />}
-			{phase === "blow" && <BlowOverlay />}
-			{phase === "cook" && <CookOverlay />}
-			{phase === "taste" && <TasteOverlay />}
-			{phase === "results" && <ResultsScreen />}
-
-			{/* Mr. Sausage avatar — visible during select + results only.
-			    During gameplay phases, the 3D MrSausage is already in each scene. */}
-			{(phase === "select" || phase === "results") && !showButFirst && (
-				<MrSausageAvatar />
+			{(gameStatus === "victory" || gameStatus === "defeat") && (
+				<GameOverScreen />
 			)}
-
-			{/* BUT FIRST modal — takes over everything */}
-			{showButFirst && <ButFirstEvent />}
 		</View>
 	);
 };
 
 export default function App() {
 	return (
-		<GameProvider>
-			<SafeAreaView style={styles.container}>
-				<GameWorld />
-				<GameUI />
-			</SafeAreaView>
-		</GameProvider>
+		<SafeAreaView style={styles.container}>
+			<GameWorld />
+			<GameUI />
+		</SafeAreaView>
 	);
 }
 
@@ -69,15 +114,5 @@ const styles = StyleSheet.create({
 	overlay: {
 		...StyleSheet.absoluteFillObject,
 		zIndex: 10,
-	},
-	trackerContainer: {
-		position: "absolute",
-		top: 0,
-		left: 0,
-		right: 0,
-		zIndex: 20,
-		backgroundColor: "rgba(10, 10, 10, 0.85)",
-		borderBottomWidth: 1,
-		borderBottomColor: "#1a1a1a",
 	},
 });
