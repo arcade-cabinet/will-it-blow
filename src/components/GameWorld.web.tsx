@@ -1,5 +1,5 @@
 import * as CANNON from 'cannon-es';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Scene } from 'reactylon';
 import { Engine } from 'reactylon/web';
 import {
@@ -18,14 +18,40 @@ import { useNavigationStore } from '../store/navigationStore';
 import { getWaypoint, type WaypointId } from '../engine/WaypointGraph';
 import { KitchenEnvironment } from './kitchen/KitchenEnvironment';
 import { CrtTelevision } from './kitchen/CrtTelevision';
+import { FridgeStation } from './kitchen/FridgeStation';
+import { getRandomIngredientPool } from '../engine/Ingredients';
+import { matchesCriteria } from '../engine/IngredientMatcher';
+import { pickVariant } from '../engine/ChallengeRegistry';
+import type { IngredientVariant } from '../data/challenges/variants';
 
 // cannon-es compat: Babylon's CannonJSPlugin reads from globalThis.CANNON
 (globalThis as any).CANNON = CANNON;
 
 export const GameWorld = () => {
-  const { gameStatus } = useGameStore();
+  const { gameStatus, currentChallenge, variantSeed } = useGameStore();
+  const { currentWaypoint: navWaypoint } = useNavigationStore();
   const [camera, setCamera] = useState<Camera>();
   const camObserverRef = useRef<Observer<BabylonScene> | null>(null);
+
+  // Fridge station state for 3D visual feedback
+  const [fridgeSelectedIds, setFridgeSelectedIds] = useState<Set<number>>(new Set());
+  const [fridgeHintActive, setFridgeHintActive] = useState(false);
+
+  const showFridge = gameStatus === 'playing' && currentChallenge === 0;
+
+  // Generate a stable ingredient pool + matching indices for the fridge 3D display
+  const fridgeData = useMemo(() => {
+    if (!showFridge) return null;
+    const pool = getRandomIngredientPool(10);
+    const v = pickVariant('ingredients', variantSeed) as IngredientVariant | null;
+    const matching = new Set<number>();
+    if (v) {
+      pool.forEach((ing, i) => {
+        if (matchesCriteria(ing, v.criteria)) matching.add(i);
+      });
+    }
+    return { pool, matching };
+  }, [showFridge, variantSeed]);
 
   const onSceneReady = (scene: any) => {
     scene.clearColor = new Color4(0.02, 0.02, 0.02, 1);
@@ -128,6 +154,21 @@ export const GameWorld = () => {
           <>
             <KitchenEnvironment />
             <CrtTelevision reaction={gameStatus === 'defeat' ? 'laugh' : 'idle'} />
+            {showFridge && fridgeData && (
+              <FridgeStation
+                ingredients={fridgeData.pool}
+                selectedIds={fridgeSelectedIds}
+                hintActive={fridgeHintActive}
+                matchingIndices={fridgeData.matching}
+                onSelect={(index) => {
+                  setFridgeSelectedIds((prev) => {
+                    const next = new Set(prev);
+                    next.add(index);
+                    return next;
+                  });
+                }}
+              />
+            )}
           </>
         )}
       </Scene>
