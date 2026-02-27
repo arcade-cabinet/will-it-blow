@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "WillItBlow",
+    "slug": "will-it-blow",
+    "version": "0.0.1",
+    "platforms": ["ios", "android", "web"],
+    "web": { "bundler": "metro" }
+  },
+  "name": "WillItBlow",
+  "displayName": "WillItBlow"
+}
