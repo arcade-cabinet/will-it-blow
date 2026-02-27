@@ -13,6 +13,7 @@ import { IngredientChallenge } from "./src/components/challenges/IngredientChall
 import { GrindingChallenge } from "./src/components/challenges/GrindingChallenge";
 import { StuffingChallenge } from "./src/components/challenges/StuffingChallenge";
 import { CookingChallenge } from "./src/components/challenges/CookingChallenge";
+import { TastingChallenge } from "./src/components/challenges/TastingChallenge";
 import type { Reaction } from "./src/components/characters/reactions";
 
 const GameUI = () => {
@@ -32,6 +33,8 @@ const GameUI = () => {
 		gameStatus === "playing" && currentChallenge === 2;
 	const isCookingChallenge =
 		gameStatus === "playing" && currentChallenge === 3;
+	const isTastingChallenge =
+		gameStatus === "playing" && currentChallenge === 4;
 
 	return (
 		<View style={styles.overlay} pointerEvents="box-none">
@@ -41,7 +44,7 @@ const GameUI = () => {
 				<>
 					<ChallengeHeader />
 					<StrikeCounter />
-					{!isIngredientChallenge && !isGrindingChallenge && !isStuffingChallenge && !isCookingChallenge && (
+					{!isIngredientChallenge && !isGrindingChallenge && !isStuffingChallenge && !isCookingChallenge && !isTastingChallenge && (
 						<HintButton
 							onHint={() => {
 								/* TODO: trigger hint glow in scene */
@@ -74,6 +77,12 @@ const GameUI = () => {
 					)}
 					{isCookingChallenge && (
 						<CookingChallenge
+							onComplete={completeChallenge}
+							onReaction={handleIngredientReaction}
+						/>
+					)}
+					{isTastingChallenge && (
+						<TastingChallenge
 							onComplete={completeChallenge}
 							onReaction={handleIngredientReaction}
 						/>

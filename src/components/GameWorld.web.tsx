@@ -44,6 +44,7 @@ export const GameWorld = () => {
   const showGrinder = gameStatus === 'playing' && currentChallenge === 1;
   const showStuffer = gameStatus === 'playing' && currentChallenge === 2;
   const showStove = gameStatus === 'playing' && currentChallenge === 3;
+  const showTasting = gameStatus === 'playing' && currentChallenge === 4;
 
   // Grinder station state derived from store
   const grinderCrankAngle = useRef(0);
@@ -196,7 +197,7 @@ export const GameWorld = () => {
         {camera && (
           <>
             <KitchenEnvironment />
-            <CrtTelevision reaction={gameStatus === 'defeat' ? 'laugh' : 'idle'} />
+            <CrtTelevision reaction={gameStatus === 'defeat' ? 'laugh' : showTasting ? 'talk' : 'idle'} />
             {showFridge && fridgeData && (
               <FridgeStation
                 ingredients={fridgeData.pool}
