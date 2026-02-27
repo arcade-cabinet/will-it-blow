@@ -19,6 +19,7 @@ import { getWaypoint, type WaypointId } from '../engine/WaypointGraph';
 import { KitchenEnvironment } from './kitchen/KitchenEnvironment';
 import { CrtTelevision } from './kitchen/CrtTelevision';
 import { FridgeStation } from './kitchen/FridgeStation';
+import { GrinderStation } from './kitchen/GrinderStation';
 import { getRandomIngredientPool } from '../engine/Ingredients';
 import { matchesCriteria } from '../engine/IngredientMatcher';
 import { pickVariant } from '../engine/ChallengeRegistry';
@@ -28,7 +29,7 @@ import type { IngredientVariant } from '../data/challenges/variants';
 (globalThis as any).CANNON = CANNON;
 
 export const GameWorld = () => {
-  const { gameStatus, currentChallenge, variantSeed } = useGameStore();
+  const { gameStatus, currentChallenge, variantSeed, challengeProgress, strikes } = useGameStore();
   const { currentWaypoint: navWaypoint } = useNavigationStore();
   const [camera, setCamera] = useState<Camera>();
   const camObserverRef = useRef<Observer<BabylonScene> | null>(null);
@@ -38,6 +39,31 @@ export const GameWorld = () => {
   const [fridgeHintActive, setFridgeHintActive] = useState(false);
 
   const showFridge = gameStatus === 'playing' && currentChallenge === 0;
+  const showGrinder = gameStatus === 'playing' && currentChallenge === 1;
+
+  // Grinder station state derived from store
+  const grinderCrankAngle = useRef(0);
+  const prevStrikesRef = useRef(strikes);
+
+  // Animate crank angle based on challenge progress changes
+  useEffect(() => {
+    if (showGrinder) {
+      // Map progress to crank rotation (multiple full rotations over the challenge)
+      grinderCrankAngle.current = (challengeProgress / 100) * Math.PI * 8;
+    }
+  }, [showGrinder, challengeProgress]);
+
+  // Detect new strikes to trigger splatter visual
+  const [grinderSplattering, setGrinderSplattering] = useState(false);
+  useEffect(() => {
+    if (showGrinder && strikes > prevStrikesRef.current) {
+      setGrinderSplattering(true);
+      const timeout = setTimeout(() => setGrinderSplattering(false), 800);
+      prevStrikesRef.current = strikes;
+      return () => clearTimeout(timeout);
+    }
+    prevStrikesRef.current = strikes;
+  }, [showGrinder, strikes]);
 
   // Generate a stable ingredient pool + matching indices for the fridge 3D display
   const fridgeData = useMemo(() => {
@@ -167,6 +193,13 @@ export const GameWorld = () => {
                     return next;
                   });
                 }}
+              />
+            )}
+            {showGrinder && (
+              <GrinderStation
+                grindProgress={challengeProgress}
+                crankAngle={grinderCrankAngle.current}
+                isSplattering={grinderSplattering}
               />
             )}
           </>
