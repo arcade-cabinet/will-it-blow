@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { useGameStore } from '../../store/gameStore';
-import { useNavigationStore } from '../../store/navigationStore';
 import { calculateFinalVerdict, CHALLENGE_ORDER, type Verdict } from '../../engine/ChallengeRegistry';
 import { DialogueOverlay } from '../ui/DialogueOverlay';
 import {
@@ -37,7 +36,6 @@ const RANK_COLORS: Record<string, string> = {
 
 export function TastingChallenge({ onComplete, onReaction }: TastingChallengeProps) {
 	const { challengeScores, completeChallenge } = useGameStore();
-	const { navigateTo } = useNavigationStore();
 
 	const [phase, setPhase] = useState<TastingPhase>('title');
 	const [revealedScoreCount, setRevealedScoreCount] = useState(0);
@@ -71,13 +69,6 @@ export function TastingChallenge({ onComplete, onReaction }: TastingChallengePro
 	// Refs to avoid stale closures in timeouts
 	const phaseRef = useRef(phase);
 	phaseRef.current = phase;
-
-	// Navigate camera to center on mount (to face the CRT TV)
-	useEffect(() => {
-		if (navigateTo) {
-			navigateTo('center');
-		}
-	}, [navigateTo]);
 
 	// Phase 1: Title fade-in
 	useEffect(() => {

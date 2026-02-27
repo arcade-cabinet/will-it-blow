@@ -24,7 +24,6 @@ varying vec2 vUV;
 uniform float time;
 uniform float flickerIntensity;
 uniform float staticIntensity;
-uniform sampler2D textureSampler;
 
 // Pseudo-random
 float rand(vec2 co) {
@@ -39,15 +38,11 @@ void main() {
   float dist = length(centered);
   uv = 0.5 + centered * (1.0 + 0.15 * dist * dist);
 
+  // Base CRT green glow
+  vec3 color = vec3(0.05, 0.15, 0.08);
+
   // Scanlines
   float scanline = sin(uv.y * 400.0 + time * 2.0) * 0.08;
-
-  // Chromatic aberration
-  float aberration = 0.003;
-  float r = texture2D(textureSampler, uv + vec2(aberration, 0.0)).r;
-  float g = texture2D(textureSampler, uv).g;
-  float b = texture2D(textureSampler, uv - vec2(aberration, 0.0)).b;
-  vec3 color = vec3(r, g, b);
 
   // Flicker
   float flicker = 1.0 - flickerIntensity * rand(vec2(time * 0.1, 0.0)) * 0.1;
@@ -59,10 +54,10 @@ void main() {
   float vignette = 1.0 - 0.6 * dist * dist;
 
   // Combine
-  color = (color + scanline) * flicker * vignette + noise * 0.1;
+  color = (color + scanline) * flicker * vignette + noise * 0.15;
 
   // CRT green tint
-  color *= vec3(0.9, 1.0, 0.92);
+  color *= vec3(0.7, 1.0, 0.8);
 
   // Out-of-bounds black
   if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
@@ -81,7 +76,7 @@ export function createCrtMaterial(name: string, scene: Scene): ShaderMaterial {
   const material = new ShaderMaterial(name, scene, name, {
     attributes: ['position', 'uv'],
     uniforms: ['worldViewProjection', 'time', 'flickerIntensity', 'staticIntensity'],
-    samplers: ['textureSampler'],
+    // No samplers — shader is purely procedural
   });
 
   // Set initial uniform values
