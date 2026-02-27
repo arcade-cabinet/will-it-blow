@@ -9,6 +9,8 @@ export interface GameState {
   // Current challenge
   strikes: number;
   challengeProgress: number;
+  challengePressure: number;
+  challengeIsPressing: boolean;
 
   // Meta
   hintsRemaining: number;
@@ -24,6 +26,8 @@ export interface GameState {
   addStrike: () => void;
   useHint: () => void;
   setChallengeProgress: (progress: number) => void;
+  setChallengePressure: (pressure: number) => void;
+  setChallengeIsPressing: (pressing: boolean) => void;
   returnToMenu: () => void;
 }
 
@@ -37,6 +41,8 @@ export const INITIAL_GAME_STATE = {
   gameStatus: 'menu' as const,
   strikes: 0,
   challengeProgress: 0,
+  challengePressure: 0,
+  challengeIsPressing: false,
   hintsRemaining: INITIAL_HINTS,
   totalGamesPlayed: 0,
   variantSeed: 0,
@@ -52,6 +58,8 @@ export const useGameStore = create<GameState>()((set) => ({
       gameStatus: 'playing',
       strikes: 0,
       challengeProgress: 0,
+      challengePressure: 0,
+      challengeIsPressing: false,
       hintsRemaining: INITIAL_HINTS,
       totalGamesPlayed: state.totalGamesPlayed + 1,
       variantSeed: Date.now(),
@@ -62,6 +70,8 @@ export const useGameStore = create<GameState>()((set) => ({
       gameStatus: 'playing',
       strikes: 0,
       challengeProgress: 0,
+      challengePressure: 0,
+      challengeIsPressing: false,
     }),
 
   completeChallenge: (score: number) =>
@@ -75,6 +85,8 @@ export const useGameStore = create<GameState>()((set) => ({
         currentChallenge: nextChallenge,
         strikes: 0,
         challengeProgress: 0,
+        challengePressure: 0,
+        challengeIsPressing: false,
         gameStatus: isLastChallenge ? 'victory' : state.gameStatus,
       };
     }),
@@ -96,6 +108,12 @@ export const useGameStore = create<GameState>()((set) => ({
   setChallengeProgress: (progress: number) =>
     set({ challengeProgress: progress }),
 
+  setChallengePressure: (pressure: number) =>
+    set({ challengePressure: pressure }),
+
+  setChallengeIsPressing: (pressing: boolean) =>
+    set({ challengeIsPressing: pressing }),
+
   returnToMenu: () =>
-    set({ gameStatus: 'menu', strikes: 0, challengeProgress: 0 }),
+    set({ gameStatus: 'menu', strikes: 0, challengeProgress: 0, challengePressure: 0, challengeIsPressing: false }),
 }));

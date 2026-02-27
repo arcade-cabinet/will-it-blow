@@ -11,6 +11,7 @@ import { GameOverScreen } from "./src/components/ui/GameOverScreen";
 import { WaypointNavigator } from "./src/components/navigation/WaypointNavigator";
 import { IngredientChallenge } from "./src/components/challenges/IngredientChallenge";
 import { GrindingChallenge } from "./src/components/challenges/GrindingChallenge";
+import { StuffingChallenge } from "./src/components/challenges/StuffingChallenge";
 import type { Reaction } from "./src/components/characters/reactions";
 
 const GameUI = () => {
@@ -26,6 +27,8 @@ const GameUI = () => {
 		gameStatus === "playing" && currentChallenge === 0;
 	const isGrindingChallenge =
 		gameStatus === "playing" && currentChallenge === 1;
+	const isStuffingChallenge =
+		gameStatus === "playing" && currentChallenge === 2;
 
 	return (
 		<View style={styles.overlay} pointerEvents="box-none">
@@ -35,7 +38,7 @@ const GameUI = () => {
 				<>
 					<ChallengeHeader />
 					<StrikeCounter />
-					{!isIngredientChallenge && !isGrindingChallenge && (
+					{!isIngredientChallenge && !isGrindingChallenge && !isStuffingChallenge && (
 						<HintButton
 							onHint={() => {
 								/* TODO: trigger hint glow in scene */
@@ -56,6 +59,12 @@ const GameUI = () => {
 					)}
 					{isGrindingChallenge && (
 						<GrindingChallenge
+							onComplete={completeChallenge}
+							onReaction={handleIngredientReaction}
+						/>
+					)}
+					{isStuffingChallenge && (
+						<StuffingChallenge
 							onComplete={completeChallenge}
 							onReaction={handleIngredientReaction}
 						/>
