@@ -33,24 +33,23 @@ export const GameWorld = () => {
 		// Enable physics with downward gravity
 		scene.enablePhysics(new Vector3(0, -9.81, 0), new CannonJSPlugin());
 
-		// Ambient Fill Light
+		// Ambient Fill Light — raised intensity for visibility
 		const ambientLight = new HemisphericLight(
 			"ambientLight",
 			new Vector3(0, 1, 0),
 			scene,
 		);
-		ambientLight.intensity = 0.4;
-		ambientLight.groundColor = new BABYLON.Color3(0.15, 0.1, 0.08);
+		ambientLight.intensity = 1.0;
+		ambientLight.groundColor = new BABYLON.Color3(0.3, 0.2, 0.12);
 
-		// Main Directional Light — warm orange tint
+		// Main Directional Light — from behind camera toward +Z, illuminates -Z facing faces
 		const dirLight = new DirectionalLight(
 			"dirLight",
-			new Vector3(-1, -2, -1),
+			new Vector3(0.1, -0.3, 1).normalize(),
 			scene,
 		);
-		dirLight.position = new Vector3(20, 40, 20);
-		dirLight.intensity = 0.8;
-		dirLight.diffuse = new BABYLON.Color3(1, 0.9, 0.8);
+		dirLight.intensity = 1.8;
+		dirLight.diffuse = new BABYLON.Color3(1, 0.92, 0.82);
 
 		// Camera
 		scene.createDefaultCameraOrLight(true, undefined, true);
