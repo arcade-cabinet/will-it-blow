@@ -1,5 +1,6 @@
 import {
   Color3,
+  type Mesh,
   MeshBuilder,
   StandardMaterial,
   TransformNode,
@@ -15,6 +16,12 @@ interface MrSausage3DProps {
   scale?: number;
 }
 
+/**
+ * Mr. Sausage — just the iconic head.
+ *
+ * Youtooz reference: hotdog-bun colored head, sick aviator shades above
+ * a lush handlebar mustache, and a white chef toque on top.
+ */
 export const MrSausage3D = ({
   reaction = "idle",
   position = [0, 0, 0],
@@ -22,294 +29,301 @@ export const MrSausage3D = ({
 }: MrSausage3DProps) => {
   const scene = useScene();
   const reactionRef = useRef<Reaction>(reaction);
-  const reactionStartRef = useRef(0);
+  const rootRef = useRef<TransformNode | null>(null);
 
   useEffect(() => {
     reactionRef.current = reaction;
-    reactionStartRef.current = 0;
   }, [reaction]);
+
+  // Update position/scale without recreating geometry
+  useEffect(() => {
+    if (rootRef.current) {
+      rootRef.current.position = new Vector3(position[0], position[1], position[2]);
+      rootRef.current.scaling = new Vector3(scale, scale, scale);
+    }
+  }, [position, scale]);
 
   useEffect(() => {
     if (!scene) return;
 
-    // -----------------------------------------------------------
-    // Materials
-    // -----------------------------------------------------------
-    const bodyColor = new Color3(0.85, 0.55, 0.35);
+    // ==========================================================
+    // MATERIALS — strong emissive so they glow against dark BG
+    // ==========================================================
 
-    const bodyMat = new StandardMaterial("mrBodyMat", scene);
-    bodyMat.diffuseColor = bodyColor;
+    // Helper: create a self-lit material (lighting disabled, emissive = final color)
+    const toon = (name: string, r: number, g: number, b: number) => {
+      const mat = new StandardMaterial(name, scene);
+      mat.disableLighting = true;
+      mat.emissiveColor = new Color3(r, g, b);
+      return mat;
+    };
 
-    const mustardMat = new StandardMaterial("mustardMat", scene);
-    mustardMat.diffuseColor = new Color3(1, 0.85, 0);
-    mustardMat.emissiveColor = new Color3(0.3, 0.25, 0);
+    // Hotdog bun skin — warm peach/tan
+    const skinMat = toon("mrSkin", 0.92, 0.62, 0.35);
 
-    const glassMat = new StandardMaterial("mrGlassMat", scene);
-    glassMat.diffuseColor = new Color3(0.05, 0.05, 0.08);
-    glassMat.specularColor = new Color3(0.4, 0.4, 0.5);
+    // Mustard zigzag — bright yellow
+    const mustardMat = toon("mrMustard", 1.0, 0.82, 0.05);
 
-    const stacheMat = new StandardMaterial("mrStacheMat", scene);
-    stacheMat.diffuseColor = new Color3(0.3, 0.15, 0.05);
+    // Sunglasses lenses — very dark, slight blue tint
+    const lensMat = toon("mrLens", 0.06, 0.06, 0.12);
 
-    const hatMat = new StandardMaterial("mrHatMat", scene);
-    hatMat.diffuseColor = new Color3(0.95, 0.95, 0.95);
+    // Glasses frame — dark charcoal
+    const frameMat = toon("mrFrame", 0.15, 0.15, 0.18);
 
-    // -----------------------------------------------------------
-    // Root node
-    // -----------------------------------------------------------
+    // Mustache — dark brown
+    const stacheMat = toon("mrStache", 0.35, 0.18, 0.06);
+
+    // Chef hat — bright white
+    const hatMat = toon("mrHat", 0.95, 0.95, 0.95);
+
+    // ==========================================================
+    // ROOT
+    // ==========================================================
     const root = new TransformNode("mrSausage", scene);
     root.position = new Vector3(position[0], position[1], position[2]);
     root.scaling = new Vector3(scale, scale, scale);
+    rootRef.current = root;
 
-    // -----------------------------------------------------------
-    // BODY — bottom-heavy egg
-    // -----------------------------------------------------------
-    const body = MeshBuilder.CreateSphere(
-      "mrBody",
-      { diameter: 2.5, segments: 16 },
-      scene,
-    );
-    body.scaling = new Vector3(1, 1.4, 1);
-    body.material = bodyMat;
-    body.parent = root;
-
-    // Mustard stripe
-    const mustardStripe = MeshBuilder.CreateCylinder(
-      "mustardStripe",
-      { height: 3.2, diameter: 0.15 },
-      scene,
-    );
-    mustardStripe.material = mustardMat;
-    mustardStripe.parent = root;
-
-    // Legs
-    const legL = MeshBuilder.CreateCapsule(
-      "legL",
-      { height: 1, radius: 0.3 },
-      scene,
-    );
-    legL.position = new Vector3(-0.4, -2, 0);
-    legL.material = bodyMat;
-    legL.parent = root;
-
-    const legR = MeshBuilder.CreateCapsule(
-      "legR",
-      { height: 1, radius: 0.3 },
-      scene,
-    );
-    legR.position = new Vector3(0.4, -2, 0);
-    legR.material = bodyMat;
-    legR.parent = root;
-
-    // -----------------------------------------------------------
-    // HEAD
-    // -----------------------------------------------------------
-    const headNode = new TransformNode("mrHead", scene);
-    headNode.position = new Vector3(0, 2.2, 0);
-    headNode.parent = root;
-
+    // ==========================================================
+    // HEAD — big bun-colored sphere, the main mass
+    // ==========================================================
     const head = MeshBuilder.CreateSphere(
-      "head",
-      { diameter: 1.8, segments: 16 },
+      "mrHead",
+      { diameter: 3.6, segments: 24 },
       scene,
     );
-    head.material = bodyMat;
-    head.parent = headNode;
+    head.scaling = new Vector3(1.0, 1.05, 0.95);
+    head.material = skinMat;
+    head.parent = root;
 
-    // Sunglasses
-    const glassL = MeshBuilder.CreateSphere(
-      "glassL",
-      { diameter: 0.55 },
+    // ==========================================================
+    // SUNGLASSES — the #1 defining feature, big and prominent
+    // ==========================================================
+
+    // Left lens — squished oval
+    const lensL = MeshBuilder.CreateSphere(
+      "lensL",
+      { diameter: 1.1, segments: 16 },
       scene,
     );
-    glassL.position = new Vector3(-0.35, 0.1, -0.8);
-    glassL.material = glassMat;
-    glassL.parent = headNode;
+    lensL.scaling = new Vector3(0.95, 0.75, 0.35);
+    lensL.position = new Vector3(-0.6, 0.25, -1.45);
+    lensL.material = lensMat;
+    lensL.parent = root;
 
-    const glassR = MeshBuilder.CreateSphere(
-      "glassR",
-      { diameter: 0.55 },
+    // Right lens
+    const lensR = MeshBuilder.CreateSphere(
+      "lensR",
+      { diameter: 1.1, segments: 16 },
       scene,
     );
-    glassR.position = new Vector3(0.35, 0.1, -0.8);
-    glassR.material = glassMat;
-    glassR.parent = headNode;
+    lensR.scaling = new Vector3(0.95, 0.75, 0.35);
+    lensR.position = new Vector3(0.6, 0.25, -1.45);
+    lensR.material = lensMat;
+    lensR.parent = root;
 
+    // Bridge between lenses
     const bridge = MeshBuilder.CreateBox(
       "bridge",
-      { width: 0.35, height: 0.08, depth: 0.08 },
+      { width: 0.5, height: 0.12, depth: 0.12 },
       scene,
     );
-    bridge.position = new Vector3(0, 0.1, -0.8);
-    bridge.material = glassMat;
-    bridge.parent = headNode;
+    bridge.position = new Vector3(0, 0.3, -1.55);
+    bridge.material = frameMat;
+    bridge.parent = root;
 
-    const glassArmL = MeshBuilder.CreateBox(
-      "glassArmL",
-      { width: 0.05, height: 0.7, depth: 0.05 },
+    // Top bar across both lenses (thick brow bar)
+    const topBar = MeshBuilder.CreateBox(
+      "topBar",
+      { width: 2.1, height: 0.15, depth: 0.12 },
       scene,
     );
-    glassArmL.position = new Vector3(-0.6, 0.1, -0.4);
-    glassArmL.rotation.z = -0.15;
-    glassArmL.material = glassMat;
-    glassArmL.parent = headNode;
+    topBar.position = new Vector3(0, 0.62, -1.52);
+    topBar.material = frameMat;
+    topBar.parent = root;
 
-    const glassArmR = MeshBuilder.CreateBox(
-      "glassArmR",
-      { width: 0.05, height: 0.7, depth: 0.05 },
+    // Left temple arm
+    const templeL = MeshBuilder.CreateBox(
+      "templeL",
+      { width: 0.1, height: 0.1, depth: 1.0 },
       scene,
     );
-    glassArmR.position = new Vector3(0.6, 0.1, -0.4);
-    glassArmR.rotation.z = 0.15;
-    glassArmR.material = glassMat;
-    glassArmR.parent = headNode;
+    templeL.position = new Vector3(-1.0, 0.55, -1.0);
+    templeL.material = frameMat;
+    templeL.parent = root;
 
-    // Mustache
-    const stache = MeshBuilder.CreateBox(
-      "stache",
-      { width: 1.4, height: 0.3, depth: 0.2 },
+    // Right temple arm
+    const templeR = MeshBuilder.CreateBox(
+      "templeR",
+      { width: 0.1, height: 0.1, depth: 1.0 },
       scene,
     );
-    stache.position = new Vector3(0, -0.25, -0.85);
-    stache.material = stacheMat;
-    stache.parent = headNode;
+    templeR.position = new Vector3(1.0, 0.55, -1.0);
+    templeR.material = frameMat;
+    templeR.parent = root;
 
-    const curlL = MeshBuilder.CreateSphere(
+    // ==========================================================
+    // MUSTACHE — big lush handlebar
+    // ==========================================================
+
+    // Center bar
+    const stacheCenter = MeshBuilder.CreateBox(
+      "stacheCenter",
+      { width: 1.4, height: 0.35, depth: 0.3 },
+      scene,
+    );
+    stacheCenter.position = new Vector3(0, -0.35, -1.5);
+    stacheCenter.material = stacheMat;
+    stacheCenter.parent = root;
+
+    // Left handlebar curl — big sweeping arc
+    const curlL = MeshBuilder.CreateTorus(
       "curlL",
-      { diameter: 0.35 },
+      { diameter: 0.85, thickness: 0.22, tessellation: 20 },
       scene,
     );
-    curlL.position = new Vector3(-0.75, -0.3, -0.85);
+    curlL.position = new Vector3(-1.05, -0.38, -1.4);
+    curlL.rotation.y = Math.PI / 2;
+    curlL.rotation.x = -0.15;
+    curlL.scaling = new Vector3(1.0, 1.0, 0.5);
     curlL.material = stacheMat;
-    curlL.parent = headNode;
+    curlL.parent = root;
 
-    const curlR = MeshBuilder.CreateSphere(
+    // Left curl tip — upswept end
+    const tipL = MeshBuilder.CreateSphere(
+      "tipL",
+      { diameter: 0.32, segments: 10 },
+      scene,
+    );
+    tipL.position = new Vector3(-1.55, -0.2, -1.35);
+    tipL.material = stacheMat;
+    tipL.parent = root;
+
+    // Right handlebar curl
+    const curlR = MeshBuilder.CreateTorus(
       "curlR",
-      { diameter: 0.35 },
+      { diameter: 0.85, thickness: 0.22, tessellation: 20 },
       scene,
     );
-    curlR.position = new Vector3(0.75, -0.3, -0.85);
+    curlR.position = new Vector3(1.05, -0.38, -1.4);
+    curlR.rotation.y = -Math.PI / 2;
+    curlR.rotation.x = -0.15;
+    curlR.scaling = new Vector3(1.0, 1.0, 0.5);
     curlR.material = stacheMat;
-    curlR.parent = headNode;
+    curlR.parent = root;
 
-    // Chin
-    const chin = MeshBuilder.CreateSphere(
-      "chin",
-      { diameter: 0.6 },
+    // Right curl tip
+    const tipR = MeshBuilder.CreateSphere(
+      "tipR",
+      { diameter: 0.32, segments: 10 },
       scene,
     );
-    chin.position = new Vector3(0, -0.7, -0.6);
-    chin.material = bodyMat;
-    chin.parent = headNode;
+    tipR.position = new Vector3(1.55, -0.2, -1.35);
+    tipR.material = stacheMat;
+    tipR.parent = root;
 
-    const chinBallL = MeshBuilder.CreateSphere(
-      "chinBallL",
-      { diameter: 0.28 },
-      scene,
-    );
-    chinBallL.position = new Vector3(-0.18, -0.95, -0.55);
-    chinBallL.material = bodyMat;
-    chinBallL.parent = headNode;
+    // No chin/chin balls — Youtooz style, just clean head sphere
 
-    const chinBallR = MeshBuilder.CreateSphere(
-      "chinBallR",
-      { diameter: 0.28 },
-      scene,
-    );
-    chinBallR.position = new Vector3(0.18, -0.95, -0.55);
-    chinBallR.material = bodyMat;
-    chinBallR.parent = headNode;
+    // ==========================================================
+    // CHEF HAT (TOQUE) — lowered, prominent, cloth texture
+    // ==========================================================
 
-    // Chef hat
+    // Slightly off-white for brim band to create contrast
+    const brimMat = toon("mrBrim", 0.88, 0.88, 0.85);
+
+    // Brim band — sits right on top of the head
     const hatBrim = MeshBuilder.CreateCylinder(
       "hatBrim",
-      { height: 0.15, diameter: 2.0, tessellation: 24 },
+      { height: 0.3, diameter: 2.8, tessellation: 28 },
       scene,
     );
-    hatBrim.position = new Vector3(0, 1.1, 0);
-    hatBrim.material = hatMat;
-    hatBrim.parent = headNode;
+    hatBrim.position = new Vector3(0, 1.4, 0);
+    hatBrim.material = brimMat;
+    hatBrim.parent = root;
 
+    // Toque body — tapers up
     const hatBody = MeshBuilder.CreateCylinder(
       "hatBody",
-      { height: 1.0, diameterTop: 1.2, diameterBottom: 1.4 },
+      { height: 1.3, diameterTop: 1.8, diameterBottom: 2.3, tessellation: 24 },
       scene,
     );
-    hatBody.position = new Vector3(0, 1.7, 0);
+    hatBody.position = new Vector3(0, 2.2, 0);
     hatBody.material = hatMat;
-    hatBody.parent = headNode;
+    hatBody.parent = root;
 
+    // Cloth pleats — vertical ridges on the toque body for fabric feel
+    const pleats: Mesh[] = [];
+    const pleatCount = 8;
+    for (let i = 0; i < pleatCount; i++) {
+      const angle = (i / pleatCount) * Math.PI * 2;
+      const pleat = MeshBuilder.CreateBox(
+        `pleat_${i}`,
+        { width: 0.06, height: 1.2, depth: 0.06 },
+        scene,
+      );
+      pleat.position = new Vector3(
+        Math.cos(angle) * 1.05,
+        2.2,
+        Math.sin(angle) * 1.05,
+      );
+      pleat.material = brimMat; // Slightly darker than hat body
+      pleat.parent = root;
+      pleats.push(pleat);
+    }
+
+    // Puffy top dome — the iconic chef hat puff
     const hatPuff = MeshBuilder.CreateSphere(
       "hatPuff",
-      { diameter: 1.4 },
+      { diameter: 2.2, segments: 18 },
       scene,
     );
-    hatPuff.position = new Vector3(0, 2.2, 0);
+    hatPuff.position = new Vector3(0, 2.95, 0);
+    hatPuff.scaling = new Vector3(1.0, 0.6, 1.0);
     hatPuff.material = hatMat;
-    hatPuff.parent = headNode;
+    hatPuff.parent = root;
 
-    // -----------------------------------------------------------
-    // ARMS
-    // -----------------------------------------------------------
-    const armL = MeshBuilder.CreateCapsule(
-      "armL",
-      { height: 1.2, radius: 0.2 },
+    // Secondary puff bulge for cloth irregularity
+    const hatPuff2 = MeshBuilder.CreateSphere(
+      "hatPuff2",
+      { diameter: 1.2, segments: 12 },
       scene,
     );
-    armL.position = new Vector3(-1.5, 0.5, 0);
-    armL.rotation.z = 0.4;
-    armL.material = bodyMat;
-    armL.parent = root;
+    hatPuff2.position = new Vector3(0.3, 3.1, -0.2);
+    hatPuff2.scaling = new Vector3(1.0, 0.5, 0.8);
+    hatPuff2.material = hatMat;
+    hatPuff2.parent = root;
 
-    const handL = MeshBuilder.CreateSphere(
-      "handL",
-      { diameter: 0.4 },
-      scene,
-    );
-    handL.position = new Vector3(-1.8, -0.1, 0);
-    handL.material = bodyMat;
-    handL.parent = root;
+    // ==========================================================
+    // MUSTARD ZIGZAG — squiggly stripe on the forehead/top
+    // Small spheres in a sine wave pattern
+    // ==========================================================
+    const mustardBalls: Mesh[] = [];
+    const mustardCount = 10;
+    for (let i = 0; i < mustardCount; i++) {
+      const t = i / (mustardCount - 1); // 0 to 1
+      const y = 0.6 + t * 1.0; // runs up from mid-head to near hat
+      const ball = MeshBuilder.CreateSphere(
+        `mustard_${i}`,
+        { diameter: 0.2, segments: 8 },
+        scene,
+      );
+      ball.position = new Vector3(
+        Math.sin(t * Math.PI * 3) * 0.2,
+        y,
+        -1.55 + t * 0.3,
+      );
+      ball.material = mustardMat;
+      ball.parent = root;
+      mustardBalls.push(ball);
+    }
 
-    const armR = MeshBuilder.CreateCapsule(
-      "armR",
-      { height: 1.2, radius: 0.2 },
-      scene,
-    );
-    armR.position = new Vector3(1.5, 0.5, 0);
-    armR.rotation.z = -0.4;
-    armR.material = bodyMat;
-    armR.parent = root;
-
-    const handR = MeshBuilder.CreateSphere(
-      "handR",
-      { diameter: 0.4 },
-      scene,
-    );
-    handR.position = new Vector3(1.8, -0.1, 0);
-    handR.material = bodyMat;
-    handR.parent = root;
-
-    // -----------------------------------------------------------
-    // Animation state
-    // -----------------------------------------------------------
+    // ==========================================================
+    // ANIMATION
+    // ==========================================================
     const baseY = position[1];
     let time = 0;
     let reactionElapsed = 0;
     let prevReaction: Reaction = reactionRef.current;
-
-    // Lerp targets — start at idle defaults
-    let targetBodyY = 0;
-    let targetBodyRotZ = 0;
-    let targetHeadRotX = 0;
-    let targetArmLRotZ = 0.4;
-    let targetArmRRotZ = -0.4;
-    let shakeIntensity = 0;
-
-    // Current animated values
-    let curBodyRotZ = 0;
-    let curHeadRotX = 0;
-    let curArmLRotZ = 0.4;
-    let curArmRRotZ = -0.4;
 
     const observer = scene.onBeforeRenderObservable.add(() => {
       const dt = scene.getEngine().getDeltaTime() / 1000;
@@ -318,188 +332,106 @@ export const MrSausage3D = ({
       const currentReaction = reactionRef.current;
       const reactionDef = REACTIONS[currentReaction];
 
-      // Detect reaction change
       if (currentReaction !== prevReaction) {
         prevReaction = currentReaction;
         reactionElapsed = 0;
-
-        // Set targets from the new reaction
-        targetBodyY = reactionDef.bodyY ?? 0;
-        targetBodyRotZ = reactionDef.bodyRotZ ?? 0;
-        targetHeadRotX = reactionDef.headRotX ?? 0;
-        targetArmLRotZ = reactionDef.armLRotZ ?? 0.4;
-        targetArmRRotZ = reactionDef.armRRotZ ?? -0.4;
-        shakeIntensity = reactionDef.shakeIntensity ?? 0;
       }
-
       reactionElapsed += dt * 1000;
 
-      // For non-looping reactions, revert to idle after duration
-      if (!reactionDef.loop && reactionElapsed > reactionDef.duration) {
-        targetBodyY = 0;
-        targetBodyRotZ = 0;
-        targetHeadRotX = 0;
-        targetArmLRotZ = 0.4;
-        targetArmRRotZ = -0.4;
-        shakeIntensity = 0;
-      }
+      // Revert non-looping reactions after duration
+      const active = reactionDef.loop || reactionElapsed <= reactionDef.duration;
 
-      // Lerp factor
-      const lerpFactor = Math.min(1, 10 * dt);
-
-      // Lerp current values toward targets
-      curBodyRotZ += (targetBodyRotZ - curBodyRotZ) * lerpFactor;
-      curHeadRotX += (targetHeadRotX - curHeadRotX) * lerpFactor;
-      curArmLRotZ += (targetArmLRotZ - curArmLRotZ) * lerpFactor;
-      curArmRRotZ += (targetArmRRotZ - curArmRRotZ) * lerpFactor;
-
-      // -----------------------------------------------------------
-      // Apply reaction-specific animations
-      // -----------------------------------------------------------
       switch (currentReaction) {
         case "idle": {
-          // Gentle body bob
-          root.position.y = baseY + Math.sin(time * 2) * 0.15;
+          // Gentle float + slow rotation
+          root.position.y = baseY + Math.sin(time * 1.8) * 0.15;
+          root.rotation.y = Math.sin(time * 0.6) * 0.06;
+          root.rotation.z = Math.sin(time * 1.2) * 0.03;
           // Mustache wiggle
-          stache.rotation.z = Math.sin(time * 4) * 0.05;
-          // Gentle body rotation oscillation
-          root.rotation.y = Math.sin(time) * 0.05;
-          root.rotation.z = curBodyRotZ;
+          stacheCenter.rotation.z = Math.sin(time * 3) * 0.04;
+          curlL.rotation.z = Math.sin(time * 3) * 0.05;
+          curlR.rotation.z = -Math.sin(time * 3) * 0.05;
           break;
         }
-
         case "flinch": {
-          root.rotation.z = curBodyRotZ;
-          armL.rotation.z = curArmLRotZ;
-          armR.rotation.z = curArmRRotZ;
-          root.position.y = baseY;
+          if (active) {
+            root.rotation.z = -0.15;
+            root.rotation.x = -0.1;
+            root.position.y = baseY + 0.2;
+          } else {
+            const decay = 1 - Math.exp(-10 * dt);
+            root.rotation.z += (0 - root.rotation.z) * decay;
+            root.rotation.x += (0 - root.rotation.x) * decay;
+            root.position.y = baseY;
+          }
           break;
         }
-
         case "laugh": {
-          // Body shakes on x
-          root.position.x =
-            position[0] + Math.sin(time * 25) * shakeIntensity;
-          // Small hops
-          root.position.y =
-            baseY + targetBodyY * Math.abs(Math.sin(time * 8));
-          root.rotation.z = 0;
-          stache.rotation.z = Math.sin(time * 6) * 0.08;
+          root.position.x = position[0] + Math.sin(time * 22) * 0.12;
+          root.position.y = baseY + Math.abs(Math.sin(time * 7)) * 0.3;
+          root.rotation.z = Math.sin(time * 18) * 0.06;
+          stacheCenter.rotation.z = Math.sin(time * 5) * 0.08;
           break;
         }
-
         case "disgust": {
-          root.rotation.z = curBodyRotZ;
-          headNode.rotation.x = curHeadRotX;
-          // Arms droop
-          armL.rotation.z = curArmLRotZ;
-          armR.rotation.z = curArmRRotZ;
+          if (active) {
+            root.rotation.z = 0.12;
+            root.rotation.x = -0.2;
+          } else {
+            const decay = 1 - Math.exp(-10 * dt);
+            root.rotation.z += (0 - root.rotation.z) * decay;
+            root.rotation.x += (0 - root.rotation.x) * decay;
+          }
           root.position.y = baseY;
           break;
         }
-
         case "excitement": {
-          // Big hop
-          root.position.y = baseY + targetBodyY * Math.abs(Math.sin(time * 6));
-          // Arms up
-          armL.rotation.z = curArmLRotZ;
-          armR.rotation.z = curArmRRotZ;
-          // Slight body pulse
-          const pulse = 1 + Math.sin(time * 8) * 0.03;
-          body.scaling.y = 1.4 * pulse;
-          root.rotation.z = 0;
+          root.position.y = baseY + Math.abs(Math.sin(time * 6)) * 0.5;
+          const pulse = 1 + Math.sin(time * 8) * 0.04;
+          head.scaling.y = 1.05 * pulse;
+          root.rotation.z = Math.sin(time * 10) * 0.05;
           break;
         }
-
         case "nervous": {
-          // Small sway
-          root.rotation.z = Math.sin(time * 3) * 0.05;
-          // Slight position jitter
-          root.position.x =
-            position[0] + Math.sin(time * 15) * shakeIntensity;
-          root.position.y = baseY + Math.sin(time * 2) * 0.05;
+          root.position.x = position[0] + Math.sin(time * 14) * 0.04;
+          root.position.y = baseY + Math.sin(time * 2) * 0.06;
+          root.rotation.z = Math.sin(time * 3) * 0.04;
           break;
         }
-
         case "nod": {
-          // Head bobs forward twice in duration
           const nodPhase = (reactionElapsed / 300) * Math.PI;
-          headNode.rotation.x = Math.abs(Math.sin(nodPhase)) * 0.3;
+          root.rotation.x = Math.abs(Math.sin(nodPhase)) * 0.25;
           root.position.y = baseY;
-          root.rotation.z = 0;
           break;
         }
-
         case "talk": {
-          // Slight body pulse synced to talk
-          body.scaling.y = 1.4 + Math.sin(time * 10) * 0.02;
           root.position.y = baseY + Math.sin(time * 2) * 0.05;
-          root.rotation.z = 0;
-          // Subtle mustache movement
-          stache.rotation.z = Math.sin(time * 8) * 0.03;
+          const talkPulse = 1 + Math.sin(time * 10) * 0.015;
+          head.scaling.y = 1.05 * talkPulse;
+          stacheCenter.rotation.z = Math.sin(time * 7) * 0.03;
           break;
         }
-      }
-
-      // Apply head rotation for non-head-specific reactions
-      if (currentReaction !== "nod") {
-        headNode.rotation.x = curHeadRotX;
-      }
-
-      // Apply arm rotations for reactions that don't override
-      if (
-        currentReaction === "idle" ||
-        currentReaction === "laugh" ||
-        currentReaction === "nervous" ||
-        currentReaction === "nod" ||
-        currentReaction === "talk"
-      ) {
-        armL.rotation.z = curArmLRotZ;
-        armR.rotation.z = curArmRRotZ;
       }
     });
 
-    // -----------------------------------------------------------
-    // Cleanup — dispose everything
-    // -----------------------------------------------------------
+    // ==========================================================
+    // CLEANUP
+    // ==========================================================
     return () => {
       scene.onBeforeRenderObservable.remove(observer);
+      rootRef.current = null;
 
-      // Meshes
-      body.dispose();
-      mustardStripe.dispose();
-      legL.dispose();
-      legR.dispose();
-      head.dispose();
-      glassL.dispose();
-      glassR.dispose();
-      bridge.dispose();
-      glassArmL.dispose();
-      glassArmR.dispose();
-      stache.dispose();
-      curlL.dispose();
-      curlR.dispose();
-      chin.dispose();
-      chinBallL.dispose();
-      chinBallR.dispose();
-      hatBrim.dispose();
-      hatBody.dispose();
-      hatPuff.dispose();
-      armL.dispose();
-      handL.dispose();
-      armR.dispose();
-      handR.dispose();
-
-      // TransformNodes
-      headNode.dispose();
+      // root.dispose() recursively disposes all child meshes
       root.dispose();
 
-      // Materials
-      bodyMat.dispose();
+      // Materials must be disposed separately
+      skinMat.dispose();
       mustardMat.dispose();
-      glassMat.dispose();
+      lensMat.dispose();
+      frameMat.dispose();
       stacheMat.dispose();
       hatMat.dispose();
+      brimMat.dispose();
     };
   }, [scene]);
 

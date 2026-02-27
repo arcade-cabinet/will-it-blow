@@ -136,7 +136,7 @@ export const TitleOverlay: React.FC = () => {
 const styles = StyleSheet.create({
 	overlay: {
 		...StyleSheet.absoluteFillObject,
-		backgroundColor: "rgba(0, 0, 0, 0.85)",
+		backgroundColor: "rgba(0, 0, 0, 0.3)",
 		justifyContent: "center",
 		alignItems: "center",
 		zIndex: 100,

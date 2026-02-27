@@ -7,9 +7,9 @@ A procedurally generated cooking game based on the "Ordinary Sausage" YouTube ch
 ## Stack
 
 - React Native 0.74 + BabylonJS (via reactylon) for 3D scenes
-- Tone.js for synthesized audio
-- React Native overlay for all UI
-- Vite for web builds, Metro for native
+- Tone.js for synthesized audio (web), no-op stub (native)
+- React Native overlay for all UI (cross-platform via react-native-web)
+- Expo SDK 51 + Metro bundler for web, iOS, and Android
 
 ## Architecture
 
@@ -29,21 +29,26 @@ title -> select -> grind -> stuff -> [BUT FIRST?] -> blow -> [BUT FIRST?] -> coo
 ```
 src/
   engine/
-    GameEngine.tsx      - State machine + context
-    AudioEngine.ts      - Tone.js synthesized audio
-    SausagePhysics.ts   - Pressure, burst risk, scoring math
-    Ingredients.ts      - Ingredient database (25+ items)
+    GameEngine.tsx        - State machine + React context (useGame hook)
+    AudioEngine.web.ts    - Tone.js synthesized audio (web)
+    AudioEngine.ts        - No-op stub (native)
+    SausagePhysics.ts     - 5 pure scoring functions
+    Ingredients.ts        - 25 ingredients with stats + pool randomizer
+    Constants.ts          - Phases, tiers, quotes, Mr. Sausage lines
   components/
+    characters/
+      MrSausage3D.tsx     - Procedural 3D character (self-lit primitives)
+      reactions.ts        - Reaction animation definitions
     scenes/
-      TitleScene.tsx      - Bobbing mascot with sunglasses/mustache
-      GrinderScene.tsx    - Hopper + spinning blade + particles
-      StufferScene.tsx    - Tube + growing casing
-      BlowScene.tsx       - Tube end-on + splatter particles
-      CookScene.tsx       - Frying pan + sausage + sizzle
-      TasteScene.tsx      - Sausage plate + cross-section split
+      TitleScene.tsx      - Mr. Sausage hero shot with dramatic lighting
+      GrinderScene.tsx    - Hopper + spinning blade + drag-fling ingredients
+      StufferScene.tsx    - Plunger drag + growing casing
+      BlowScene.tsx       - Hold-release pressure + meat chunk physics
+      CookScene.tsx       - Frying pan + flip interaction + burst sequence
+      TasteScene.tsx      - Plate + sausage split + cross-section reveal
     ui/
       PhaseTracker.tsx    - Step indicator
-      MrSausageAvatar.tsx - Bobbing avatar + speech bubbles
+      MrSausageAvatar.tsx - 2D avatar + speech bubbles (select/results)
       IngredientSelect.tsx- Grid card picker
       ProgressBar.tsx     - Animated fill bar
       SausageRating.tsx   - Hot dog emoji rating
@@ -53,8 +58,13 @@ src/
       ResultsScreen.tsx   - Sausage report card
       TitleOverlay.tsx    - Title screen
       CountdownOverlay.tsx- 3-2-1 LET'S SAUSAGE
-    GameWorld.web.tsx     - Scene orchestrator (web)
-    GameWorld.native.tsx  - Scene orchestrator (native)
+    GameWorld.web.tsx     - Scene orchestrator + camera compositions (web)
+    GameWorld.native.tsx  - Scene orchestrator (native, NativeEngine)
+__tests__/
+  SausagePhysics.test.ts  - 32 tests for scoring functions
+  Ingredients.test.ts     - 10 tests for data integrity
+  Constants.test.ts       - 11 tests for game constants
+  App.test.tsx            - 8 tests for pipeline + balance
 ```
 
 ## Game Phases

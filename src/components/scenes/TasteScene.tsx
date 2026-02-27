@@ -97,6 +97,31 @@ export const TasteScene = () => {
 		plateRim.material = rimMat;
 		plateRim.position.y = 0;
 
+		// --- Table surface ---
+		const table = MeshBuilder.CreateBox(
+			"table",
+			{ width: 10, height: 0.2, depth: 8 },
+			scene,
+		);
+		const tableMat = new StandardMaterial("tableMat", scene);
+		tableMat.diffuseColor = new Color3(0.35, 0.22, 0.12);
+		tableMat.specularColor = new Color3(0.15, 0.1, 0.05);
+		table.material = tableMat;
+		table.position.y = -0.2;
+
+		// --- Tablecloth hint ---
+		const tablecloth = MeshBuilder.CreateDisc(
+			"tablecloth",
+			{ radius: 4, tessellation: 32 },
+			scene,
+		);
+		const clothMat = new StandardMaterial("clothMat", scene);
+		clothMat.diffuseColor = new Color3(0.85, 0.82, 0.75);
+		clothMat.specularColor = new Color3(0.1, 0.1, 0.1);
+		tablecloth.material = clothMat;
+		tablecloth.rotation.x = Math.PI / 2;
+		tablecloth.position.y = -0.09;
+
 		// --- Bun meshes ---
 		const bunMat = new StandardMaterial("bunMat", scene);
 		bunMat.diffuseColor = new Color3(0.85, 0.7, 0.4);
@@ -411,6 +436,8 @@ export const TasteScene = () => {
 			for (const disc of rightSwirlDiscs) disc.dispose();
 			plate.dispose();
 			plateRim.dispose();
+			table.dispose();
+			tablecloth.dispose();
 			bunL.dispose();
 			bunCapL.dispose();
 			bunR.dispose();
@@ -419,6 +446,8 @@ export const TasteScene = () => {
 			ketchupDrizzle.dispose();
 			plateMat.dispose();
 			rimMat.dispose();
+			tableMat.dispose();
+			clothMat.dispose();
 			bunMat.dispose();
 			mustardDrizzleMat.dispose();
 			ketchupDrizzleMat.dispose();
@@ -430,6 +459,6 @@ export const TasteScene = () => {
 	}, [scene, ingredients, sausageRating]);
 
 	return (
-		<MrSausage3D reaction={reaction} position={[0, -1, -3]} scale={0.9} />
+		<MrSausage3D reaction={reaction} position={[4, 0.2, -1]} scale={0.7} />
 	);
 };

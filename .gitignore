@@ -76,3 +76,7 @@ yarn-error.log
 # Expo
 .expo/
 dist/
+
+# Dev screenshots / Playwright
+/*.png
+.playwright-mcp/

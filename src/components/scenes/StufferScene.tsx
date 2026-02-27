@@ -2,7 +2,6 @@ import {
 	Color3,
 	MeshBuilder,
 	StandardMaterial,
-	Vector3,
 } from "@babylonjs/core";
 import { useEffect, useState } from "react";
 import { useScene } from "reactylon";
@@ -70,12 +69,14 @@ export const StufferScene = () => {
 
 		const plungerHandle = MeshBuilder.CreateBox(
 			"plungerHandle",
-			{ width: 0.15, height: 1.5, depth: 0.15 },
+			{ width: 0.4, height: 1.5, depth: 0.4 },
 			scene,
 		);
 		plungerHandle.position.x = -2;
 		plungerHandle.position.y = 0.9;
 		plungerHandle.material = handleMat;
+		plungerHandle.isPickable = true;
+		plunger.isPickable = true;
 
 		// ---------------------------------------------------------------
 		// Casing
@@ -114,12 +115,49 @@ export const StufferScene = () => {
 		let currentStuffProgress = stuffProgress;
 		let dragSpeed = 0;
 
+		// ---------------------------------------------------------------
+		// Ground surface (metal counter)
+		// ---------------------------------------------------------------
+		const groundMat = new StandardMaterial("groundMat", scene);
+		groundMat.diffuseColor = new Color3(0.2, 0.2, 0.22);
+		groundMat.specularColor = new Color3(0.3, 0.3, 0.32);
+
+		const ground = MeshBuilder.CreateDisc(
+			"ground",
+			{ radius: 6 },
+			scene,
+		);
+		ground.rotation.x = Math.PI / 2;
+		ground.position.y = -1.2;
+		ground.material = groundMat;
+
+		// ---------------------------------------------------------------
+		// Back wall panel
+		// ---------------------------------------------------------------
+		const wallMat = new StandardMaterial("wallMat", scene);
+		wallMat.diffuseColor = new Color3(0.25, 0.25, 0.28);
+		wallMat.specularColor = new Color3(0.15, 0.15, 0.18);
+
+		const backWall = MeshBuilder.CreatePlane(
+			"backWall",
+			{ width: 12, height: 6 },
+			scene,
+		);
+		backWall.position.z = 2;
+		backWall.position.y = 1.8;
+		backWall.material = wallMat;
+
 		scene.onPointerDown = (evt) => {
-			const pick = scene.pick(scene.pointerX, scene.pointerY);
+			const px = evt.offsetX ?? scene.pointerX;
+			const py = evt.offsetY ?? scene.pointerY;
+			const pick = scene.pick(px, py);
+			const name = pick?.pickedMesh?.name;
+			// Accept clicks on plunger, plungerHandle, or stufferBody (which often occludes plunger)
 			if (
 				pick?.hit &&
-				(pick.pickedMesh?.name === "plunger" ||
-					pick.pickedMesh?.name === "plungerHandle")
+				(name === "plunger" ||
+					name === "plungerHandle" ||
+					name === "stufferBody")
 			) {
 				draggingPlunger = true;
 				lastX = scene.pointerX;
@@ -243,11 +281,15 @@ export const StufferScene = () => {
 			plunger.dispose();
 			plungerHandle.dispose();
 			casing.dispose();
+			ground.dispose();
+			backWall.dispose();
 
 			bodyMat.dispose();
 			plungerMat.dispose();
 			handleMat.dispose();
 			casingMat.dispose();
+			groundMat.dispose();
+			wallMat.dispose();
 
 			if (leftKnot) leftKnot.dispose();
 			if (rightKnot) rightKnot.dispose();
@@ -255,5 +297,5 @@ export const StufferScene = () => {
 		};
 	}, [scene]);
 
-	return <MrSausage3D reaction={reaction} position={[4, -1, 0]} scale={0.8} />;
+	return <MrSausage3D reaction={reaction} position={[-4, -1, 0]} scale={0.8} />;
 };

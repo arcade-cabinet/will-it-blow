@@ -28,35 +28,35 @@ The game is functionally a series of "tap button, number goes up" interactions l
 
 Built entirely from Babylon.js primitives. No external models.
 
-### Anatomy
+### Anatomy (Implemented — Youtooz Style Head Only)
 
-**Body** — Peter Griffin proportions:
-- Large egg/sphere torso, bottom-heavy
-- Hotdog-colored (tan/peach bun tones)
-- Mustard zigzag stripe running vertically (yellow, slightly raised or emissive)
-- Short stubby legs, slightly wide stance
-- Round capsule arms, mitten-sphere hands
-
-**Head**:
-- Rounder than body, on a short thick neck
-- **Sunglasses**: Two dark reflective spheres + bridge + arms. Thick frames.
-- **Mustache**: Big handlebar — two curved torus segments sweeping outward. Dark brown.
-- **Chin**: Prominent with two small chin-ball spheres (Peter Griffin signature)
-- **Chef hat**: White toque — cylinder brim + puffy sphere top
+**Head** — the iconic oversized head, no body:
+- Large bun-colored sphere (diameter 3.6), warm peach/tan
+- Mustard zigzag stripe running up the forehead (small emissive spheres in sine wave)
+- **Sunglasses**: Two dark squished-oval spheres + bridge + thick brow bar + temple arms
+- **Mustache**: Big lush handlebar — center bar + two curved torus segments with upswept tips
+- **Chef hat (toque)**: Cylinder brim band + tapered body with 8 cloth pleat ridges + puffy dome top + secondary puff bulge
+- All materials use `disableLighting: true` with emissive colors (self-lit, always visible against dark backgrounds)
 
 ### Component Structure
 
 ```
 MrSausage3D (single reusable component)
-├── Body (scaled sphere — bottom-heavy egg)
-│   └── MustardStripe (ribbon geometry, yellow emissive)
-├── Head (sphere on short neck cylinder)
-│   ├── Sunglasses (2 dark spheres + bridge + arms)
-│   ├── Mustache (2 curved torus segments)
-│   ├── Chin (sphere + 2 chin-ball spheres)
-│   └── ChefHat (cylinder brim + sphere puff)
-├── LeftArm (capsule + hand sphere)
-└── RightArm (capsule + hand sphere)
+├── Head (scaled sphere — diameter 3.6, bun-colored)
+│   └── MustardZigzag (10 small emissive spheres in sine wave)
+├── Sunglasses
+│   ├── LensL/LensR (squished dark spheres)
+│   ├── Bridge (box)
+│   ├── TopBar (thick brow bar)
+│   └── TempleL/TempleR (arms)
+├── Mustache
+│   ├── StacheCenter (box)
+│   ├── CurlL/CurlR (torus segments)
+│   └── TipL/TipR (spheres)
+└── ChefHat
+    ├── HatBrim (cylinder)
+    ├── HatBody (tapered cylinder + 8 pleat ridges)
+    └── HatPuff/HatPuff2 (squished spheres)
 ```
 
 ### Animation System
@@ -260,43 +260,43 @@ All ingredients are physics rigid bodies with mass/bounce/friction derived from 
 
 ---
 
-## Technical Architecture
+## Technical Architecture (As Implemented)
 
-### New Files
+### Character Files
 
 | File | Purpose |
 |------|---------|
-| `src/components/characters/MrSausage3D.tsx` | Full 3D character component |
-| `src/components/characters/reactions.ts` | Reaction animation definitions (target transforms + timing) |
-| `src/components/ingredients/Ingredient3D.tsx` | Physics-enabled 3D ingredient factory |
+| `src/components/characters/MrSausage3D.tsx` | Youtooz-style head-only 3D character (self-lit primitives) |
+| `src/components/characters/reactions.ts` | 8 reaction definitions with duration + loop config |
 
-### Modified Files (Rewritten)
+### Scene Files (All Rewritten)
 
-| File | Change |
-|------|--------|
-| `src/components/scenes/GrinderScene.tsx` | Drag-fling physics mini-game + Mr. Sausage |
-| `src/components/scenes/StufferScene.tsx` | Press-drag stuffer + deformable casing + Mr. Sausage |
-| `src/components/scenes/BlowScene.tsx` | Hold-release pressure + physics splatter + Mr. Sausage |
-| `src/components/scenes/CookScene.tsx` | Auto-cook + tap-flip + burst physics + Mr. Sausage |
-| `src/components/scenes/TasteScene.tsx` | Cut reveal + bite reaction + Mr. Sausage |
+| File | Mechanic |
+|------|----------|
+| `src/components/scenes/TitleScene.tsx` | Hero shot with 3-point lighting |
+| `src/components/scenes/GrinderScene.tsx` | Drag-fling ingredients into hopper, collision detection |
+| `src/components/scenes/StufferScene.tsx` | Drag plunger rightward, casing scales + color blends |
+| `src/components/scenes/BlowScene.tsx` | Hold-to-shake, release → meat chunk physics + splatter |
+| `src/components/scenes/CookScene.tsx` | Click-to-flip, drag sausage, burst explosion sequence |
+| `src/components/scenes/TasteScene.tsx` | Sausage splits, cross-section with ingredient color swirls |
 
-### Unchanged Files
+### Camera System
 
-- `App.tsx` — root layout
-- `GameEngine.tsx` — phase state machine, scoring formulas
-- All 16 UI overlays — HUD/buttons layer
-- `AudioEngine.web.ts` / `AudioEngine.ts` — platform split already done
-- `GameWorld.web.tsx` / `GameWorld.native.tsx` — scene container
-- `SausagePhysics.ts`, `Ingredients.ts`, `Constants.ts` — data/logic
+Per-phase camera compositions defined in `CAMERA_COMPOSITIONS` (GameWorld.web.tsx). Smooth transitions use ease-out cubic interpolation over ~0.4s. Camera orbit locked during gameplay phases, free during title/select/results.
 
 ### Physics Engine
 
-Babylon.js built-in physics (Havok plugin preferred, Ammo.js fallback). Each scene enables physics with gravity. Ingredients and meat chunks use rigid body imposters. Casing in stuff phase uses vertex deformation (not full soft-body — approximated with vertex displacement based on fill progress).
+cannon-es via Babylon.js CannonJSPlugin. Used for gravity in scene setup. Meat chunks in BlowScene and CookScene use manual velocity + gravity integration in render loop (simpler than full rigid body imposters for small projectiles).
 
 ### Interaction Model
 
-Touch/pointer events mapped through Babylon.js `ActionManager` or `pointer observable`:
-- **Drag**: `onPointerDown` → track delta → apply force to physics body
-- **Fling**: Velocity at release becomes impulse vector
-- **Hold**: Duration tracked, mapped to pressure/power
-- **Tap**: Single pointer down+up, triggers discrete action (flip, cut)
+Touch/pointer events via Babylon.js `scene.onPointerDown/Move/Up`:
+- **Drag** (Grind, Stuff): Track pointer delta, apply to mesh position
+- **Hold** (Blow): Duration tracked via TouchableOpacity onPressIn/onPressOut, mapped to shake intensity
+- **Click** (Cook): `scene.pick()` on sausage mesh triggers flip animation
+- **Auto** (Taste): Cut triggered when `sausageRating` transitions from 0 → positive
+
+### CI/CD
+
+- `.github/workflows/ci.yml` — Tests + Android debug APK (push/PR to main and feat branches)
+- `.github/workflows/cd.yml` — Static web export → GitHub Pages (push to main)

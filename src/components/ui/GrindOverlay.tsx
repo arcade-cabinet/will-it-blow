@@ -30,10 +30,10 @@ export const GrindOverlay: React.FC = () => {
 		setGrinderOn(true);
 	};
 
-	// Turn-on screen
+	// Turn-on screen — centered CTA
 	if (!grinderOn) {
 		return (
-			<View style={styles.container}>
+			<View style={styles.centeredContainer}>
 				<Text style={styles.phaseTitle}>GRIND PHASE</Text>
 				<Text style={styles.grinderEmoji}>&#x2699;&#xFE0F;</Text>
 				<Text style={styles.turnOnText}>
@@ -50,22 +50,27 @@ export const GrindOverlay: React.FC = () => {
 		);
 	}
 
-	// Active grinding UI — drag instructions + progress
+	// Active grinding — instruction at top, progress at bottom, center clear for 3D
 	return (
-		<View style={styles.container}>
-			<Text style={styles.instruction}>
-				Drag and fling ingredients into the grinder!
-			</Text>
+		<View style={styles.gameplayContainer} pointerEvents="box-none">
+			{/* Top: instruction */}
+			<View style={styles.topSection}>
+				<Text style={styles.instruction}>
+					Drag and fling ingredients into the grinder!
+				</Text>
+				{done && <Text style={styles.doneText}>FULLY GROUND!</Text>}
+			</View>
 
-			{done && <Text style={styles.doneText}>FULLY GROUND!</Text>}
-
-			<View style={styles.progressContainer}>
-				<ProgressBar
-					value={grindProgress}
-					max={100}
-					color="#FF6B35"
-					label="GRIND PROGRESS"
-				/>
+			{/* Bottom: progress bar */}
+			<View style={styles.bottomSection}>
+				<View style={styles.progressContainer}>
+					<ProgressBar
+						value={grindProgress}
+						max={100}
+						color="#FF6B35"
+						label="GRIND PROGRESS"
+					/>
+				</View>
 			</View>
 
 			<SfxText
@@ -83,11 +88,27 @@ export const GrindOverlay: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-	container: {
+	centeredContainer: {
 		flex: 1,
 		alignItems: "center",
 		justifyContent: "center",
 		padding: 20,
+	},
+	gameplayContainer: {
+		flex: 1,
+		justifyContent: "space-between",
+		alignItems: "center",
+		paddingTop: 60,
+		paddingBottom: 30,
+		paddingHorizontal: 20,
+	},
+	topSection: {
+		alignItems: "center",
+		width: "100%",
+	},
+	bottomSection: {
+		alignItems: "center",
+		width: "100%",
 	},
 	phaseTitle: {
 		fontSize: 36,
@@ -135,7 +156,6 @@ const styles = StyleSheet.create({
 		color: "#FFFFFF",
 		fontFamily: "Bangers",
 		textAlign: "center",
-		marginBottom: 24,
 		letterSpacing: 1,
 	},
 	doneText: {
@@ -143,14 +163,12 @@ const styles = StyleSheet.create({
 		fontWeight: "900",
 		fontFamily: "Bangers",
 		color: "#4CAF50",
-		marginBottom: 12,
+		marginTop: 8,
 		textShadowColor: "rgba(76, 175, 80, 0.4)",
 		textShadowOffset: { width: 0, height: 0 },
 		textShadowRadius: 6,
 	},
 	progressContainer: {
 		width: "100%",
-		maxWidth: 300,
-		marginTop: 12,
 	},
 });

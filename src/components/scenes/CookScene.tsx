@@ -26,6 +26,12 @@ export const CookScene = () => {
 	const { cookProgress, hasBurst, ingredients } = useGame();
 	const [reaction, setReaction] = useState<Reaction>("nervous");
 
+	// Refs to avoid rebuilding the entire scene on every cookProgress tick
+	const cookProgressRef = useRef(cookProgress);
+	const hasBurstRef = useRef(hasBurst);
+	useEffect(() => { cookProgressRef.current = cookProgress; }, [cookProgress]);
+	useEffect(() => { hasBurstRef.current = hasBurst; }, [hasBurst]);
+
 	// Refs for flip state (persist across renders without triggering re-render)
 	const flipStateRef = useRef({
 		flipped: false,
@@ -51,6 +57,34 @@ export const CookScene = () => {
 		burner.material = burnerMat;
 		burner.position.y = -0.3;
 		burner.rotation.x = Math.PI / 2;
+
+		// --- Stove surface ---
+
+		const stoveSurface = MeshBuilder.CreateDisc(
+			"stoveSurface",
+			{ radius: 4, tessellation: 48 },
+			scene,
+		);
+		const stoveSurfaceMat = new StandardMaterial("stoveSurfaceMat", scene);
+		stoveSurfaceMat.diffuseColor = new Color3(0.08, 0.08, 0.1);
+		stoveSurfaceMat.specularColor = new Color3(0.15, 0.15, 0.15);
+		stoveSurfaceMat.emissiveColor = new Color3(0.03, 0.015, 0.005);
+		stoveSurface.material = stoveSurfaceMat;
+		stoveSurface.position.y = -0.35;
+		stoveSurface.rotation.x = Math.PI / 2;
+
+		// --- Kitchen counter ---
+
+		const counter = MeshBuilder.CreateBox(
+			"counter",
+			{ width: 10, height: 0.3, depth: 6 },
+			scene,
+		);
+		const counterMat = new StandardMaterial("counterMat", scene);
+		counterMat.diffuseColor = new Color3(0.18, 0.1, 0.06);
+		counterMat.specularColor = new Color3(0.05, 0.05, 0.05);
+		counter.material = counterMat;
+		counter.position.y = -0.6;
 
 		// --- Frying Pan ---
 
@@ -214,14 +248,14 @@ export const CookScene = () => {
 
 		// --- Render loop observer ---
 
-		let currentCookProgress = cookProgress;
-		let currentHasBurst = hasBurst;
 		let time = 0;
 
 		const observer = scene.onBeforeRenderObservable.add(() => {
 			const dt = scene.getEngine().getDeltaTime() / 1000;
 			time += dt;
 
+			const currentCookProgress = cookProgressRef.current;
+			const currentHasBurst = hasBurstRef.current;
 			const progress = currentCookProgress / 100; // 0..1
 
 			// --- Burner glow: pulses orange based on cookProgress ---
@@ -429,13 +463,6 @@ export const CookScene = () => {
 			}
 		});
 
-		// Expose a way to update state from outside the closure
-		const updateState = () => {
-			currentCookProgress = cookProgress;
-			currentHasBurst = hasBurst;
-		};
-		updateState();
-
 		return () => {
 			scene.onPointerDown = undefined as any;
 			scene.onPointerMove = undefined as any;
@@ -468,8 +495,12 @@ export const CookScene = () => {
 			handleMat.dispose();
 			burner.dispose();
 			burnerMat.dispose();
+			stoveSurface.dispose();
+			stoveSurfaceMat.dispose();
+			counter.dispose();
+			counterMat.dispose();
 		};
-	}, [scene, cookProgress, hasBurst]);
+	}, [scene]);
 
 	// --- MrSausage3D reaction logic ---
 	useEffect(() => {
@@ -488,6 +519,6 @@ export const CookScene = () => {
 	}, [hasBurst, cookProgress]);
 
 	return (
-		<MrSausage3D reaction={reaction} position={[-4, -1, 0]} scale={0.8} />
+		<MrSausage3D reaction={reaction} position={[-2.5, 0, 2]} scale={0.55} />
 	);
 };

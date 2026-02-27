@@ -22,90 +22,114 @@ export const StuffOverlay: React.FC = () => {
 	useEffect(() => {
 		if (stuffProgress >= 100 && subPhase === "stuffing") {
 			setSubPhase("done");
-			setTimeout(() => tryButFirst("blow"), 1000);
+			const timer = setTimeout(() => tryButFirst("blow"), 1000);
+			return () => clearTimeout(timer);
 		}
-	}, [stuffProgress]);
+	}, [stuffProgress, subPhase, tryButFirst]);
 
-	return (
-		<View style={styles.overlay}>
-			{/* Title */}
-			<Text style={styles.title}>STUFF THE CASING</Text>
-
-			{/* Countdown overlay */}
-			{subPhase === "countdown" && (
+	// Countdown is centered overlay
+	if (subPhase === "countdown") {
+		return (
+			<View style={styles.centeredOverlay}>
+				<Text style={styles.title}>STUFF THE CASING</Text>
 				<CountdownOverlay onComplete={handleCountdownComplete} />
-			)}
+			</View>
+		);
+	}
 
-			{/* Stuffing UI */}
-			{(subPhase === "stuffing" || subPhase === "done") && (
-				<View style={styles.stuffContainer}>
-					{subPhase === "stuffing" && (
-						<Text style={styles.instruction}>
-							Drag the plunger to stuff the casing!
-						</Text>
-					)}
+	// Active stuffing / done — instruction at top, progress at bottom, center clear for 3D
+	return (
+		<View style={styles.gameplayOverlay} pointerEvents="box-none">
+			{/* Top section */}
+			<View style={styles.topSection}>
+				<Text style={styles.title}>STUFF THE CASING</Text>
 
-					{subPhase === "done" && (
-						<Text style={styles.doneText}>PERFECTLY STUFFED!</Text>
-					)}
+				{subPhase === "stuffing" && (
+					<Text style={styles.instruction}>
+						Drag the plunger to stuff the casing!
+					</Text>
+				)}
 
-					{/* Sausage casing visual (HUD indicator) */}
-					<View style={styles.casingOuter}>
-						{/* Left tie knot */}
-						<Text style={styles.knotLeft}>{"\uD83E\uDEA2"}</Text>
+				{subPhase === "done" && (
+					<Text style={styles.doneText}>PERFECTLY STUFFED!</Text>
+				)}
+			</View>
 
-						{/* Casing track */}
-						<View style={styles.casingTrack}>
-							<View
-								style={[
-									styles.casingFill,
-									{
-										width: `${Math.min(stuffProgress, 100)}%`,
-										backgroundColor: firstIngredientColor,
-									},
-								]}
-							/>
-						</View>
+			{/* Bottom section */}
+			<View style={styles.bottomSection}>
+				{/* Sausage casing visual (HUD indicator) */}
+				<View style={styles.casingOuter}>
+					{/* Left tie knot */}
+					<Text style={styles.knotLeft}>{"\uD83E\uDEA2"}</Text>
 
-						{/* Right tie knot -- appears when done */}
-						{subPhase === "done" && (
-							<Text style={styles.knotRight}>{"\uD83E\uDEA2"}</Text>
-						)}
-					</View>
-
-					{/* Progress bar */}
-					<View style={styles.progressContainer}>
-						<ProgressBar
-							value={stuffProgress}
-							max={100}
-							color="#8D6E63"
-							label="SAUSAGE FULLNESS"
+					{/* Casing track */}
+					<View style={styles.casingTrack}>
+						<View
+							style={[
+								styles.casingFill,
+								{
+									width: `${Math.min(stuffProgress, 100)}%`,
+									backgroundColor: firstIngredientColor,
+								},
+							]}
 						/>
 					</View>
 
-					{/* SFX floating text */}
-					<SfxText
-						texts={[
-							"SQUISH!",
-							"SQUELCH!",
-							"*stuffing*",
-							"PACK!",
-							"SQUEEZE!",
-						]}
-						active={subPhase === "stuffing"}
+					{/* Right tie knot -- appears when done */}
+					{subPhase === "done" && (
+						<Text style={styles.knotRight}>{"\uD83E\uDEA2"}</Text>
+					)}
+				</View>
+
+				{/* Progress bar */}
+				<View style={styles.progressContainer}>
+					<ProgressBar
+						value={stuffProgress}
+						max={100}
+						color="#8D6E63"
+						label="SAUSAGE FULLNESS"
 					/>
 				</View>
-			)}
+			</View>
+
+			{/* SFX floating text */}
+			<SfxText
+				texts={[
+					"SQUISH!",
+					"SQUELCH!",
+					"*stuffing*",
+					"PACK!",
+					"SQUEEZE!",
+				]}
+				active={subPhase === "stuffing"}
+			/>
 		</View>
 	);
 };
 
 const styles = StyleSheet.create({
-	overlay: {
+	centeredOverlay: {
 		...StyleSheet.absoluteFillObject,
 		justifyContent: "center",
 		alignItems: "center",
 		zIndex: 100,
+	},
+	gameplayOverlay: {
+		...StyleSheet.absoluteFillObject,
+		justifyContent: "space-between",
+		alignItems: "center",
+		paddingTop: 60,
+		paddingBottom: 30,
+		paddingHorizontal: 24,
+		zIndex: 100,
+	},
+	topSection: {
+		alignItems: "center",
+		width: "100%",
+	},
+	bottomSection: {
+		alignItems: "center",
+		width: "100%",
 	},
 	title: {
 		fontSize: 32,
@@ -116,25 +140,20 @@ const styles = StyleSheet.create({
 		textShadowColor: "rgba(255, 213, 79, 0.5)",
 		textShadowOffset: { width: 0, height: 0 },
 		textShadowRadius: 12,
-		marginBottom: 16,
-	},
-	stuffContainer: {
-		width: "100%",
-		alignItems: "center",
-		paddingHorizontal: 24,
+		marginBottom: 8,
 	},
 	instruction: {
 		fontSize: 18,
 		color: "#BDBDBD",
 		textAlign: "center",
-		marginBottom: 20,
+		marginTop: 4,
 	},
 	doneText: {
 		fontSize: 28,
 		fontWeight: "900",
 		color: "#4CAF50",
 		textAlign: "center",
-		marginBottom: 20,
+		marginTop: 4,
 		textShadowColor: "rgba(76, 175, 80, 0.5)",
 		textShadowOffset: { width: 0, height: 0 },
 		textShadowRadius: 10,
@@ -143,7 +162,7 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		alignItems: "center",
 		width: "100%",
-		marginBottom: 24,
+		marginBottom: 16,
 	},
 	knotLeft: {
 		fontSize: 28,
@@ -169,6 +188,5 @@ const styles = StyleSheet.create({
 	},
 	progressContainer: {
 		width: "100%",
-		marginBottom: 16,
 	},
 });

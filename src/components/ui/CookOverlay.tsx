@@ -173,45 +173,58 @@ export const CookOverlay: React.FC = () => {
 	}
 
 	// --- Active cooking UI ---
+	// pointerEvents="box-none" allows touch to pass through to 3D canvas for sausage flip/drag
 	return (
-		<View style={styles.container}>
-			<Text style={styles.phaseTitle}>COOK THE SAUSAGE</Text>
+		<View style={styles.gameplayOverlay} pointerEvents="box-none">
+			{/* Top section */}
+			<View style={styles.topSection}>
+				<Text style={styles.phaseTitle}>COOK THE SAUSAGE</Text>
 
-			{hasBurst && (
-				<View style={styles.burstContainer}>
-					<Animated.Text
-						style={[
-							styles.burstText,
-							{
-								transform: [
-									{ scale: burstPulse as unknown as number },
-								],
-							},
-						]}
-					>
-						💥 BURST! 💥
-					</Animated.Text>
-					<Text style={styles.burstSubtext}>
-						Oh, we got a burst!
+				{!done && !hasBurst && (
+					<Text style={styles.instruction}>
+						Click the sausage to flip it!
 					</Text>
+				)}
+
+				{hasBurst && (
+					<View style={styles.burstContainer}>
+						<Animated.Text
+							style={[
+								styles.burstText,
+								{
+									transform: [
+										{
+											scale: burstPulse as unknown as number,
+										},
+									],
+								},
+							]}
+						>
+							BURST!
+						</Animated.Text>
+						<Text style={styles.burstSubtext}>
+							Oh, we got a burst!
+						</Text>
+					</View>
+				)}
+
+				{done && (
+					<Text style={styles.doneText}>
+						{hasBurst ? "COOKED (with a burst!)" : "COOKED PERFECTLY!"}
+					</Text>
+				)}
+			</View>
+
+			{/* Bottom section */}
+			<View style={styles.bottomSection}>
+				<View style={styles.progressContainer}>
+					<ProgressBar
+						value={cookProgress}
+						max={100}
+						color={hasBurst ? "#F44336" : "#FF6B35"}
+						label="COOK PROGRESS"
+					/>
 				</View>
-			)}
-
-			{done && (
-				<Text style={styles.doneText}>
-					{hasBurst
-						? "✅ COOKED (with a burst!)"
-						: "✅ COOKED PERFECTLY!"}
-				</Text>
-			)}
-
-			<View style={styles.progressContainer}>
-				<ProgressBar
-					value={cookProgress}
-					max={100}
-					color={hasBurst ? "#F44336" : "#FF6B35"}
-					label="COOK PROGRESS"
-				/>
 			</View>
 
 			<SfxText
@@ -236,6 +249,23 @@ const styles = StyleSheet.create({
 		justifyContent: "center",
 		padding: 20,
 	},
+	gameplayOverlay: {
+		...StyleSheet.absoluteFillObject,
+		justifyContent: "space-between",
+		alignItems: "center",
+		paddingTop: 60,
+		paddingBottom: 30,
+		paddingHorizontal: 24,
+		zIndex: 100,
+	},
+	topSection: {
+		alignItems: "center",
+		width: "100%",
+	},
+	bottomSection: {
+		alignItems: "center",
+		width: "100%",
+	},
 	hereWeGoText: {
 		fontSize: 52,
 		fontWeight: "900",
@@ -255,7 +285,15 @@ const styles = StyleSheet.create({
 		textShadowColor: "rgba(0, 0, 0, 0.5)",
 		textShadowOffset: { width: 2, height: 2 },
 		textShadowRadius: 4,
-		marginBottom: 20,
+		marginBottom: 8,
+	},
+	instruction: {
+		fontSize: 18,
+		color: "#FFFFFF",
+		fontFamily: "Bangers",
+		textAlign: "center",
+		letterSpacing: 1,
+		marginTop: 4,
 	},
 	startButton: {
 		backgroundColor: "#F44336",
@@ -312,7 +350,5 @@ const styles = StyleSheet.create({
 	},
 	progressContainer: {
 		width: "100%",
-		maxWidth: 300,
-		marginTop: 12,
 	},
 });
