@@ -28,6 +28,17 @@ export const TasteOverlay: React.FC = () => {
 	const ratingFade = useRef(new Animated.Value(0)).current;
 	const ratingNumberScale = useRef(new Animated.Value(0.5)).current;
 
+	const scissorsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const ratingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+	// Clear pending timers on unmount
+	useEffect(() => {
+		return () => {
+			if (scissorsTimeoutRef.current) clearTimeout(scissorsTimeoutRef.current);
+			if (ratingTimeoutRef.current) clearTimeout(ratingTimeoutRef.current);
+		};
+	}, []);
+
 	const firstIngredientColor =
 		ingredients.length > 0 ? ingredients[0].color : "#8D6E63";
 
@@ -49,7 +60,7 @@ export const TasteOverlay: React.FC = () => {
 		]).start();
 
 		// Scissors pop-in after a short delay
-		setTimeout(() => {
+		scissorsTimeoutRef.current = setTimeout(() => {
 			Animated.spring(scissorsScale, {
 				toValue: 1,
 				friction: 4,
@@ -59,7 +70,7 @@ export const TasteOverlay: React.FC = () => {
 		}, 200);
 
 		// After 1200ms, calculate and show rating
-		setTimeout(() => {
+		ratingTimeoutRef.current = setTimeout(() => {
 			const rating = calculateTasteRating(ingredients, hasBurst);
 			setLocalRating(rating);
 			setSausageRating(rating);
@@ -346,6 +357,7 @@ const styles = StyleSheet.create({
 	ratingNumber: {
 		fontSize: 56,
 		fontWeight: "900",
+		fontFamily: "Bangers",
 		textAlign: "center",
 		marginBottom: 28,
 		textShadowColor: "rgba(0, 0, 0, 0.3)",

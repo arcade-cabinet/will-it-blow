@@ -6,6 +6,8 @@ import {
 	Color4,
 	DirectionalLight,
 	HemisphericLight,
+	type Observer,
+	type Scene as BabylonScene,
 	Vector3,
 } from "@babylonjs/core";
 import * as CANNON from "cannon-es";
@@ -28,10 +30,10 @@ import { TasteScene } from "./scenes/TasteScene";
  * Per-phase camera compositions.
  * Each entry defines target, alpha, beta, radius for optimal scene framing.
  */
-const CAMERA_COMPOSITIONS: Record<
-	string,
+const CAMERA_COMPOSITIONS: Partial<Record<
+	GamePhase,
 	{ target: [number, number, number]; alpha: number; beta: number; radius: number }
-> = {
+>> = {
 	// Title/select/results: Mr. Sausage centered, slight hero angle
 	title: { target: [0, 0.3, 0], alpha: -Math.PI / 2, beta: Math.PI / 2.5, radius: 10 },
 	select: { target: [0, 0.3, 0], alpha: -Math.PI / 2, beta: Math.PI / 2.5, radius: 10 },
@@ -93,7 +95,7 @@ export const GameWorld = () => {
 	};
 
 	// Ref to track and clean up camera animation observers
-	const camObserverRef = useRef<any>(null);
+	const camObserverRef = useRef<Observer<BabylonScene> | null>(null);
 
 	// --- Per-phase camera composition + orbit locking ---
 	useEffect(() => {
@@ -140,6 +142,14 @@ export const GameWorld = () => {
 		} else if (canvas) {
 			cam.attachControl(canvas, true);
 		}
+
+		return () => {
+			if (camObserverRef.current) {
+				scene.onBeforeRenderObservable.remove(camObserverRef.current);
+				camObserverRef.current = null;
+			}
+			cam.detachControl();
+		};
 	}, [phase, camera]);
 
 	// reactylon Engine types are incomplete — antialias/style work at runtime

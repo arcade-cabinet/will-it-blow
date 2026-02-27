@@ -1,5 +1,6 @@
 import {
   Color3,
+  type Mesh,
   MeshBuilder,
   StandardMaterial,
   TransformNode,
@@ -19,8 +20,7 @@ interface MrSausage3DProps {
  * Mr. Sausage — just the iconic head.
  *
  * Youtooz reference: hotdog-bun colored head, sick aviator shades above
- * a lush handlebar mustache, prominent Peter Griffin chin balls,
- * white chef toque on top.
+ * a lush handlebar mustache, and a white chef toque on top.
  */
 export const MrSausage3D = ({
   reaction = "idle",
@@ -29,10 +29,19 @@ export const MrSausage3D = ({
 }: MrSausage3DProps) => {
   const scene = useScene();
   const reactionRef = useRef<Reaction>(reaction);
+  const rootRef = useRef<TransformNode | null>(null);
 
   useEffect(() => {
     reactionRef.current = reaction;
   }, [reaction]);
+
+  // Update position/scale without recreating geometry
+  useEffect(() => {
+    if (rootRef.current) {
+      rootRef.current.position = new Vector3(position[0], position[1], position[2]);
+      rootRef.current.scaling = new Vector3(scale, scale, scale);
+    }
+  }, [position, scale]);
 
   useEffect(() => {
     if (!scene) return;
@@ -73,6 +82,7 @@ export const MrSausage3D = ({
     const root = new TransformNode("mrSausage", scene);
     root.position = new Vector3(position[0], position[1], position[2]);
     root.scaling = new Vector3(scale, scale, scale);
+    rootRef.current = root;
 
     // ==========================================================
     // HEAD — big bun-colored sphere, the main mass
@@ -242,7 +252,7 @@ export const MrSausage3D = ({
     hatBody.parent = root;
 
     // Cloth pleats — vertical ridges on the toque body for fabric feel
-    const pleats: any[] = [];
+    const pleats: Mesh[] = [];
     const pleatCount = 8;
     for (let i = 0; i < pleatCount; i++) {
       const angle = (i / pleatCount) * Math.PI * 2;
@@ -287,7 +297,7 @@ export const MrSausage3D = ({
     // MUSTARD ZIGZAG — squiggly stripe on the forehead/top
     // Small spheres in a sine wave pattern
     // ==========================================================
-    const mustardBalls: any[] = [];
+    const mustardBalls: Mesh[] = [];
     const mustardCount = 10;
     for (let i = 0; i < mustardCount; i++) {
       const t = i / (mustardCount - 1); // 0 to 1
@@ -349,8 +359,9 @@ export const MrSausage3D = ({
             root.rotation.x = -0.1;
             root.position.y = baseY + 0.2;
           } else {
-            root.rotation.z *= 0.9;
-            root.rotation.x *= 0.9;
+            const decay = 1 - Math.exp(-10 * dt);
+            root.rotation.z += (0 - root.rotation.z) * decay;
+            root.rotation.x += (0 - root.rotation.x) * decay;
             root.position.y = baseY;
           }
           break;
@@ -367,8 +378,9 @@ export const MrSausage3D = ({
             root.rotation.z = 0.12;
             root.rotation.x = -0.2;
           } else {
-            root.rotation.z *= 0.9;
-            root.rotation.x *= 0.9;
+            const decay = 1 - Math.exp(-10 * dt);
+            root.rotation.z += (0 - root.rotation.z) * decay;
+            root.rotation.x += (0 - root.rotation.x) * decay;
           }
           root.position.y = baseY;
           break;
@@ -407,26 +419,12 @@ export const MrSausage3D = ({
     // ==========================================================
     return () => {
       scene.onBeforeRenderObservable.remove(observer);
-      head.dispose();
-      lensL.dispose();
-      lensR.dispose();
-      bridge.dispose();
-      topBar.dispose();
-      templeL.dispose();
-      templeR.dispose();
-      stacheCenter.dispose();
-      curlL.dispose();
-      curlR.dispose();
-      tipL.dispose();
-      tipR.dispose();
-      // chin removed — Youtooz style
-      hatBrim.dispose();
-      hatBody.dispose();
-      for (const p of pleats) p.dispose();
-      hatPuff.dispose();
-      hatPuff2.dispose();
-      for (const b of mustardBalls) b.dispose();
+      rootRef.current = null;
+
+      // root.dispose() recursively disposes all child meshes
       root.dispose();
+
+      // Materials must be disposed separately
       skinMat.dispose();
       mustardMat.dispose();
       lensMat.dispose();

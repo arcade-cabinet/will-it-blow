@@ -329,6 +329,7 @@ export const GrinderScene = () => {
 		const groundIngredients = new Set<string>();
 		let shakeTimer = 0;
 		let warmupFrames = 3; // Skip first 3 frames to let bounding boxes settle
+		const timeoutIds: ReturnType<typeof setTimeout>[] = [];
 		const totalIngredients = Math.min(ingredients.length, 3);
 		const progressPerIngredient =
 			totalIngredients > 0 ? 100 / totalIngredients : 100;
@@ -400,15 +401,15 @@ export const GrinderScene = () => {
 
 					// Audio
 					audioEngine.startGrinder();
-					setTimeout(() => audioEngine.stopGrinder(), 500);
+					timeoutIds.push(setTimeout(() => audioEngine.stopGrinder(), 500));
 
 					// Mr. Sausage reaction
 					if (totalIngredients > 0 && groundCount >= totalIngredients) {
 						setReaction("excitement");
-						setTimeout(() => setPhase("stuff"), 600);
+						timeoutIds.push(setTimeout(() => setPhase("stuff"), 600));
 					} else {
 						setReaction("flinch");
-						setTimeout(() => setReaction("idle"), 500);
+						timeoutIds.push(setTimeout(() => setReaction("idle"), 500));
 					}
 				}
 			}
@@ -416,6 +417,7 @@ export const GrinderScene = () => {
 
 		// ----- Cleanup -----
 		return () => {
+			for (const id of timeoutIds) clearTimeout(id);
 			scene.onPointerDown = undefined as any;
 			scene.onPointerMove = undefined as any;
 			scene.onPointerUp = undefined as any;

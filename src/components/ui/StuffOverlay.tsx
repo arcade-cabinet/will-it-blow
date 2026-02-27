@@ -22,7 +22,8 @@ export const StuffOverlay: React.FC = () => {
 	useEffect(() => {
 		if (stuffProgress >= 100 && subPhase === "stuffing") {
 			setSubPhase("done");
-			setTimeout(() => tryButFirst("blow"), 1000);
+			const timer = setTimeout(() => tryButFirst("blow"), 1000);
+			return () => clearTimeout(timer);
 		}
 	}, [stuffProgress, subPhase, tryButFirst]);
 

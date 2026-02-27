@@ -1,4 +1,4 @@
-import { Color3, HemisphericLight, PointLight, SpotLight, Vector3 } from "@babylonjs/core";
+import { Color3, PointLight, SpotLight, Vector3 } from "@babylonjs/core";
 import { useEffect } from "react";
 import { useScene } from "reactylon";
 import { MrSausage3D } from "../characters/MrSausage3D";

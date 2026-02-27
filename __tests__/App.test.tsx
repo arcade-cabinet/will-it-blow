@@ -5,7 +5,7 @@
  * ensuring the game produces valid results for all possible input combinations.
  */
 
-import { it, expect, describe } from "@jest/globals";
+import { it, expect, describe, jest } from "@jest/globals";
 import {
 	calculateBlowRuffalos,
 	calculateTasteRating,
@@ -65,7 +65,7 @@ describe("Full game scoring pipeline", () => {
 		const worst = INGREDIENTS.filter(
 			(i) => i.category === "absurd" && i.tasteMod <= 0,
 		);
-		if (worst.length === 0) return;
+		expect(worst.length).toBeGreaterThanOrEqual(3);
 
 		for (let i = 0; i < 50; i++) {
 			const selected = worst.slice(0, 3);
@@ -84,20 +84,26 @@ describe("Full game scoring pipeline", () => {
 		const best = INGREDIENTS.filter(
 			(i) => i.tasteMod >= 4 && i.textureMod >= 3,
 		);
-		if (best.length === 0) return;
+		expect(best.length).toBeGreaterThanOrEqual(3);
 
+		// Mock Math.random to make this test deterministic
+		const randomSpy = jest.spyOn(Math, "random").mockReturnValue(0.99);
 		let reachedKing = false;
-		for (let i = 0; i < 200; i++) {
-			const selected = best.slice(0, 3);
-			const ruffalos = calculateBlowRuffalos(3, selected);
-			const tasteRating = calculateTasteRating(selected, false);
-			// BUT FIRST bonus (3-10 points) helps bridge the gap
-			const bonus = 10;
-			const score = calculateFinalScore(tasteRating, ruffalos, false, bonus);
-			if (getTitleTier(score) === "THE SAUSAGE KING") {
-				reachedKing = true;
-				break;
+		try {
+			for (let i = 0; i < 200; i++) {
+				const selected = best.slice(0, 3);
+				const ruffalos = calculateBlowRuffalos(3, selected);
+				const tasteRating = calculateTasteRating(selected, false);
+				// BUT FIRST bonus (3-10 points) helps bridge the gap
+				const bonus = 10;
+				const score = calculateFinalScore(tasteRating, ruffalos, false, bonus);
+				if (getTitleTier(score) === "THE SAUSAGE KING") {
+					reachedKing = true;
+					break;
+				}
 			}
+		} finally {
+			randomSpy.mockRestore();
 		}
 		expect(reachedKing).toBe(true);
 	});

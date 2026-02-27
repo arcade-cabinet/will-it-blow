@@ -78,5 +78,5 @@ yarn-error.log
 dist/
 
 # Dev screenshots / Playwright
-*.png
+/*.png
 .playwright-mcp/

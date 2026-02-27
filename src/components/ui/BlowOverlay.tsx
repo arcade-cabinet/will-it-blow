@@ -203,7 +203,7 @@ export const BlowOverlay: React.FC = () => {
 						key="blowBtn"
 						style={isBlowing ? styles.releaseButton : styles.blowButton}
 						onPressIn={handlePressIn}
-						onPressOut={handlePressOut}
+						onPress={handlePressOut}
 						activeOpacity={0.8}
 					>
 						<Text
