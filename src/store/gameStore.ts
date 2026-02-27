@@ -1,0 +1,101 @@
+import { create } from 'zustand';
+
+export interface GameState {
+  // Progression
+  currentChallenge: number;
+  challengeScores: number[];
+  gameStatus: 'menu' | 'playing' | 'victory' | 'defeat';
+
+  // Current challenge
+  strikes: number;
+  challengeProgress: number;
+
+  // Meta
+  hintsRemaining: number;
+  totalGamesPlayed: number;
+
+  // Variant seed
+  variantSeed: number;
+
+  // Actions
+  startNewGame: () => void;
+  continueGame: () => void;
+  completeChallenge: (score: number) => void;
+  addStrike: () => void;
+  useHint: () => void;
+  setChallengeProgress: (progress: number) => void;
+  returnToMenu: () => void;
+}
+
+const TOTAL_CHALLENGES = 5;
+const INITIAL_HINTS = 3;
+const MAX_STRIKES = 3;
+
+export const INITIAL_GAME_STATE = {
+  currentChallenge: 0,
+  challengeScores: [] as number[],
+  gameStatus: 'menu' as const,
+  strikes: 0,
+  challengeProgress: 0,
+  hintsRemaining: INITIAL_HINTS,
+  totalGamesPlayed: 0,
+  variantSeed: 0,
+};
+
+export const useGameStore = create<GameState>()((set) => ({
+  ...INITIAL_GAME_STATE,
+
+  startNewGame: () =>
+    set((state) => ({
+      currentChallenge: 0,
+      challengeScores: [],
+      gameStatus: 'playing',
+      strikes: 0,
+      challengeProgress: 0,
+      hintsRemaining: INITIAL_HINTS,
+      totalGamesPlayed: state.totalGamesPlayed + 1,
+      variantSeed: Date.now(),
+    })),
+
+  continueGame: () =>
+    set({
+      gameStatus: 'playing',
+      strikes: 0,
+      challengeProgress: 0,
+    }),
+
+  completeChallenge: (score: number) =>
+    set((state) => {
+      const nextChallenge = state.currentChallenge + 1;
+      const scores = [...state.challengeScores, score];
+      const isLastChallenge = nextChallenge >= TOTAL_CHALLENGES;
+
+      return {
+        challengeScores: scores,
+        currentChallenge: nextChallenge,
+        strikes: 0,
+        challengeProgress: 0,
+        gameStatus: isLastChallenge ? 'victory' : state.gameStatus,
+      };
+    }),
+
+  addStrike: () =>
+    set((state) => {
+      const newStrikes = state.strikes + 1;
+      return {
+        strikes: newStrikes,
+        gameStatus: newStrikes >= MAX_STRIKES ? 'defeat' : state.gameStatus,
+      };
+    }),
+
+  useHint: () =>
+    set((state) => ({
+      hintsRemaining: Math.max(0, state.hintsRemaining - 1),
+    })),
+
+  setChallengeProgress: (progress: number) =>
+    set({ challengeProgress: progress }),
+
+  returnToMenu: () =>
+    set({ gameStatus: 'menu', strikes: 0, challengeProgress: 0 }),
+}));
