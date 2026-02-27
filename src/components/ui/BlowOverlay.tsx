@@ -181,32 +181,39 @@ export const BlowOverlay: React.FC = () => {
 	// --- BLOWING sub-phase ---
 	if (subPhase === "blowing") {
 		return (
-			<View style={styles.container}>
-				<Animated.Text
-					style={[
-						styles.windEmojiLarge,
-						{ transform: [{ rotate: wobbleRotation }] },
-					]}
-				>
-					{"\uD83C\uDF2C\uFE0F"}
-				</Animated.Text>
-
-				<View style={styles.progressContainer}>
-					<ProgressBar
-						value={holdPower}
-						max={100}
-						color="#2196F3"
-						label="BLOW POWER"
-					/>
+			<View style={styles.gameplayOverlay} pointerEvents="box-none">
+				{/* Top: wind emoji + label */}
+				<View style={styles.topSection}>
+					<Animated.Text
+						style={[
+							styles.windEmojiLarge,
+							{ transform: [{ rotate: wobbleRotation }] },
+						]}
+					>
+						{"\uD83C\uDF2C\uFE0F"}
+					</Animated.Text>
+					<Text style={styles.blowingLabel}>BLOWING!</Text>
 				</View>
 
-				<TouchableOpacity
-					style={styles.releaseButton}
-					onPressOut={handlePressOut}
-					activeOpacity={0.8}
-				>
-					<Text style={styles.releaseButtonText}>RELEASE!</Text>
-				</TouchableOpacity>
+				{/* Bottom: progress bar + release button */}
+				<View style={styles.bottomSection}>
+					<View style={styles.progressContainer}>
+						<ProgressBar
+							value={holdPower}
+							max={100}
+							color="#2196F3"
+							label="BLOW POWER"
+						/>
+					</View>
+
+					<TouchableOpacity
+						style={styles.releaseButton}
+						onPressOut={handlePressOut}
+						activeOpacity={0.8}
+					>
+						<Text style={styles.releaseButtonText}>RELEASE!</Text>
+					</TouchableOpacity>
+				</View>
 
 				<SfxText
 					texts={[
@@ -292,6 +299,33 @@ const styles = StyleSheet.create({
 		justifyContent: "center",
 		padding: 20,
 	},
+	gameplayOverlay: {
+		...StyleSheet.absoluteFillObject,
+		justifyContent: "space-between",
+		alignItems: "center",
+		paddingTop: 60,
+		paddingBottom: 30,
+		paddingHorizontal: 24,
+		zIndex: 100,
+	},
+	topSection: {
+		alignItems: "center",
+		width: "100%",
+	},
+	bottomSection: {
+		alignItems: "center",
+		width: "100%",
+	},
+	blowingLabel: {
+		fontSize: 24,
+		fontWeight: "900",
+		fontFamily: "Bangers",
+		color: "#64B5F6",
+		letterSpacing: 2,
+		textShadowColor: "rgba(33, 150, 243, 0.4)",
+		textShadowOffset: { width: 0, height: 0 },
+		textShadowRadius: 8,
+	},
 	phaseTitle: {
 		fontSize: 36,
 		fontWeight: "900",
@@ -346,8 +380,7 @@ const styles = StyleSheet.create({
 	},
 	progressContainer: {
 		width: "100%",
-		maxWidth: 300,
-		marginBottom: 20,
+		marginBottom: 16,
 	},
 	releaseButton: {
 		backgroundColor: "#F44336",

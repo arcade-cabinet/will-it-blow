@@ -169,6 +169,32 @@ export const GrinderScene = () => {
 		bowl.material = bowlMat;
 		bowl.position.y = -1.5;
 
+		// ----- Ground surface (butcher block counter) -----
+		const ground = MeshBuilder.CreateDisc(
+			"ground",
+			{ radius: 8, tessellation: 48 },
+			scene,
+		);
+		const groundMat = new StandardMaterial("groundMat", scene);
+		groundMat.diffuseColor = new Color3(0.35, 0.2, 0.1);
+		groundMat.specularColor = new Color3(0.15, 0.1, 0.05);
+		ground.material = groundMat;
+		ground.position.y = -2.5;
+		ground.rotation.x = Math.PI / 2;
+
+		// ----- Back wall panel for depth -----
+		const backWall = MeshBuilder.CreatePlane(
+			"backWall",
+			{ width: 16, height: 10 },
+			scene,
+		);
+		const backWallMat = new StandardMaterial("backWallMat", scene);
+		backWallMat.diffuseColor = new Color3(0.28, 0.16, 0.08);
+		backWallMat.specularColor = new Color3(0.05, 0.03, 0.02);
+		backWall.material = backWallMat;
+		backWall.position.y = 2;
+		backWall.position.z = 3;
+
 		// ----- Ground meat accumulator -----
 		const meatBall = MeshBuilder.CreateSphere(
 			"meatBall",
@@ -187,9 +213,9 @@ export const GrinderScene = () => {
 		const allCreatedMeshes: AbstractMesh[] = [];
 		const ingredientMats: StandardMaterial[] = [];
 		const shelfPositions = [
-			new Vector3(-4, 2, 0),
-			new Vector3(-4, 2, 1),
-			new Vector3(-4, 2, -1),
+			new Vector3(-3, 2, 0),
+			new Vector3(-3, 2, 1.2),
+			new Vector3(-3, 2, -1.2),
 		];
 
 		for (let i = 0; i < Math.min(ingredients.length, 3); i++) {
@@ -251,9 +277,6 @@ export const GrinderScene = () => {
 		let pickedMesh: AbstractMesh | null = null;
 		let lastPointerPos = { x: 0, y: 0 };
 
-		// Detach camera controls during ingredient drag to prevent orbit interference
-		const camera = scene.activeCamera;
-
 		scene.onPointerDown = (evt) => {
 			const pick = scene.pick(
 				evt.offsetX ?? scene.pointerX,
@@ -266,8 +289,6 @@ export const GrinderScene = () => {
 			) {
 				pickedMesh = pick.pickedMesh;
 				lastPointerPos = { x: scene.pointerX, y: scene.pointerY };
-				// Stop camera from orbiting while dragging ingredient
-				if (camera) camera.detachControl();
 			}
 		};
 
@@ -286,11 +307,6 @@ export const GrinderScene = () => {
 		};
 
 		scene.onPointerUp = () => {
-			if (pickedMesh && camera) {
-				// Re-attach camera controls after ingredient drop
-				const canvas = scene.getEngine().getRenderingCanvas();
-				if (canvas) camera.attachControl(canvas, true);
-			}
 			pickedMesh = null;
 		};
 
@@ -425,6 +441,10 @@ export const GrinderScene = () => {
 			bowlMat.dispose();
 			meatBall.dispose();
 			meatBallMat.dispose();
+			ground.dispose();
+			groundMat.dispose();
+			backWall.dispose();
+			backWallMat.dispose();
 		};
 	}, [scene]);
 

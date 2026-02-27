@@ -2,7 +2,6 @@ import {
 	Color3,
 	MeshBuilder,
 	StandardMaterial,
-	Vector3,
 } from "@babylonjs/core";
 import { useEffect, useState } from "react";
 import { useScene } from "reactylon";
@@ -116,8 +115,37 @@ export const StufferScene = () => {
 		let currentStuffProgress = stuffProgress;
 		let dragSpeed = 0;
 
-		// Detach camera controls during plunger drag to prevent orbit interference
-		const camera = scene.activeCamera;
+		// ---------------------------------------------------------------
+		// Ground surface (metal counter)
+		// ---------------------------------------------------------------
+		const groundMat = new StandardMaterial("groundMat", scene);
+		groundMat.diffuseColor = new Color3(0.2, 0.2, 0.22);
+		groundMat.specularColor = new Color3(0.3, 0.3, 0.32);
+
+		const ground = MeshBuilder.CreateDisc(
+			"ground",
+			{ radius: 6 },
+			scene,
+		);
+		ground.rotation.x = Math.PI / 2;
+		ground.position.y = -1.2;
+		ground.material = groundMat;
+
+		// ---------------------------------------------------------------
+		// Back wall panel
+		// ---------------------------------------------------------------
+		const wallMat = new StandardMaterial("wallMat", scene);
+		wallMat.diffuseColor = new Color3(0.25, 0.25, 0.28);
+		wallMat.specularColor = new Color3(0.15, 0.15, 0.18);
+
+		const backWall = MeshBuilder.CreatePlane(
+			"backWall",
+			{ width: 12, height: 6 },
+			scene,
+		);
+		backWall.position.z = 2;
+		backWall.position.y = 1.8;
+		backWall.material = wallMat;
 
 		scene.onPointerDown = (evt) => {
 			const px = evt.offsetX ?? scene.pointerX;
@@ -133,7 +161,6 @@ export const StufferScene = () => {
 			) {
 				draggingPlunger = true;
 				lastX = scene.pointerX;
-				if (camera) camera.detachControl();
 			}
 		};
 
@@ -157,10 +184,6 @@ export const StufferScene = () => {
 		};
 
 		scene.onPointerUp = () => {
-			if (draggingPlunger && camera) {
-				const canvas = scene.getEngine().getRenderingCanvas();
-				if (canvas) camera.attachControl(canvas, true);
-			}
 			draggingPlunger = false;
 		};
 
@@ -258,11 +281,15 @@ export const StufferScene = () => {
 			plunger.dispose();
 			plungerHandle.dispose();
 			casing.dispose();
+			ground.dispose();
+			backWall.dispose();
 
 			bodyMat.dispose();
 			plungerMat.dispose();
 			handleMat.dispose();
 			casingMat.dispose();
+			groundMat.dispose();
+			wallMat.dispose();
 
 			if (leftKnot) leftKnot.dispose();
 			if (rightKnot) rightKnot.dispose();

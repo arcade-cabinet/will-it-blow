@@ -58,6 +58,34 @@ export const CookScene = () => {
 		burner.position.y = -0.3;
 		burner.rotation.x = Math.PI / 2;
 
+		// --- Stove surface ---
+
+		const stoveSurface = MeshBuilder.CreateDisc(
+			"stoveSurface",
+			{ radius: 4, tessellation: 48 },
+			scene,
+		);
+		const stoveSurfaceMat = new StandardMaterial("stoveSurfaceMat", scene);
+		stoveSurfaceMat.diffuseColor = new Color3(0.08, 0.08, 0.1);
+		stoveSurfaceMat.specularColor = new Color3(0.15, 0.15, 0.15);
+		stoveSurfaceMat.emissiveColor = new Color3(0.03, 0.015, 0.005);
+		stoveSurface.material = stoveSurfaceMat;
+		stoveSurface.position.y = -0.35;
+		stoveSurface.rotation.x = Math.PI / 2;
+
+		// --- Kitchen counter ---
+
+		const counter = MeshBuilder.CreateBox(
+			"counter",
+			{ width: 10, height: 0.3, depth: 6 },
+			scene,
+		);
+		const counterMat = new StandardMaterial("counterMat", scene);
+		counterMat.diffuseColor = new Color3(0.18, 0.1, 0.06);
+		counterMat.specularColor = new Color3(0.05, 0.05, 0.05);
+		counter.material = counterMat;
+		counter.position.y = -0.6;
+
 		// --- Frying Pan ---
 
 		const panRim = MeshBuilder.CreateTorus(
@@ -168,8 +196,6 @@ export const CookScene = () => {
 		let lastPointerPos = { x: 0, y: 0 };
 
 		// --- Pointer interactions ---
-		// Detach camera controls during sausage drag to prevent orbit interference
-		const camera = scene.activeCamera;
 
 		scene.onPointerDown = (evt: any) => {
 			const pick = scene.pick(
@@ -188,7 +214,6 @@ export const CookScene = () => {
 				}
 				isDragging = true;
 				lastPointerPos = { x: scene.pointerX, y: scene.pointerY };
-				if (camera) camera.detachControl();
 			}
 		};
 
@@ -218,10 +243,6 @@ export const CookScene = () => {
 		};
 
 		scene.onPointerUp = () => {
-			if (isDragging && camera) {
-				const canvas = scene.getEngine().getRenderingCanvas();
-				if (canvas) camera.attachControl(canvas, true);
-			}
 			isDragging = false;
 		};
 
@@ -474,6 +495,10 @@ export const CookScene = () => {
 			handleMat.dispose();
 			burner.dispose();
 			burnerMat.dispose();
+			stoveSurface.dispose();
+			stoveSurfaceMat.dispose();
+			counter.dispose();
+			counterMat.dispose();
 		};
 	}, [scene]);
 

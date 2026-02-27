@@ -1,5 +1,6 @@
 import * as BABYLON from "@babylonjs/core";
 import {
+	ArcRotateCamera,
 	CannonJSPlugin,
 	type Camera,
 	Color4,
@@ -8,10 +9,11 @@ import {
 	Vector3,
 } from "@babylonjs/core";
 import * as CANNON from "cannon-es";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Scene } from "reactylon";
 import { Engine } from "reactylon/web";
 import { useGame } from "../engine/GameEngine";
+import type { GamePhase } from "../engine/Constants";
 import { TitleScene } from "./scenes/TitleScene";
 import { GrinderScene } from "./scenes/GrinderScene";
 import { StufferScene } from "./scenes/StufferScene";
@@ -21,6 +23,33 @@ import { TasteScene } from "./scenes/TasteScene";
 
 // cannon-es compat: Babylon's CannonJSPlugin reads from globalThis.CANNON
 (globalThis as any).CANNON = CANNON;
+
+/**
+ * Per-phase camera compositions.
+ * Each entry defines target, alpha, beta, radius for optimal scene framing.
+ */
+const CAMERA_COMPOSITIONS: Record<
+	string,
+	{ target: [number, number, number]; alpha: number; beta: number; radius: number }
+> = {
+	// Title/select/results: Mr. Sausage centered, slight hero angle
+	title: { target: [0, 0.3, 0], alpha: -Math.PI / 2, beta: Math.PI / 2.5, radius: 10 },
+	select: { target: [0, 0.3, 0], alpha: -Math.PI / 2, beta: Math.PI / 2.5, radius: 10 },
+	results: { target: [0, 0.3, 0], alpha: -Math.PI / 2, beta: Math.PI / 2.5, radius: 10 },
+	// Grind: Framed on grinder + ingredient shelf, slightly closer
+	grind: { target: [-0.5, 0.5, 0], alpha: -Math.PI / 2, beta: Math.PI / 2.5, radius: 9 },
+	// Stuff: Horizontal stuffer, offset right to show casing extension
+	stuff: { target: [0.5, 0, 0], alpha: -Math.PI / 2, beta: Math.PI / 2.3, radius: 9 },
+	// Blow: Pulled back to show full tube-to-wall distance
+	blow: { target: [0, 0, 2], alpha: -Math.PI / 2, beta: Math.PI / 2.5, radius: 12 },
+	// Cook: More top-down to see frying pan + sausage from above
+	cook: { target: [0, 0, 0], alpha: -Math.PI / 2, beta: Math.PI / 3, radius: 7 },
+	// Taste: Close-up of plated sausage
+	taste: { target: [0, 0.3, 0], alpha: -Math.PI / 2, beta: Math.PI / 2.5, radius: 8 },
+};
+
+/** Phases where camera orbit should be locked to prevent accidental rotation */
+const LOCKED_PHASES = new Set<GamePhase>(["grind", "stuff", "blow", "cook", "taste"]);
 
 export const GameWorld = () => {
 	const { phase } = useGame();
@@ -53,7 +82,7 @@ export const GameWorld = () => {
 
 		// Camera
 		scene.createDefaultCameraOrLight(true, undefined, true);
-		const cam = scene.activeCamera as BABYLON.ArcRotateCamera;
+		const cam = scene.activeCamera as ArcRotateCamera;
 		cam.alpha = -Math.PI / 2;
 		cam.beta = Math.PI / 2.5;
 		cam.radius = 10;
@@ -62,6 +91,27 @@ export const GameWorld = () => {
 
 		setCamera(cam);
 	};
+
+	// --- Per-phase camera composition + orbit locking ---
+	useEffect(() => {
+		if (!camera) return;
+		const cam = camera as ArcRotateCamera;
+		const canvas = cam.getScene().getEngine().getRenderingCanvas();
+
+		const comp = CAMERA_COMPOSITIONS[phase];
+		if (comp) {
+			cam.target = new Vector3(comp.target[0], comp.target[1], comp.target[2]);
+			cam.alpha = comp.alpha;
+			cam.beta = comp.beta;
+			cam.radius = comp.radius;
+		}
+
+		if (LOCKED_PHASES.has(phase)) {
+			cam.detachControl();
+		} else if (canvas) {
+			cam.attachControl(canvas, true);
+		}
+	}, [phase, camera]);
 
 	// reactylon Engine types are incomplete — antialias/style work at runtime
 	const engineProps = {

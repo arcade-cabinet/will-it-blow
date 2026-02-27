@@ -130,6 +130,46 @@ export const BlowScene = () => {
 		splatterParticles.start();
 
 		// ---------------------------------------------------------------
+		// Floor plane — large disc at y=-2
+		// ---------------------------------------------------------------
+		const floor = MeshBuilder.CreateDisc(
+			"floor",
+			{ radius: 8, tessellation: 48 },
+			scene,
+		);
+		const floorMat = new StandardMaterial("floorMat", scene);
+		floorMat.diffuseColor = new Color3(0.12, 0.12, 0.14);
+		floorMat.specularColor = new Color3(0.05, 0.05, 0.05);
+		floor.material = floorMat;
+		floor.rotation.x = Math.PI / 2; // lay flat
+		floor.position.y = -2;
+
+		// ---------------------------------------------------------------
+		// Side wall panels — enclosed chamber feel
+		// ---------------------------------------------------------------
+		const leftWall = MeshBuilder.CreatePlane(
+			"leftWall",
+			{ width: 12, height: 10 },
+			scene,
+		);
+		const leftWallMat = new StandardMaterial("leftWallMat", scene);
+		leftWallMat.diffuseColor = new Color3(0.08, 0.08, 0.1);
+		leftWall.material = leftWallMat;
+		leftWall.position = new Vector3(-6, 0, 2);
+		leftWall.rotation.y = Math.PI / 2; // face inward (+X)
+
+		const rightWall = MeshBuilder.CreatePlane(
+			"rightWall",
+			{ width: 12, height: 10 },
+			scene,
+		);
+		const rightWallMat = new StandardMaterial("rightWallMat", scene);
+		rightWallMat.diffuseColor = new Color3(0.08, 0.08, 0.1);
+		rightWall.material = rightWallMat;
+		rightWall.position = new Vector3(6, 0, 2);
+		rightWall.rotation.y = -Math.PI / 2; // face inward (-X)
+
+		// ---------------------------------------------------------------
 		// Pointer events for shake detection
 		// ---------------------------------------------------------------
 		const onPointerDown = () => {
@@ -220,6 +260,12 @@ export const BlowScene = () => {
 			tubeRingMat.dispose();
 			wall.dispose();
 			wallMat.dispose();
+			floor.dispose();
+			floorMat.dispose();
+			leftWall.dispose();
+			leftWallMat.dispose();
+			rightWall.dispose();
+			rightWallMat.dispose();
 
 			// Dispose all meat chunks
 			for (const chunk of chunksRef.current) {
