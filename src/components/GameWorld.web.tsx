@@ -9,7 +9,7 @@ import {
 	Vector3,
 } from "@babylonjs/core";
 import * as CANNON from "cannon-es";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Scene } from "reactylon";
 import { Engine } from "reactylon/web";
 import { useGame } from "../engine/GameEngine";
@@ -92,18 +92,47 @@ export const GameWorld = () => {
 		setCamera(cam);
 	};
 
+	// Ref to track and clean up camera animation observers
+	const camObserverRef = useRef<any>(null);
+
 	// --- Per-phase camera composition + orbit locking ---
 	useEffect(() => {
 		if (!camera) return;
 		const cam = camera as ArcRotateCamera;
-		const canvas = cam.getScene().getEngine().getRenderingCanvas();
+		const scene = cam.getScene();
+		const canvas = scene.getEngine().getRenderingCanvas();
+
+		// Remove previous animation observer if still running
+		if (camObserverRef.current) {
+			scene.onBeforeRenderObservable.remove(camObserverRef.current);
+			camObserverRef.current = null;
+		}
 
 		const comp = CAMERA_COMPOSITIONS[phase];
 		if (comp) {
-			cam.target = new Vector3(comp.target[0], comp.target[1], comp.target[2]);
-			cam.alpha = comp.alpha;
-			cam.beta = comp.beta;
-			cam.radius = comp.radius;
+			const targetVec = new Vector3(comp.target[0], comp.target[1], comp.target[2]);
+			const startAlpha = cam.alpha;
+			const startBeta = cam.beta;
+			const startRadius = cam.radius;
+			const startTarget = cam.target.clone();
+
+			let t = 0;
+			const observer = scene.onBeforeRenderObservable.add(() => {
+				const dt = scene.getEngine().getDeltaTime() / 1000;
+				t = Math.min(t + dt * 2.5, 1); // ~0.4s transition
+				const ease = 1 - Math.pow(1 - t, 3); // ease-out cubic
+
+				cam.alpha = startAlpha + (comp.alpha - startAlpha) * ease;
+				cam.beta = startBeta + (comp.beta - startBeta) * ease;
+				cam.radius = startRadius + (comp.radius - startRadius) * ease;
+				cam.target = Vector3.Lerp(startTarget, targetVec, ease);
+
+				if (t >= 1) {
+					scene.onBeforeRenderObservable.remove(observer);
+					camObserverRef.current = null;
+				}
+			});
+			camObserverRef.current = observer;
 		}
 
 		if (LOCKED_PHASES.has(phase)) {

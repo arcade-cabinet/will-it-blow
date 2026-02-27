@@ -38,8 +38,11 @@ const GameUI = () => {
 			{phase === "taste" && <TasteOverlay />}
 			{phase === "results" && <ResultsScreen />}
 
-			{/* Mr. Sausage avatar — visible during all phases except title */}
-			{phase !== "title" && !showButFirst && <MrSausageAvatar />}
+			{/* Mr. Sausage avatar — visible during select + results only.
+			    During gameplay phases, the 3D MrSausage is already in each scene. */}
+			{(phase === "select" || phase === "results") && !showButFirst && (
+				<MrSausageAvatar />
+			)}
 
 			{/* BUT FIRST modal — takes over everything */}
 			{showButFirst && <ButFirstEvent />}

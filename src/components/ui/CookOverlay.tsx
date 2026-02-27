@@ -180,6 +180,12 @@ export const CookOverlay: React.FC = () => {
 			<View style={styles.topSection}>
 				<Text style={styles.phaseTitle}>COOK THE SAUSAGE</Text>
 
+				{!done && !hasBurst && (
+					<Text style={styles.instruction}>
+						Click the sausage to flip it!
+					</Text>
+				)}
+
 				{hasBurst && (
 					<View style={styles.burstContainer}>
 						<Animated.Text
@@ -279,7 +285,15 @@ const styles = StyleSheet.create({
 		textShadowColor: "rgba(0, 0, 0, 0.5)",
 		textShadowOffset: { width: 2, height: 2 },
 		textShadowRadius: 4,
-		marginBottom: 20,
+		marginBottom: 8,
+	},
+	instruction: {
+		fontSize: 18,
+		color: "#FFFFFF",
+		fontFamily: "Bangers",
+		textAlign: "center",
+		letterSpacing: 1,
+		marginTop: 4,
 	},
 	startButton: {
 		backgroundColor: "#F44336",

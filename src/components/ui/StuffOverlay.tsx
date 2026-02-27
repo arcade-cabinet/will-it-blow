@@ -24,7 +24,7 @@ export const StuffOverlay: React.FC = () => {
 			setSubPhase("done");
 			setTimeout(() => tryButFirst("blow"), 1000);
 		}
-	}, [stuffProgress]);
+	}, [stuffProgress, subPhase, tryButFirst]);
 
 	// Countdown is centered overlay
 	if (subPhase === "countdown") {

@@ -84,7 +84,7 @@ export const TasteOverlay: React.FC = () => {
 				}),
 			]).start();
 		}
-	}, [subPhase]);
+	}, [subPhase, ratingFade, ratingNumberScale]);
 
 	const getRatingColor = (rating: number): string => {
 		if (rating >= 4) return "#4CAF50";
@@ -234,6 +234,7 @@ const styles = StyleSheet.create({
 	title: {
 		fontSize: 36,
 		fontWeight: "900",
+		fontFamily: "Bangers",
 		color: "#FF6B35",
 		textAlign: "center",
 		letterSpacing: 3,
@@ -245,6 +246,7 @@ const styles = StyleSheet.create({
 	subtitle: {
 		fontSize: 18,
 		color: "#FFD54F",
+		fontFamily: "Bangers",
 		textAlign: "center",
 		marginBottom: 24,
 	},
@@ -289,6 +291,7 @@ const styles = StyleSheet.create({
 		color: "#FFFFFF",
 		fontSize: 24,
 		fontWeight: "900",
+		fontFamily: "Bangers",
 		textAlign: "center",
 		letterSpacing: 1,
 	},
@@ -366,6 +369,7 @@ const styles = StyleSheet.create({
 		color: "#FFFFFF",
 		fontSize: 20,
 		fontWeight: "900",
+		fontFamily: "Bangers",
 		textAlign: "center",
 		letterSpacing: 1,
 	},

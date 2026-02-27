@@ -170,6 +170,5 @@ const styles = StyleSheet.create({
 	},
 	progressContainer: {
 		width: "100%",
-		maxWidth: 300,
 	},
 });
