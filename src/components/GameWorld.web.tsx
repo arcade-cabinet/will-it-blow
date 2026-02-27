@@ -1,5 +1,5 @@
 import * as CANNON from 'cannon-es';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Scene } from 'reactylon';
 import { Engine } from 'reactylon/web';
 import {
@@ -14,8 +14,6 @@ import {
   Vector3,
 } from '@babylonjs/core';
 import { useGameStore } from '../store/gameStore';
-import { useNavigationStore } from '../store/navigationStore';
-import { getWaypoint, type WaypointId } from '../engine/WaypointGraph';
 import { KitchenEnvironment } from './kitchen/KitchenEnvironment';
 import { CrtTelevision } from './kitchen/CrtTelevision';
 import { FridgeStation } from './kitchen/FridgeStation';
@@ -30,11 +28,24 @@ import type { IngredientVariant } from '../data/challenges/variants';
 // cannon-es compat: Babylon's CannonJSPlugin reads from globalThis.CANNON
 (globalThis as any).CANNON = CANNON;
 
+/** Camera positions for each challenge station, in order along the basement. */
+const STATION_CAMERAS: { position: [number, number, number]; lookAt: [number, number, number] }[] = [
+  // 0: Fridge (left side of room)
+  { position: [-4, 1.6, -2], lookAt: [-5, 1.2, -4] },
+  // 1: Grinder (center-left)
+  { position: [-1.5, 1.6, -3], lookAt: [-1.5, 1.0, -5] },
+  // 2: Stuffer (center-right)
+  { position: [1.5, 1.6, -2], lookAt: [2.5, 1.0, -4] },
+  // 3: Stove (right side)
+  { position: [4, 1.6, -3], lookAt: [4, 0.8, -5.5] },
+  // 4: Tasting (back to center, facing CRT TV on back wall)
+  { position: [0, 1.6, -3], lookAt: [0, 2.5, -6.8] },
+];
+
 export const GameWorld = () => {
   const { gameStatus, currentChallenge, variantSeed, challengeProgress, challengePressure, challengeIsPressing, challengeTemperature, challengeHeatLevel, strikes } = useGameStore();
-  const { currentWaypoint: navWaypoint } = useNavigationStore();
   const [camera, setCamera] = useState<Camera>();
-  const camObserverRef = useRef<Observer<BabylonScene> | null>(null);
+  const walkObserverRef = useRef<Observer<BabylonScene> | null>(null);
 
   // Fridge station state for 3D visual feedback
   const [fridgeSelectedIds, setFridgeSelectedIds] = useState<Set<number>>(new Set());
@@ -101,86 +112,78 @@ export const GameWorld = () => {
     scene.clearColor = new Color4(0.02, 0.02, 0.02, 1);
     scene.enablePhysics(new Vector3(0, -9.81, 0), new CannonJSPlugin());
 
-    // Dim ambient light (horror atmosphere)
+    // Dim ambient fill (fluorescent tubes in KitchenEnvironment provide main light)
     const ambientLight = new HemisphericLight('ambientLight', new Vector3(0, 1, 0), scene);
-    ambientLight.intensity = 0.3;
-    ambientLight.groundColor = new Color3(0.1, 0.08, 0.06);
+    ambientLight.intensity = 0.15;
+    ambientLight.groundColor = new Color3(0.1, 0.1, 0.1);
 
-    // FreeCamera at center waypoint
-    const startWp = getWaypoint('center');
+    // Start camera at station 0 (fridge)
+    const start = STATION_CAMERAS[0];
     const cam = new FreeCamera(
       'playerCamera',
-      new Vector3(startWp.position[0], startWp.position[1], startWp.position[2]),
+      new Vector3(start.position[0], start.position[1], start.position[2]),
       scene,
     );
-    cam.setTarget(new Vector3(startWp.lookAt[0], startWp.lookAt[1], startWp.lookAt[2]));
+    cam.setTarget(new Vector3(start.lookAt[0], start.lookAt[1], start.lookAt[2]));
     cam.minZ = 0.1;
 
-    // Disable WASD/arrow key movement (waypoint-only navigation)
     cam.keysUp = [];
     cam.keysDown = [];
     cam.keysLeft = [];
     cam.keysRight = [];
 
-    // Enable mouse/touch rotation
     cam.attachControl(scene.getEngine().getRenderingCanvas(), true);
 
     scene.activeCamera = cam;
     setCamera(cam);
   };
 
-  // Navigate to a new waypoint with smooth camera interpolation
-  const navigateToWaypoint = useCallback(
-    (targetId: WaypointId) => {
-      if (!camera) return;
-      const cam = camera as FreeCamera;
-      const scene = cam.getScene();
-      const target = getWaypoint(targetId);
-
-      // Remove previous animation
-      if (camObserverRef.current) {
-        scene.onBeforeRenderObservable.remove(camObserverRef.current);
-        camObserverRef.current = null;
-      }
-
-      const startPos = cam.position.clone();
-      const endPos = new Vector3(target.position[0], target.position[1], target.position[2]);
-      const endTarget = new Vector3(target.lookAt[0], target.lookAt[1], target.lookAt[2]);
-
-      let t = 0;
-      const observer = scene.onBeforeRenderObservable.add(() => {
-        const dt = scene.getEngine().getDeltaTime() / 1000;
-        t = Math.min(t + dt * 2.0, 1); // ~0.5s transition
-        const ease = 1 - Math.pow(1 - t, 3); // ease-out cubic
-
-        cam.position = Vector3.Lerp(startPos, endPos, ease);
-        cam.setTarget(Vector3.Lerp(cam.getTarget(), endTarget, ease * 0.5 + 0.5));
-
-        if (t >= 1) {
-          scene.onBeforeRenderObservable.remove(observer);
-          camObserverRef.current = null;
-        }
-      });
-      camObserverRef.current = observer;
-
-      useNavigationStore.getState().setCurrentWaypoint(targetId);
-    },
-    [camera],
-  );
-
-  // Register navigate function in the navigation store once camera is ready
+  // Auto-walk camera when currentChallenge changes
   useEffect(() => {
-    if (camera) {
-      useNavigationStore.getState().setNavigateTo(navigateToWaypoint);
-    }
-  }, [camera, navigateToWaypoint]);
+    if (!camera || gameStatus !== 'playing') return;
 
-  // Cleanup animation on unmount
+    const cam = camera as FreeCamera;
+    const scene = cam.getScene();
+    const target = STATION_CAMERAS[currentChallenge];
+    if (!target) return;
+
+    // Clean up any in-progress walk
+    if (walkObserverRef.current) {
+      scene.onBeforeRenderObservable.remove(walkObserverRef.current);
+      walkObserverRef.current = null;
+    }
+
+    const startPos = cam.position.clone();
+    const endPos = new Vector3(target.position[0], target.position[1], target.position[2]);
+    const endTarget = new Vector3(target.lookAt[0], target.lookAt[1], target.lookAt[2]);
+    const startTarget = cam.getTarget().clone();
+
+    // Skip animation if already at position (e.g. first challenge on game start)
+    if (Vector3.Distance(startPos, endPos) < 0.1) return;
+
+    let t = 0;
+    const observer = scene.onBeforeRenderObservable.add(() => {
+      const dt = scene.getEngine().getDeltaTime() / 1000;
+      t = Math.min(t + dt * 0.4, 1); // ~2.5 second walk
+      const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; // ease-in-out quadratic
+
+      cam.position = Vector3.Lerp(startPos, endPos, ease);
+      cam.setTarget(Vector3.Lerp(startTarget, endTarget, ease));
+
+      if (t >= 1) {
+        scene.onBeforeRenderObservable.remove(observer);
+        walkObserverRef.current = null;
+      }
+    });
+    walkObserverRef.current = observer;
+  }, [camera, currentChallenge, gameStatus]);
+
+  // Cleanup walk on unmount
   useEffect(() => {
     return () => {
-      if (camObserverRef.current && camera) {
+      if (walkObserverRef.current && camera) {
         const scene = (camera as FreeCamera).getScene();
-        scene.onBeforeRenderObservable.remove(camObserverRef.current);
+        scene.onBeforeRenderObservable.remove(walkObserverRef.current);
       }
     };
   }, [camera]);
