@@ -3,8 +3,7 @@ import { useScene } from 'reactylon';
 import {
 	Color3,
 	MeshBuilder,
-	PointLight,
-	ShadowGenerator,
+	SpotLight,
 	StandardMaterial,
 	Vector3,
 } from '@babylonjs/core';
@@ -23,10 +22,9 @@ export const KitchenEnvironment = () => {
 			scene,
 		);
 		const floorMat = new StandardMaterial('floorMat', scene);
-		floorMat.diffuseColor = new Color3(0.25, 0.22, 0.2);
-		floorMat.specularColor = new Color3(0.05, 0.05, 0.05);
+		floorMat.diffuseColor = new Color3(0.35, 0.33, 0.3);
+		floorMat.specularColor = new Color3(0.15, 0.15, 0.15);
 		floor.material = floorMat;
-		floor.receiveShadows = true;
 
 		// --- Ceiling ---
 
@@ -36,8 +34,8 @@ export const KitchenEnvironment = () => {
 			scene,
 		);
 		const ceilingMat = new StandardMaterial('ceilingMat', scene);
-		ceilingMat.diffuseColor = new Color3(0.18, 0.17, 0.16);
-		ceilingMat.specularColor = new Color3(0.02, 0.02, 0.02);
+		ceilingMat.diffuseColor = new Color3(0.7, 0.68, 0.65);
+		ceilingMat.specularColor = new Color3(0.05, 0.05, 0.05);
 		ceiling.material = ceilingMat;
 		ceiling.position.y = 4;
 		ceiling.rotation.x = Math.PI;
@@ -45,8 +43,8 @@ export const KitchenEnvironment = () => {
 		// --- Walls ---
 
 		const wallMat = new StandardMaterial('wallMat', scene);
-		wallMat.diffuseColor = new Color3(0.3, 0.28, 0.25);
-		wallMat.specularColor = new Color3(0.05, 0.05, 0.05);
+		wallMat.diffuseColor = new Color3(0.6, 0.58, 0.55);
+		wallMat.specularColor = new Color3(0.1, 0.1, 0.1);
 
 		// Back wall (CRT wall)
 		const backWall = MeshBuilder.CreatePlane(
@@ -87,66 +85,95 @@ export const KitchenEnvironment = () => {
 		rightWall.position = new Vector3(6, 2, 0);
 		rightWall.rotation.y = -Math.PI / 2;
 
-		// --- Swinging lightbulb ---
+		// --- Fluorescent Tube Fixtures ---
+		const tubePositions = [
+			new Vector3(-3, 3.8, -2),
+			new Vector3(0, 3.8, -3.5),
+			new Vector3(3, 3.8, -2),
+		];
 
-		// Point light
-		const bulbLight = new PointLight(
-			'bulbLight',
-			new Vector3(0, 3.5, 0),
-			scene,
-		);
-		bulbLight.diffuse = new Color3(1.0, 0.85, 0.6);
-		bulbLight.intensity = 1.5;
-		bulbLight.range = 15;
+		const tubeMeshes: any[] = [];
+		const tubeLights: SpotLight[] = [];
+		const tubeMats: StandardMaterial[] = [];
 
-		// Bulb sphere
-		const bulb = MeshBuilder.CreateSphere(
-			'bulb',
-			{ diameter: 0.2, segments: 8 },
-			scene,
-		);
-		const bulbMat = new StandardMaterial('bulbMat', scene);
-		bulbMat.emissiveColor = new Color3(1.0, 0.9, 0.5);
-		bulbMat.disableLighting = true;
-		bulb.material = bulbMat;
-		bulb.position = new Vector3(0, 3.5, 0);
+		const tubeMat = new StandardMaterial('tubeMat', scene);
+		tubeMat.emissiveColor = new Color3(0.95, 1.0, 0.9);
+		tubeMat.disableLighting = true;
+		tubeMats.push(tubeMat);
 
-		// Wire from ceiling to bulb
-		const wire = MeshBuilder.CreateCylinder(
-			'wire',
-			{ diameter: 0.02, height: 0.5 },
-			scene,
-		);
-		const wireMat = new StandardMaterial('wireMat', scene);
-		wireMat.diffuseColor = new Color3(0.1, 0.1, 0.1);
-		wire.material = wireMat;
-		wire.position = new Vector3(0, 3.75, 0);
+		for (let i = 0; i < tubePositions.length; i++) {
+			const pos = tubePositions[i];
 
-		// --- Shadow generator ---
+			// Tube mesh (long thin box — the glass tube)
+			const tube = MeshBuilder.CreateBox(
+				`fluorescentTube${i}`,
+				{ width: 0.12, height: 0.06, depth: 3.0 },
+				scene,
+			);
+			tube.material = tubeMat;
+			tube.position = pos;
+			tubeMeshes.push(tube);
 
-		const shadowGen = new ShadowGenerator(512, bulbLight);
-		shadowGen.usePoissonSampling = true;
+			// Housing/fixture (slightly wider metal housing above tube)
+			const housing = MeshBuilder.CreateBox(
+				`tubeHousing${i}`,
+				{ width: 0.3, height: 0.08, depth: 3.2 },
+				scene,
+			);
+			const housingMat = new StandardMaterial(`tubeHousingMat${i}`, scene);
+			housingMat.diffuseColor = new Color3(0.6, 0.6, 0.6);
+			housingMat.specularColor = new Color3(0.1, 0.1, 0.1);
+			housing.material = housingMat;
+			housing.position = new Vector3(pos.x, pos.y + 0.06, pos.z);
+			tubeMeshes.push(housing);
+			tubeMats.push(housingMat);
 
-		// --- Swing animation ---
+			// SpotLight pointing straight down
+			const light = new SpotLight(
+				`tubeLight${i}`,
+				new Vector3(pos.x, pos.y - 0.05, pos.z),
+				new Vector3(0, -1, 0),
+				Math.PI / 2.5,
+				1.5,
+				scene,
+			);
+			light.diffuse = new Color3(0.95, 1.0, 0.9);
+			light.intensity = 2.0;
+			light.range = 8;
+			tubeLights.push(light);
+		}
 
-		let time = 0;
+		// --- Flicker animation ---
+		let flickerTime = 0;
+		let nextFlickerAt = 2 + Math.random() * 3;
+		let flickeringTube = -1;
+		let flickerEnd = 0;
 
 		const observer = scene.onBeforeRenderObservable.add(() => {
 			const dt = scene.getEngine().getDeltaTime() / 1000;
-			time += dt;
+			flickerTime += dt;
 
-			// Gentle swing
-			const swingOffset = Math.sin(time * 0.8) * 0.15;
+			// Check if it's time for a new flicker
+			if (flickerTime > nextFlickerAt && flickeringTube === -1) {
+				flickeringTube = Math.floor(Math.random() * tubePositions.length);
+				flickerEnd = flickerTime + 0.1 + Math.random() * 0.3;
+				nextFlickerAt = flickerTime + 3 + Math.random() * 8;
+			}
 
-			bulb.position.x = swingOffset;
-			bulbLight.position.x = swingOffset;
-			wire.position.x = swingOffset;
+			// Apply flicker
+			for (let i = 0; i < tubeLights.length; i++) {
+				if (i === flickeringTube && flickerTime < flickerEnd) {
+					const flash = Math.sin(flickerTime * 60) > 0 ? 0.3 : 2.0;
+					tubeLights[i].intensity = flash;
+				} else {
+					tubeLights[i].intensity = 2.0;
+				}
+			}
 
-			// Subtle tilt of the wire to follow the swing
-			wire.rotation.z = -swingOffset * 0.5;
-
-			// Subtle intensity flicker
-			bulbLight.intensity = 1.5 + Math.sin(time * 12) * 0.05;
+			// End flicker
+			if (flickeringTube !== -1 && flickerTime >= flickerEnd) {
+				flickeringTube = -1;
+			}
 		});
 
 		// --- Cleanup ---
@@ -154,14 +181,9 @@ export const KitchenEnvironment = () => {
 		return () => {
 			if (observer) scene.onBeforeRenderObservable.remove(observer);
 
-			shadowGen.dispose();
-
-			bulbLight.dispose();
-
-			bulb.dispose();
-			bulbMat.dispose();
-			wire.dispose();
-			wireMat.dispose();
+			for (const light of tubeLights) light.dispose();
+			for (const mesh of tubeMeshes) mesh.dispose();
+			for (const mat of tubeMats) mat.dispose();
 
 			floor.dispose();
 			floorMat.dispose();
