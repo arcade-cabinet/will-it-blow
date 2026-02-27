@@ -297,5 +297,5 @@ export const StufferScene = () => {
 		};
 	}, [scene]);
 
-	return <MrSausage3D reaction={reaction} position={[4, -1, 0]} scale={0.8} />;
+	return <MrSausage3D reaction={reaction} position={[-4, -1, 0]} scale={0.8} />;
 };

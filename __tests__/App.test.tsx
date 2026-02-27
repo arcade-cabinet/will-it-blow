@@ -102,3 +102,42 @@ describe("Full game scoring pipeline", () => {
 		expect(reachedKing).toBe(true);
 	});
 });
+
+describe("Game balance sanity checks", () => {
+	it("high-burst ingredients have lower taste (risk/reward trade-off)", () => {
+		const highBurst = INGREDIENTS.filter((i) => i.burstRisk >= 0.5);
+		const lowBurst = INGREDIENTS.filter((i) => i.burstRisk <= 0.2);
+		const avgHighTaste =
+			highBurst.reduce((a, i) => a + i.tasteMod, 0) / highBurst.length;
+		const avgLowTaste =
+			lowBurst.reduce((a, i) => a + i.tasteMod, 0) / lowBurst.length;
+		// High-burst ingredients should taste worse on average
+		expect(avgHighTaste).toBeLessThan(avgLowTaste);
+	});
+
+	it("absurd ingredients mostly have low taste", () => {
+		const absurd = INGREDIENTS.filter((i) => i.category === "absurd");
+		const avgTaste = absurd.reduce((a, i) => a + i.tasteMod, 0) / absurd.length;
+		expect(avgTaste).toBeLessThan(1);
+	});
+
+	it("ingredient pool has a balanced tier distribution", () => {
+		const great = INGREDIENTS.filter((i) => i.tasteMod >= 4).length;
+		const decent = INGREDIENTS.filter(
+			(i) => i.tasteMod >= 2 && i.tasteMod < 4,
+		).length;
+		const bad = INGREDIENTS.filter((i) => i.tasteMod < 2).length;
+		// Should have ingredients in all tiers for meaningful choices
+		expect(great).toBeGreaterThanOrEqual(4);
+		expect(decent).toBeGreaterThanOrEqual(4);
+		expect(bad).toBeGreaterThanOrEqual(4);
+	});
+
+	it("no ingredient is both perfect taste AND perfect blow (creates trade-offs)", () => {
+		for (const ing of INGREDIENTS) {
+			// No ingredient should be a "god tier" that maxes both dimensions
+			const combined = ing.tasteMod + ing.blowPower;
+			expect(combined).toBeLessThanOrEqual(8);
+		}
+	});
+});

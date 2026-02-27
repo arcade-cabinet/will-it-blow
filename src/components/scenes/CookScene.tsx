@@ -519,6 +519,6 @@ export const CookScene = () => {
 	}, [hasBurst, cookProgress]);
 
 	return (
-		<MrSausage3D reaction={reaction} position={[-4, -1, 0]} scale={0.8} />
+		<MrSausage3D reaction={reaction} position={[-2.5, 0, 2]} scale={0.55} />
 	);
 };

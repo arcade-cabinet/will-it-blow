@@ -1,79 +1,120 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# Will It Blow?
 
-# Getting Started
+A sausage-making mini-game inspired by the [Ordinary Sausage](https://www.youtube.com/@OrdinarySausage) YouTube channel. Grind absurd ingredients, stuff casings, test "Will It Blow?!", and earn your sausage title — from Sausage Disaster to THE SAUSAGE KING.
 
->**Note**: Make sure you have completed the [React Native - Environment Setup](https://reactnative.dev/docs/environment-setup) instructions till "Creating a new application" step, before proceeding.
+Built with React Native + Babylon.js (reactylon) + Expo. Runs on web, Android, and iOS.
 
-## Step 1: Start the Metro Server
+## Gameplay
 
-First, you will need to start **Metro**, the JavaScript _bundler_ that ships _with_ React Native.
+Six interactive phases, each a distinct physics-driven mini-game:
 
-To start Metro, run the following command from the _root_ of your React Native project:
+| Phase | Mechanic | Energy |
+|-------|----------|--------|
+| **Select** | Pick 1-3 ingredients from 25+ pool | Setup |
+| **Grind** | Drag-fling ingredients into grinder hopper | HIGH chaos |
+| **Stuff** | Drag plunger to fill casing, watch for stress | MEDIUM tension |
+| **Blow** | Hold to build pressure, release for splatter (0-5 Mark Ruffalos) | HIGH explosive |
+| **Cook** | Click sausage to flip, watch for burst | LOW suspense |
+| **Taste** | Cut open, reveal cross-section, get rated (0-5 stars) | Payoff |
 
-```bash
-# using npm
-npm start
+**Bonus:** "BUT FIRST!" mini-game interrupts randomly (60% chance) for bonus points.
 
-# OR using Yarn
-yarn start
+### Scoring
+
+```
+taste (60%) + blow (20%) + no-burst bonus (20%) + BUT FIRST bonus → 0-100
 ```
 
-## Step 2: Start your Application
+Titles: Sausage Disaster (0-19) → Apprentice → Maker → Chef → Master → **THE SAUSAGE KING** (100)
 
-Let Metro Bundler run in its _own_ terminal. Open a _new_ terminal from the _root_ of your React Native project. Run the following command to start your _Android_ or _iOS_ app:
+## Tech Stack
 
-### For Android
+- **3D Engine:** Babylon.js via [reactylon](https://github.com/nicolo-ribaudo/reactylon) — procedural meshes, no external models
+- **UI:** React Native overlays (cross-platform via react-native-web)
+- **Audio:** Tone.js synthesized sound effects (grinder noise, sizzle, jingles)
+- **Physics:** cannon-es for rigid body dynamics
+- **Platform:** Expo SDK 51 + Metro bundler (web, iOS, Android)
 
-```bash
-# using npm
-npm run android
-
-# OR using Yarn
-yarn android
-```
-
-### For iOS
+## Quick Start
 
 ```bash
-# using npm
-npm run ios
+# Install dependencies
+npm install
 
-# OR using Yarn
-yarn ios
+# Web (recommended for development)
+npx expo start --web
+
+# Android
+npx expo start --android
+
+# iOS
+npx expo start --ios
 ```
 
-If everything is set up _correctly_, you should see your new app running in your _Android Emulator_ or _iOS Simulator_ shortly provided you have set up your emulator/simulator correctly.
+## Project Structure
 
-This is one way to run your app — you can also run it directly from within Android Studio and Xcode respectively.
+```
+will-it-blow/
+├── App.tsx                     # Root layout (SafeAreaView + GameProvider + overlays)
+├── index.js                    # Expo entry point
+├── app.json                    # Expo config (web/ios/android)
+├── src/
+│   ├── engine/
+│   │   ├── GameEngine.tsx      # State machine + React context
+│   │   ├── SausagePhysics.ts   # Scoring math (5 pure functions)
+│   │   ├── Ingredients.ts      # 25 ingredients with stats
+│   │   ├── Constants.ts        # Phases, tiers, quotes, Mr. Sausage lines
+│   │   ├── AudioEngine.web.ts  # Tone.js audio (web)
+│   │   └── AudioEngine.ts      # No-op stub (native)
+│   └── components/
+│       ├── GameWorld.web.tsx    # 3D scene orchestrator + camera compositions
+│       ├── GameWorld.native.tsx # Native scene orchestrator (NativeEngine)
+│       ├── scenes/             # 6 Babylon.js 3D scenes (one per phase)
+│       ├── characters/         # MrSausage3D procedural character
+│       └── ui/                 # 16 React Native overlay components
+├── __tests__/                  # Jest test suite (61 tests)
+├── android/                    # Native Android project (Gradle)
+├── ios/                        # Native iOS project (Xcode)
+└── web/                        # Custom Expo web template
+```
 
-## Step 3: Modifying your App
+## Testing
 
-Now that you have successfully run the app, let's modify it.
+```bash
+npm test
+```
 
-1. Open `App.tsx` in your text editor of choice and edit some lines.
-2. For **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Developer Menu** (<kbd>Ctrl</kbd> + <kbd>M</kbd> (on Window and Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (on macOS)) to see your changes!
+61 tests across 4 suites:
+- **SausagePhysics** (32): Blow, burst, taste, scoring, tier functions
+- **Ingredients** (10): Data integrity, pool randomization
+- **Constants** (11): Phase ordering, content coverage
+- **Pipeline** (8): End-to-end scoring + balance sanity checks
 
-   For **iOS**: Hit <kbd>Cmd ⌘</kbd> + <kbd>R</kbd> in your iOS Simulator to reload the app and see your changes!
+## CI/CD
 
-## Congratulations! :tada:
+| Workflow | Trigger | What it does |
+|----------|---------|-------------|
+| **CI** (`ci.yml`) | Push to `main`/`feat/**`, PRs | Runs tests, builds Android debug APK (uploaded as artifact) |
+| **CD** (`cd.yml`) | Push to `main`, manual | Exports web build, deploys to GitHub Pages |
 
-You've successfully run and modified your React Native App. :partying_face:
+## Architecture
 
-### Now what?
+Three-layer rendering:
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [Introduction to React Native](https://reactnative.dev/docs/getting-started).
+1. **Babylon.js 3D scene** — procedural meshes, physics, particles, per-phase camera compositions
+2. **React Native overlay** — UI controls, progress bars, ratings, phase tracker
+3. **Mr. Sausage 3D character** — self-lit procedural mesh (head + sunglasses + mustache + chef hat), reaction-driven animations in every scene
 
-# Troubleshooting
+Platform splitting via Metro file extensions:
+- `GameWorld.web.tsx` / `GameWorld.native.tsx` — Engine wrapper
+- `AudioEngine.web.ts` / `AudioEngine.ts` — Tone.js vs no-op
 
-If you can't get this to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+State machine flow:
+```
+title → select → grind → stuff → [BUT FIRST?] → blow → [BUT FIRST?] → cook → taste → results
+```
 
-# Learn More
+## Design Documents
 
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+- [`docs/plans/2026-02-26-will-it-blow-game-design.md`](docs/plans/2026-02-26-will-it-blow-game-design.md) — Full game design document
+- [`docs/plans/2026-02-26-gameplay-elevation-design.md`](docs/plans/2026-02-26-gameplay-elevation-design.md) — Physics mini-game design + Mr. Sausage 3D character spec

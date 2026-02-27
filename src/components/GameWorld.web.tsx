@@ -38,8 +38,8 @@ const CAMERA_COMPOSITIONS: Record<
 	results: { target: [0, 0.3, 0], alpha: -Math.PI / 2, beta: Math.PI / 2.5, radius: 10 },
 	// Grind: Framed on grinder + ingredient shelf, slightly closer
 	grind: { target: [-0.5, 0.5, 0], alpha: -Math.PI / 2, beta: Math.PI / 2.5, radius: 9 },
-	// Stuff: Horizontal stuffer, offset right to show casing extension
-	stuff: { target: [0.5, 0, 0], alpha: -Math.PI / 2, beta: Math.PI / 2.3, radius: 9 },
+	// Stuff: Horizontal stuffer, offset right to show casing extension + MrSausage on left
+	stuff: { target: [1.5, 0, 0], alpha: -Math.PI / 2, beta: Math.PI / 2.3, radius: 10 },
 	// Blow: Pulled back to show full tube-to-wall distance
 	blow: { target: [0, 0, 2], alpha: -Math.PI / 2, beta: Math.PI / 2.5, radius: 12 },
 	// Cook: More top-down to see frying pan + sausage from above

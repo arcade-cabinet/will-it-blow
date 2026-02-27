@@ -459,6 +459,6 @@ export const TasteScene = () => {
 	}, [scene, ingredients, sausageRating]);
 
 	return (
-		<MrSausage3D reaction={reaction} position={[0, -1, -3]} scale={0.9} />
+		<MrSausage3D reaction={reaction} position={[4, 0.2, -1]} scale={0.7} />
 	);
 };
