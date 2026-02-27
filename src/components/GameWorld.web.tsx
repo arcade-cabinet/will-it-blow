@@ -21,6 +21,7 @@ import { CrtTelevision } from './kitchen/CrtTelevision';
 import { FridgeStation } from './kitchen/FridgeStation';
 import { GrinderStation } from './kitchen/GrinderStation';
 import { StufferStation } from './kitchen/StufferStation';
+import { StoveStation } from './kitchen/StoveStation';
 import { getRandomIngredientPool } from '../engine/Ingredients';
 import { matchesCriteria } from '../engine/IngredientMatcher';
 import { pickVariant } from '../engine/ChallengeRegistry';
@@ -30,7 +31,7 @@ import type { IngredientVariant } from '../data/challenges/variants';
 (globalThis as any).CANNON = CANNON;
 
 export const GameWorld = () => {
-  const { gameStatus, currentChallenge, variantSeed, challengeProgress, challengePressure, challengeIsPressing, strikes } = useGameStore();
+  const { gameStatus, currentChallenge, variantSeed, challengeProgress, challengePressure, challengeIsPressing, challengeTemperature, challengeHeatLevel, strikes } = useGameStore();
   const { currentWaypoint: navWaypoint } = useNavigationStore();
   const [camera, setCamera] = useState<Camera>();
   const camObserverRef = useRef<Observer<BabylonScene> | null>(null);
@@ -42,6 +43,7 @@ export const GameWorld = () => {
   const showFridge = gameStatus === 'playing' && currentChallenge === 0;
   const showGrinder = gameStatus === 'playing' && currentChallenge === 1;
   const showStuffer = gameStatus === 'playing' && currentChallenge === 2;
+  const showStove = gameStatus === 'playing' && currentChallenge === 3;
 
   // Grinder station state derived from store
   const grinderCrankAngle = useRef(0);
@@ -223,6 +225,13 @@ export const GameWorld = () => {
                 pressureLevel={challengePressure}
                 isPressing={challengeIsPressing}
                 hasBurst={stufferBurst}
+              />
+            )}
+            {showStove && (
+              <StoveStation
+                temperature={challengeTemperature}
+                heatLevel={challengeHeatLevel}
+                holdProgress={challengeProgress}
               />
             )}
           </>

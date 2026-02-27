@@ -11,6 +11,8 @@ export interface GameState {
   challengeProgress: number;
   challengePressure: number;
   challengeIsPressing: boolean;
+  challengeTemperature: number;
+  challengeHeatLevel: number;
 
   // Meta
   hintsRemaining: number;
@@ -28,6 +30,8 @@ export interface GameState {
   setChallengeProgress: (progress: number) => void;
   setChallengePressure: (pressure: number) => void;
   setChallengeIsPressing: (pressing: boolean) => void;
+  setChallengeTemperature: (temperature: number) => void;
+  setChallengeHeatLevel: (heatLevel: number) => void;
   returnToMenu: () => void;
 }
 
@@ -43,6 +47,8 @@ export const INITIAL_GAME_STATE = {
   challengeProgress: 0,
   challengePressure: 0,
   challengeIsPressing: false,
+  challengeTemperature: 70,
+  challengeHeatLevel: 0,
   hintsRemaining: INITIAL_HINTS,
   totalGamesPlayed: 0,
   variantSeed: 0,
@@ -60,6 +66,8 @@ export const useGameStore = create<GameState>()((set) => ({
       challengeProgress: 0,
       challengePressure: 0,
       challengeIsPressing: false,
+      challengeTemperature: 70,
+      challengeHeatLevel: 0,
       hintsRemaining: INITIAL_HINTS,
       totalGamesPlayed: state.totalGamesPlayed + 1,
       variantSeed: Date.now(),
@@ -72,6 +80,8 @@ export const useGameStore = create<GameState>()((set) => ({
       challengeProgress: 0,
       challengePressure: 0,
       challengeIsPressing: false,
+      challengeTemperature: 70,
+      challengeHeatLevel: 0,
     }),
 
   completeChallenge: (score: number) =>
@@ -87,6 +97,8 @@ export const useGameStore = create<GameState>()((set) => ({
         challengeProgress: 0,
         challengePressure: 0,
         challengeIsPressing: false,
+        challengeTemperature: 70,
+        challengeHeatLevel: 0,
         gameStatus: isLastChallenge ? 'victory' : state.gameStatus,
       };
     }),
@@ -114,6 +126,12 @@ export const useGameStore = create<GameState>()((set) => ({
   setChallengeIsPressing: (pressing: boolean) =>
     set({ challengeIsPressing: pressing }),
 
+  setChallengeTemperature: (temperature: number) =>
+    set({ challengeTemperature: temperature }),
+
+  setChallengeHeatLevel: (heatLevel: number) =>
+    set({ challengeHeatLevel: heatLevel }),
+
   returnToMenu: () =>
-    set({ gameStatus: 'menu', strikes: 0, challengeProgress: 0, challengePressure: 0, challengeIsPressing: false }),
+    set({ gameStatus: 'menu', strikes: 0, challengeProgress: 0, challengePressure: 0, challengeIsPressing: false, challengeTemperature: 70, challengeHeatLevel: 0 }),
 }));
