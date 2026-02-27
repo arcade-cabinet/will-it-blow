@@ -1,4 +1,3 @@
-import type { WaypointId } from "./WaypointGraph";
 import {
 	INGREDIENT_VARIANTS,
 	GRINDING_VARIANTS,
@@ -30,7 +29,7 @@ export const CHALLENGE_ORDER: ChallengeId[] = [
 export interface ChallengeConfig {
 	id: ChallengeId;
 	name: string;
-	station: WaypointId;
+	station: string;
 	cameraOffset: [number, number, number];
 	description: string;
 }
