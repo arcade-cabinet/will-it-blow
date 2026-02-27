@@ -70,12 +70,14 @@ export const StufferScene = () => {
 
 		const plungerHandle = MeshBuilder.CreateBox(
 			"plungerHandle",
-			{ width: 0.15, height: 1.5, depth: 0.15 },
+			{ width: 0.4, height: 1.5, depth: 0.4 },
 			scene,
 		);
 		plungerHandle.position.x = -2;
 		plungerHandle.position.y = 0.9;
 		plungerHandle.material = handleMat;
+		plungerHandle.isPickable = true;
+		plunger.isPickable = true;
 
 		// ---------------------------------------------------------------
 		// Casing
@@ -114,15 +116,24 @@ export const StufferScene = () => {
 		let currentStuffProgress = stuffProgress;
 		let dragSpeed = 0;
 
+		// Detach camera controls during plunger drag to prevent orbit interference
+		const camera = scene.activeCamera;
+
 		scene.onPointerDown = (evt) => {
-			const pick = scene.pick(scene.pointerX, scene.pointerY);
+			const px = evt.offsetX ?? scene.pointerX;
+			const py = evt.offsetY ?? scene.pointerY;
+			const pick = scene.pick(px, py);
+			const name = pick?.pickedMesh?.name;
+			// Accept clicks on plunger, plungerHandle, or stufferBody (which often occludes plunger)
 			if (
 				pick?.hit &&
-				(pick.pickedMesh?.name === "plunger" ||
-					pick.pickedMesh?.name === "plungerHandle")
+				(name === "plunger" ||
+					name === "plungerHandle" ||
+					name === "stufferBody")
 			) {
 				draggingPlunger = true;
 				lastX = scene.pointerX;
+				if (camera) camera.detachControl();
 			}
 		};
 
@@ -146,6 +157,10 @@ export const StufferScene = () => {
 		};
 
 		scene.onPointerUp = () => {
+			if (draggingPlunger && camera) {
+				const canvas = scene.getEngine().getRenderingCanvas();
+				if (canvas) camera.attachControl(canvas, true);
+			}
 			draggingPlunger = false;
 		};
 

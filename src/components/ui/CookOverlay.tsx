@@ -173,8 +173,9 @@ export const CookOverlay: React.FC = () => {
 	}
 
 	// --- Active cooking UI ---
+	// pointerEvents="box-none" allows touch to pass through to 3D canvas for sausage flip/drag
 	return (
-		<View style={styles.container}>
+		<View style={styles.container} pointerEvents="box-none">
 			<Text style={styles.phaseTitle}>COOK THE SAUSAGE</Text>
 
 			{hasBurst && (

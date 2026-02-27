@@ -27,7 +27,7 @@ export const StuffOverlay: React.FC = () => {
 	}, [stuffProgress]);
 
 	return (
-		<View style={styles.overlay}>
+		<View style={styles.overlay} pointerEvents="box-none">
 			{/* Title */}
 			<Text style={styles.title}>STUFF THE CASING</Text>
 

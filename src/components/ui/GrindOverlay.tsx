@@ -51,8 +51,9 @@ export const GrindOverlay: React.FC = () => {
 	}
 
 	// Active grinding UI — drag instructions + progress
+	// pointerEvents="box-none" allows touch to pass through to 3D canvas for drag-fling
 	return (
-		<View style={styles.container}>
+		<View style={styles.container} pointerEvents="box-none">
 			<Text style={styles.instruction}>
 				Drag and fling ingredients into the grinder!
 			</Text>

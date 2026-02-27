@@ -26,6 +26,12 @@ export const CookScene = () => {
 	const { cookProgress, hasBurst, ingredients } = useGame();
 	const [reaction, setReaction] = useState<Reaction>("nervous");
 
+	// Refs to avoid rebuilding the entire scene on every cookProgress tick
+	const cookProgressRef = useRef(cookProgress);
+	const hasBurstRef = useRef(hasBurst);
+	useEffect(() => { cookProgressRef.current = cookProgress; }, [cookProgress]);
+	useEffect(() => { hasBurstRef.current = hasBurst; }, [hasBurst]);
+
 	// Refs for flip state (persist across renders without triggering re-render)
 	const flipStateRef = useRef({
 		flipped: false,
@@ -162,6 +168,8 @@ export const CookScene = () => {
 		let lastPointerPos = { x: 0, y: 0 };
 
 		// --- Pointer interactions ---
+		// Detach camera controls during sausage drag to prevent orbit interference
+		const camera = scene.activeCamera;
 
 		scene.onPointerDown = (evt: any) => {
 			const pick = scene.pick(
@@ -180,6 +188,7 @@ export const CookScene = () => {
 				}
 				isDragging = true;
 				lastPointerPos = { x: scene.pointerX, y: scene.pointerY };
+				if (camera) camera.detachControl();
 			}
 		};
 
@@ -209,19 +218,23 @@ export const CookScene = () => {
 		};
 
 		scene.onPointerUp = () => {
+			if (isDragging && camera) {
+				const canvas = scene.getEngine().getRenderingCanvas();
+				if (canvas) camera.attachControl(canvas, true);
+			}
 			isDragging = false;
 		};
 
 		// --- Render loop observer ---
 
-		let currentCookProgress = cookProgress;
-		let currentHasBurst = hasBurst;
 		let time = 0;
 
 		const observer = scene.onBeforeRenderObservable.add(() => {
 			const dt = scene.getEngine().getDeltaTime() / 1000;
 			time += dt;
 
+			const currentCookProgress = cookProgressRef.current;
+			const currentHasBurst = hasBurstRef.current;
 			const progress = currentCookProgress / 100; // 0..1
 
 			// --- Burner glow: pulses orange based on cookProgress ---
@@ -429,13 +442,6 @@ export const CookScene = () => {
 			}
 		});
 
-		// Expose a way to update state from outside the closure
-		const updateState = () => {
-			currentCookProgress = cookProgress;
-			currentHasBurst = hasBurst;
-		};
-		updateState();
-
 		return () => {
 			scene.onPointerDown = undefined as any;
 			scene.onPointerMove = undefined as any;
@@ -469,7 +475,7 @@ export const CookScene = () => {
 			burner.dispose();
 			burnerMat.dispose();
 		};
-	}, [scene, cookProgress, hasBurst]);
+	}, [scene]);
 
 	// --- MrSausage3D reaction logic ---
 	useEffect(() => {

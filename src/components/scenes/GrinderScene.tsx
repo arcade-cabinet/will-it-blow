@@ -251,6 +251,9 @@ export const GrinderScene = () => {
 		let pickedMesh: AbstractMesh | null = null;
 		let lastPointerPos = { x: 0, y: 0 };
 
+		// Detach camera controls during ingredient drag to prevent orbit interference
+		const camera = scene.activeCamera;
+
 		scene.onPointerDown = (evt) => {
 			const pick = scene.pick(
 				evt.offsetX ?? scene.pointerX,
@@ -263,6 +266,8 @@ export const GrinderScene = () => {
 			) {
 				pickedMesh = pick.pickedMesh;
 				lastPointerPos = { x: scene.pointerX, y: scene.pointerY };
+				// Stop camera from orbiting while dragging ingredient
+				if (camera) camera.detachControl();
 			}
 		};
 
@@ -281,20 +286,47 @@ export const GrinderScene = () => {
 		};
 
 		scene.onPointerUp = () => {
+			if (pickedMesh && camera) {
+				// Re-attach camera controls after ingredient drop
+				const canvas = scene.getEngine().getRenderingCanvas();
+				if (canvas) camera.attachControl(canvas, true);
+			}
 			pickedMesh = null;
 		};
+
+		// ----- Force initial world matrix computation -----
+		// Babylon.js doesn't compute world matrices until first render.
+		// intersectsMesh uses bounding boxes derived from world matrices,
+		// so without this, all meshes appear at origin and collide instantly.
+		grinderBody.computeWorldMatrix(true);
+		hopper.computeWorldMatrix(true);
+		blade.computeWorldMatrix(true);
+		bowl.computeWorldMatrix(true);
+		meatBall.computeWorldMatrix(true);
+		for (const m of allCreatedMeshes) {
+			m.computeWorldMatrix(true);
+		}
 
 		// ----- Hopper collision & animation loop -----
 		let currentGrindProgress = grindProgress;
 		let groundCount = 0;
 		const groundIngredients = new Set<string>();
 		let shakeTimer = 0;
+		let warmupFrames = 3; // Skip first 3 frames to let bounding boxes settle
 		const totalIngredients = Math.min(ingredients.length, 3);
 		const progressPerIngredient =
-			totalIngredients > 0 ? 100 / totalIngredients : 34;
+			totalIngredients > 0 ? 100 / totalIngredients : 100;
 
 		const observer = scene.onBeforeRenderObservable.add(() => {
 			const dt = scene.getEngine().getDeltaTime() / 1000;
+
+			// Skip collision checks during warmup
+			if (warmupFrames > 0) {
+				warmupFrames--;
+				// Still spin blade during warmup
+				blade.rotation.y += dt * 8;
+				return;
+			}
 
 			// Spin blade continuously
 			blade.rotation.y += dt * 8;
@@ -355,7 +387,7 @@ export const GrinderScene = () => {
 					setTimeout(() => audioEngine.stopGrinder(), 500);
 
 					// Mr. Sausage reaction
-					if (groundCount >= totalIngredients) {
+					if (totalIngredients > 0 && groundCount >= totalIngredients) {
 						setReaction("excitement");
 						setTimeout(() => setPhase("stuff"), 600);
 					} else {
