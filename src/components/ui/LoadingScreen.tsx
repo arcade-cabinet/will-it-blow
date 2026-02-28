@@ -1,6 +1,7 @@
 import {useEffect, useRef, useState} from 'react';
 import {Animated, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {audioEngine} from '../../engine/AudioEngine';
+import {getAssetUrl} from '../../engine/assetUrl';
 import {useGameStore} from '../../store/gameStore';
 
 const LOADING_QUOTES = [
@@ -10,18 +11,6 @@ const LOADING_QUOTES = [
   'Firing up the stove...',
   'Almost ready to blow...',
 ];
-
-/** Resolve model URL accounting for Expo web baseUrl in production */
-function getModelUrl(filename: string): string {
-  if (typeof document !== 'undefined') {
-    const base = document.querySelector('base');
-    if (base?.href) {
-      const url = new URL(base.href);
-      return `${url.pathname.replace(/\/$/, '')}/models/${filename}`;
-    }
-  }
-  return `/models/${filename}`;
-}
 
 export function LoadingScreen() {
   const startNewGame = useGameStore(s => s.startNewGame);
@@ -62,7 +51,7 @@ export function LoadingScreen() {
 
     async function preload() {
       try {
-        const url = getModelUrl('kitchen.glb');
+        const url = getAssetUrl('models', 'kitchen.glb');
         const response = await fetch(url, {signal: controller.signal});
 
         if (!response.ok) {
