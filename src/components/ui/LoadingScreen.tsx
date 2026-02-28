@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useGameStore } from '../../store/gameStore';
 
 const LOADING_QUOTES = [
@@ -24,7 +24,9 @@ function getModelUrl(filename: string): string {
 
 export function LoadingScreen() {
   const startNewGame = useGameStore((s) => s.startNewGame);
+  const gameStatus = useGameStore((s) => s.gameStatus);
   const [progress, setProgress] = useState(0);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [quoteIndex, setQuoteIndex] = useState(0);
 
   // Fade-in animation
@@ -56,10 +58,9 @@ export function LoadingScreen() {
         const response = await fetch(url);
 
         if (!response.ok) {
-          // If fetch fails, still transition after a short delay
           console.warn('Failed to preload kitchen.glb:', response.status);
           if (!cancelled) {
-            setProgress(100);
+            setLoadError(`Failed to load assets (HTTP ${response.status})`);
           }
           return;
         }
@@ -86,47 +87,70 @@ export function LoadingScreen() {
         if (!cancelled) setProgress(100);
       } catch (error) {
         console.warn('Error preloading kitchen.glb:', error);
-        if (!cancelled) setProgress(100);
+        if (!cancelled) setLoadError('Failed to load assets. Check your connection.');
       }
     }
 
     preload();
     return () => { cancelled = true; };
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadError]);
 
   // When loading completes, transition to playing
   useEffect(() => {
     if (progress < 100) return;
 
     const timeout = setTimeout(() => {
-      startNewGame();
+      // If continuing a saved game, gameStatus is already 'playing' (set by continueGame())
+      if (gameStatus !== 'playing') {
+        startNewGame();
+      } else {
+        // CONTINUE flow — game state already restored, just enter the 3D scene
+        useGameStore.getState().setAppPhase('playing');
+      }
     }, 400); // Brief pause so user sees 100%
 
     return () => clearTimeout(timeout);
-  }, [progress, startNewGame]);
+  }, [progress, startNewGame, gameStatus]);
 
   const fillWidth = `${Math.max(progress, 2)}%` as const;
 
+  const handleRetry = () => {
+    setLoadError(null);
+    setProgress(0);
+  };
+
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-      {/* Sausage progress bar */}
-      <View style={styles.progressArea}>
-        <View style={styles.sausageTrack}>
-          <View style={[styles.sausageFill, { width: fillWidth }]}>
-            {/* Left end cap */}
-            <View style={styles.sausageCapLeft} />
-            {/* Right end cap */}
-            <View style={styles.sausageCapRight} />
-          </View>
+      {loadError ? (
+        <View style={styles.progressArea}>
+          <Text style={styles.errorText}>{loadError}</Text>
+          <TouchableOpacity onPress={handleRetry} style={styles.retryButton}>
+            <Text style={styles.retryText}>RETRY</Text>
+          </TouchableOpacity>
         </View>
+      ) : (
+        <>
+          {/* Sausage progress bar */}
+          <View style={styles.progressArea}>
+            <View style={styles.sausageTrack}>
+              <View style={[styles.sausageFill, { width: fillWidth }]}>
+                {/* Left end cap */}
+                <View style={styles.sausageCapLeft} />
+                {/* Right end cap */}
+                <View style={styles.sausageCapRight} />
+              </View>
+            </View>
 
-        {/* Percentage */}
-        <Text style={styles.percentage}>{progress}%</Text>
-      </View>
+            {/* Percentage */}
+            <Text style={styles.percentage}>{progress}%</Text>
+          </View>
 
-      {/* Mr. Sausage quote */}
-      <Text style={styles.quote}>"{LOADING_QUOTES[quoteIndex]}"</Text>
-      <Text style={styles.attribution}>- Mr. Sausage</Text>
+          {/* Mr. Sausage quote */}
+          <Text style={styles.quote}>"{LOADING_QUOTES[quoteIndex]}"</Text>
+          <Text style={styles.attribution}>- Mr. Sausage</Text>
+        </>
+      )}
     </Animated.View>
   );
 }
@@ -207,6 +231,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#555',
     marginTop: 8,
+    letterSpacing: 2,
+  },
+  errorText: {
+    fontFamily: 'Bangers',
+    fontSize: 22,
+    color: '#C2442D',
+    textAlign: 'center',
+    letterSpacing: 1,
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: '#C2442D',
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryText: {
+    fontFamily: 'Bangers',
+    fontSize: 20,
+    color: '#fff',
     letterSpacing: 2,
   },
 });

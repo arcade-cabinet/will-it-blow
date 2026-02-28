@@ -284,7 +284,7 @@ export const CrtTelevision = ({
 			knob2.dispose();
 			knobMat.dispose();
 
-			grilleSlots.forEach((s) => s.dispose());
+			grilleSlots.forEach((s) => { s.dispose(); });
 			grilleMat.dispose();
 
 			bracket.dispose();

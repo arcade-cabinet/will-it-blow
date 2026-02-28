@@ -27,7 +27,7 @@ npx expo start --web          # Web dev server (primary dev target)
 npm test                      # Run all 172 Jest tests
 npm test -- --ci --forceExit  # CI mode
 
-# Type checking (test files show Jest type warnings — ignore those)
+# Type checking
 npx tsc --noEmit
 ```
 

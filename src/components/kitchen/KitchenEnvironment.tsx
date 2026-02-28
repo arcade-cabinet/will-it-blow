@@ -309,7 +309,7 @@ export const KitchenEnvironment = () => {
 		SceneLoader.ImportMeshAsync('', modelRoot, 'kitchen.glb', scene).then(
 			(result) => {
 				if (disposed) {
-					result.meshes.forEach((m) => m.dispose());
+					result.meshes.forEach((m) => { m.dispose(); });
 					return;
 				}
 				// Per-material overrides to tame direct light on bright surfaces.

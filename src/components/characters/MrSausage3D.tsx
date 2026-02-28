@@ -380,7 +380,6 @@ export const MrSausage3D = ({
 
     /** Set pupil size multiplier (1 = normal, <1 = constricted, >1 = dilated) */
     const setPupilSize = (s: number) => {
-      const d = 0.12 * s;
       pupilL.scaling.x = s;
       pupilL.scaling.y = s;
       pupilR.scaling.x = s;
@@ -431,7 +430,7 @@ export const MrSausage3D = ({
         // Compute target yaw/pitch relative to root's base rotation
         const targetYaw = Math.atan2(dir.x, dir.z) - rotationY;
         const dist = Math.sqrt(dir.x * dir.x + dir.z * dir.z);
-        const targetPitch = -Math.atan2(dir.y - rootWorldPos.y, dist) * 0.3;
+        const targetPitch = -Math.atan2(dir.y, dist) * 0.3;
 
         // Clamp tracking range
         const maxYaw = 0.4;

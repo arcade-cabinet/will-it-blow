@@ -12,7 +12,7 @@
 | Audio (native) | 0% | Complete no-op stub |
 | UI/UX | 65% | Menu/loading/overlays work; hints/settings/continue are stubs |
 | Cross-platform | 45% | Web works well; native untested, stub audio |
-| Testing | 75% | 172 pure logic tests; no component/visual tests |
+| Testing | 85% | 172 unit tests + 10 Playwright e2e tests with screenshot capture |
 | Git hygiene | 30% | Large uncommitted changes, assets not committed |
 | CI/CD | 50% | Tests run; no tsc, no lint, no Android build |
 | Production readiness | 25% | No save/load, no settings, no mobile testing |

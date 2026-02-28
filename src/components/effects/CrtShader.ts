@@ -31,13 +31,6 @@ float rand(vec2 co) {
   return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
 }
 
-// Smooth noise for rolling distortion
-float smoothNoise(float x) {
-  float i = floor(x);
-  float f = fract(x);
-  return mix(rand(vec2(i, 0.0)), rand(vec2(i + 1.0, 0.0)), f * f * (3.0 - 2.0 * f));
-}
-
 void main() {
   vec2 uv = vUV;
 

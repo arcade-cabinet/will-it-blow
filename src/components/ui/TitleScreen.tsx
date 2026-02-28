@@ -59,6 +59,9 @@ export function TitleScreen() {
     if (item === 'NEW GAME') {
       setAppPhase('loading');
     } else if (item === 'CONTINUE' && hasSaveData) {
+      // Restore saved progress before entering loading phase.
+      // LoadingScreen only handles asset preloading — it doesn't touch game state.
+      continueGame();
       setAppPhase('loading');
     }
     // SETTINGS: no-op for now
