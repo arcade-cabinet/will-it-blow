@@ -31,7 +31,7 @@ pnpm remove expo-gl
 **Step 3: Verify dependencies resolve**
 
 ```bash
-pnpm install
+pnpm add
 ```
 
 Expected: Clean install with no peer dependency conflicts.
@@ -650,7 +650,7 @@ This maps `three/webgpu` back to `three` in Jest (since Jest runs in Node.js whe
 **Step 4: Run all tests**
 
 ```bash
-npm test -- --ci --forceExit
+pnpm test -- --ci --forceExit
 ```
 
 Expected: All tests pass (currently 265 tests).
@@ -699,7 +699,7 @@ git commit -m "docs: update architecture docs for WebGPU migration"
 
 After all tasks:
 
-1. `npm test -- --ci --forceExit` — all tests pass
+1. `pnpm test -- --ci --forceExit` — all tests pass
 2. `npx tsc --noEmit` — no new type errors
 3. `npx expo start --web` — 3D scene renders with WebGPU (check console for "THREE.WebGPURenderer")
 4. CRT TV shows scanlines, barrel distortion, phosphor glow

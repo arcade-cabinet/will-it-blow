@@ -523,7 +523,7 @@ window.CANNON = CANNON;
 scene.enablePhysics(new Vector3(0, -9.81, 0), new CannonJSPlugin());
 ```
 
-This may require: `npm install cannon --legacy-peer-deps`
+This may require: `pnpm add cannon --legacy-peer-deps`
 
 **Step 2: Commit**
 

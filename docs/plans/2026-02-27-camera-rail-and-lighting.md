@@ -112,7 +112,7 @@ Remove the `import { useNavigationStore }` line 4. Remove the `const { navigateT
 **Step 5: Run tests to verify**
 
 ```bash
-npm test -- --ci --forceExit
+pnpm test -- --ci --forceExit
 ```
 
 Expected: Tests pass. The WaypointGraph tests are gone (deleted). All other tests should be unaffected since they don't import navigation code.
@@ -302,7 +302,7 @@ The native version should also remove navigation imports and use the same `STATI
 **Step 4: Run tests**
 
 ```bash
-npm test -- --ci --forceExit
+pnpm test -- --ci --forceExit
 ```
 
 Expected: All tests pass (none test GameWorld directly — it uses Babylon.js).
@@ -496,7 +496,7 @@ return () => {
 **Step 5: Run tests + type check**
 
 ```bash
-npm test -- --ci --forceExit
+pnpm test -- --ci --forceExit
 npx tsc --noEmit 2>&1 | grep -v "\.test\." | head -20
 ```
 
@@ -599,7 +599,7 @@ export function createCrtMaterial(name: string, scene: Scene): ShaderMaterial {
 **Step 3: Run tests + type check**
 
 ```bash
-npm test -- --ci --forceExit
+pnpm test -- --ci --forceExit
 npx tsc --noEmit 2>&1 | grep -v "\.test\." | head -20
 ```
 
@@ -624,7 +624,7 @@ Fixes WebGPU createBindGroup errors."
 **Step 1: Run full test suite**
 
 ```bash
-npm test -- --ci --forceExit
+pnpm test -- --ci --forceExit
 ```
 
 Expected: All tests pass (should be ~167 tests now — 10 WaypointGraph tests removed).

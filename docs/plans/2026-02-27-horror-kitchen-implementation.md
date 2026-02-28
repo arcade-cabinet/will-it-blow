@@ -22,7 +22,7 @@
 **Step 1: Install zustand**
 
 ```bash
-npm install zustand
+pnpm add zustand
 ```
 
 **Step 2: Write failing tests for game store**
@@ -167,7 +167,7 @@ describe('useHint', () => {
 **Step 3: Run tests to verify they fail**
 
 ```bash
-npm test -- __tests__/gameStore.test.ts --no-cache
+pnpm test -- __tests__/gameStore.test.ts --no-cache
 ```
 
 Expected: FAIL — `Cannot find module '../src/store/gameStore'`
@@ -314,7 +314,7 @@ beforeEach(() => reset());
 **Step 5: Run tests to verify they pass**
 
 ```bash
-npm test -- __tests__/gameStore.test.ts --no-cache
+pnpm test -- __tests__/gameStore.test.ts --no-cache
 ```
 
 Expected: All 14 tests PASS.
@@ -435,7 +435,7 @@ describe('getNavigationPath', () => {
 **Step 2: Run tests to verify they fail**
 
 ```bash
-npm test -- __tests__/WaypointGraph.test.ts --no-cache
+pnpm test -- __tests__/WaypointGraph.test.ts --no-cache
 ```
 
 Expected: FAIL — module not found.
@@ -558,7 +558,7 @@ export function getNavigationPath(from: WaypointId, to: WaypointId): WaypointId[
 **Step 4: Run tests to verify they pass**
 
 ```bash
-npm test -- __tests__/WaypointGraph.test.ts --no-cache
+pnpm test -- __tests__/WaypointGraph.test.ts --no-cache
 ```
 
 Expected: All 10 tests PASS.
@@ -689,7 +689,7 @@ describe('DialogueEngine', () => {
 **Step 2: Run tests to verify they fail**
 
 ```bash
-npm test -- __tests__/DialogueEngine.test.ts --no-cache
+pnpm test -- __tests__/DialogueEngine.test.ts --no-cache
 ```
 
 Expected: FAIL — module not found.
@@ -783,7 +783,7 @@ export class DialogueEngine {
 **Step 4: Run tests to verify they pass**
 
 ```bash
-npm test -- __tests__/DialogueEngine.test.ts --no-cache
+pnpm test -- __tests__/DialogueEngine.test.ts --no-cache
 ```
 
 Expected: All 9 tests PASS.
@@ -902,7 +902,7 @@ describe('calculateFinalVerdict', () => {
 **Step 2: Run tests to verify they fail**
 
 ```bash
-npm test -- __tests__/ChallengeRegistry.test.ts --no-cache
+pnpm test -- __tests__/ChallengeRegistry.test.ts --no-cache
 ```
 
 **Step 3: Implement ChallengeRegistry**
@@ -1127,7 +1127,7 @@ export function calculateFinalVerdict(challengeScores: number[]): Verdict {
 **Step 4: Run tests to verify they pass**
 
 ```bash
-npm test -- __tests__/ChallengeRegistry.test.ts --no-cache
+pnpm test -- __tests__/ChallengeRegistry.test.ts --no-cache
 ```
 
 Expected: All 10 tests PASS.
@@ -1227,7 +1227,7 @@ describe('filterMatchingIngredients', () => {
 **Step 2: Run tests to verify they fail**
 
 ```bash
-npm test -- __tests__/IngredientMatcher.test.ts --no-cache
+pnpm test -- __tests__/IngredientMatcher.test.ts --no-cache
 ```
 
 **Step 3: Implement IngredientMatcher**
@@ -1310,7 +1310,7 @@ export function filterMatchingIngredients(
 **Step 4: Run tests to verify they pass**
 
 ```bash
-npm test -- __tests__/IngredientMatcher.test.ts --no-cache
+pnpm test -- __tests__/IngredientMatcher.test.ts --no-cache
 ```
 
 Expected: All 8 tests PASS.
@@ -1335,7 +1335,7 @@ describe('ingredient tag coverage', () => {
 **Step 6: Run all tests**
 
 ```bash
-npm test --no-cache
+pnpm test --no-cache
 ```
 
 Expected: All existing + new tests PASS.
@@ -3119,7 +3119,7 @@ rm src/engine/Constants.ts
 **Step 4: Run all tests**
 
 ```bash
-npm test --no-cache
+pnpm test --no-cache
 ```
 
 Expected: All tests pass. No broken imports.
@@ -3138,7 +3138,7 @@ git commit -m "chore: remove old scene components, game engine, and constants"
 **Step 1: Run full test suite**
 
 ```bash
-npm test --no-cache --ci --forceExit
+pnpm test --no-cache --ci --forceExit
 ```
 
 Expected: All tests pass.

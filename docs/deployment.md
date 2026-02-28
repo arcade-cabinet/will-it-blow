@@ -11,8 +11,8 @@
 **Steps:**
 1. Checkout code
 2. Setup Node 22
-3. `npm ci`
-4. `npm test -- --ci --forceExit`
+3. `pnpm install --frozen-lockfile`
+4. `pnpm test:ci`
 
 **Concurrency:** Cancels in-progress runs for the same git ref.
 
@@ -31,7 +31,7 @@
 
 1. Checkout code
 2. Setup Node 22
-3. `npm ci`
+3. `pnpm install --frozen-lockfile`
 4. `npx expo export --platform web --output-dir dist`
 5. Upload `dist/` as artifact
 
@@ -113,7 +113,7 @@ The `public/` directory contains models and textures required for the game to ru
 ## Environment Requirements
 
 - **Node.js:** ≥ 20
-- **npm:** included with Node.js
+- **pnpm:** `corepack enable && corepack prepare`
 - **Browser:** Chrome/Edge (WebGPU), Firefox/Safari (WebGL fallback)
 - **Mobile:** iOS 15+, Android API 24+ (via Expo)
 
