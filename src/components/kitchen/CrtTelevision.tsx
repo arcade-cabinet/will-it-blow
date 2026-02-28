@@ -3,7 +3,7 @@ import {useMemo, useRef} from 'react';
 import type * as THREE from 'three';
 import {MrSausage3D} from '../characters/MrSausage3D';
 import type {Reaction} from '../characters/reactions';
-import {createCrtMaterial} from '../effects/CrtShader';
+import {createCrtMaterial, crtUniforms} from '../effects/CrtShader';
 
 /** Map reactions to CRT signal distortion intensity (0 = calm, 1 = max chaos) */
 const REACTION_INTENSITY: Record<Reaction, number> = {
@@ -86,14 +86,14 @@ export const CrtTelevision = ({
     s.time += dt;
 
     // Update CRT time uniform
-    crtMaterial.uniforms.time.value = s.time;
+    crtUniforms.time.value = s.time;
 
     // Smooth reaction intensity
     const targetIntensity = REACTION_INTENSITY[reactionRef.current] ?? 0;
     const lerpSpeed = targetIntensity > s.currentReactionIntensity ? 8.0 : 3.0;
     s.currentReactionIntensity +=
       (targetIntensity - s.currentReactionIntensity) * Math.min(lerpSpeed * dt, 1.0);
-    crtMaterial.uniforms.reactionIntensity.value = s.currentReactionIntensity;
+    crtUniforms.reactionIntensity.value = s.currentReactionIntensity;
 
     // Blink power LED
     const ledBrightness = 0.5 + 0.5 * Math.sin(s.time * 3);
