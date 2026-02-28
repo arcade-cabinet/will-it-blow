@@ -24,7 +24,7 @@ A first-person horror sausage-making mini-game. SAW meets cooking show. Built wi
 npx expo start --web          # Web dev server (primary dev target)
 
 # Testing
-pnpm test                     # Run all 259 Jest tests
+pnpm test                     # Run all 256 Jest tests
 pnpm test:ci                  # CI mode (--ci --forceExit)
 
 # Linting & formatting (Biome)
@@ -61,11 +61,20 @@ Single `GameWorld.tsx` uses `@react-three/fiber` Canvas with `WebGPURenderer` �
 - Metro config has a WebGPU resolver that maps bare `'three'` imports to `'three/webgpu'` on native platforms
 - `AudioEngine.web.ts` (Tone.js) / `AudioEngine.ts` (native no-op stub) — only remaining platform split
 
+### Code Splitting (Dynamic Imports)
+
+`App.tsx` uses `React.lazy()` + `Suspense` to split the bundle at phase boundaries:
+
+- **Static imports** (in initial bundle): `TitleScreen`, `LoadingScreen`, small UI chrome
+- **Lazy-loaded**: `GameWorld` (Three.js + R3F + all stations — biggest chunk), all 5 challenge components, `GameOverScreen`
+- **Prefetching**: During the loading phase, `import('./src/components/GameWorld')` and first challenge are prefetched so the JS chunk is cached before the phase transitions to `playing`
+- **Production chunks**: Metro splits into 17 separate JS files. Menu loads ~1.2MB; GameWorld chunk (~4.6MB with Three.js) only loads when game starts
+
 ## Key Files
 
 | File | Purpose |
 |------|---------|
-| `App.tsx` | Root layout — SafeAreaView + phase routing (menu/loading/playing) |
+| `App.tsx` | Root layout — phase routing + React.lazy code splitting + chunk prefetch |
 | `src/store/gameStore.ts` | Zustand store (all game state + actions) |
 | `src/engine/ChallengeRegistry.ts` | Challenge configs, variant selection, final verdict |
 | `src/engine/SausagePhysics.ts` | 5 pure scoring functions |

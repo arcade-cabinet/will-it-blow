@@ -1,14 +1,7 @@
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {Suspense, lazy, useCallback, useEffect, useRef, useState} from 'react';
 import {SafeAreaView, StyleSheet, View} from 'react-native';
-import {CookingChallenge} from './src/components/challenges/CookingChallenge';
-import {GrindingChallenge} from './src/components/challenges/GrindingChallenge';
-import {IngredientChallenge} from './src/components/challenges/IngredientChallenge';
-import {StuffingChallenge} from './src/components/challenges/StuffingChallenge';
-import {TastingChallenge} from './src/components/challenges/TastingChallenge';
-import {GameWorld} from './src/components/GameWorld';
 import {ChallengeHeader} from './src/components/ui/ChallengeHeader';
 import {ChallengeTransition} from './src/components/ui/ChallengeTransition';
-import {GameOverScreen} from './src/components/ui/GameOverScreen';
 import {LoadingScreen} from './src/components/ui/LoadingScreen';
 import {StrikeCounter} from './src/components/ui/StrikeCounter';
 import {TitleScreen} from './src/components/ui/TitleScreen';
@@ -16,8 +9,49 @@ import {installGovernor} from './src/dev/GameGovernor';
 import {audioEngine} from './src/engine/AudioEngine';
 import {useGameStore} from './src/store/gameStore';
 
+// ── Dynamic imports for code splitting ──────────────────────────
+// Metro splits these into separate chunks on web builds,
+// so the menu loads instantly without pulling in Three.js/R3F.
+
+const GameWorld = lazy(() =>
+  import('./src/components/GameWorld').then(m => ({default: m.GameWorld})),
+);
+const GameOverScreen = lazy(() =>
+  import('./src/components/ui/GameOverScreen').then(m => ({default: m.GameOverScreen})),
+);
+
+// Challenge components — only one active at a time
+const IngredientChallenge = lazy(() =>
+  import('./src/components/challenges/IngredientChallenge').then(m => ({
+    default: m.IngredientChallenge,
+  })),
+);
+const GrindingChallenge = lazy(() =>
+  import('./src/components/challenges/GrindingChallenge').then(m => ({
+    default: m.GrindingChallenge,
+  })),
+);
+const StuffingChallenge = lazy(() =>
+  import('./src/components/challenges/StuffingChallenge').then(m => ({
+    default: m.StuffingChallenge,
+  })),
+);
+const CookingChallenge = lazy(() =>
+  import('./src/components/challenges/CookingChallenge').then(m => ({
+    default: m.CookingChallenge,
+  })),
+);
+const TastingChallenge = lazy(() =>
+  import('./src/components/challenges/TastingChallenge').then(m => ({
+    default: m.TastingChallenge,
+  })),
+);
+
 // Install dev-only test harness (gated behind __DEV__, no-op in production)
 installGovernor();
+
+/** Dark placeholder while lazy chunks load — matches app background. */
+const ChunkFallback = () => <View style={styles.chunkFallback} />;
 
 const GameUI = () => {
   const {gameStatus, currentChallenge, completeChallenge, setMrSausageReaction} = useGameStore();
@@ -75,10 +109,10 @@ const GameUI = () => {
       )}
 
       {gameStatus === 'playing' && !transitioning && (
-        <>
+        <Suspense fallback={<ChunkFallback />}>
           <ChallengeHeader />
           <StrikeCounter />
-          {/* Challenge overlays */}
+          {/* Challenge overlays — lazy-loaded, one at a time */}
           {isIngredientChallenge && (
             <IngredientChallenge onComplete={completeChallenge} onReaction={handleReaction} />
           )}
@@ -94,10 +128,14 @@ const GameUI = () => {
           {isTastingChallenge && (
             <TastingChallenge onComplete={completeChallenge} onReaction={handleReaction} />
           )}
-        </>
+        </Suspense>
       )}
 
-      {(gameStatus === 'victory' || gameStatus === 'defeat') && <GameOverScreen />}
+      {(gameStatus === 'victory' || gameStatus === 'defeat') && (
+        <Suspense fallback={<ChunkFallback />}>
+          <GameOverScreen />
+        </Suspense>
+      )}
     </View>
   );
 };
@@ -117,15 +155,25 @@ export default function App() {
     };
   }, [appPhase]);
 
+  // Prefetch heavy chunks while the loading screen is showing.
+  // By the time kitchen.glb finishes downloading, the GameWorld JS
+  // chunk (Three.js + R3F + stations) is already cached.
+  useEffect(() => {
+    if (appPhase === 'loading') {
+      import('./src/components/GameWorld');
+      import('./src/components/challenges/IngredientChallenge');
+    }
+  }, [appPhase]);
+
   return (
     <SafeAreaView style={styles.container}>
       {appPhase === 'menu' && <TitleScreen />}
       {appPhase === 'loading' && <LoadingScreen />}
       {appPhase === 'playing' && (
-        <>
+        <Suspense fallback={<ChunkFallback />}>
           <GameWorld />
           <GameUI />
-        </>
+        </Suspense>
       )}
     </SafeAreaView>
   );
@@ -139,5 +187,9 @@ const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 10,
+  },
+  chunkFallback: {
+    flex: 1,
+    backgroundColor: '#0a0a0a',
   },
 });

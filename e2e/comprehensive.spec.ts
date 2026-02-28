@@ -1036,8 +1036,9 @@ test.describe('3D Scene Rendering', () => {
     await waitForGovernor(page);
     await startAndWaitForScene(page);
 
-    const canvasExists = await page.locator('canvas').isVisible();
-    expect(canvasExists).toBe(true);
+    // Use auto-retrying assertion — with lazy-loaded GameWorld, the canvas
+    // may briefly exist in DOM before becoming fully visible.
+    await expect(page.locator('canvas')).toBeVisible({timeout: 10_000});
   });
 
   test('canvas has non-zero dimensions', async ({page}) => {
