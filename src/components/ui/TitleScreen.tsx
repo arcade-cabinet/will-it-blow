@@ -7,7 +7,7 @@ const MENU_ITEMS = ['NEW GAME', 'CONTINUE', 'SETTINGS'] as const;
 
 export function TitleScreen() {
   const {setAppPhase, continueGame, currentChallenge, challengeScores} = useGameStore();
-  const hasSaveData = challengeScores.length > 0;
+  const hasSaveData = challengeScores.length > 0 && currentChallenge < 5;
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
 
