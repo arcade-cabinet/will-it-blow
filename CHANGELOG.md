@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.3](https://github.com/arcade-cabinet/will-it-blow/compare/v1.1.2...v1.1.3) (2026-02-28)
+
+
+### Bug Fixes
+
+* remove stale android/ dir, use expo prebuild --clean in CI ([#11](https://github.com/arcade-cabinet/will-it-blow/issues/11)) ([178c5e1](https://github.com/arcade-cabinet/will-it-blow/commit/178c5e1a52ea67cbcd494ce27abe002f6f6ace61))
+
 ## [1.1.2](https://github.com/arcade-cabinet/will-it-blow/compare/v1.1.1...v1.1.2) (2026-02-28)
 
 
