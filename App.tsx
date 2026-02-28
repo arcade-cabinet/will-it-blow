@@ -3,8 +3,6 @@ import { SafeAreaView, StyleSheet, View } from "react-native";
 import { GameWorld } from "./src/components/GameWorld";
 import { useGameStore } from "./src/store/gameStore";
 import { installGovernor } from "./src/dev/GameGovernor";
-
-installGovernor();
 import { TitleScreen } from "./src/components/ui/TitleScreen";
 import { LoadingScreen } from "./src/components/ui/LoadingScreen";
 import { StrikeCounter } from "./src/components/ui/StrikeCounter";
@@ -17,6 +15,9 @@ import { StuffingChallenge } from "./src/components/challenges/StuffingChallenge
 import { CookingChallenge } from "./src/components/challenges/CookingChallenge";
 import { TastingChallenge } from "./src/components/challenges/TastingChallenge";
 import type { Reaction } from "./src/components/characters/reactions";
+
+// Install dev-only test harness (gated behind __DEV__, no-op in production)
+installGovernor();
 
 const GameUI = () => {
 	const { gameStatus, currentChallenge, completeChallenge } = useGameStore();
@@ -44,11 +45,7 @@ const GameUI = () => {
 					<ChallengeHeader />
 					<StrikeCounter />
 					{!isIngredientChallenge && !isGrindingChallenge && !isStuffingChallenge && !isCookingChallenge && !isTastingChallenge && (
-						<HintButton
-							onHint={() => {
-								/* TODO: trigger hint glow in scene */
-							}}
-						/>
+						<HintButton onHint={() => useGameStore.getState().useHint()} />
 					)}
 					{/* Challenge overlays */}
 					{isIngredientChallenge && (
