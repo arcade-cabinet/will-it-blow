@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.4](https://github.com/arcade-cabinet/will-it-blow/compare/v1.1.3...v1.1.4) (2026-02-28)
+
+
+### Bug Fixes
+
+* enable LFS checkout for Pages deploy, add async-storage Maven repo ([#13](https://github.com/arcade-cabinet/will-it-blow/issues/13)) ([948522d](https://github.com/arcade-cabinet/will-it-blow/commit/948522d64c274ed3181c0d360cde245fb4c25b23))
+
 ## [1.1.3](https://github.com/arcade-cabinet/will-it-blow/compare/v1.1.2...v1.1.3) (2026-02-28)
 
 
