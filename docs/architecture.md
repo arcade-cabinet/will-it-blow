@@ -12,21 +12,21 @@ Will It Blow? is a first-person horror sausage-making mini-game. The player is t
 │  (StyleSheet.absoluteFillObject, z=10)   │
 ├──────────────────────────────────────────┤
 │  Layer 1: React Three Fiber Canvas       │  ← Kitchen GLB, stations, lighting
-│  (Three.js WebGL via R3F reconciler)     │
+│  (Three.js WebGPU via R3F reconciler)    │
 ├──────────────────────────────────────────┤
 │  Root: SafeAreaView (React Native)       │  ← Root container, flex: 1
 └──────────────────────────────────────────┘
 ```
 
 - **Root** provides the container and background color (#0a0a0a).
-- **Layer 1** is the R3F `<Canvas>` rendering Three.js via WebGL. On web, this is a `<canvas>` element. On native, it uses `expo-gl` for the GL context. It renders the 3D kitchen environment, station meshes, and CRT TV.
+- **Layer 1** is the R3F `<Canvas>` rendering Three.js via `WebGPURenderer`. On web, this uses browser-native WebGPU. On native, `react-native-wgpu` provides a Dawn-based WebGPU surface. WebXR support is available on web via `@react-three/xr`. It renders the 3D kitchen environment, station meshes, and CRT TV.
 - **Layer 2** is React Native overlays (`pointerEvents="box-none"`) that float above the 3D scene. All game UI lives here: challenge controls, dialogue, menus, results.
 
 ### Platform Strategy
 
 The app targets web (primary), iOS, and Android via Expo SDK 55 + React Native 0.83.
 
-A single `GameWorld.tsx` works on all platforms — R3F's `<Canvas>` uses `expo-gl` on native and standard WebGL on web. No platform-specific file splitting for the 3D layer.
+A single `GameWorld.tsx` works on all platforms — R3F's `<Canvas>` uses `WebGPURenderer` with `react-native-wgpu` on native and browser WebGPU on web. Metro config has a WebGPU resolver that maps bare `'three'` imports to `'three/webgpu'` on native. No platform-specific file splitting for the 3D layer.
 
 Only remaining platform split:
 - `AudioEngine.web.ts` — Full Tone.js synthesis
@@ -37,11 +37,12 @@ Only remaining platform split:
 | Technology | Version | Role |
 |-----------|---------|------|
 | React Native | 0.83.2 | UI framework, cross-platform |
-| Three.js | 0.183.1 | 3D engine (WebGL) |
+| Three.js | 0.183.1 | 3D engine (WebGPU renderer, TSL shaders) |
 | React Three Fiber | 9.5.0 | React reconciler for Three.js (declarative JSX scene graph) |
 | @react-three/drei | 10.7.7 | Helpers: useGLTF, Environment, etc. |
+| @react-three/xr | 6.6.29 | WebXR support (web only) |
 | @react-three/cannon | 6.6.0 | Physics (optional, available) |
-| expo-gl | 55.0.9 | Native GL context for Three.js on iOS/Android |
+| react-native-wgpu | 0.5.7 | Dawn-based WebGPU surface for native (iOS/Android) |
 | Zustand | 5.0.11 | State management (replaces React Context) |
 | Tone.js | 15.1.22 | Web audio synthesis (procedural SFX) |
 | Expo | 55.0.0 | Build toolchain, dev server, deployment |
@@ -88,7 +89,7 @@ will-it-blow/
 │   │   │   ├── CrtTelevision.tsx      CRT TV with Mr. Sausage + shader
 │   │   │   └── __tests__/            Tests for all station components
 │   │   ├── effects/
-│   │   │   ├── CrtShader.ts          Three.js ShaderMaterial (chromatic aberration)
+│   │   │   ├── CrtShader.ts          TSL NodeMaterial (chromatic aberration, WGSL/GLSL)
 │   │   │   └── __tests__/CrtShader.test.ts
 │   │   ├── ingredients/
 │   │   │   ├── Ingredient3D.tsx      Shape-based ingredient meshes (8 types)

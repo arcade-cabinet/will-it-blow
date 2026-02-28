@@ -4,7 +4,7 @@ Project-specific instructions for Claude Code when working in this repository.
 
 ## What This Is
 
-A first-person horror sausage-making mini-game. SAW meets cooking show. Built with React Native 0.83 + React Three Fiber 9.5 (Three.js 0.183) + Expo SDK 55. Cross-platform: web, iOS, Android.
+A first-person horror sausage-making mini-game. SAW meets cooking show. Built with React Native 0.83 + React Three Fiber 9.5 (Three.js 0.183 WebGPU) + Expo SDK 55. WebGPU rendering via `react-native-wgpu` (Dawn-based on native, browser WebGPU on web). Cross-platform: web, iOS, Android.
 
 **Full documentation:** See `docs/` directory for detailed guides:
 - `docs/architecture.md` — System design, directory structure, data flow
@@ -39,7 +39,7 @@ npx tsc --noEmit
 
 ### Two-Layer Rendering
 
-1. **React Three Fiber 3D scene** (`<Canvas>`) — Kitchen GLB model + declarative station meshes + lighting
+1. **React Three Fiber 3D scene** (`<Canvas>` with `WebGPURenderer`) — Kitchen GLB model + declarative station meshes + lighting. WebXR support via `@react-three/xr`.
 2. **React Native overlay** — All UI (challenges, dialogue, menus, results)
 
 ### State Management
@@ -56,8 +56,9 @@ Managed by `appPhase` (menu/loading/playing) and `currentChallenge` (0–4) in t
 
 ### Unified Cross-Platform
 
-Single `GameWorld.tsx` uses `@react-three/fiber` Canvas — works on both web and native via `expo-gl`. No platform-specific file splitting for the 3D layer.
+Single `GameWorld.tsx` uses `@react-three/fiber` Canvas with `WebGPURenderer` — works on both web and native via `react-native-wgpu`. No platform-specific file splitting for the 3D layer.
 
+- Metro config has a WebGPU resolver that maps bare `'three'` imports to `'three/webgpu'` on native platforms
 - `AudioEngine.web.ts` (Tone.js) / `AudioEngine.ts` (native no-op stub) — only remaining platform split
 
 ## Key Files
@@ -77,7 +78,7 @@ Single `GameWorld.tsx` uses `@react-three/fiber` Canvas — works on both web an
 | `src/components/kitchen/StoveStation.tsx` | 3D stove with temperature glow |
 | `src/components/kitchen/CrtTelevision.tsx` | CRT TV with Mr. Sausage + shader |
 | `src/components/characters/MrSausage3D.tsx` | Procedural 3D character with reaction animations |
-| `src/components/effects/CrtShader.ts` | Three.js ShaderMaterial (chromatic aberration + scanlines) |
+| `src/components/effects/CrtShader.ts` | TSL NodeMaterial (chromatic aberration + scanlines, compiles to WGSL/GLSL) |
 | `src/components/ingredients/Ingredient3D.tsx` | Shape-based ingredient meshes (8 shape types) |
 | `src/components/challenges/*.tsx` | 5 challenge overlays (game mechanics + UI) |
 | `src/components/ui/*.tsx` | Menu, loading, dialogue, progress, strikes, game over |
@@ -129,3 +130,5 @@ Each challenge = overlay (`challenges/`) + 3D station (`kitchen/`) + dialogue (`
 - **Camera inside mesh**: Check STATION_CAMERAS values. Camera needs ≥0.5 units clearance from solid meshes.
 - **MrSausage3D overlap**: The character is ~3.5 units tall at scale 1.0. Verify position in each scene doesn't clip animated geometry.
 - **Three.js transform allowlist**: `jest.config.js` must include `three` and `@react-three` in `transformIgnorePatterns` or tests fail with ESM syntax errors.
+- **TSL vs GLSL**: WebGPU renderer does not support raw GLSL `ShaderMaterial`. Use TSL (Three Shading Language) `NodeMaterial` instead — it compiles to WGSL for WebGPU or GLSL for WebGL2 fallback. Import node functions from `'three/tsl'`.
+- **Metro WebGPU resolver**: On native, bare `'three'` imports are remapped to `'three/webgpu'` by `metro.config.js`. On web, the browser build already uses WebGPU. Direct `'three/webgpu'` imports work on all platforms.
