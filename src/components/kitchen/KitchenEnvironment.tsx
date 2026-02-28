@@ -2,8 +2,8 @@ import {useGLTF, useTexture} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
 import type React from 'react';
 import {useEffect, useMemo, useRef} from 'react';
-import {Platform} from 'react-native';
 import * as THREE from 'three/webgpu';
+import {getAssetUrl} from '../../engine/assetUrl';
 
 // --- Room dimensions (slightly larger than 12x12 kitchen GLB to avoid z-fighting) ---
 const ROOM_W = 13; // x-axis
@@ -71,26 +71,9 @@ const TUBE_POSITIONS: [number, number, number][] = [
 
 const BASE_INTENSITY = 2.0;
 
-/** Derive the Expo baseUrl from script tags (Expo prefixes script src with baseUrl) */
-function getWebBasePath(): string {
-  if (typeof document === 'undefined') return '';
-  const base = document.querySelector('base');
-  if (base?.href) return new URL(base.href).pathname.replace(/\/$/, '');
-  // Fallback: Expo prefixes script src with experiments.baseUrl — extract it
-  const script = document.querySelector('script[src*="/_expo/"]');
-  const src = script?.getAttribute('src') ?? '';
-  const match = src.match(/^(\/[^/]+)\/_expo\//);
-  return match ? match[1] : '';
-}
-
-/** Resolve asset URL accounting for platform and Expo web baseUrl in production */
+/** Resolve asset root URL for a subdirectory (textures, models) */
 function getAssetRootUrl(subdir: string): string {
-  if (Platform.OS === 'web') {
-    return `${getWebBasePath()}/${subdir}/`;
-  }
-  // Native: assets are bundled by Metro and served from the app bundle
-  // drei's useGLTF/useTexture handle this via the asset URI
-  return `${subdir}/`;
+  return getAssetUrl(subdir);
 }
 
 // -------------------------------------------------------

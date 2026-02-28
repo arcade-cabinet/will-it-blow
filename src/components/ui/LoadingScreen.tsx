@@ -1,6 +1,7 @@
 import {useEffect, useRef, useState} from 'react';
 import {Animated, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {audioEngine} from '../../engine/AudioEngine';
+import {getAssetUrl} from '../../engine/assetUrl';
 import {useGameStore} from '../../store/gameStore';
 
 const LOADING_QUOTES = [
@@ -10,22 +11,6 @@ const LOADING_QUOTES = [
   'Firing up the stove...',
   'Almost ready to blow...',
 ];
-
-/** Derive the Expo baseUrl from script tags (Expo prefixes script src with baseUrl) */
-function getWebBasePath(): string {
-  if (typeof document === 'undefined') return '';
-  const base = document.querySelector('base');
-  if (base?.href) return new URL(base.href).pathname.replace(/\/$/, '');
-  const script = document.querySelector('script[src*="/_expo/"]');
-  const src = script?.getAttribute('src') ?? '';
-  const match = src.match(/^(\/[^/]+)\/_expo\//);
-  return match ? match[1] : '';
-}
-
-/** Resolve model URL accounting for Expo web baseUrl in production */
-function getModelUrl(filename: string): string {
-  return `${getWebBasePath()}/models/${filename}`;
-}
 
 export function LoadingScreen() {
   const startNewGame = useGameStore(s => s.startNewGame);
@@ -66,7 +51,7 @@ export function LoadingScreen() {
 
     async function preload() {
       try {
-        const url = getModelUrl('kitchen.glb');
+        const url = getAssetUrl('models', 'kitchen.glb');
         const response = await fetch(url, {signal: controller.signal});
 
         if (!response.ok) {
