@@ -147,10 +147,24 @@ describe('addStrike', () => {
 describe('returnToMenu', () => {
   it('resets appPhase to menu', () => {
     store().startNewGame();
+    useGameStore.setState({
+      strikes: 2,
+      challengeProgress: 55,
+      challengePressure: 80,
+      challengeIsPressing: true,
+      challengeTemperature: 180,
+      challengeHeatLevel: 90,
+    });
     expect(store().appPhase).toBe('playing');
     store().returnToMenu();
     expect(store().appPhase).toBe('menu');
     expect(store().gameStatus).toBe('menu');
+    expect(store().strikes).toBe(0);
+    expect(store().challengeProgress).toBe(0);
+    expect(store().challengePressure).toBe(0);
+    expect(store().challengeIsPressing).toBe(false);
+    expect(store().challengeTemperature).toBe(70);
+    expect(store().challengeHeatLevel).toBe(0);
   });
 });
 

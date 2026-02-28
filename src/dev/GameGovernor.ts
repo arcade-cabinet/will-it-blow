@@ -12,6 +12,9 @@
 import { useGameStore } from '../store/gameStore';
 
 export interface GameGov {
+	/** True once the 3D scene + GLB meshes are fully loaded and rendered */
+	sceneReady: boolean;
+
 	/** Get current store state snapshot */
 	getState: () => Record<string, unknown>;
 
@@ -47,6 +50,8 @@ function createGovernor(): GameGov {
 	const store = useGameStore;
 
 	return {
+		sceneReady: false,
+
 		getState() {
 			const s = store.getState();
 			return {
@@ -84,9 +89,9 @@ function createGovernor(): GameGov {
 			if (state.appPhase !== 'playing') {
 				state.startNewGame();
 			}
-			// Complete challenges up to the target index
-			const current = store.getState().currentChallenge;
-			for (let i = current; i < index; i++) {
+			// Complete challenges up to the target index, re-reading state each
+			// iteration to avoid stale currentChallenge after completeChallenge()
+			while (store.getState().currentChallenge < index) {
 				store.getState().completeChallenge(75); // default decent score
 			}
 		},

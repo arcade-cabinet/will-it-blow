@@ -135,8 +135,18 @@ async function dismissDialogue(page: Page) {
 	}
 }
 
-async function settle(ms = 3000) {
+/** Brief pause for animations/transitions (NOT for asset loading — use waitForSceneReady) */
+async function settle(ms = 1000) {
 	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Wait until the 3D scene + GLB meshes are fully loaded */
+async function waitForSceneReady(page: Page, timeoutMs = 90_000) {
+	await page.waitForFunction(
+		() => (window as any).__gov?.sceneReady === true,
+		null,
+		{ timeout: timeoutMs },
+	);
 }
 
 /** Start game through loading screen and wait for 3D scene to be ready */
@@ -144,7 +154,7 @@ async function startAndWaitForScene(page: Page) {
 	await page.evaluate(() => (window as any).__gov.startGame());
 	await waitForPhase(page, 'playing', 90_000);
 	await waitForCanvas(page);
-	await settle(8000); // Wait for GLB parse + mesh/material creation
+	await waitForSceneReady(page); // Wait for GLB parse + mesh/material creation
 }
 
 // ---------------------------------------------------------------------------

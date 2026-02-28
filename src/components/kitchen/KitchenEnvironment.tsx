@@ -344,9 +344,18 @@ export const KitchenEnvironment = () => {
 						}
 					}
 				}
+
+				// Signal to e2e tests that the scene is fully loaded
+				if (typeof window !== 'undefined' && (window as any).__gov) {
+					(window as any).__gov.sceneReady = true;
+				}
 			},
 			(error) => {
 				console.warn('Failed to load kitchen.glb:', error);
+				// Still signal readiness so tests don't hang
+				if (typeof window !== 'undefined' && (window as any).__gov) {
+					(window as any).__gov.sceneReady = true;
+				}
 			},
 		);
 

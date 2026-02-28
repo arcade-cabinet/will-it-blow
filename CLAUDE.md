@@ -34,17 +34,21 @@ npx tsc --noEmit
 ## Architecture
 
 ### Three-Layer Rendering
+
 1. **Babylon.js 3D scene** (reactylon) — Kitchen GLB model + procedural station meshes + lighting
 2. **React Native overlay** — All UI (challenges, dialogue, menus, results)
 3. **MrSausage3D** — Procedural self-lit character on CRT television
 
 ### State Management
+
 Zustand store (`src/store/gameStore.ts`) — single source of truth. No React Context.
 
 ### Game Flow
+
 ```
 menu → loading → ingredients → grinding → stuffing → cooking → tasting → results
 ```
+
 Managed by `appPhase` (menu/loading/playing) and `currentChallenge` (0–4) in the store.
 
 ### Platform Splitting (Metro file extensions)
@@ -70,6 +74,7 @@ Managed by `appPhase` (menu/loading/playing) and `currentChallenge` (0–4) in t
 ## Patterns and Conventions
 
 ### 3D Scenes
+
 - Mesh/material creation in `useEffect([scene, ...])` with full disposal on cleanup
 - `useRef` for values read inside `onBeforeRenderObservable` (avoids stale closures)
 - Self-lit materials: `disableLighting: true` + `emissiveColor` for non-physical objects
@@ -78,12 +83,14 @@ Managed by `appPhase` (menu/loading/playing) and `currentChallenge` (0–4) in t
 - StandardMaterial `diffuseColor` must be ≤0.20 (6 scene lights totaling ~7× intensity)
 
 ### Challenge Component Pattern
+
 Each challenge = overlay (`challenges/`) + 3D station (`kitchen/`) + dialogue (`data/dialogue/`)
 - Overlay writes to store (progress, pressure, strikes)
 - Station reads from store via props (passed through GameWorld)
 - No direct communication between overlay and station
 
 ### Testing
+
 - Jest with react-native preset — **pure logic only**
 - Cannot import Babylon.js or reactylon in tests (ESM incompatible)
 - 172 tests covering: SausagePhysics, Ingredients, ChallengeRegistry, IngredientMatcher, DialogueEngine, gameStore
