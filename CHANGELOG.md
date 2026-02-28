@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.2](https://github.com/arcade-cabinet/will-it-blow/compare/v1.1.1...v1.1.2) (2026-02-28)
+
+
+### Bug Fixes
+
+* move Pages deploy to cd.yml, fix Android pnpm hoisting ([4d405db](https://github.com/arcade-cabinet/will-it-blow/commit/4d405db1fc335f3564dddb25a0e5f76c72de5160))
+
 ## [1.1.1](https://github.com/arcade-cabinet/will-it-blow/compare/v1.1.0...v1.1.1) (2026-02-28)
 
 
