@@ -36,13 +36,10 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Use hoisted node_modules for Gradle compatibility
-        run: echo "node-linker=hoisted" >> .npmrc
-
       - run: pnpm install --frozen-lockfile
 
-      - name: Generate native project
-        run: npx expo prebuild --platform android --no-install
+      - name: Generate native project (clean)
+        run: npx expo prebuild --platform android --clean --no-install
 
       - name: Build debug APKs (all architectures)
         working-directory: android
