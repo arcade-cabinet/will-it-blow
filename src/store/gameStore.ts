@@ -143,6 +143,11 @@ export const useGameStore = create<GameState>()(
           challengeIsPressing: false,
           challengeTemperature: 70,
           challengeHeatLevel: 0,
+          fridgePool: [],
+          fridgeMatchingIndices: [],
+          fridgeSelectedIndices: [],
+          pendingFridgeClick: null,
+          fridgeHoveredIndex: null,
         }),
 
       completeChallenge: (score: number) =>
@@ -231,6 +236,7 @@ export const useGameStore = create<GameState>()(
           challengeTemperature: 70,
           challengeHeatLevel: 0,
           mrSausageReaction: 'idle' as Reaction,
+          hintActive: false,
           fridgePool: [],
           fridgeMatchingIndices: [],
           fridgeSelectedIndices: [],

@@ -1,6 +1,7 @@
 import type {Ingredient} from './Ingredients';
 
 export function calculateBlowRuffalos(holdDurationSec: number, ingredients: Ingredient[]): number {
+  if (ingredients.length === 0) return 0;
   const avgBlow = ingredients.reduce((a, i) => a + i.blowPower, 0) / ingredients.length;
   const dur = Math.min(holdDurationSec, 3);
   const pow = Math.min((dur / 3) * avgBlow + Math.random() * 1.5, 5);
@@ -8,11 +9,13 @@ export function calculateBlowRuffalos(holdDurationSec: number, ingredients: Ingr
 }
 
 export function checkBurst(ingredients: Ingredient[]): boolean {
+  if (ingredients.length === 0) return false;
   const avgRisk = ingredients.reduce((a, i) => a + i.burstRisk, 0) / ingredients.length;
   return Math.random() < avgRisk;
 }
 
 export function calculateTasteRating(ingredients: Ingredient[], hasBurst: boolean): number {
+  if (ingredients.length === 0) return 0;
   const avgTaste = ingredients.reduce((a, i) => a + i.tasteMod, 0) / ingredients.length;
   const avgTexture = ingredients.reduce((a, i) => a + i.textureMod, 0) / ingredients.length;
   let base = avgTaste * 0.6 + avgTexture * 0.4;

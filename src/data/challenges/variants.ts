@@ -31,9 +31,14 @@ export interface CookingVariant {
 
 export const INGREDIENT_VARIANTS: IngredientVariant[] = [
   {
-    criteria: {tags: ['sweet', 'savory'], description: 'sweet and savory'},
+    criteria: {tags: ['sweet'], description: 'sweet'},
     requiredCount: 3,
-    mrSausageDemand: 'I want something SWEET and SAVORY...',
+    mrSausageDemand: 'I want something SWEET...',
+  },
+  {
+    criteria: {tags: ['savory'], description: 'savory'},
+    requiredCount: 3,
+    mrSausageDemand: 'I want something SAVORY...',
   },
   {
     criteria: {tags: ['spicy'], description: 'spicy'},
