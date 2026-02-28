@@ -80,7 +80,10 @@ export const StoveStation = ({temperature, heatLevel}: StoveStationProps) => {
   const sausageCapLRef = useRef<THREE.Mesh>(null);
   const sausageCapRRef = useRef<THREE.Mesh>(null);
   const sausageMatRef = useRef<THREE.MeshBasicMaterial>(null);
-  const sausageCapMat = useMemo(() => new THREE.MeshBasicMaterial({color: new THREE.Color(...COLOR_PINK)}), []);
+  const sausageCapMat = useMemo(
+    () => new THREE.MeshBasicMaterial({color: new THREE.Color(...COLOR_PINK)}),
+    [],
+  );
   const thermoFillRef = useRef<THREE.Mesh>(null);
   const thermoFillMatRef = useRef<THREE.MeshBasicMaterial>(null);
   const panRef = useRef<THREE.Mesh>(null);

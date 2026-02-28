@@ -51,7 +51,15 @@ export const MrSausage3D = ({
   const lowerLipRef = useRef<THREE.Mesh>(null);
 
   // Cheeks — shared material so both update together
-  const cheekMat = useMemo(() => new THREE.MeshBasicMaterial({color: new THREE.Color(0.92, 0.62, 0.35), transparent: true, opacity: 0.6}), []);
+  const cheekMat = useMemo(
+    () =>
+      new THREE.MeshBasicMaterial({
+        color: new THREE.Color(0.92, 0.62, 0.35),
+        transparent: true,
+        opacity: 0.6,
+      }),
+    [],
+  );
 
   // Mustache
   const stacheCenterRef = useRef<THREE.Mesh>(null);
@@ -88,7 +96,7 @@ export const MrSausage3D = ({
     if (!root || !head) return;
 
     // Reset animated properties to defaults before applying reaction-specific values
-    head.scale.y = 1.0;
+    head.scale.y = 1.05;
     root.position.x = position[0];
 
     const currentReaction = reactionRef.current;

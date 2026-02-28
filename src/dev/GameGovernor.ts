@@ -71,6 +71,12 @@ export interface GameGov {
 
   /** Get fridge state snapshot */
   getFridgeState: () => Record<string, unknown>;
+
+  /** Set audio volume/mute for testing persistence */
+  setMusicVolume: (v: number) => void;
+  setSfxVolume: (v: number) => void;
+  setMusicMuted: (v: boolean) => void;
+  setSfxMuted: (v: boolean) => void;
 }
 
 function createGovernor(): GameGov {
@@ -188,8 +194,8 @@ function createGovernor(): GameGov {
     },
 
     simulateContinue() {
-      store.getState().continueGame();
       store.getState().setAppPhase('loading');
+      store.getState().continueGame();
     },
 
     clearSaveData() {
@@ -228,6 +234,19 @@ function createGovernor(): GameGov {
         pendingFridgeClick: s.pendingFridgeClick,
         fridgeHoveredIndex: s.fridgeHoveredIndex,
       };
+    },
+
+    setMusicVolume(v) {
+      store.getState().setMusicVolume(v);
+    },
+    setSfxVolume(v) {
+      store.getState().setSfxVolume(v);
+    },
+    setMusicMuted(v) {
+      store.getState().setMusicMuted(v);
+    },
+    setSfxMuted(v) {
+      store.getState().setSfxMuted(v);
     },
   };
 }

@@ -1,6 +1,6 @@
 import {useFrame} from '@react-three/fiber';
 import {useRef} from 'react';
-import * as THREE from 'three/webgpu';
+import type * as THREE from 'three/webgpu';
 
 interface GrinderStationProps {
   grindProgress: number; // 0-100

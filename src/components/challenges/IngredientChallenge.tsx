@@ -10,7 +10,7 @@ import {INTRO_DIALOGUE} from '../../data/dialogue/intro';
 import {audioEngine} from '../../engine/AudioEngine';
 import {pickVariant} from '../../engine/ChallengeRegistry';
 import {filterMatchingIngredients, matchesCriteria} from '../../engine/IngredientMatcher';
-import {INGREDIENTS, getRandomIngredientPool} from '../../engine/Ingredients';
+import {getRandomIngredientPool, INGREDIENTS} from '../../engine/Ingredients';
 import {useGameStore} from '../../store/gameStore';
 import type {Reaction} from '../characters/reactions';
 import {DialogueOverlay} from '../ui/DialogueOverlay';
@@ -78,17 +78,16 @@ export function IngredientChallenge({onComplete, onReaction}: IngredientChalleng
       const alreadyInPool = new Set(pool.map(ing => ing.name));
       const available = allMatching.filter(ing => !alreadyInPool.has(ing.name));
       // Indices of non-matching pool items we can replace
-      const nonMatchingIndices = pool
-        .map((_, i) => i)
-        .filter(i => !matching.includes(i));
+      const nonMatchingIndices = pool.map((_, i) => i).filter(i => !matching.includes(i));
       let needed = v.requiredCount - matching.length;
       let availIdx = 0;
       let replaceIdx = 0;
       while (needed > 0 && replaceIdx < nonMatchingIndices.length) {
         // Pick from available extras first, then cycle through allMatching
-        const replacement = availIdx < available.length
-          ? available[availIdx++]
-          : allMatching[availIdx++ % allMatching.length];
+        const replacement =
+          availIdx < available.length
+            ? available[availIdx++]
+            : allMatching[availIdx++ % allMatching.length];
         const targetIdx = nonMatchingIndices[replaceIdx++];
         pool[targetIdx] = replacement;
         matching.push(targetIdx);

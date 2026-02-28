@@ -24,7 +24,7 @@ A first-person horror sausage-making mini-game. SAW meets cooking show. Built wi
 npx expo start --web          # Web dev server (primary dev target)
 
 # Testing
-pnpm test                     # Run all 256 Jest tests
+pnpm test                     # Run all Jest tests
 pnpm test:ci                  # CI mode (--ci --forceExit)
 
 # Linting & formatting (Biome)
@@ -120,7 +120,7 @@ Each challenge = overlay (`challenges/`) + 3D station (`kitchen/`) + dialogue (`
 
 - Jest with react-native preset — **both pure logic AND R3F component tests**
 - R3F components tested via `@react-three/test-renderer` (renders Three.js scene graph in Node.js)
-- 259 tests across ~17 test files
+- 256+ tests across ~24 test files
 - Pure logic: SausagePhysics, Ingredients, ChallengeRegistry, IngredientMatcher, DialogueEngine, gameStore
 - Component tests: MrSausage3D, CrtTelevision, KitchenEnvironment, FridgeStation, GrinderStation, StufferStation, StoveStation, Ingredient3D, GameWorld, CrtShader
 

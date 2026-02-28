@@ -79,12 +79,6 @@ async function startAndWaitForScene(page: Page) {
   await waitForSceneReady(page);
 }
 
-async function clearSaveAndReload(page: Page) {
-  await page.evaluate(() => (window as any).__gov.clearSaveData());
-  await page.evaluate(() => (window as any).__gov.returnToMenu());
-  await waitForPhase(page, 'menu');
-}
-
 /** Brief pause for animations/transitions */
 async function settle(ms = 500) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -301,17 +295,16 @@ test.describe('Challenge Flow — Sequential Progression', () => {
 
     const state = await getState(page);
     expect(state.currentChallenge).toBe(1);
-    expect((state.challengeScores as number[])).toEqual([85]);
+    expect(state.challengeScores as number[]).toEqual([85]);
     expect(state.strikes).toBe(0); // Strikes reset between challenges
   });
 
   test('completing all 5 challenges triggers victory', async ({page}) => {
     const scores = [85, 70, 90, 80, 75];
     for (let i = 0; i < 5; i++) {
-      await page.evaluate(
-        ({score}) => (window as any).__gov.completeCurrentChallenge(score),
-        {score: scores[i]},
-      );
+      await page.evaluate(({score}) => (window as any).__gov.completeCurrentChallenge(score), {
+        score: scores[i],
+      });
       if (i < 4) {
         await waitForChallenge(page, i + 1);
       }
@@ -433,8 +426,8 @@ test.describe('Victory Paths — Rank Tiers', () => {
     await settle(3000);
 
     const bodyText = await page.evaluate(() => document.body.innerText);
-    // S-rank should show "THE SAUSAGE KING"
-    expect(bodyText).toContain('S');
+    // S-rank shows "THE SAUSAGE KING" title
+    expect(bodyText).toContain('SAUSAGE KING');
   });
 
   test('A-rank victory (avg >= 75, < 92)', async ({page}) => {
@@ -446,7 +439,7 @@ test.describe('Victory Paths — Rank Tiers', () => {
     await settle(3000);
 
     const bodyText = await page.evaluate(() => document.body.innerText);
-    expect(bodyText).toContain('A');
+    expect(bodyText).toContain('Almost Worthy');
   });
 
   test('B-rank victory (avg >= 50, < 75)', async ({page}) => {
@@ -458,7 +451,7 @@ test.describe('Victory Paths — Rank Tiers', () => {
     await settle(3000);
 
     const bodyText = await page.evaluate(() => document.body.innerText);
-    expect(bodyText).toContain('B');
+    expect(bodyText).toContain('Mediocre');
   });
 
   test('F-rank victory (avg < 50)', async ({page}) => {
@@ -470,7 +463,7 @@ test.describe('Victory Paths — Rank Tiers', () => {
     await settle(3000);
 
     const bodyText = await page.evaluate(() => document.body.innerText);
-    expect(bodyText).toContain('F');
+    expect(bodyText).toContain('Unacceptable');
   });
 
   test('victory screen shows all individual challenge scores', async ({page}) => {
@@ -728,18 +721,28 @@ test.describe('State Persistence', () => {
   });
 
   test('settings persist across games', async ({page}) => {
-    // Change volume settings
+    // Mutate volume settings via governor
     await page.evaluate(() => {
-      const store = (window as any).__gov;
-      // Access store directly for settings
-      store.getState(); // just to verify gov works
+      (window as any).__gov.setMusicVolume(0.3);
+      (window as any).__gov.setSfxVolume(0.5);
+      (window as any).__gov.setMusicMuted(true);
     });
 
+    // Start and complete a game
+    await page.evaluate(() => (window as any).__gov.startGame());
+    await waitForPhase(page, 'playing', 90_000);
+    await page.evaluate(() => (window as any).__gov.triggerVictory([80, 80, 80, 80, 80]));
+    await waitForGameStatus(page, 'victory');
+
+    // Return to menu (simulating a new game cycle)
+    await page.evaluate(() => (window as any).__gov.returnToMenu());
+    await waitForPhase(page, 'menu');
+
+    // Settings should persist across game boundaries
     const state = await getState(page);
-    // Default values
-    expect(state.musicVolume).toBeCloseTo(0.7, 1);
-    expect(state.sfxVolume).toBeCloseTo(0.8, 1);
-    expect(state.musicMuted).toBe(false);
+    expect(state.musicVolume).toBeCloseTo(0.3, 1);
+    expect(state.sfxVolume).toBeCloseTo(0.5, 1);
+    expect(state.musicMuted).toBe(true);
     expect(state.sfxMuted).toBe(false);
   });
 });
@@ -939,10 +942,9 @@ test.describe('Full Game Journeys', () => {
     // 3. Complete all challenges
     const scores = [85, 70, 90, 80, 75];
     for (let i = 0; i < 5; i++) {
-      await page.evaluate(
-        ({score}) => (window as any).__gov.completeCurrentChallenge(score),
-        {score: scores[i]},
-      );
+      await page.evaluate(({score}) => (window as any).__gov.completeCurrentChallenge(score), {
+        score: scores[i],
+      });
     }
 
     // 4. Victory
@@ -959,7 +961,9 @@ test.describe('Full Game Journeys', () => {
     expect(state.appPhase).toBe('menu');
   });
 
-  test('defeat path: menu → load → 2 challenges → strike out → defeat → new game', async ({page}) => {
+  test('defeat path: menu → load → 2 challenges → strike out → defeat → new game', async ({
+    page,
+  }) => {
     // 1. Start game
     await page.evaluate(() => (window as any).__gov.startGame());
     await waitForPhase(page, 'playing', 90_000);
@@ -1064,14 +1068,9 @@ test.describe('3D Scene Rendering', () => {
     const hasPixelData = await page.evaluate(() => {
       const canvas = document.querySelector('canvas');
       if (!canvas) return false;
-      try {
-        const ctx = canvas.getContext('2d') || canvas.getContext('webgl2') || canvas.getContext('webgpu');
-        // For WebGL/WebGPU we can't easily read pixels, but the canvas existing and having
-        // non-zero dimensions after sceneReady is a strong indicator
-        return canvas.width > 0 && canvas.height > 0;
-      } catch {
-        return canvas.width > 0 && canvas.height > 0;
-      }
+      // For WebGL/WebGPU we can't easily read pixels, but the canvas existing
+      // with non-zero dimensions after sceneReady is a strong indicator
+      return canvas.width > 0 && canvas.height > 0;
     });
     expect(hasPixelData).toBe(true);
   });

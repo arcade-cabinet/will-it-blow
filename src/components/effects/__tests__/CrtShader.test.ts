@@ -1,6 +1,11 @@
 import {createCrtMaterial, crtUniforms} from '../CrtShader';
 
 describe('CrtShader', () => {
+  afterEach(() => {
+    crtUniforms.time.value = 0;
+    crtUniforms.reactionIntensity.value = 0.0;
+  });
+
   it('creates a NodeMaterial with fragmentNode set', () => {
     const mat = createCrtMaterial('test');
     expect(mat.type).toBe('NodeMaterial');
@@ -20,9 +25,5 @@ describe('CrtShader', () => {
 
     crtUniforms.reactionIntensity.value = 0.8;
     expect(crtUniforms.reactionIntensity.value).toBe(0.8);
-
-    // Reset for other tests
-    crtUniforms.time.value = 0;
-    crtUniforms.reactionIntensity.value = 0.0;
   });
 });

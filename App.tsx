@@ -1,4 +1,4 @@
-import {Suspense, lazy, useCallback, useEffect, useRef, useState} from 'react';
+import {lazy, Suspense, useCallback, useEffect, useRef, useState} from 'react';
 import {SafeAreaView, StyleSheet, View} from 'react-native';
 import {ChallengeHeader} from './src/components/ui/ChallengeHeader';
 import {ChallengeTransition} from './src/components/ui/ChallengeTransition';

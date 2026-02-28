@@ -33,8 +33,8 @@ function createNode(value) {
   return node;
 }
 
-const fnStub = () => createNode();
-const fnFactory = fn => {
+const _fnStub = () => createNode();
+const fnFactory = _fn => {
   const wrapper = (..._args) => createNode();
   return wrapper;
 };
