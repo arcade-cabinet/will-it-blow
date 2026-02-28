@@ -11,16 +11,20 @@ const LOADING_QUOTES = [
   'Almost ready to blow...',
 ];
 
+/** Derive the Expo baseUrl from script tags (Expo prefixes script src with baseUrl) */
+function getWebBasePath(): string {
+  if (typeof document === 'undefined') return '';
+  const base = document.querySelector('base');
+  if (base?.href) return new URL(base.href).pathname.replace(/\/$/, '');
+  const script = document.querySelector('script[src*="/_expo/"]');
+  const src = script?.getAttribute('src') ?? '';
+  const match = src.match(/^(\/[^/]+)\/_expo\//);
+  return match ? match[1] : '';
+}
+
 /** Resolve model URL accounting for Expo web baseUrl in production */
 function getModelUrl(filename: string): string {
-  if (typeof document !== 'undefined') {
-    const base = document.querySelector('base');
-    if (base?.href) {
-      const url = new URL(base.href);
-      return `${url.pathname.replace(/\/$/, '')}/models/${filename}`;
-    }
-  }
-  return `/models/${filename}`;
+  return `${getWebBasePath()}/models/${filename}`;
 }
 
 export function LoadingScreen() {

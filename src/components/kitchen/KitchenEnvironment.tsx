@@ -71,17 +71,22 @@ const TUBE_POSITIONS: [number, number, number][] = [
 
 const BASE_INTENSITY = 2.0;
 
+/** Derive the Expo baseUrl from script tags (Expo prefixes script src with baseUrl) */
+function getWebBasePath(): string {
+  if (typeof document === 'undefined') return '';
+  const base = document.querySelector('base');
+  if (base?.href) return new URL(base.href).pathname.replace(/\/$/, '');
+  // Fallback: Expo prefixes script src with experiments.baseUrl — extract it
+  const script = document.querySelector('script[src*="/_expo/"]');
+  const src = script?.getAttribute('src') ?? '';
+  const match = src.match(/^(\/[^/]+)\/_expo\//);
+  return match ? match[1] : '';
+}
+
 /** Resolve asset URL accounting for platform and Expo web baseUrl in production */
 function getAssetRootUrl(subdir: string): string {
   if (Platform.OS === 'web') {
-    if (typeof document !== 'undefined') {
-      const base = document.querySelector('base');
-      if (base?.href) {
-        const url = new URL(base.href);
-        return `${url.pathname.replace(/\/$/, '')}/${subdir}/`;
-      }
-    }
-    return `/${subdir}/`;
+    return `${getWebBasePath()}/${subdir}/`;
   }
   // Native: assets are bundled by Metro and served from the app bundle
   // drei's useGLTF/useTexture handle this via the asset URI
