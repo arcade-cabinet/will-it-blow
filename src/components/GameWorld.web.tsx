@@ -28,18 +28,31 @@ import type { IngredientVariant } from '../data/challenges/variants';
 // cannon-es compat: Babylon's CannonJSPlugin reads from globalThis.CANNON
 (globalThis as any).CANNON = CANNON;
 
-/** Camera positions for each challenge station, in order along the basement. */
+/** Menu camera: center of room, facing the kitchen */
+const MENU_CAMERA = {
+  position: [0, 1.6, 2] as [number, number, number],
+  lookAt: [-2, 1.6, -2] as [number, number, number],
+};
+
+/**
+ * Camera positions for each challenge station.
+ * Mapped to the kitchen.glb layout (Blender coords → Babylon Y-up):
+ * - Fridge: back-left corner (~x=-5, z=-5)
+ * - Counter/sink: right side (~x=2-4, z=0-2)
+ * - Stove burners: right side (~x=2.4, z=1.2)
+ * - Table: center-back (~x=0, z=-3)
+ */
 const STATION_CAMERAS: { position: [number, number, number]; lookAt: [number, number, number] }[] = [
-  // 0: Fridge (left side of room)
-  { position: [-4, 1.6, -2], lookAt: [-5, 1.2, -4] },
-  // 1: Grinder (center-left)
-  { position: [-1.5, 1.6, -3], lookAt: [-1.5, 1.0, -5] },
-  // 2: Stuffer (center-right)
-  { position: [1.5, 1.6, -2], lookAt: [2.5, 1.0, -4] },
-  // 3: Stove (right side)
-  { position: [4, 1.6, -3], lookAt: [4, 0.8, -5.5] },
-  // 4: Tasting (back to center, facing CRT TV on back wall)
-  { position: [0, 1.6, -3], lookAt: [0, 2.5, -6.8] },
+  // 0: Fridge — stand near center, look toward back-left (stay inside room)
+  { position: [0, 1.6, 0], lookAt: [-3, 1.4, -3] },
+  // 1: Grinder — step to left side, face the counter/shelf on left wall
+  { position: [-1, 1.6, 0], lookAt: [-4, 1.4, 0] },
+  // 2: Stuffer — walk toward main counter/island on right side
+  { position: [0, 1.6, 1], lookAt: [3, 1.2, 2] },
+  // 3: Stove — face the gas burners on the right counter
+  { position: [0, 1.6, 0], lookAt: [2.5, 2.0, 1.5] },
+  // 4: Tasting — walk to table, face the CRT TV on back wall
+  { position: [-1, 1.6, -1], lookAt: [0, 2.5, -5.5] },
 ];
 
 export const GameWorld = () => {
@@ -112,19 +125,20 @@ export const GameWorld = () => {
     scene.clearColor = new Color4(0.02, 0.02, 0.02, 1);
     scene.enablePhysics(new Vector3(0, -9.81, 0), new CannonJSPlugin());
 
-    // Dim ambient fill (fluorescent tubes in KitchenEnvironment provide main light)
+    // Dim ambient fill (KitchenEnvironment provides the strong fluorescent + fill lights)
     const ambientLight = new HemisphericLight('ambientLight', new Vector3(0, 1, 0), scene);
     ambientLight.intensity = 0.15;
     ambientLight.groundColor = new Color3(0.1, 0.1, 0.1);
 
-    // Start camera at station 0 (fridge)
-    const start = STATION_CAMERAS[0];
+    // Start camera at menu position (center of room, facing back wall)
+    const start = MENU_CAMERA;
     const cam = new FreeCamera(
       'playerCamera',
       new Vector3(start.position[0], start.position[1], start.position[2]),
       scene,
     );
     cam.setTarget(new Vector3(start.lookAt[0], start.lookAt[1], start.lookAt[2]));
+    cam.fov = 1.2; // ~70° — wider than default 0.8 for proper first-person feel
     cam.minZ = 0.1;
 
     cam.keysUp = [];
@@ -138,7 +152,7 @@ export const GameWorld = () => {
     setCamera(cam);
   };
 
-  // Auto-walk camera when currentChallenge changes
+  // Auto-walk camera: menu→station0 on game start, stationN→stationN+1 on challenge complete
   useEffect(() => {
     if (!camera || gameStatus !== 'playing') return;
 
@@ -185,6 +199,34 @@ export const GameWorld = () => {
         const scene = (camera as FreeCamera).getScene();
         scene.onBeforeRenderObservable.remove(walkObserverRef.current);
       }
+    };
+  }, [camera]);
+
+  // Force the Babylon.js canvas to fill the viewport.
+  // IMPORTANT: Only set CSS sizing — never mutate canvas.width/height directly,
+  // as that invalidates the WebGPU swap chain. Let engine.resize() handle it.
+  useEffect(() => {
+    if (!camera) return;
+    const engine = (camera as FreeCamera).getScene().getEngine();
+
+    const resizeCanvas = () => {
+      const canvas = engine.getRenderingCanvas();
+      if (canvas) {
+        canvas.style.position = 'absolute';
+        canvas.style.top = '0';
+        canvas.style.left = '0';
+        canvas.style.width = '100vw';
+        canvas.style.height = '100vh';
+      }
+      engine.resize();
+    };
+
+    // Apply after a tick to ensure canvas exists in DOM
+    const id = setTimeout(resizeCanvas, 100);
+    window.addEventListener('resize', resizeCanvas);
+    return () => {
+      clearTimeout(id);
+      window.removeEventListener('resize', resizeCanvas);
     };
   }, [camera]);
 

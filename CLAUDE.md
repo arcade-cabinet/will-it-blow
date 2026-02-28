@@ -4,103 +4,102 @@ Project-specific instructions for Claude Code when working in this repository.
 
 ## What This Is
 
-A sausage-making mini-game built with React Native + Babylon.js (via reactylon) + Expo SDK 51. Cross-platform: web, Android, iOS.
+A first-person horror sausage-making mini-game. SAW meets cooking show. Built with React Native 0.83 + Babylon.js 8.53 (via reactylon 3.5) + Expo SDK 55. Primary target: web. Also targets iOS and Android.
+
+**Full documentation:** See `docs/` directory for detailed guides:
+- `docs/architecture.md` — System design, directory structure, data flow
+- `docs/game-design.md` — Gameplay mechanics, scoring, challenges, Mr. Sausage
+- `docs/3d-rendering.md` — Babylon.js setup, materials, lighting, cameras, stations
+- `docs/state-management.md` — Zustand store schema, actions, state flow
+- `docs/audio.md` — Tone.js synthesis, sound design, integration points
+- `docs/testing.md` — Strategy, coverage, limitations, adding tests
+- `docs/deployment.md` — CI/CD, GitHub Pages, build commands
+- `docs/development-guide.md` — Conventions, patterns, pitfalls, how to add features
+- `docs/status.md` — Current completion status and remaining work
 
 ## Commands
 
 ```bash
 # Development
 npx expo start --web          # Web dev server (primary dev target)
-npx expo start --android      # Android dev
-npx expo start --ios          # iOS dev
 
 # Testing
-npm test                      # Run all 61 Jest tests
-npm test -- --watch           # Watch mode
+npm test                      # Run all 172 Jest tests
 npm test -- --ci --forceExit  # CI mode
 
-# Build
-npx expo export --platform web --output-dir dist   # Static web export
-cd android && ./gradlew assembleDebug               # Android debug APK
-
-# Type checking (test files will show Jest type warnings — ignore those)
+# Type checking (test files show Jest type warnings — ignore those)
 npx tsc --noEmit
 ```
 
 ## Architecture
 
 ### Three-Layer Rendering
-1. **Babylon.js 3D scene** (reactylon `useScene()`) — procedural meshes, no external models
-2. **React Native overlay** — all UI components (buttons, progress bars, ratings)
-3. **MrSausage3D character** — self-lit procedural mesh present in every scene
+1. **Babylon.js 3D scene** (reactylon) — Kitchen GLB model + procedural station meshes + lighting
+2. **React Native overlay** — All UI (challenges, dialogue, menus, results)
+3. **MrSausage3D** — Procedural self-lit character on CRT television
+
+### State Management
+Zustand store (`src/store/gameStore.ts`) — single source of truth. No React Context.
+
+### Game Flow
+```
+menu → loading → ingredients → grinding → stuffing → cooking → tasting → results
+```
+Managed by `appPhase` (menu/loading/playing) and `currentChallenge` (0–4) in the store.
 
 ### Platform Splitting (Metro file extensions)
 - `GameWorld.web.tsx` / `GameWorld.native.tsx` — Engine wrapper
 - `AudioEngine.web.ts` (Tone.js) / `AudioEngine.ts` (native no-op stub)
-- All other code is cross-platform
-
-### State Machine
-```
-title → select → grind → stuff → [BUT FIRST?] → blow → [BUT FIRST?] → cook → taste → results
-```
-Managed by `src/engine/GameEngine.tsx` via React context (`useGame()` hook).
 
 ## Key Files
 
 | File | Purpose |
 |------|---------|
-| `App.tsx` | Root layout — SafeAreaView + GameProvider + all overlays |
-| `src/engine/GameEngine.tsx` | Phase state machine + React context |
+| `App.tsx` | Root layout — SafeAreaView + phase routing (menu/loading/playing) |
+| `src/store/gameStore.ts` | Zustand store (all game state + actions) |
+| `src/engine/ChallengeRegistry.ts` | Challenge configs, variant selection, final verdict |
 | `src/engine/SausagePhysics.ts` | 5 pure scoring functions |
-| `src/engine/Ingredients.ts` | 25 ingredients with stats (taste, texture, burst, blow) |
-| `src/engine/Constants.ts` | Phase config, tiers, quotes, Mr. Sausage dialogue |
-| `src/components/GameWorld.web.tsx` | Camera compositions + scene switching |
-| `src/components/scenes/*.tsx` | 6 Babylon.js 3D scenes (one per game phase) |
-| `src/components/characters/MrSausage3D.tsx` | Procedural 3D character with reaction animations |
-| `src/components/ui/*.tsx` | 16 React Native overlay components |
+| `src/engine/Ingredients.ts` | 25 ingredients with stats |
+| `src/components/GameWorld.web.tsx` | Babylon.js scene orchestrator, camera system |
+| `src/components/kitchen/KitchenEnvironment.tsx` | Room enclosure, GLB loading, PBR materials, lighting |
+| `src/components/kitchen/FridgeStation.tsx` | 3D fridge with ingredient meshes |
+| `src/components/kitchen/CrtTelevision.tsx` | CRT TV with Mr. Sausage + shader |
+| `src/components/challenges/*.tsx` | 5 challenge overlays (game mechanics + UI) |
+| `src/components/ui/*.tsx` | Menu, loading, dialogue, progress, strikes, game over |
 
 ## Patterns and Conventions
 
 ### 3D Scenes
-- Each scene creates all meshes/materials in a `useEffect` that depends on `[scene]`
-- Cleanup function disposes every mesh and material (prevents memory leaks)
-- MrSausage3D is placed as a JSX return from each scene component
-- **Camera compositions** defined in `CAMERA_COMPOSITIONS` object in `GameWorld.web.tsx`
-- All MrSausage3D positions must avoid overlapping scene geometry (check casing extensions, table/counter surfaces)
+- Mesh/material creation in `useEffect([scene, ...])` with full disposal on cleanup
+- `useRef` for values read inside `onBeforeRenderObservable` (avoids stale closures)
+- Self-lit materials: `disableLighting: true` + `emissiveColor` for non-physical objects
+- PBR materials: `albedoTexture` + `bumpTexture` + roughness in metallicTexture green channel
+- All PBR materials: `maxSimultaneousLights = 4` (WebGPU uniform buffer limit)
+- StandardMaterial `diffuseColor` must be ≤0.20 (6 scene lights totaling ~7× intensity)
 
-### MrSausage3D
-- Uses `disableLighting: true` with emissive colors (self-lit, always visible)
-- Head sphere diameter 3.6 at scale 1.0 — extends ~3.5 units tall
-- Position prop is [x, y, z], scale prop multiplies entire character
-- `reaction` prop drives procedural animation (idle, flinch, laugh, disgust, excitement, nervous, nod, talk)
-
-### UI Overlays
-- All use React Native components (cross-platform via react-native-web)
-- Font: "Bangers" for all game text
-- Sub-phase pattern: overlays use `SubPhase` types for multi-step UX within a single game phase
-- Touch events: keep TouchableOpacity mounted across sub-phase changes to prevent onPressIn/onPressOut loss
-
-### Scoring Balance
-- Taste (60%) + Blow (20%) + No-burst bonus (20%) + BUT FIRST bonus
-- High-taste ingredients have low blowPower (intentional trade-off)
-- THE SAUSAGE KING (100) requires BUT FIRST bonus — by design
-- Ingredient stats: tasteMod (−1 to 5), textureMod (0-5), burstRisk (0-0.9), blowPower (0-5)
+### Challenge Component Pattern
+Each challenge = overlay (`challenges/`) + 3D station (`kitchen/`) + dialogue (`data/dialogue/`)
+- Overlay writes to store (progress, pressure, strikes)
+- Station reads from store via props (passed through GameWorld)
+- No direct communication between overlay and station
 
 ### Testing
-- Jest with react-native preset + babel-preset-expo
-- Tests cover pure logic only (SausagePhysics, Ingredients, Constants, scoring pipeline)
-- No React component render tests (Babylon.js ESM imports incompatible with Jest)
-- Balance sanity tests verify ingredient stat distributions
+- Jest with react-native preset — **pure logic only**
+- Cannot import Babylon.js or reactylon in tests (ESM incompatible)
+- 172 tests covering: SausagePhysics, Ingredients, ChallengeRegistry, IngredientMatcher, DialogueEngine, gameStore
 
 ## CI/CD
 
-- `.github/workflows/ci.yml` — Tests + Android debug APK build (push/PR)
+- `.github/workflows/ci.yml` — Tests on push (main + feat/**)
 - `.github/workflows/cd.yml` — Web export → GitHub Pages deploy (push to main)
+- **Live:** https://arcade-cabinet.github.io/will-it-blow/
 
 ## Common Pitfalls
 
 - **Babylon.js ESM in Jest**: Can't import Babylon or reactylon in tests. Test pure logic modules only.
 - **Stale closure in render loops**: Use `useRef` for values read inside `onBeforeRenderObservable` callbacks.
-- **Camera inside mesh**: If you position camera too close to a mesh or change radius too small, you get a black screen. Check `CAMERA_COMPOSITIONS` values.
-- **MrSausage3D overlap**: The character is ~3.5 units tall at scale 1.0. When positioning in scenes, verify the character doesn't clip into animated geometry (casing in StufferScene extends to x=10.5 at 100%).
-- **useEffect deps in scenes**: Scene setup effects should depend on `[scene]` only. Use refs for values that change frequently (cookProgress, hasBurst) to avoid rebuilding the entire scene.
+- **Canvas.width mutation kills WebGPU**: Never set canvas.width directly. Only CSS sizing + `engine.resize()`.
+- **PBR black without IBL**: Scene needs `environmentTexture` or PBR surfaces render nearly black.
+- **Light accumulation**: With ~7× total intensity, `diffuseColor > 0.20` clips to white.
+- **Double geometry**: Station components create procedural meshes that occlude GLB model meshes at the same positions. PBR material overrides on the GLB won't visually affect stations.
+- **Camera inside mesh**: Check STATION_CAMERAS values. Camera needs ≥0.5 units clearance from solid meshes.

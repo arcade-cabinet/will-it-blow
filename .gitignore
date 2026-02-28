@@ -80,6 +80,9 @@ dist/
 # Dev screenshots / Playwright
 /*.png
 .playwright-mcp/
+e2e/screenshots/
+playwright-report/
+test-results/
 
 # Worktrees
 .worktrees/

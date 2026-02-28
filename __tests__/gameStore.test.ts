@@ -10,6 +10,10 @@ describe('gameStore initial state', () => {
     expect(store().gameStatus).toBe('menu');
   });
 
+  it('starts with menu appPhase', () => {
+    expect(store().appPhase).toBe('menu');
+  });
+
   it('starts at challenge 0', () => {
     expect(store().currentChallenge).toBe(0);
   });
@@ -27,10 +31,34 @@ describe('gameStore initial state', () => {
   });
 });
 
+describe('setAppPhase', () => {
+  it('transitions appPhase to loading', () => {
+    store().setAppPhase('loading');
+    expect(store().appPhase).toBe('loading');
+  });
+
+  it('transitions appPhase to playing', () => {
+    store().setAppPhase('playing');
+    expect(store().appPhase).toBe('playing');
+  });
+
+  it('transitions appPhase back to menu', () => {
+    store().setAppPhase('playing');
+    store().setAppPhase('menu');
+    expect(store().appPhase).toBe('menu');
+  });
+});
+
 describe('startNewGame', () => {
   it('sets status to playing', () => {
     store().startNewGame();
     expect(store().gameStatus).toBe('playing');
+  });
+
+  it('sets appPhase to playing', () => {
+    store().setAppPhase('loading');
+    store().startNewGame();
+    expect(store().appPhase).toBe('playing');
   });
 
   it('resets challenge to 0', () => {
@@ -113,6 +141,16 @@ describe('addStrike', () => {
     store().addStrike();
     expect(store().strikes).toBe(3);
     expect(store().gameStatus).toBe('defeat');
+  });
+});
+
+describe('returnToMenu', () => {
+  it('resets appPhase to menu', () => {
+    store().startNewGame();
+    expect(store().appPhase).toBe('playing');
+    store().returnToMenu();
+    expect(store().appPhase).toBe('menu');
+    expect(store().gameStatus).toBe('menu');
   });
 });
 

@@ -1,6 +1,11 @@
 import { create } from 'zustand';
 
+export type AppPhase = 'menu' | 'loading' | 'playing';
+
 export interface GameState {
+  // App lifecycle (menu → loading → playing)
+  appPhase: AppPhase;
+
   // Progression
   currentChallenge: number;
   challengeScores: number[];
@@ -22,6 +27,7 @@ export interface GameState {
   variantSeed: number;
 
   // Actions
+  setAppPhase: (phase: AppPhase) => void;
   startNewGame: () => void;
   continueGame: () => void;
   completeChallenge: (score: number) => void;
@@ -40,6 +46,7 @@ const INITIAL_HINTS = 3;
 const MAX_STRIKES = 3;
 
 export const INITIAL_GAME_STATE = {
+  appPhase: 'menu' as AppPhase,
   currentChallenge: 0,
   challengeScores: [] as number[],
   gameStatus: 'menu' as const,
@@ -57,8 +64,11 @@ export const INITIAL_GAME_STATE = {
 export const useGameStore = create<GameState>()((set) => ({
   ...INITIAL_GAME_STATE,
 
+  setAppPhase: (phase: AppPhase) => set({ appPhase: phase }),
+
   startNewGame: () =>
     set((state) => ({
+      appPhase: 'playing' as AppPhase,
       currentChallenge: 0,
       challengeScores: [],
       gameStatus: 'playing',
@@ -133,5 +143,5 @@ export const useGameStore = create<GameState>()((set) => ({
     set({ challengeHeatLevel: heatLevel }),
 
   returnToMenu: () =>
-    set({ gameStatus: 'menu', strikes: 0, challengeProgress: 0, challengePressure: 0, challengeIsPressing: false, challengeTemperature: 70, challengeHeatLevel: 0 }),
+    set({ appPhase: 'menu' as AppPhase, gameStatus: 'menu', strikes: 0, challengeProgress: 0, challengePressure: 0, challengeIsPressing: false, challengeTemperature: 70, challengeHeatLevel: 0 }),
 }));

@@ -24,42 +24,98 @@ varying vec2 vUV;
 uniform float time;
 uniform float flickerIntensity;
 uniform float staticIntensity;
+uniform float reactionIntensity; // 0 = idle, 1 = max reaction (laugh/talk)
 
 // Pseudo-random
 float rand(vec2 co) {
   return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
 }
 
+// Smooth noise for rolling distortion
+float smoothNoise(float x) {
+  float i = floor(x);
+  float f = fract(x);
+  return mix(rand(vec2(i, 0.0)), rand(vec2(i + 1.0, 0.0)), f * f * (3.0 - 2.0 * f));
+}
+
 void main() {
   vec2 uv = vUV;
 
-  // Barrel distortion
+  // Barrel distortion — CRT glass curvature
   vec2 centered = uv - 0.5;
   float dist = length(centered);
-  uv = 0.5 + centered * (1.0 + 0.15 * dist * dist);
+  uv = 0.5 + centered * (1.0 + 0.18 * dist * dist);
 
-  // Base CRT green glow
-  vec3 color = vec3(0.05, 0.15, 0.08);
+  // Horizontal roll distortion — bad antenna signal
+  // A slow band that crawls up the screen, shifting pixels horizontally
+  float rollSpeed = 0.8 + reactionIntensity * 1.5;
+  float rollY = fract(time * rollSpeed * 0.1);
+  float rollBand = smoothstep(0.0, 0.08, abs(uv.y - rollY)) *
+                   smoothstep(0.0, 0.08, abs(uv.y - rollY - 1.0));
+  float rollShift = (1.0 - rollBand) * 0.02 * (1.0 + reactionIntensity * 3.0);
+  uv.x += rollShift;
 
-  // Scanlines
-  float scanline = sin(uv.y * 400.0 + time * 2.0) * 0.08;
+  // Occasional horizontal tear — a sharp line that jumps
+  float tearLine = step(0.995, rand(vec2(floor(time * 8.0), 0.0)));
+  float tearY = rand(vec2(floor(time * 8.0), 1.0));
+  float tearActive = tearLine * step(abs(uv.y - tearY), 0.01);
+  uv.x += tearActive * 0.05 * (1.0 + reactionIntensity * 2.0);
 
-  // Flicker
-  float flicker = 1.0 - flickerIntensity * rand(vec2(time * 0.1, 0.0)) * 0.1;
+  // Base CRT phosphor glow — warm green with amber undertone
+  vec3 baseGreen = vec3(0.04, 0.14, 0.06);
+  vec3 warmAmber = vec3(0.12, 0.08, 0.02);
+  // Pulse between green and amber based on reaction + slow wave
+  float amberPulse = reactionIntensity * 0.5 + 0.15 * sin(time * 1.5);
+  vec3 color = mix(baseGreen, warmAmber, clamp(amberPulse, 0.0, 1.0));
 
-  // Static noise
-  float noise = rand(uv + time) * staticIntensity;
+  // Brighter center glow — the screen is hottest in the middle
+  float centerGlow = 1.0 + 0.3 * exp(-dist * dist * 8.0);
+  color *= centerGlow;
 
-  // Vignette
-  float vignette = 1.0 - 0.6 * dist * dist;
+  // Scanlines — finer, with slight wobble
+  float scanFreq = 320.0;
+  float scanWobble = sin(time * 0.7 + uv.x * 20.0) * 0.5;
+  float scanline = sin(uv.y * scanFreq + time * 2.0 + scanWobble) * 0.06;
+  color += scanline;
+
+  // RGB phosphor separation — chromatic aberration
+  float chromaOffset = 0.003 + reactionIntensity * 0.004;
+  float rShift = rand(vec2(floor(uv.y * scanFreq), time * 0.01)) * chromaOffset;
+  color.r += 0.02 * sin(uv.x * 100.0 + rShift);
+  color.b += 0.015 * sin(uv.x * 100.0 - chromaOffset * 50.0);
+
+  // Phosphor dot pattern — subtle RGB subpixel grid
+  float dotX = mod(uv.x * 600.0, 3.0);
+  float dotMask = 0.92 + 0.08 * step(1.0, dotX) * step(dotX, 2.0);
+  color *= dotMask;
+
+  // Flicker — whole-screen brightness wobble
+  float flicker = 1.0 - flickerIntensity * rand(vec2(time * 0.1, 0.0)) * 0.12;
+  // Extra flicker during reactions
+  flicker -= reactionIntensity * 0.05 * sin(time * 30.0);
+
+  // Static noise — more during reactions
+  float noiseAmount = staticIntensity + reactionIntensity * 0.08;
+  float noise = rand(uv + time) * noiseAmount;
+
+  // Vignette — strong for that CRT edge darkness
+  float vignette = 1.0 - 0.7 * dist * dist;
+
+  // Screen edge glow — subtle phosphor bleed at the border
+  float edgeDist = max(abs(centered.x), abs(centered.y));
+  float edgeGlow = smoothstep(0.42, 0.48, edgeDist) * 0.08;
+  color += vec3(0.0, edgeGlow * 0.5, edgeGlow * 0.3);
 
   // Combine
-  color = (color + scanline) * flicker * vignette + noise * 0.15;
+  color = color * flicker * vignette + noise * vec3(0.1, 0.12, 0.08);
 
-  // CRT green tint
-  color *= vec3(0.7, 1.0, 0.8);
+  // CRT color temperature — overall tint
+  color *= vec3(0.75, 1.0, 0.82);
 
-  // Out-of-bounds black
+  // Boost overall brightness slightly — screen should be visible in dark room
+  color *= 1.3 + reactionIntensity * 0.4;
+
+  // Out-of-bounds: black beyond barrel distortion edges
   if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
     color = vec3(0.0);
   }
@@ -75,14 +131,14 @@ export function createCrtMaterial(name: string, scene: Scene): ShaderMaterial {
 
   const material = new ShaderMaterial(name, scene, name, {
     attributes: ['position', 'uv'],
-    uniforms: ['worldViewProjection', 'time', 'flickerIntensity', 'staticIntensity'],
-    // No samplers — shader is purely procedural
+    uniforms: ['worldViewProjection', 'time', 'flickerIntensity', 'staticIntensity', 'reactionIntensity'],
   });
 
   // Set initial uniform values
   material.setFloat('time', 0);
   material.setFloat('flickerIntensity', 1.0);
   material.setFloat('staticIntensity', 0.05);
+  material.setFloat('reactionIntensity', 0.0);
 
   return material;
 }

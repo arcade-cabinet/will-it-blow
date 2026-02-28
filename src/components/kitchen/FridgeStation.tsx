@@ -69,8 +69,8 @@ export const FridgeStation = ({
 			scene,
 		);
 		const fridgeMat = new StandardMaterial('fridgeMat', scene);
-		fridgeMat.diffuseColor = new Color3(0.85, 0.85, 0.88);
-		fridgeMat.specularColor = new Color3(0.2, 0.2, 0.2);
+		fridgeMat.diffuseColor = new Color3(0.18, 0.17, 0.15);  // aged grimy appliance
+		fridgeMat.specularColor = new Color3(0.05, 0.05, 0.05);
 		fridgeBody.material = fridgeMat;
 		fridgeBody.position = new Vector3(FRIDGE_POS[0], FRIDGE_POS[1], FRIDGE_POS[2]);
 		allMeshes.push(fridgeBody);
@@ -84,8 +84,8 @@ export const FridgeStation = ({
 			scene,
 		);
 		const doorMat = new StandardMaterial('fridgeDoorMat', scene);
-		doorMat.diffuseColor = new Color3(0.8, 0.8, 0.82);
-		doorMat.specularColor = new Color3(0.15, 0.15, 0.15);
+		doorMat.diffuseColor = new Color3(0.16, 0.15, 0.14);  // aged grimy door
+		doorMat.specularColor = new Color3(0.03, 0.03, 0.03);
 		fridgeDoor.material = doorMat;
 		// Position door pivoted open ~90 degrees to the left
 		fridgeDoor.position = new Vector3(
@@ -106,8 +106,8 @@ export const FridgeStation = ({
 		);
 		const interiorLightMat = new StandardMaterial('fridgeInteriorLightMat', scene);
 		interiorLightMat.disableLighting = true;
-		interiorLightMat.emissiveColor = new Color3(0.6, 0.7, 0.9);
-		interiorLightMat.alpha = 0.7;
+		interiorLightMat.emissiveColor = new Color3(0.3, 0.35, 0.5);  // dim sickly fridge glow
+		interiorLightMat.alpha = 0.5;
 		interiorLight.material = interiorLightMat;
 		interiorLight.position = new Vector3(
 			FRIDGE_POS[0],
@@ -120,8 +120,8 @@ export const FridgeStation = ({
 		// --- Shelves ---
 
 		const shelfMat = new StandardMaterial('shelfMat', scene);
-		shelfMat.diffuseColor = new Color3(0.7, 0.72, 0.75);
-		shelfMat.specularColor = new Color3(0.1, 0.1, 0.1);
+		shelfMat.diffuseColor = new Color3(0.20, 0.22, 0.25);  // grimy wire shelves
+		shelfMat.specularColor = new Color3(0.03, 0.03, 0.03);
 		allMaterials.push(shelfMat);
 
 		for (let s = 0; s < SHELF_COUNT; s++) {

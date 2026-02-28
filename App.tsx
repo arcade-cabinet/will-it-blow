@@ -2,7 +2,11 @@ import React, { useCallback, useState } from "react";
 import { SafeAreaView, StyleSheet, View } from "react-native";
 import { GameWorld } from "./src/components/GameWorld";
 import { useGameStore } from "./src/store/gameStore";
+import { installGovernor } from "./src/dev/GameGovernor";
+
+installGovernor();
 import { TitleScreen } from "./src/components/ui/TitleScreen";
+import { LoadingScreen } from "./src/components/ui/LoadingScreen";
 import { StrikeCounter } from "./src/components/ui/StrikeCounter";
 import { HintButton } from "./src/components/ui/HintButton";
 import { ChallengeHeader } from "./src/components/ui/ChallengeHeader";
@@ -35,8 +39,6 @@ const GameUI = () => {
 
 	return (
 		<View style={styles.overlay} pointerEvents="box-none">
-			{gameStatus === "menu" && <TitleScreen />}
-
 			{gameStatus === "playing" && (
 				<>
 					<ChallengeHeader />
@@ -90,10 +92,18 @@ const GameUI = () => {
 };
 
 export default function App() {
+	const appPhase = useGameStore((s) => s.appPhase);
+
 	return (
 		<SafeAreaView style={styles.container}>
-			<GameWorld />
-			<GameUI />
+			{appPhase === "menu" && <TitleScreen />}
+			{appPhase === "loading" && <LoadingScreen />}
+			{appPhase === "playing" && (
+				<>
+					<GameWorld />
+					<GameUI />
+				</>
+			)}
 		</SafeAreaView>
 	);
 }
