@@ -5,4 +5,8 @@ module.exports = {
   transformIgnorePatterns: [
     'node_modules/(?!(.pnpm|react-native|@react-native|@react-native-async-storage|expo|@expo|babel-preset-expo|three|@react-three|zustand)/)',
   ],
+  moduleNameMapper: {
+    '^three/webgpu$': '<rootDir>/__mocks__/three_webgpu.js',
+    '^three/tsl$': '<rootDir>/__mocks__/three_tsl.js',
+  },
 };
