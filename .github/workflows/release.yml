@@ -12,9 +12,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # ─── Android Debug APK Builds ──────────────────────────────
+  # ─── Android Release APK Builds ─────────────────────────────
   build-android:
-    name: Build Android Debug APKs
+    name: Build Android Release APKs
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -48,9 +48,30 @@ jobs:
           REPO_PATH="$(cd node_modules/@react-native-async-storage/async-storage/android/local_repo && pwd)"
           sed -i "s|mavenCentral()|mavenCentral()\n    maven { url \"${REPO_PATH}\" }|" android/build.gradle
 
-      - name: Build debug APKs (all architectures)
+      - name: Configure debug signing for release build
+        run: |
+          cat >> android/app/build.gradle << 'SIGNING'
+
+          android {
+              signingConfigs {
+                  release {
+                      storeFile file("debug.keystore")
+                      storePassword "android"
+                      keyAlias "androiddebugkey"
+                      keyPassword "android"
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                  }
+              }
+          }
+          SIGNING
+
+      - name: Build release APKs (all architectures)
         working-directory: android
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleRelease
 
       - name: List built APKs
         run: find android/app/build/outputs/apk -name "*.apk" -type f
@@ -60,7 +81,7 @@ jobs:
           GH_TOKEN: ${{ secrets.CI_GITHUB_TOKEN }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
-          for apk in android/app/build/outputs/apk/debug/*.apk; do
+          for apk in android/app/build/outputs/apk/release/*.apk; do
             filename=$(basename "$apk")
             echo "Uploading $filename to release $RELEASE_TAG..."
             gh release upload "$RELEASE_TAG" "$apk" --clobber
