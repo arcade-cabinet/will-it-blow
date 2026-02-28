@@ -10,10 +10,6 @@ permissions:
   pages: write
   id-token: write
 
-concurrency:
-  group: deploy-web
-  cancel-in-progress: true
-
 jobs:
   release-please:
     name: Release Please
@@ -33,6 +29,9 @@ jobs:
   deploy-web:
     name: Deploy to GitHub Pages
     runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-web
+      cancel-in-progress: true
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

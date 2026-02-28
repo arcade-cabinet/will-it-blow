@@ -37,7 +37,7 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Use hoisted node_modules for Gradle compatibility
-        run: echo "node-linker=hoisted" > .npmrc
+        run: echo "node-linker=hoisted" >> .npmrc
 
       - run: pnpm install --frozen-lockfile
 
