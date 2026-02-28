@@ -41,6 +41,13 @@ jobs:
       - name: Generate native project (clean)
         run: npx expo prebuild --platform android --clean --no-install
 
+      - name: Add async-storage local Maven repo
+        run: |
+          # async-storage v3 ships a KMP artifact in a local_repo/ directory
+          # that must be registered as a Maven repository for Gradle to find it
+          REPO_PATH="$(cd node_modules/@react-native-async-storage/async-storage/android/local_repo && pwd)"
+          sed -i "s|mavenCentral()|mavenCentral()\n    maven { url \"${REPO_PATH}\" }|" android/build.gradle
+
       - name: Build debug APKs (all architectures)
         working-directory: android
         run: ./gradlew assembleDebug
