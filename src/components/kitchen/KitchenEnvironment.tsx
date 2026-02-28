@@ -2,6 +2,7 @@ import {useGLTF, useTexture} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
 import type React from 'react';
 import {useEffect, useMemo, useRef} from 'react';
+import {Platform} from 'react-native';
 import * as THREE from 'three/webgpu';
 
 // --- Room dimensions (slightly larger than 12x12 kitchen GLB to avoid z-fighting) ---
@@ -70,16 +71,21 @@ const TUBE_POSITIONS: [number, number, number][] = [
 
 const BASE_INTENSITY = 2.0;
 
-/** Resolve asset URL accounting for Expo web baseUrl in production */
+/** Resolve asset URL accounting for platform and Expo web baseUrl in production */
 function getAssetRootUrl(subdir: string): string {
-  if (typeof document !== 'undefined') {
-    const base = document.querySelector('base');
-    if (base?.href) {
-      const url = new URL(base.href);
-      return `${url.pathname.replace(/\/$/, '')}/${subdir}/`;
+  if (Platform.OS === 'web') {
+    if (typeof document !== 'undefined') {
+      const base = document.querySelector('base');
+      if (base?.href) {
+        const url = new URL(base.href);
+        return `${url.pathname.replace(/\/$/, '')}/${subdir}/`;
+      }
     }
+    return `/${subdir}/`;
   }
-  return `/${subdir}/`;
+  // Native: assets are bundled by Metro and served from the app bundle
+  // drei's useGLTF/useTexture handle this via the asset URI
+  return `${subdir}/`;
 }
 
 // -------------------------------------------------------
