@@ -14,7 +14,13 @@ jest.mock('@react-three/drei', () => ({
   useTexture: jest.fn(() => {
     // Return a mock texture object for each map key
     const mockTex = {wrapS: 0, wrapT: 0, repeat: {set: jest.fn()}};
-    return {map: mockTex, normalMap: mockTex, roughnessMap: mockTex, aoMap: mockTex, alphaMap: mockTex};
+    return {
+      map: mockTex,
+      normalMap: mockTex,
+      roughnessMap: mockTex,
+      aoMap: mockTex,
+      alphaMap: mockTex,
+    };
   }),
 }));
 

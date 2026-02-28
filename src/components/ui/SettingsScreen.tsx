@@ -89,7 +89,10 @@ export function SettingsScreen({onBack}: SettingsScreenProps) {
   const {musicVolume, sfxVolume, musicMuted, sfxMuted} = useGameStore();
   const {setMusicVolume, setSfxVolume, setMusicMuted, setSfxMuted} = useGameStore();
 
-  const toggleMusicMute = useCallback(() => setMusicMuted(!musicMuted), [musicMuted, setMusicMuted]);
+  const toggleMusicMute = useCallback(
+    () => setMusicMuted(!musicMuted),
+    [musicMuted, setMusicMuted],
+  );
   const toggleSfxMute = useCallback(() => setSfxMuted(!sfxMuted), [sfxMuted, setSfxMuted]);
 
   return (

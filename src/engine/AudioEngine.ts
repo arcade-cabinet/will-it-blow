@@ -36,8 +36,7 @@ async function playBeep(frequencyHz: number, durationMs: number, volume = 0.5): 
     for (let i = 0; i < numSamples; i++) {
       const t = i / sampleRate;
       // Apply fade envelope to avoid clicks
-      const env =
-        i < 100 ? i / 100 : i > numSamples - 100 ? (numSamples - i) / 100 : 1;
+      const env = i < 100 ? i / 100 : i > numSamples - 100 ? (numSamples - i) / 100 : 1;
       const sample = Math.sin(2 * Math.PI * frequencyHz * t) * volume * env;
       view.setInt16(44 + i * 2, Math.floor(sample * 32767), true);
     }
@@ -149,11 +148,7 @@ class AudioEngine {
   playRatingSong(rating: number) {
     if (!this.isInitialized) return;
     const melody =
-      rating >= 4
-        ? [262, 330, 392, 523]
-        : rating > 1
-          ? [262, 294, 330, 262]
-          : [262, 196, 165, 131];
+      rating >= 4 ? [262, 330, 392, 523] : rating > 1 ? [262, 294, 330, 262] : [262, 196, 165, 131];
     melody.forEach((freq, i) => {
       setTimeout(() => playBeep(freq, 200, 0.4), i * 250);
     });
