@@ -21,7 +21,7 @@ export default defineConfig({
 			name: 'chrome',
 			use: {
 				// Use installed Chrome (not bundled Chromium) for WebGL/WebGPU support.
-				// Babylon.js needs GPU rendering that bundled Chromium doesn't support.
+				// Three.js/R3F needs GPU rendering that bundled Chromium doesn't support.
 				channel: 'chrome',
 				viewport: { width: 1280, height: 720 },
 			},
