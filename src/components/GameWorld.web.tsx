@@ -1,9 +1,7 @@
-import * as CANNON from 'cannon-es';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Scene } from 'reactylon';
 import { Engine } from 'reactylon/web';
 import {
-  CannonJSPlugin,
   type Camera,
   Color3,
   Color4,
@@ -25,8 +23,7 @@ import { matchesCriteria } from '../engine/IngredientMatcher';
 import { pickVariant } from '../engine/ChallengeRegistry';
 import type { IngredientVariant } from '../data/challenges/variants';
 
-// cannon-es compat: Babylon's CannonJSPlugin reads from globalThis.CANNON
-(globalThis as any).CANNON = CANNON;
+// TODO(Task-5): Havok physics swap — add HavokPlugin initialization here
 
 /** Menu camera: center of room, facing the kitchen */
 const MENU_CAMERA = {
@@ -123,7 +120,8 @@ export const GameWorld = () => {
 
   const onSceneReady = (scene: any) => {
     scene.clearColor = new Color4(0.02, 0.02, 0.02, 1);
-    scene.enablePhysics(new Vector3(0, -9.81, 0), new CannonJSPlugin());
+    // TODO(Task-5): Enable Havok physics here
+    // scene.enablePhysics(new Vector3(0, -9.81, 0), havokPlugin);
 
     // Dim ambient fill (KitchenEnvironment provides the strong fluorescent + fill lights)
     const ambientLight = new HemisphericLight('ambientLight', new Vector3(0, 1, 0), scene);
