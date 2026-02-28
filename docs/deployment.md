@@ -28,6 +28,7 @@
 **Two-job pipeline:**
 
 ### Job 1: Build
+
 1. Checkout code
 2. Setup Node 22
 3. `npm ci`
@@ -35,12 +36,14 @@
 5. Upload `dist/` as artifact
 
 ### Job 2: Deploy
+
 1. Download build artifact
 2. Deploy to GitHub Pages
 
 **Concurrency:** `pages` group, does NOT cancel in-progress (ensures deployments complete).
 
 **Base URL:** Configured in `app.json`:
+
 ```json
 {
   "experiments": {
@@ -72,18 +75,23 @@ npx expo start --android
 ## Building for Production
 
 ### Web (Static Export)
+
 ```bash
 npx expo export --platform web --output-dir dist
 ```
+
 Produces a static site in `dist/` ready for any static hosting.
 
 ### Android (Debug APK)
+
 ```bash
 cd android && ./gradlew assembleDebug
 ```
+
 Output: `android/app/build/outputs/apk/debug/app-debug.apk`
 
 ### iOS
+
 ```bash
 npx expo run:ios --configuration Release
 ```

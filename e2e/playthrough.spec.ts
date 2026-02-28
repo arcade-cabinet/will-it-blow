@@ -34,7 +34,7 @@ async function snap(page: Page, name: string) {
 async function snapScene(page: Page, name: string) {
 	// Hide the overlay layer to reveal the 3D canvas
 	await page.evaluate(() => {
-		const overlays = document.querySelectorAll('[style*="z-index"]');
+		const overlays = document.querySelectorAll('[data-testid="game-overlay"]');
 		overlays.forEach((el) => {
 			(el as HTMLElement).dataset.wasHidden = 'true';
 			(el as HTMLElement).style.visibility = 'hidden';
@@ -98,32 +98,15 @@ async function waitForCanvas(page: Page, timeoutMs = 30_000) {
 async function dismissDialogue(page: Page) {
 	for (let attempt = 0; attempt < 10; attempt++) {
 		// Check for "Tap to continue" first
-		const tapText = page.locator('text=Tap to continue');
-		if (await tapText.isVisible({ timeout: 500 }).catch(() => false)) {
-			await tapText.click();
+		const tapElement = page.locator('[data-testid="dialogue-tap"]');
+		if (await tapElement.isVisible({ timeout: 500 }).catch(() => false)) {
+			await tapElement.click();
 			await page.waitForTimeout(400);
 			continue;
 		}
 
-		// Check for choice buttons (gold-bordered options in dialogue)
-		// Choice buttons are the first interactive option — just click the first one
-		const choices = page.locator('text=I\'ll do my best').or(
-			page.locator('text=Give me a hint')
-		).or(
-			page.locator('text=I won\'t let you down')
-		).or(
-			page.locator('text=This is insane')
-		).or(
-			page.locator('text=What if I choose wrong')
-		).or(
-			page.locator('text=Let\'s do this')
-		).or(
-			page.locator('text=Understood')
-		).or(
-			page.locator('text=Got it')
-		);
-
-		const firstChoice = choices.first();
+		// Check for choice buttons — just click the first one
+		const firstChoice = page.locator('[data-testid="dialogue-choice"]').first();
 		if (await firstChoice.isVisible({ timeout: 500 }).catch(() => false)) {
 			await firstChoice.click();
 			await page.waitForTimeout(400);

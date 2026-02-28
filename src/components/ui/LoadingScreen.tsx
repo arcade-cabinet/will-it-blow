@@ -50,16 +50,16 @@ export function LoadingScreen() {
 
   // Pre-fetch kitchen.glb to warm the browser cache
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
 
     async function preload() {
       try {
         const url = getModelUrl('kitchen.glb');
-        const response = await fetch(url);
+        const response = await fetch(url, { signal: controller.signal });
 
         if (!response.ok) {
           console.warn('Failed to preload kitchen.glb:', response.status);
-          if (!cancelled) {
+          if (!controller.signal.aborted) {
             setLoadError(`Failed to load assets (HTTP ${response.status})`);
           }
           return;
@@ -71,28 +71,29 @@ export function LoadingScreen() {
         if (!reader || contentLength === 0) {
           // No streaming support or unknown size — just consume the response
           await response.arrayBuffer();
-          if (!cancelled) setProgress(100);
+          if (!controller.signal.aborted) setProgress(100);
           return;
         }
 
         let received = 0;
         while (true) {
           const { done, value } = await reader.read();
-          if (done || cancelled) break;
+          if (done || controller.signal.aborted) break;
           received += value.byteLength;
           const pct = Math.min(Math.round((received / contentLength) * 100), 99);
           setProgress(pct);
         }
 
-        if (!cancelled) setProgress(100);
+        if (!controller.signal.aborted) setProgress(100);
       } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
         console.warn('Error preloading kitchen.glb:', error);
-        if (!cancelled) setLoadError('Failed to load assets. Check your connection.');
+        if (!controller.signal.aborted) setLoadError('Failed to load assets. Check your connection.');
       }
     }
 
     preload();
-    return () => { cancelled = true; };
+    return () => { controller.abort(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadError]);
 

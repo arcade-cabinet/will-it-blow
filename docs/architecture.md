@@ -6,7 +6,7 @@ Will It Blow? is a first-person horror sausage-making mini-game. The player is t
 
 ### Three-Layer Rendering Stack
 
-```
+```text
 ┌──────────────────────────────────────────┐
 │  Layer 3: React Native UI Overlays       │  ← Buttons, progress bars, dialogue
 │  (StyleSheet.absoluteFillObject, z=10)   │
@@ -48,7 +48,7 @@ All other code is cross-platform.
 
 ## App Lifecycle
 
-```
+```text
 App.tsx
   └─ useGameStore(s => s.appPhase)
      ├─ 'menu'    → <TitleScreen />           Pure 2D, no Babylon engine
@@ -60,7 +60,7 @@ The `appPhase` state machine prevents the heavy Babylon.js engine from mounting 
 
 ## Directory Structure
 
-```
+```text
 will-it-blow/
 ├── App.tsx                          Root layout (SafeAreaView → phase routing)
 ├── src/
@@ -136,7 +136,7 @@ will-it-blow/
 
 ## Data Flow
 
-```
+```text
 User Input (touch/click)
   → React Native event handler (challenge overlay)
     → Zustand store action (setChallengeProgress, addStrike, etc.)

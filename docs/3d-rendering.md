@@ -53,7 +53,7 @@ Procedural room constructed from planes and grounds:
 
 Materials use AmbientCG texture sets with the `makePBR()` helper:
 
-```
+```text
 albedoTexture   ← Color map (JPG)
 bumpTexture     ← NormalGL map (JPG)
 metallicTexture ← Roughness map (JPG, read from Green channel)
@@ -206,7 +206,7 @@ All geometry is created programmatically — no external model files:
 
 ## Texture Bake Pipeline
 
-The kitchen GLB's PBR textures were baked using a Blender Python script (`/tmp/bake_kitchen_textures.py`):
+The kitchen GLB's PBR textures were baked using a Blender Python script (`bake_kitchen_textures.py`):
 
 1. Import `kitchen-original.glb` into Blender
 2. For each material, map to an AmbientCG texture set:
@@ -218,4 +218,4 @@ The kitchen GLB's PBR textures were baked using a Blender Python script (`/tmp/b
    - JPEG image format (quality 80)
    - Applied transforms
 
-Source textures: AmbientCG 1K-JPG sets stored at `/Volumes/home/assets/AmbientCG/Assets/MATERIAL/1K-JPG/`.
+Source textures: AmbientCG 1K-JPG sets (not in repo, downloaded separately per material).

@@ -8,7 +8,7 @@ You're trapped in a filthy basement kitchen. Mr. Sausage — a sentient, menacin
 
 ## Game Flow
 
-```
+```text
 MENU (butcher shop sign aesthetic)
   ↓ "NEW GAME"
 LOADING (kitchen.glb preload, sausage progress bar)
@@ -104,7 +104,7 @@ Average of all 5 challenge scores determines rank:
 
 The original scoring model (from the pre-horror design) is still in the codebase:
 
-```
+```text
 finalScore = (tasteRating/5 × 60) + (ruffalos/5 × 20) + (noBurstBonus: 20) + bonusPoints
 ```
 

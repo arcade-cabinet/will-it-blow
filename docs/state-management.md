@@ -82,7 +82,7 @@ Resets to menu: `appPhase` → `'menu'`, `gameStatus` → `'menu'`, all ephemera
 
 ## State Flow Diagram
 
-```
+```text
                     ┌──────────────────────────────┐
                     │         MENU                  │
                     │  appPhase='menu'              │

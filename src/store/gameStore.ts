@@ -143,5 +143,14 @@ export const useGameStore = create<GameState>()((set) => ({
     set({ challengeHeatLevel: heatLevel }),
 
   returnToMenu: () =>
-    set({ appPhase: 'menu' as AppPhase, gameStatus: 'menu', strikes: 0, challengeProgress: 0, challengePressure: 0, challengeIsPressing: false, challengeTemperature: 70, challengeHeatLevel: 0 }),
+    set({
+      appPhase: 'menu' as AppPhase,
+      gameStatus: 'menu',
+      strikes: 0,
+      challengeProgress: 0,
+      challengePressure: 0,
+      challengeIsPressing: false,
+      challengeTemperature: 70,
+      challengeHeatLevel: 0,
+    }),
 }));

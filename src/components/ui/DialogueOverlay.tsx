@@ -135,7 +135,7 @@ export function DialogueOverlay({ lines, onComplete }: DialogueOverlayProps) {
 
         {/* Tap to continue indicator */}
         {!isTyping && choices.length === 0 && (
-          <Text style={styles.tapHint}>Tap to continue...</Text>
+          <Text style={styles.tapHint} testID="dialogue-tap">Tap to continue...</Text>
         )}
 
         {/* Player choices */}
@@ -147,6 +147,7 @@ export function DialogueOverlay({ lines, onComplete }: DialogueOverlayProps) {
                 style={styles.choiceButton}
                 onPress={() => handleChoice(index)}
                 activeOpacity={0.7}
+                testID="dialogue-choice"
               >
                 <Text style={styles.choiceText}>{choice.text}</Text>
               </TouchableOpacity>

@@ -39,7 +39,7 @@ const GameUI = () => {
 		gameStatus === "playing" && currentChallenge === 4;
 
 	return (
-		<View style={styles.overlay} pointerEvents="box-none">
+		<View style={styles.overlay} pointerEvents="box-none" testID="game-overlay">
 			{gameStatus === "playing" && (
 				<>
 					<ChallengeHeader />

@@ -30,7 +30,7 @@ npx tsc --noEmit
 
 Each challenge follows this structure:
 
-```
+```text
 src/components/challenges/FooChallenge.tsx    ← React Native overlay (UI + game logic)
 src/components/kitchen/FooStation.tsx          ← Babylon.js 3D visuals
 src/data/dialogue/foo.ts                       ← Mr. Sausage dialogue for this phase
@@ -168,4 +168,4 @@ Downloaded but not integrated:
 - `fbxfileskitchenbystyloo.zip` (3.5 MB) — FBX kitchen assets
 - `funny sausag.obj` (4.1 MB) — Legacy sausage model
 
-AmbientCG texture sources (not in repo): `/Volumes/home/assets/AmbientCG/Assets/MATERIAL/1K-JPG/`
+AmbientCG texture sources (not in repo, downloaded separately per material)
