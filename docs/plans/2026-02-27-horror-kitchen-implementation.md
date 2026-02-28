@@ -322,7 +322,7 @@ Expected: All 14 tests PASS.
 **Step 6: Commit**
 
 ```bash
-git add src/store/gameStore.ts __tests__/gameStore.test.ts package.json package-lock.json
+git add src/store/gameStore.ts __tests__/gameStore.test.ts package.json pnpm-lock.yaml
 git commit -m "feat: add Zustand game store with progression, strikes, hints"
 ```
 
