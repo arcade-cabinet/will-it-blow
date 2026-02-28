@@ -103,6 +103,12 @@ describe('continueGame', () => {
     expect(store().strikes).toBe(0);
     expect(store().challengeScores).toEqual([80]);
   });
+
+  it('sets appPhase to playing', () => {
+    useGameStore.setState({appPhase: 'menu'});
+    store().continueGame();
+    expect(store().appPhase).toBe('playing');
+  });
 });
 
 describe('completeChallenge', () => {

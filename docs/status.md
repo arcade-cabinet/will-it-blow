@@ -6,13 +6,13 @@
 
 | Domain | % | Status |
 |--------|---|--------|
-| Core gameplay loop | 85% | All 5 challenges playable end-to-end |
-| 3D visuals | 70% | Horror kitchen with PBR textures, R3F declarative stations |
-| Audio (web) | 40% | Procedural synth SFX work, no ambient/music, no sample-based SFX |
+| Core gameplay loop | 90% | All 5 challenges playable, 3D fridge interaction, transitions |
+| 3D visuals | 75% | Horror kitchen with PBR textures, R3F stations, 3D fridge picking |
+| Audio (web) | 70% | All challenges wired: grinder, squelch, pressure, sizzle, burst, picks, rating song, ambient drone |
 | Audio (native) | 0% | Complete no-op stub |
-| UI/UX | 65% | Menu/loading/overlays work; hints/settings/continue are stubs |
+| UI/UX | 75% | Menu/loading/overlays, challenge transitions, hover tooltips, intro dialogue |
 | Cross-platform | 60% | Web works well; native uses same Canvas (expo-gl), untested on devices |
-| Testing | 90% | 265 unit tests (pure logic + R3F component tests) |
+| Testing | 90% | 259 unit tests (pure logic + R3F component tests) |
 | Git hygiene | 30% | Large uncommitted assets |
 | CI/CD | 50% | Tests run; no tsc, no lint, no Android build |
 | Production readiness | 25% | No save/load, no settings, no mobile testing |
@@ -29,10 +29,13 @@
 - Loading screen with asset preload
 - Camera walk animations between stations (easeInOutQuad)
 - Zustand state management with full reset/progression flow
-- Web audio synthesis (7 SFX instruments + 2 melodies)
+- Web audio synthesis (7 SFX instruments + 2 melodies) — all wired into challenges
+- Challenge transition title cards with Mr. Sausage quips
+- 3D fridge ingredient picking (click shapes, hover tooltips)
+- Intro dialogue sequence wired into first challenge
 - Dialogue system with typewriter text and branching choices
 - Variant system for replayability (seeded challenge difficulty)
-- 265 passing tests (pure logic + R3F component tests)
+- 259 passing tests (pure logic + R3F component tests via @react-three/test-renderer)
 - GitHub Pages deployment
 - Unified cross-platform GameWorld (single file, no platform split)
 
@@ -69,8 +72,8 @@ Completed 2026-02-27. Full migration from Babylon.js/reactylon to R3F/Three.js:
 
 ### Priority 2: Complete Core Features
 
-4. **Hint system** — Wire HintButton to trigger ingredient glow in FridgeStation.
-5. **Ingredient challenge audio** — No sound on correct/wrong pick.
+4. ~~**Hint system** — Wire HintButton to trigger ingredient glow in FridgeStation.~~ DONE — hints pulse matching ingredients in fridge
+5. ~~**Ingredient challenge audio** — No sound on correct/wrong pick.~~ DONE — playCorrectPick/playWrongPick wired
 
 ### Priority 3: Polish & Production
 

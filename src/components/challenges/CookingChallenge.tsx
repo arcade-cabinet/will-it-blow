@@ -1,6 +1,7 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {PanResponder, StyleSheet, Text, View} from 'react-native';
 import type {CookingVariant} from '../../data/challenges/variants';
+import {audioEngine} from '../../engine/AudioEngine';
 import {COOKING_DIALOGUE, COOKING_SUCCESS} from '../../data/dialogue/cooking';
 import {pickVariant} from '../../engine/ChallengeRegistry';
 import {useGameStore} from '../../store/gameStore';
@@ -60,6 +61,8 @@ export function CookingChallenge({onComplete, onReaction}: CookingChallengeProps
 
   phaseRef.current = phase;
   variantRef.current = variant;
+  const lastSizzleTimeRef = useRef(0);
+  const lastBeepSecondRef = useRef(-1);
 
   // Initialize variant on mount
   useEffect(() => {
@@ -171,6 +174,15 @@ export function CookingChallenge({onComplete, onReaction}: CookingChallengeProps
       const holdProgress = (newHoldTimer / v.holdSeconds) * 100;
       setChallengeProgress(holdProgress);
 
+      // Sizzle audio when heat is on (every ~1 second)
+      if (heat > 0.1) {
+        const now = Date.now();
+        if (now - lastSizzleTimeRef.current > 1000) {
+          audioEngine.playSizzle();
+          lastSizzleTimeRef.current = now;
+        }
+      }
+
       // Reactions
       if (inZone) {
         onReaction?.('nod');
@@ -191,6 +203,13 @@ export function CookingChallenge({onComplete, onReaction}: CookingChallengeProps
       const newTime = Math.max(0, timeRemainingRef.current - dt);
       timeRemainingRef.current = newTime;
       setTimeRemaining(newTime);
+
+      // Countdown beep for last 5 seconds
+      const currentSecond = Math.ceil(newTime);
+      if (currentSecond <= 5 && currentSecond > 0 && currentSecond !== lastBeepSecondRef.current) {
+        lastBeepSecondRef.current = currentSecond;
+        audioEngine.playCountdownBeep(currentSecond === 1);
+      }
 
       // Timer expired
       if (newTime <= 0) {

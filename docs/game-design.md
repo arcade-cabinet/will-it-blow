@@ -118,7 +118,7 @@ Note: The per-challenge scoring in the current horror redesign supersedes parts 
 ## Strike System
 
 - Maximum 3 strikes per challenge
-- 4th strike = defeat (game over)
+- 3rd strike = defeat (game over, `addStrike` triggers defeat at `>= MAX_STRIKES`)
 - Strikes reset between challenges
 - Visual: red X marks in StrikeCounter overlay
 

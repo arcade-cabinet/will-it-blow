@@ -46,11 +46,13 @@ These fields are set by challenge overlays and read by 3D station components:
 ## Actions
 
 ### `setAppPhase(phase)`
+
 Sets the app lifecycle phase. Called by:
 - LoadingScreen → `'playing'` when assets are preloaded
 - Title screen → `'loading'` on "NEW GAME"
 
 ### `startNewGame()`
+
 Resets all game state for a fresh playthrough:
 - `appPhase` → `'playing'`
 - `gameStatus` → `'playing'`
@@ -62,9 +64,11 @@ Resets all game state for a fresh playthrough:
 - `variantSeed` → Date.now()
 
 ### `continueGame()`
+
 Resets challenge-level ephemeral state but preserves progression. Used when retrying after non-fatal failure.
 
 ### `completeChallenge(score)`
+
 Advances to next challenge:
 - Appends score to `challengeScores`
 - Increments `currentChallenge`
@@ -72,12 +76,15 @@ Advances to next challenge:
 - If last challenge (index 4), sets `gameStatus` → `'victory'`
 
 ### `addStrike()`
+
 Increments strikes. If strikes ≥ 3, sets `gameStatus` → `'defeat'`.
 
 ### `useHint()`
+
 Decrements `hintsRemaining` (minimum 0).
 
 ### `returnToMenu()`
+
 Resets to menu: `appPhase` → `'menu'`, `gameStatus` → `'menu'`, all ephemeral state → defaults.
 
 ## State Flow Diagram
@@ -118,12 +125,14 @@ Resets to menu: `appPhase` → `'menu'`, `gameStatus` → `'menu'`, all ephemera
 ## Subscription Patterns
 
 ### Challenge overlay → Store
+
 ```typescript
 // Challenge reads variant seed, writes progress/strikes
 const { variantSeed, setChallengeProgress, addStrike, completeChallenge } = useGameStore();
 ```
 
 ### 3D Station → Store (via GameWorld)
+
 ```typescript
 // GameWorld reads challenge state, passes to station components as props
 const { challengeProgress, challengePressure, strikes } = useGameStore();
@@ -132,6 +141,7 @@ const { challengeProgress, challengePressure, strikes } = useGameStore();
 ```
 
 ### App.tsx → Store
+
 ```typescript
 // Top-level phase routing
 const appPhase = useGameStore(s => s.appPhase);

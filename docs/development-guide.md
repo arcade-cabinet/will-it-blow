@@ -128,26 +128,32 @@ If a new challenge needs new ephemeral state:
 ## Common Pitfalls
 
 ### import.meta in Metro
+
 **Problem:** White screen on load — `Cannot use 'import.meta' outside a module`.
 **Solution:** Ensure `unstable_transformImportMeta: true` in `babel.config.js` preset options. Run `npx expo start --web --clear` after changing babel config.
 
 ### useGLTF in Jest
+
 **Problem:** `useGLTF` fails in tests — file loading not available in Node.js.
 **Solution:** Mock `@react-three/drei` in your test file. See `docs/testing.md` for the mock pattern.
 
 ### Stale closure in useFrame
+
 **Problem:** `useFrame` callback captures state from mount time.
 **Solution:** Use `useRef` and update `.current` on each render. Read from ref inside `useFrame`.
 
 ### Three.js ESM in Jest
+
 **Problem:** `SyntaxError: Unexpected token 'export'` when importing Three.js or R3F in tests.
 **Solution:** `jest.config.js` must include `three` and `@react-three` in the `transformIgnorePatterns` allowlist.
 
 ### Camera inside mesh
+
 **Problem:** Camera positioned inside or too close to a mesh → black screen.
 **Solution:** Check STATION_CAMERAS values. Ensure camera is at least 0.5 units from any solid mesh.
 
 ### MrSausage3D overlap
+
 **Problem:** Character's head sphere (radius 1.8, extends ~3.5 units tall) clips into scene geometry.
 **Solution:** Verify position in each scene. Check that animated geometry doesn't grow into the character.
 

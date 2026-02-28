@@ -57,27 +57,27 @@ describe('ChallengeRegistry', () => {
     expect(results.size).toBeGreaterThanOrEqual(2);
   });
 
-  it('calculateFinalVerdict returns S rank for average >= 90', () => {
-    const verdict = calculateFinalVerdict([95, 92, 90, 98, 100]);
+  it('calculateFinalVerdict returns S rank for average >= 92', () => {
+    const verdict = calculateFinalVerdict([95, 92, 93, 98, 100]);
     expect(verdict.rank).toBe('S');
     expect(verdict.title).toBe('THE SAUSAGE KING');
-    expect(verdict.averageScore).toBeGreaterThanOrEqual(90);
+    expect(verdict.averageScore).toBeGreaterThanOrEqual(92);
   });
 
-  it('calculateFinalVerdict returns A rank for average 70-89', () => {
-    const verdict = calculateFinalVerdict([75, 80, 70, 85]);
+  it('calculateFinalVerdict returns A rank for average 75-91', () => {
+    const verdict = calculateFinalVerdict([80, 85, 75, 90]);
     expect(verdict.rank).toBe('A');
-    expect(verdict.title).toBe('Acceptable');
-    expect(verdict.averageScore).toBeGreaterThanOrEqual(70);
-    expect(verdict.averageScore).toBeLessThan(90);
+    expect(verdict.title).toBe('Almost Worthy');
+    expect(verdict.averageScore).toBeGreaterThanOrEqual(75);
+    expect(verdict.averageScore).toBeLessThan(92);
   });
 
-  it('calculateFinalVerdict returns B rank for average 50-69', () => {
+  it('calculateFinalVerdict returns B rank for average 50-74', () => {
     const verdict = calculateFinalVerdict([55, 60, 50, 65]);
     expect(verdict.rank).toBe('B');
     expect(verdict.title).toBe('Mediocre');
     expect(verdict.averageScore).toBeGreaterThanOrEqual(50);
-    expect(verdict.averageScore).toBeLessThan(70);
+    expect(verdict.averageScore).toBeLessThan(75);
   });
 
   it('calculateFinalVerdict returns F rank for average < 50', () => {

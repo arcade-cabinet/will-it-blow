@@ -46,12 +46,13 @@ describe('FridgeStation', () => {
         hintActive={false}
         matchingIndices={new Set()}
         onSelect={jest.fn()}
+        onHover={jest.fn()}
       />,
     );
     expect(renderer.scene.children.length).toBeGreaterThan(0);
   });
 
-  it('renders fridge body, door, shelves, and ingredient meshes', async () => {
+  it('renders lights, door, shelves, and ingredient meshes', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <FridgeStation
         ingredients={mockIngredients}
@@ -59,15 +60,15 @@ describe('FridgeStation', () => {
         hintActive={false}
         matchingIndices={new Set()}
         onSelect={jest.fn()}
+        onHover={jest.fn()}
       />,
     );
-    // Root group should contain fridge body, door, shelves, interior light, and ingredient meshes
+    // Root group: 2 lights + door group + 3 shelves + back wall + 3 ingredients = 10
     const root = renderer.scene.children[0];
-    // Fridge body (1) + door (1) + interior light emissive (1) + pointLight (1) + shelves (3) + ingredients (3) = 10
     expect(root.children.length).toBeGreaterThanOrEqual(8);
   });
 
-  it('positions the fridge group at the expected location', async () => {
+  it('positions the fridge group at GLB fridge center', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <FridgeStation
         ingredients={mockIngredients}
@@ -75,12 +76,13 @@ describe('FridgeStation', () => {
         hintActive={false}
         matchingIndices={new Set()}
         onSelect={jest.fn()}
+        onHover={jest.fn()}
       />,
     );
     const root = renderer.scene.children[0];
-    expect(root.instance.position.x).toBe(-5);
-    expect(root.instance.position.y).toBe(1.5);
-    expect(root.instance.position.z).toBe(-4);
+    expect(root.instance.position.x).toBeCloseTo(-5.16, 1);
+    expect(root.instance.position.y).toBeCloseTo(1.79, 1);
+    expect(root.instance.position.z).toBeCloseTo(-5.02, 1);
   });
 
   it('includes a point light for interior fridge glow', async () => {
@@ -91,6 +93,7 @@ describe('FridgeStation', () => {
         hintActive={false}
         matchingIndices={new Set()}
         onSelect={jest.fn()}
+        onHover={jest.fn()}
       />,
     );
     const pointLights: any[] = [];
@@ -116,6 +119,7 @@ describe('FridgeStation', () => {
         hintActive={false}
         matchingIndices={new Set()}
         onSelect={jest.fn()}
+        onHover={jest.fn()}
       />,
     );
     expect(renderer.scene.children.length).toBeGreaterThan(0);
@@ -129,6 +133,7 @@ describe('FridgeStation', () => {
         hintActive={true}
         matchingIndices={new Set([1])}
         onSelect={jest.fn()}
+        onHover={jest.fn()}
       />,
     );
     expect(renderer.scene.children.length).toBeGreaterThan(0);

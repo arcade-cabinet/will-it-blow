@@ -1,6 +1,7 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {StyleSheet, Text, TouchableWithoutFeedback, View} from 'react-native';
 import type {StuffingVariant} from '../../data/challenges/variants';
+import {audioEngine} from '../../engine/AudioEngine';
 import {STUFFING_DIALOGUE, STUFFING_SUCCESS} from '../../data/dialogue/stuffing';
 import {pickVariant} from '../../engine/ChallengeRegistry';
 import {useGameStore} from '../../store/gameStore';
@@ -54,6 +55,7 @@ export function StuffingChallenge({onComplete, onReaction}: StuffingChallengePro
   const burstCountRef = useRef(0);
   const startTimeRef = useRef(0);
   const burstCooldownRef = useRef(false);
+  const lastBeepSecondRef = useRef(-1);
 
   phaseRef.current = phase;
   variantRef.current = variant;
@@ -88,6 +90,18 @@ export function StuffingChallenge({onComplete, onReaction}: StuffingChallengePro
       setWarningVisible(false);
     }
   }, [pressureLevel, phase]);
+
+  // Pressure audio: rising tone as pressure increases
+  useEffect(() => {
+    if (phase === 'stuffing' && pressureLevel > 10) {
+      audioEngine.updatePressure(pressureLevel);
+    } else {
+      audioEngine.stopPressure();
+    }
+    return () => {
+      audioEngine.stopPressure();
+    };
+  }, [phase, pressureLevel]);
 
   // Main gameplay tick
   useEffect(() => {
@@ -124,9 +138,10 @@ export function StuffingChallenge({onComplete, onReaction}: StuffingChallengePro
         newPressure = 0;
         newFill = Math.max(0, newFill - FILL_DROP_ON_BURST);
 
-        // Visual burst feedback
+        // Visual + audio burst feedback
         setHasBurst(true);
         setBurstFlash(true);
+        audioEngine.playBurst();
         onReaction?.('flinch');
 
         setTimeout(() => {
@@ -166,6 +181,13 @@ export function StuffingChallenge({onComplete, onReaction}: StuffingChallengePro
       const newTime = Math.max(0, timeRemainingRef.current - dt);
       timeRemainingRef.current = newTime;
       setTimeRemaining(newTime);
+
+      // Countdown beep for last 5 seconds
+      const currentSecond = Math.ceil(newTime);
+      if (currentSecond <= 5 && currentSecond > 0 && currentSecond !== lastBeepSecondRef.current) {
+        lastBeepSecondRef.current = currentSecond;
+        audioEngine.playCountdownBeep(currentSecond === 1);
+      }
 
       // Timer expired
       if (newTime <= 0) {
@@ -223,6 +245,7 @@ export function StuffingChallenge({onComplete, onReaction}: StuffingChallengePro
     if (phaseRef.current === 'stuffing') {
       setIsPressing(true);
       setChallengeIsPressing(true);
+      audioEngine.playStuffingSquelch();
     }
   }, [setChallengeIsPressing]);
 

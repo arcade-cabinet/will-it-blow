@@ -1,7 +1,7 @@
-import {useGLTF} from '@react-three/drei';
+import {useGLTF, useTexture} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
 import type React from 'react';
-import {useEffect, useRef} from 'react';
+import {useEffect, useMemo, useRef} from 'react';
 import * as THREE from 'three';
 
 // --- Room dimensions (slightly larger than 12x12 kitchen GLB to avoid z-fighting) ---
@@ -80,6 +80,168 @@ function getAssetRootUrl(subdir: string): string {
     }
   }
   return `/${subdir}/`;
+}
+
+// -------------------------------------------------------
+// useRoomTextures — loads ambientCG PBR texture sets for the room enclosure
+// -------------------------------------------------------
+
+/** Configure a texture for tiling: RepeatWrapping + repeat count */
+function tileTex(tex: THREE.Texture, repeatX: number, repeatY: number): THREE.Texture {
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(repeatX, repeatY);
+  return tex;
+}
+
+function useRoomTextures() {
+  const root = getAssetRootUrl('textures');
+
+  // Load all PBR maps in parallel via drei's useTexture
+  const tileWall = useTexture({
+    map: `${root}tile_wall_color.jpg`,
+    normalMap: `${root}tile_wall_normal.jpg`,
+    roughnessMap: `${root}tile_wall_roughness.jpg`,
+    aoMap: `${root}tile_wall_ao.jpg`,
+  });
+  const concrete = useTexture({
+    map: `${root}concrete_color.jpg`,
+    normalMap: `${root}concrete_normal.jpg`,
+    roughnessMap: `${root}concrete_roughness.jpg`,
+  });
+  const tileFloor = useTexture({
+    map: `${root}tile_floor_color.jpg`,
+    normalMap: `${root}tile_floor_normal.jpg`,
+    roughnessMap: `${root}tile_floor_roughness.jpg`,
+  });
+  const grimeDrip = useTexture({
+    map: `${root}grime_drip_color.jpg`,
+    normalMap: `${root}grime_drip_normal.jpg`,
+    roughnessMap: `${root}grime_drip_roughness.jpg`,
+    alphaMap: `${root}grime_drip_opacity.jpg`,
+  });
+  const grimeBase = useTexture({
+    map: `${root}grime_base_color.jpg`,
+    normalMap: `${root}grime_base_normal.jpg`,
+    roughnessMap: `${root}grime_base_roughness.jpg`,
+    alphaMap: `${root}grime_base_opacity.jpg`,
+  });
+
+  // Apply tiling (run once after load)
+  useMemo(() => {
+    // Subway tile: ~6.5 tiles across a 13-unit wall, ~2.4 tiles vertically
+    for (const t of Object.values(tileWall)) tileTex(t as THREE.Texture, 6, 3);
+    // Concrete: ~3 repeats across a 13-unit wall
+    for (const t of Object.values(concrete)) tileTex(t as THREE.Texture, 3, 2);
+    // Floor tile: ~6 repeats across 13-unit floor
+    for (const t of Object.values(tileFloor)) tileTex(t as THREE.Texture, 6, 6);
+    // Grime decals: no tiling (they're placed individually, 1:1 mapping)
+  }, [tileWall, concrete, tileFloor]);
+
+  return {tileWall, concrete, tileFloor, grimeDrip, grimeBase};
+}
+
+// -------------------------------------------------------
+// RoomEnclosure — floor, ceiling, walls with PBR textures
+// -------------------------------------------------------
+
+function RoomEnclosure({
+  textures,
+}: {
+  textures: ReturnType<typeof useRoomTextures>;
+}) {
+  const upperH = ROOM_H - TILE_LINE;
+
+  return (
+    <group>
+      {/* Floor (tile) — ground plane facing up */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
+        <planeGeometry args={[ROOM_W, ROOM_D]} />
+        <meshStandardMaterial
+          {...textures.tileFloor}
+          roughness={0.9}
+          metalness={0.0}
+          side={THREE.FrontSide}
+        />
+      </mesh>
+
+      {/* Ceiling (concrete) — ground plane facing down */}
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, ROOM_H, 0]}>
+        <planeGeometry args={[ROOM_W, ROOM_D]} />
+        <meshStandardMaterial
+          {...textures.concrete}
+          roughness={0.95}
+          metalness={0.0}
+          side={THREE.FrontSide}
+        />
+      </mesh>
+
+      {/* Walls — each wall is TWO planes stacked:
+          lower subway tile + upper exposed concrete.
+          Plane normals face +Z by default; we rotate each wall
+          so normals point inward. DoubleSide for lighting from both directions. */}
+      {WALL_CONFIGS.map((cfg, i) => (
+        <group key={`wall_${i}`}>
+          {/* Lower wall: subway tile (y=0 to TILE_LINE) */}
+          <mesh position={[cfg.pos[0], TILE_LINE / 2, cfg.pos[2]]} rotation={[0, cfg.rotY, 0]}>
+            <planeGeometry args={[cfg.w, TILE_LINE]} />
+            <meshStandardMaterial
+              {...textures.tileWall}
+              roughness={0.85}
+              metalness={0.05}
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+
+          {/* Upper wall: concrete (y=TILE_LINE to ROOM_H) */}
+          <mesh
+            position={[cfg.pos[0], TILE_LINE + upperH / 2, cfg.pos[2]]}
+            rotation={[0, cfg.rotY, 0]}
+          >
+            <planeGeometry args={[cfg.w, upperH]} />
+            <meshStandardMaterial
+              {...textures.concrete}
+              roughness={0.9}
+              metalness={0.05}
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+// -------------------------------------------------------
+// PBR Grime Decals — textured transparent planes
+// -------------------------------------------------------
+
+interface PbrGrimeDecalProps {
+  size: [number, number];
+  position: [number, number, number];
+  rotY: number;
+  textures: {
+    map: THREE.Texture;
+    normalMap: THREE.Texture;
+    roughnessMap: THREE.Texture;
+    alphaMap: THREE.Texture;
+  };
+}
+
+function PbrGrimeDecal({size, position, rotY, textures}: PbrGrimeDecalProps) {
+  return (
+    <mesh position={position} rotation={[0, rotY, 0]} renderOrder={10}>
+      <planeGeometry args={size} />
+      <meshStandardMaterial
+        {...textures}
+        transparent
+        opacity={0.85}
+        depthWrite={false}
+        roughness={0.95}
+        metalness={0.0}
+      />
+    </mesh>
+  );
 }
 
 // -------------------------------------------------------
@@ -177,29 +339,13 @@ function FluorescentTube({position, lightRef}: FluorescentTubeProps) {
 }
 
 // -------------------------------------------------------
-// GrimeDecal — semi-transparent plane for horror aesthetic
-// -------------------------------------------------------
-
-interface GrimeDecalProps {
-  size: [number, number];
-  position: [number, number, number];
-  rotY: number;
-}
-
-function GrimeDecal({size, position, rotY}: GrimeDecalProps) {
-  return (
-    <mesh position={position} rotation={[0, rotY, 0]} renderOrder={10}>
-      <planeGeometry args={size} />
-      <meshBasicMaterial color="#1a1008" transparent opacity={0.3} depthWrite={false} />
-    </mesh>
-  );
-}
-
-// -------------------------------------------------------
 // KitchenEnvironment — room enclosure, GLB, lighting, grime
 // -------------------------------------------------------
 
 export const KitchenEnvironment = () => {
+  // Load PBR textures for room enclosure
+  const textures = useRoomTextures();
+
   // Refs for fluorescent tube lights (flicker animation)
   const tubeLight0 = useRef<THREE.PointLight>(null);
   const tubeLight1 = useRef<THREE.PointLight>(null);
@@ -248,88 +394,42 @@ export const KitchenEnvironment = () => {
     }
   });
 
-  const upperH = ROOM_H - TILE_LINE;
-
   return (
     <group>
       {/* =======================================================
-			    ROOM ENCLOSURE — floor, ceiling, 4 walls with PBR
-			    ======================================================= */}
-
-      {/* Floor (checkered tiles) — ground plane facing up */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-        <planeGeometry args={[ROOM_W, ROOM_D]} />
-        <meshStandardMaterial color="#8c877f" roughness={0.9} metalness={0.0} />
-      </mesh>
-
-      {/* Ceiling (cracked concrete) — ground plane facing down */}
-      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, ROOM_H, 0]}>
-        <planeGeometry args={[ROOM_W, ROOM_D]} />
-        <meshStandardMaterial color="#807a73" roughness={0.95} metalness={0.0} />
-      </mesh>
-
-      {/* Walls — each wall is TWO planes stacked:
-			    lower subway tile + upper exposed concrete.
-			    Plane normals face +Z by default; we rotate each wall
-			    so normals point inward. DoubleSide for lighting from both directions. */}
-      {WALL_CONFIGS.map((cfg, i) => (
-        <group key={`wall_${i}`}>
-          {/* Lower wall: subway tile (y=0 to TILE_LINE) */}
-          <mesh position={[cfg.pos[0], TILE_LINE / 2, cfg.pos[2]]} rotation={[0, cfg.rotY, 0]}>
-            <planeGeometry args={[cfg.w, TILE_LINE]} />
-            <meshStandardMaterial
-              color="#999485"
-              roughness={0.85}
-              metalness={0.05}
-              side={THREE.DoubleSide}
-            />
-          </mesh>
-
-          {/* Upper wall: concrete (y=TILE_LINE to ROOM_H) */}
-          <mesh
-            position={[cfg.pos[0], TILE_LINE + upperH / 2, cfg.pos[2]]}
-            rotation={[0, cfg.rotY, 0]}
-          >
-            <planeGeometry args={[cfg.w, upperH]} />
-            <meshStandardMaterial
-              color="#8c857a"
-              roughness={0.9}
-              metalness={0.05}
-              side={THREE.DoubleSide}
-            />
-          </mesh>
-        </group>
-      ))}
+          ROOM ENCLOSURE — floor, ceiling, 4 walls with PBR textures
+          ======================================================= */}
+      <RoomEnclosure textures={textures} />
 
       {/* =======================================================
-			    GRIME DECALS — transparent planes offset from walls
-			    ======================================================= */}
+          GRIME DECALS — PBR textured transparent planes
+          ======================================================= */}
 
       {/* Dripping grime decals on walls */}
       {GRIME_DRIPS.map((decal, i) => (
-        <GrimeDecal key={`grimeDrip_${i}`} {...decal} />
+        <PbrGrimeDecal key={`grimeDrip_${i}`} {...decal} textures={textures.grimeDrip} />
       ))}
 
       {/* Baseboard mold decals along floor line */}
       {GRIME_BASES.map((decal, i) => (
-        <GrimeDecal key={`grimeBase_${i}`} {...decal} />
+        <PbrGrimeDecal key={`grimeBase_${i}`} {...decal} textures={textures.grimeBase} />
       ))}
 
       {/* =======================================================
-			    KITCHEN GLB MODEL
-			    ======================================================= */}
+          KITCHEN GLB MODEL
+          ======================================================= */}
       <KitchenModel />
 
       {/* =======================================================
-			    LIGHTING — harsh fluorescent overhead
-			    ======================================================= */}
+          LIGHTING — harsh fluorescent overhead
+          ======================================================= */}
 
       {/* Hemisphere light: slightly cooler fluorescent sky color
-			    with darker ground bounce for horror atmosphere */}
+          with darker ground bounce for horror atmosphere */}
       <hemisphereLight args={['#d9e6d1', '#4d473d', 0.6]} />
 
       {/* Center fill point light at mid-wall height —
-			    illuminates vertical surfaces the hemisphere misses */}
+          illuminates vertical surfaces the hemisphere misses */}
       <pointLight position={[0, 2.0, 0]} color="#d9e1cc" intensity={0.8} distance={14} decay={2} />
 
       {/* Fluorescent tube fixtures with flicker animation */}

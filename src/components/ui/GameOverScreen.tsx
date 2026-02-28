@@ -1,10 +1,15 @@
 import {useEffect, useRef} from 'react';
 import {Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {audioEngine} from '../../engine/AudioEngine';
 import {calculateFinalVerdict} from '../../engine/ChallengeRegistry';
 import {useGameStore} from '../../store/gameStore';
 
+const CHALLENGE_NAMES = ['Ingredients', 'Grinding', 'Stuffing', 'Cooking', 'Tasting'];
+
 export function GameOverScreen() {
   const {gameStatus, challengeScores, startNewGame, returnToMenu} = useGameStore();
+  const isVictory = gameStatus === 'victory';
+  const verdict = isVictory ? calculateFinalVerdict(challengeScores) : null;
 
   // Rank scale-in animation
   const rankScale = useRef(new Animated.Value(0.3)).current;
@@ -25,10 +30,16 @@ export function GameOverScreen() {
         delay: 300,
       }),
     ]).start();
-  }, [fadeAnim, rankScale]);
 
-  const isVictory = gameStatus === 'victory';
-  const verdict = isVictory ? calculateFinalVerdict(challengeScores) : null;
+    // Play rating song based on outcome
+    const ratingMap: Record<string, number> = {S: 5, A: 3, B: 2, F: 0};
+    if (isVictory && challengeScores.length > 0) {
+      const v = calculateFinalVerdict(challengeScores);
+      audioEngine.playRatingSong(ratingMap[v.rank] ?? 1);
+    } else {
+      audioEngine.playRatingSong(0);
+    }
+  }, [fadeAnim, rankScale, isVictory, challengeScores]);
 
   const rankColor =
     verdict?.rank === 'S'
@@ -77,7 +88,7 @@ export function GameOverScreen() {
               <View style={styles.challengeScores}>
                 {challengeScores.map((score, i) => (
                   <View key={i} style={styles.challengeScoreRow}>
-                    <Text style={styles.challengeScoreLabel}>Challenge {i + 1}</Text>
+                    <Text style={styles.challengeScoreLabel}>{CHALLENGE_NAMES[i] ?? `Challenge ${i + 1}`}</Text>
                     <Text style={styles.challengeScoreValue}>{score}</Text>
                   </View>
                 ))}
@@ -85,9 +96,31 @@ export function GameOverScreen() {
             </>
           ) : (
             <>
-              {/* Defeat */}
+              {/* Defeat — show rank if we have scores (A/B/F) */}
               <Text style={styles.gameOverTitle}>GAME OVER</Text>
-              <Text style={styles.gameOverSubtitle}>You are the sausage now.</Text>
+              {challengeScores.length > 0 && (() => {
+                const defeatVerdict = calculateFinalVerdict(challengeScores);
+                const defeatColor = defeatVerdict.rank === 'A' ? '#FF9800' : '#FF1744';
+                return (
+                  <>
+                    <Text style={[styles.rankLetter, {color: defeatColor, textShadowColor: defeatColor}]}>
+                      {defeatVerdict.rank}
+                    </Text>
+                    <Text style={styles.gameOverSubtitle}>{defeatVerdict.message}</Text>
+                    <View style={styles.challengeScores}>
+                      {challengeScores.map((score, i) => (
+                        <View key={i} style={styles.challengeScoreRow}>
+                          <Text style={styles.challengeScoreLabel}>{CHALLENGE_NAMES[i] ?? `Challenge ${i + 1}`}</Text>
+                          <Text style={styles.challengeScoreValue}>{Math.round(score)}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </>
+                );
+              })()}
+              {challengeScores.length === 0 && (
+                <Text style={styles.gameOverSubtitle}>You are the sausage now.</Text>
+              )}
             </>
           )}
 

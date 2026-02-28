@@ -25,8 +25,10 @@ const REACTION_INTENSITY: Record<Reaction, number> = {
 const TV = {
   housing: {width: 3.2, height: 2.6, depth: 1.6},
   screen: {width: 2.2, height: 1.6},
-  /** How far forward the screen glass sits from the housing center */
-  screenZ: 0.81,
+  /** How far forward the screen glass sits from the housing center.
+   *  Must be AHEAD of the inner bezel recess front face (bezelZ - 0.04 + 0.04 = bezelZ)
+   *  so the CRT shader plane isn't occluded by the dark bezel box. */
+  screenZ: 0.835,
   /** Glass bezel dimensions -- slightly larger than screen, slightly proud of housing */
   bezel: {width: 2.5, height: 1.85, depth: 0.12},
   bezelZ: 0.82,

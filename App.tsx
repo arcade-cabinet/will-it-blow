@@ -1,4 +1,4 @@
-import {useCallback, useEffect} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {SafeAreaView, StyleSheet, View} from 'react-native';
 import {CookingChallenge} from './src/components/challenges/CookingChallenge';
 import {GrindingChallenge} from './src/components/challenges/GrindingChallenge';
@@ -7,6 +7,7 @@ import {StuffingChallenge} from './src/components/challenges/StuffingChallenge';
 import {TastingChallenge} from './src/components/challenges/TastingChallenge';
 import {GameWorld} from './src/components/GameWorld';
 import {ChallengeHeader} from './src/components/ui/ChallengeHeader';
+import {ChallengeTransition} from './src/components/ui/ChallengeTransition';
 import {GameOverScreen} from './src/components/ui/GameOverScreen';
 import {LoadingScreen} from './src/components/ui/LoadingScreen';
 import {StrikeCounter} from './src/components/ui/StrikeCounter';
@@ -21,6 +22,34 @@ installGovernor();
 const GameUI = () => {
   const {gameStatus, currentChallenge, completeChallenge, setMrSausageReaction} = useGameStore();
 
+  // Transition state: show title card between challenges
+  const [transitioning, setTransitioning] = useState(false);
+  const prevChallengeRef = useRef(currentChallenge);
+
+  useEffect(() => {
+    // Show transition card when advancing to a new challenge (not on first mount)
+    if (
+      gameStatus === 'playing' &&
+      currentChallenge > prevChallengeRef.current &&
+      currentChallenge > 0
+    ) {
+      setTransitioning(true);
+    }
+    prevChallengeRef.current = currentChallenge;
+  }, [currentChallenge, gameStatus]);
+
+  // Reset transition state when returning to menu or starting new game
+  useEffect(() => {
+    if (gameStatus !== 'playing') {
+      setTransitioning(false);
+      prevChallengeRef.current = 0;
+    }
+  }, [gameStatus]);
+
+  const handleTransitionComplete = useCallback(() => {
+    setTransitioning(false);
+  }, []);
+
   const handleReaction = useCallback(
     (reaction: Parameters<typeof setMrSausageReaction>[0]) => {
       setMrSausageReaction(reaction);
@@ -28,15 +57,24 @@ const GameUI = () => {
     [setMrSausageReaction],
   );
 
-  const isIngredientChallenge = gameStatus === 'playing' && currentChallenge === 0;
-  const isGrindingChallenge = gameStatus === 'playing' && currentChallenge === 1;
-  const isStuffingChallenge = gameStatus === 'playing' && currentChallenge === 2;
-  const isCookingChallenge = gameStatus === 'playing' && currentChallenge === 3;
-  const isTastingChallenge = gameStatus === 'playing' && currentChallenge === 4;
+  const showChallenge = gameStatus === 'playing' && !transitioning;
+  const isIngredientChallenge = showChallenge && currentChallenge === 0;
+  const isGrindingChallenge = showChallenge && currentChallenge === 1;
+  const isStuffingChallenge = showChallenge && currentChallenge === 2;
+  const isCookingChallenge = showChallenge && currentChallenge === 3;
+  const isTastingChallenge = showChallenge && currentChallenge === 4;
 
   return (
     <View style={styles.overlay} pointerEvents="box-none" testID="game-overlay">
-      {gameStatus === 'playing' && (
+      {/* Challenge transition title card */}
+      {gameStatus === 'playing' && transitioning && (
+        <ChallengeTransition
+          challengeIndex={currentChallenge}
+          onComplete={handleTransitionComplete}
+        />
+      )}
+
+      {gameStatus === 'playing' && !transitioning && (
         <>
           <ChallengeHeader />
           <StrikeCounter />

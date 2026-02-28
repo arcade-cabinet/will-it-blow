@@ -196,12 +196,13 @@ export function TastingChallenge({onComplete: _onComplete, onReaction}: TastingC
     (_effects: string[]) => {
       setPhase('complete');
 
-      if (verdict.rank === 'S' || verdict.rank === 'A') {
-        // Victory: completeChallenge handles setting gameStatus to 'victory'
-        // since tasting is the last challenge (index 4)
-        completeChallenge(verdict.averageScore);
-      } else {
-        // Defeat: B and F ranks
+      // Record the final tasting score regardless of outcome
+      completeChallenge(verdict.averageScore);
+
+      if (verdict.rank !== 'S') {
+        // Only S-rank is true victory. A/B/F = defeat with different dialogue tones.
+        // completeChallenge already set gameStatus to 'victory' (last challenge),
+        // so override it to 'defeat' for non-S ranks.
         useGameStore.setState({gameStatus: 'defeat'});
       }
     },

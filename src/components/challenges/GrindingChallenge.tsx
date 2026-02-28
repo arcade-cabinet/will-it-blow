@@ -1,6 +1,7 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {PanResponder, StyleSheet, Text, View} from 'react-native';
 import type {GrindingVariant} from '../../data/challenges/variants';
+import {audioEngine} from '../../engine/AudioEngine';
 import {GRINDING_DIALOGUE, GRINDING_SUCCESS} from '../../data/dialogue/grinding';
 import {pickVariant} from '../../engine/ChallengeRegistry';
 import {useGameStore} from '../../store/gameStore';
@@ -46,6 +47,7 @@ export function GrindingChallenge({onComplete, onReaction}: GrindingChallengePro
   const variantRef = useRef(variant);
   const startTimeRef = useRef(0);
   const splatCooldownRef = useRef(false);
+  const lastBeepSecondRef = useRef(-1);
 
   strikesRef.current = strikes;
   phaseRef.current = phase;
@@ -201,6 +203,13 @@ export function GrindingChallenge({onComplete, onReaction}: GrindingChallengePro
       timeRemainingRef.current = newTime;
       setTimeRemaining(newTime);
 
+      // Countdown beep for last 5 seconds
+      const currentSecond = Math.ceil(newTime);
+      if (currentSecond <= 5 && currentSecond > 0 && currentSecond !== lastBeepSecondRef.current) {
+        lastBeepSecondRef.current = currentSecond;
+        audioEngine.playCountdownBeep(currentSecond === 1);
+      }
+
       // Timer expired
       if (newTime <= 0) {
         setPhase('complete');
@@ -224,6 +233,18 @@ export function GrindingChallenge({onComplete, onReaction}: GrindingChallengePro
 
     return () => clearInterval(interval);
   }, [phase, variant, addStrike, setChallengeProgress, onComplete, onReaction]);
+
+  // Start/stop grinder audio when phase changes
+  useEffect(() => {
+    if (phase === 'grinding') {
+      audioEngine.startGrinder();
+    } else {
+      audioEngine.stopGrinder();
+    }
+    return () => {
+      audioEngine.stopGrinder();
+    };
+  }, [phase]);
 
   // Handle dialogue completion
   const handleDialogueComplete = useCallback(

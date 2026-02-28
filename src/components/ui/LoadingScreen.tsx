@@ -29,6 +29,7 @@ export function LoadingScreen() {
   const [progress, setProgress] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [quoteIndex, setQuoteIndex] = useState(0);
+  const [retryCount, setRetryCount] = useState(0);
 
   // Fade-in animation
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -103,8 +104,7 @@ export function LoadingScreen() {
     return () => {
       controller.abort();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [retryCount]);
 
   // When loading completes, transition to playing
   useEffect(() => {
@@ -128,6 +128,7 @@ export function LoadingScreen() {
   const handleRetry = () => {
     setLoadError(null);
     setProgress(0);
+    setRetryCount(c => c + 1);
   };
 
   return (

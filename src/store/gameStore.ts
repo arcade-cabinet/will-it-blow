@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {create} from 'zustand';
 import {createJSONStorage, persist} from 'zustand/middleware';
 import type {Reaction} from '../components/characters/reactions';
+import type {Ingredient} from '../engine/Ingredients';
 
 export type AppPhase = 'menu' | 'loading' | 'playing';
 export interface GameState {
@@ -32,6 +33,13 @@ export interface GameState {
   // Variant seed
   variantSeed: number;
 
+  // Fridge challenge — shared state between 3D scene and 2D overlay
+  fridgePool: Ingredient[];
+  fridgeMatchingIndices: number[];
+  fridgeSelectedIndices: number[];
+  pendingFridgeClick: number | null;
+  fridgeHoveredIndex: number | null;
+
   // Settings (persist across games)
   musicVolume: number; // 0-1
   sfxVolume: number; // 0-1
@@ -52,6 +60,11 @@ export interface GameState {
   setChallengeHeatLevel: (heatLevel: number) => void;
   setMrSausageReaction: (reaction: Reaction) => void;
   setHintActive: (active: boolean) => void;
+  setFridgePool: (pool: Ingredient[], matching: number[]) => void;
+  triggerFridgeClick: (index: number) => void;
+  clearFridgeClick: () => void;
+  addFridgeSelected: (index: number) => void;
+  setFridgeHovered: (index: number | null) => void;
   setMusicVolume: (volume: number) => void;
   setSfxVolume: (volume: number) => void;
   setMusicMuted: (muted: boolean) => void;
@@ -79,6 +92,11 @@ export const INITIAL_GAME_STATE = {
   hintsRemaining: INITIAL_HINTS,
   totalGamesPlayed: 0,
   variantSeed: 0,
+  fridgePool: [] as Ingredient[],
+  fridgeMatchingIndices: [] as number[],
+  fridgeSelectedIndices: [] as number[],
+  pendingFridgeClick: null as number | null,
+  fridgeHoveredIndex: null as number | null,
   musicVolume: 0.7,
   sfxVolume: 0.8,
   musicMuted: false,
@@ -108,10 +126,16 @@ export const useGameStore = create<GameState>()(
       hintsRemaining: INITIAL_HINTS,
       totalGamesPlayed: state.totalGamesPlayed + 1,
       variantSeed: Date.now(),
+      fridgePool: [],
+      fridgeMatchingIndices: [],
+      fridgeSelectedIndices: [],
+      pendingFridgeClick: null,
+      fridgeHoveredIndex: null,
     })),
 
   continueGame: () =>
     set({
+      appPhase: 'playing' as AppPhase,
       gameStatus: 'playing',
       strikes: 0,
       challengeProgress: 0,
@@ -173,6 +197,18 @@ export const useGameStore = create<GameState>()(
 
   setHintActive: (active: boolean) => set({hintActive: active}),
 
+  setFridgePool: (pool: Ingredient[], matching: number[]) =>
+    set({fridgePool: pool, fridgeMatchingIndices: matching, fridgeSelectedIndices: [], pendingFridgeClick: null, fridgeHoveredIndex: null}),
+
+  triggerFridgeClick: (index: number) => set({pendingFridgeClick: index}),
+
+  clearFridgeClick: () => set({pendingFridgeClick: null}),
+
+  addFridgeSelected: (index: number) =>
+    set(state => ({fridgeSelectedIndices: [...state.fridgeSelectedIndices, index]})),
+
+  setFridgeHovered: (index: number | null) => set({fridgeHoveredIndex: index}),
+
   setMusicVolume: (volume: number) => set({musicVolume: Math.max(0, Math.min(1, volume))}),
   setSfxVolume: (volume: number) => set({sfxVolume: Math.max(0, Math.min(1, volume))}),
   setMusicMuted: (muted: boolean) => set({musicMuted: muted}),
@@ -189,6 +225,11 @@ export const useGameStore = create<GameState>()(
       challengeTemperature: 70,
       challengeHeatLevel: 0,
       mrSausageReaction: 'idle' as Reaction,
+      fridgePool: [],
+      fridgeMatchingIndices: [],
+      fridgeSelectedIndices: [],
+      pendingFridgeClick: null,
+      fridgeHoveredIndex: null,
     }),
     }),
     {

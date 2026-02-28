@@ -5,7 +5,7 @@ describe('CrtShader', () => {
     const mat = createCrtMaterial('test');
     expect(mat.uniforms.time.value).toBe(0);
     expect(mat.uniforms.flickerIntensity.value).toBe(1.0);
-    expect(mat.uniforms.staticIntensity.value).toBe(0.05);
+    expect(mat.uniforms.staticIntensity.value).toBe(0.06);
     expect(mat.uniforms.reactionIntensity.value).toBe(0.0);
   });
 

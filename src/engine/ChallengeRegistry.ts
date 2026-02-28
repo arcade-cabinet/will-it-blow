@@ -113,7 +113,7 @@ export interface Verdict {
 export function calculateFinalVerdict(challengeScores: number[]): Verdict {
   const averageScore = challengeScores.reduce((sum, s) => sum + s, 0) / challengeScores.length;
 
-  if (averageScore >= 90) {
+  if (averageScore >= 92) {
     return {
       rank: 'S',
       title: 'THE SAUSAGE KING',
@@ -121,12 +121,12 @@ export function calculateFinalVerdict(challengeScores: number[]): Verdict {
       message: 'Perfection. You have earned my respect.',
     };
   }
-  if (averageScore >= 70) {
+  if (averageScore >= 75) {
     return {
       rank: 'A',
-      title: 'Acceptable',
+      title: 'Almost Worthy',
       averageScore,
-      message: 'Not bad. You may live... for now.',
+      message: 'Close. So painfully close.',
     };
   }
   if (averageScore >= 50) {
@@ -134,13 +134,13 @@ export function calculateFinalVerdict(challengeScores: number[]): Verdict {
       rank: 'B',
       title: 'Mediocre',
       averageScore,
-      message: "I've had worse. But not by much.",
+      message: "I've eaten gas station sausages with more soul.",
     };
   }
   return {
     rank: 'F',
     title: 'Unacceptable',
     averageScore,
-    message: 'You call this a sausage? DISGRACEFUL.',
+    message: 'You are the sausage now.',
   };
 }

@@ -1,7 +1,7 @@
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import {KitchenEnvironment} from '../KitchenEnvironment';
 
-// Mock useGLTF since we don't have the actual GLB in tests
+// Mock drei hooks since we don't have actual assets in tests
 jest.mock('@react-three/drei', () => ({
   useGLTF: jest.fn(() => ({
     scene: {
@@ -11,6 +11,11 @@ jest.mock('@react-three/drei', () => ({
       traverse: jest.fn(),
     },
   })),
+  useTexture: jest.fn(() => {
+    // Return a mock texture object for each map key
+    const mockTex = {wrapS: 0, wrapT: 0, repeat: {set: jest.fn()}};
+    return {map: mockTex, normalMap: mockTex, roughnessMap: mockTex, aoMap: mockTex, alphaMap: mockTex};
+  }),
 }));
 
 describe('KitchenEnvironment', () => {
@@ -28,21 +33,30 @@ describe('KitchenEnvironment', () => {
 
   it('includes floor at y=0', async () => {
     const renderer = await ReactThreeTestRenderer.create(<KitchenEnvironment />);
-    const root = renderer.scene.children[0];
-    // Find a mesh at y=0 with downward-facing rotation (floor)
-    const floor = root.children.find(
-      (child: any) =>
-        child.instance.position.y === 0 &&
-        Math.abs(child.instance.rotation.x - -Math.PI / 2) < 0.01,
+    // Floor is inside RoomEnclosure group (first child of root group)
+    const meshes: any[] = [];
+    function findMeshes(node: any) {
+      if (node.instance?.type === 'Mesh') meshes.push(node);
+      if (node.children) node.children.forEach(findMeshes);
+    }
+    findMeshes(renderer.scene.children[0]);
+    const floor = meshes.find(
+      (m: any) =>
+        m.instance.position.y === 0 && Math.abs(m.instance.rotation.x - -Math.PI / 2) < 0.01,
     );
     expect(floor).toBeDefined();
   });
 
   it('includes ceiling at room height', async () => {
     const renderer = await ReactThreeTestRenderer.create(<KitchenEnvironment />);
-    const root = renderer.scene.children[0];
-    // Ceiling is at y=5.5 (ROOM_H)
-    const ceiling = root.children.find((child: any) => child.instance.position.y === 5.5);
+    // Ceiling is inside RoomEnclosure group at y=5.5 (ROOM_H)
+    const meshes: any[] = [];
+    function findMeshes(node: any) {
+      if (node.instance?.type === 'Mesh') meshes.push(node);
+      if (node.children) node.children.forEach(findMeshes);
+    }
+    findMeshes(renderer.scene.children[0]);
+    const ceiling = meshes.find((m: any) => m.instance.position.y === 5.5);
     expect(ceiling).toBeDefined();
   });
 

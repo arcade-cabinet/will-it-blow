@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useMemo, useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import type {IngredientVariant} from '../../data/challenges/variants';
 import {audioEngine} from '../../engine/AudioEngine';
@@ -7,9 +7,9 @@ import {
   INGREDIENTS_FAIL,
   INGREDIENTS_SUCCESS,
 } from '../../data/dialogue/ingredients';
+import {INTRO_DIALOGUE} from '../../data/dialogue/intro';
 import {pickVariant} from '../../engine/ChallengeRegistry';
 import {matchesCriteria} from '../../engine/IngredientMatcher';
-import type {Ingredient} from '../../engine/Ingredients';
 import {getRandomIngredientPool} from '../../engine/Ingredients';
 import {useGameStore} from '../../store/gameStore';
 import type {Reaction} from '../characters/reactions';
@@ -30,12 +30,8 @@ const INGREDIENT_POOL_SIZE = 10;
 
 export function IngredientChallenge({onComplete, onReaction}: IngredientChallengeProps) {
   const [phase, setPhase] = useState<ChallengePhase>('dialogue');
-  const [ingredientPool, setIngredientPool] = useState<Ingredient[]>([]);
-  const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
   const [correctCount, setCorrectCount] = useState(0);
   const [variant, setVariant] = useState<IngredientVariant | null>(null);
-  const [matchingIndices, setMatchingIndices] = useState<Set<number>>(new Set());
-  const [hintActive, setHintActive] = useState(false);
   const [lastResult, setLastResult] = useState<'correct' | 'wrong' | null>(null);
 
   const {
@@ -46,24 +42,39 @@ export function IngredientChallenge({onComplete, onReaction}: IngredientChalleng
     setChallengeProgress,
     gameStatus,
     setHintActive: setStoreHintActive,
+    pendingFridgeClick,
+    clearFridgeClick,
+    addFridgeSelected,
+    fridgePool,
+    fridgeMatchingIndices,
+    fridgeSelectedIndices,
+    fridgeHoveredIndex,
+    setFridgePool,
   } = useGameStore();
 
-  // Initialize variant and ingredient pool on mount
+  // Refs for values read in the click handler to avoid stale closures
+  const correctCountRef = useRef(correctCount);
+  correctCountRef.current = correctCount;
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
+
+  // Initialize variant and ingredient pool on mount → write to store for 3D
   useEffect(() => {
     const v = pickVariant('ingredients', variantSeed) as IngredientVariant;
     setVariant(v);
     const pool = getRandomIngredientPool(INGREDIENT_POOL_SIZE);
-    setIngredientPool(pool);
 
     // Calculate which pool indices match the variant criteria
-    const matching = new Set<number>();
+    const matching: number[] = [];
     pool.forEach((ing, i) => {
       if (matchesCriteria(ing, v.criteria)) {
-        matching.add(i);
+        matching.push(i);
       }
     });
-    setMatchingIndices(matching);
-  }, [variantSeed]);
+
+    // Write shared pool to store so FridgeStation 3D reads it
+    setFridgePool(pool, matching);
+  }, [variantSeed, setFridgePool]);
 
   // Watch for defeat (3 strikes) to trigger failure dialogue
   useEffect(() => {
@@ -72,76 +83,77 @@ export function IngredientChallenge({onComplete, onReaction}: IngredientChalleng
     }
   }, [gameStatus, phase]);
 
-  // Handle ingredient selection
-  const handleSelect = useCallback(
-    (index: number) => {
-      if (selectedIndices.has(index) || !variant || phase !== 'selecting') return;
+  // Process 3D fridge clicks from the store
+  useEffect(() => {
+    if (pendingFridgeClick === null || !variant || phaseRef.current !== 'selecting') return;
 
-      const newSelected = new Set(selectedIndices);
-      newSelected.add(index);
-      setSelectedIndices(newSelected);
+    const index = pendingFridgeClick;
+    clearFridgeClick();
 
-      if (matchingIndices.has(index)) {
-        // Correct ingredient
-        const newCount = correctCount + 1;
-        setCorrectCount(newCount);
-        setLastResult('correct');
-        onReaction?.('excitement');
-        audioEngine.playCorrectPick();
-        setChallengeProgress((newCount / variant.requiredCount) * 100);
+    // Already selected — ignore
+    if (fridgeSelectedIndices.includes(index)) return;
 
-        if (newCount >= variant.requiredCount) {
-          // Challenge complete
-          setPhase('success');
-        }
+    // Mark as selected in the shared store (3D reads this for visual state)
+    addFridgeSelected(index);
+
+    const matchingSet = new Set(fridgeMatchingIndices);
+    if (matchingSet.has(index)) {
+      // Correct ingredient
+      const newCount = correctCountRef.current + 1;
+      setCorrectCount(newCount);
+      setLastResult('correct');
+      onReaction?.('excitement');
+      audioEngine.playCorrectPick();
+      setChallengeProgress((newCount / variant.requiredCount) * 100);
+
+      if (newCount >= variant.requiredCount) {
+        setPhase('success');
+      }
+    } else {
+      // Wrong ingredient — strike
+      setLastResult('wrong');
+
+      // Check if ingredient is "close" (shares at least one tag)
+      const ing = fridgePool[index];
+      const isClose = ing && variant.criteria.tags.some(tag =>
+        matchesCriteria(ing, {tags: [tag]}),
+      );
+
+      if (isClose) {
+        onReaction?.('nervous');
       } else {
-        // Wrong ingredient - strike
-        setLastResult('wrong');
-
-        // Check if ingredient is "close" (shares at least one tag)
-        const isClose = variant.criteria.tags.some(tag => {
-          const pool = ingredientPool[index];
-          if (!pool) return false;
-          return matchesCriteria(pool, {tags: [tag]});
-        });
-
-        if (isClose) {
-          onReaction?.('nervous');
-        } else {
-          onReaction?.('disgust');
-        }
-
-        addStrike();
-        audioEngine.playWrongPick();
+        onReaction?.('disgust');
       }
 
-      // Reset result indicator after delay
-      setTimeout(() => {
-        setLastResult(null);
-        onReaction?.('idle');
-      }, REACTION_RESET_MS);
-    },
-    [
-      selectedIndices,
-      matchingIndices,
-      correctCount,
-      variant,
-      phase,
-      ingredientPool,
-      addStrike,
-      setChallengeProgress,
-      onReaction,
-    ],
-  );
+      addStrike();
+      audioEngine.playWrongPick();
+    }
+
+    // Reset result indicator after delay
+    setTimeout(() => {
+      setLastResult(null);
+      onReaction?.('idle');
+    }, REACTION_RESET_MS);
+  }, [
+    pendingFridgeClick,
+    variant,
+    fridgePool,
+    fridgeMatchingIndices,
+    fridgeSelectedIndices,
+    clearFridgeClick,
+    addFridgeSelected,
+    addStrike,
+    setChallengeProgress,
+    onReaction,
+  ]);
 
   // Handle hint activation
   const handleHint = useCallback(() => {
     if (hintsRemaining > 0) {
       // biome-ignore lint/correctness/useHookAtTopLevel: useHint is a Zustand store action, not a React hook
       useGameStore.getState().useHint();
-      setHintActive(true);
+      setStoreHintActive(true);
       setTimeout(() => {
-        setHintActive(false);
         setStoreHintActive(false);
       }, 3000);
     }
@@ -150,12 +162,9 @@ export function IngredientChallenge({onComplete, onReaction}: IngredientChalleng
   // Handle dialogue completion
   const handleDialogueComplete = useCallback(
     (effects: string[]) => {
-      // If player got a hint from dialogue, activate hint glow
       if (effects.includes('hint')) {
-        setHintActive(true);
         setStoreHintActive(true);
         setTimeout(() => {
-          setHintActive(false);
           setStoreHintActive(false);
         }, 3000);
       }
@@ -172,32 +181,27 @@ export function IngredientChallenge({onComplete, onReaction}: IngredientChalleng
     setTimeout(() => onComplete(score), COMPLETE_DELAY_MS);
   }, [strikes, onComplete]);
 
-  // Handle failure dialogue completion (game over handled by gameStore)
+  // Handle failure dialogue completion
   const handleFailureComplete = useCallback(() => {
     setPhase('complete');
   }, []);
 
-  // Derived state for the ingredient grid
   const requiredCount = variant?.requiredCount ?? 3;
   const progressPercent = (correctCount / requiredCount) * 100;
 
-  // Memoize the ingredient grid items
-  const gridItems = useMemo(() => {
-    return ingredientPool.map((ing, i) => ({
-      ingredient: ing,
-      index: i,
-      isSelected: selectedIndices.has(i),
-      isHinted: hintActive && matchingIndices.has(i) && !selectedIndices.has(i),
-    }));
-  }, [ingredientPool, selectedIndices, hintActive, matchingIndices]);
+  // Hovered ingredient name from 3D scene
+  const hoveredIngredient = fridgeHoveredIndex !== null ? fridgePool[fridgeHoveredIndex] : null;
 
   if (!variant) return null;
 
   return (
     <View style={styles.container} pointerEvents="box-none">
-      {/* Intro dialogue */}
+      {/* Intro + ingredients dialogue */}
       {phase === 'dialogue' && (
-        <DialogueOverlay lines={INGREDIENTS_DIALOGUE} onComplete={handleDialogueComplete} />
+        <DialogueOverlay
+          lines={[...INTRO_DIALOGUE, ...INGREDIENTS_DIALOGUE]}
+          onComplete={handleDialogueComplete}
+        />
       )}
 
       {/* Success dialogue */}
@@ -210,7 +214,7 @@ export function IngredientChallenge({onComplete, onReaction}: IngredientChalleng
         <DialogueOverlay lines={INGREDIENTS_FAIL} onComplete={handleFailureComplete} />
       )}
 
-      {/* Main gameplay UI */}
+      {/* Main gameplay UI — no emoji grid, player clicks 3D objects in the fridge */}
       {phase === 'selecting' && (
         <>
           {/* Demand banner at top */}
@@ -230,51 +234,29 @@ export function IngredientChallenge({onComplete, onReaction}: IngredientChalleng
 
           {/* Result flash feedback */}
           {lastResult && (
-            <View
-              style={[
-                styles.resultFlash,
-                lastResult === 'correct' ? styles.resultCorrect : styles.resultWrong,
-              ]}
-            >
-              <Text style={styles.resultText}>
+            <View style={styles.resultFlash}>
+              <Text
+                style={[
+                  styles.resultText,
+                  lastResult === 'correct' ? styles.resultCorrect : styles.resultWrong,
+                ]}
+              >
                 {lastResult === 'correct' ? 'CORRECT!' : 'WRONG!'}
               </Text>
             </View>
           )}
 
-          {/* Ingredient grid (2D overlay — mobile-first) */}
-          <View style={styles.ingredientGrid}>
-            {gridItems.map(({ingredient, index, isSelected, isHinted}) => (
-              <TouchableOpacity
-                key={index}
-                style={[
-                  styles.ingredientButton,
-                  isSelected && styles.ingredientSelected,
-                  isHinted && styles.ingredientHinted,
-                ]}
-                onPress={() => handleSelect(index)}
-                disabled={isSelected || phase !== 'selecting'}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.ingredientEmoji}>{ingredient.emoji}</Text>
-                <Text
-                  style={[styles.ingredientName, isSelected && styles.ingredientNameSelected]}
-                  numberOfLines={1}
-                >
-                  {ingredient.name}
-                </Text>
-                {isSelected && matchingIndices.has(index) && (
-                  <View style={styles.checkMark}>
-                    <Text style={styles.checkMarkText}>{'\u2713'}</Text>
-                  </View>
-                )}
-                {isSelected && !matchingIndices.has(index) && (
-                  <View style={styles.crossMark}>
-                    <Text style={styles.crossMarkText}>{'\u2715'}</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            ))}
+          {/* Hover tooltip — shows ingredient name when hovering 3D objects */}
+          {hoveredIngredient && (
+            <View style={styles.hoverTooltip}>
+              <Text style={styles.hoverTooltipText}>{hoveredIngredient.name}</Text>
+              <Text style={styles.hoverTooltipCategory}>{hoveredIngredient.category}</Text>
+            </View>
+          )}
+
+          {/* Instruction hint at bottom */}
+          <View style={styles.instructionContainer}>
+            <Text style={styles.instructionText}>Choose from the fridge...</Text>
           </View>
 
           {/* Hint button at bottom */}
@@ -336,94 +318,71 @@ const styles = StyleSheet.create({
   },
   resultFlash: {
     position: 'absolute',
-    top: 185,
+    top: '40%',
     left: 0,
     right: 0,
     alignItems: 'center',
     zIndex: 60,
   },
-  resultCorrect: {},
-  resultWrong: {},
   resultText: {
-    fontSize: 22,
+    fontSize: 36,
+    fontWeight: '900',
+    fontFamily: 'Bangers',
+    letterSpacing: 4,
+    textShadowOffset: {width: 0, height: 0},
+    textShadowRadius: 16,
+  },
+  resultCorrect: {
+    color: '#4CAF50',
+    textShadowColor: 'rgba(76, 175, 80, 0.7)',
+  },
+  resultWrong: {
+    color: '#FF1744',
+    textShadowColor: 'rgba(255, 23, 68, 0.7)',
+  },
+  hoverTooltip: {
+    position: 'absolute',
+    bottom: 100,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(10, 10, 10, 0.92)',
+    borderWidth: 1,
+    borderColor: '#FFC832',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    zIndex: 55,
+  },
+  hoverTooltipText: {
+    fontSize: 18,
     fontWeight: '900',
     fontFamily: 'Bangers',
     color: '#FFC832',
-    letterSpacing: 3,
-    textShadowColor: 'rgba(255, 200, 50, 0.6)',
-    textShadowOffset: {width: 0, height: 0},
-    textShadowRadius: 10,
+    letterSpacing: 1,
   },
-  ingredientGrid: {
-    position: 'absolute',
-    bottom: 80,
-    left: 12,
-    right: 12,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 8,
-    zIndex: 55,
-  },
-  ingredientButton: {
-    width: 80,
-    height: 90,
-    backgroundColor: 'rgba(20, 20, 20, 0.9)',
-    borderWidth: 2,
-    borderColor: '#444',
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-  },
-  ingredientSelected: {
-    opacity: 0.4,
-    borderColor: '#666',
-  },
-  ingredientHinted: {
-    borderColor: '#FFC832',
-    borderWidth: 2,
-    shadowColor: '#FFC832',
-    shadowOffset: {width: 0, height: 0},
-    shadowOpacity: 0.8,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  ingredientEmoji: {
-    fontSize: 28,
-    marginBottom: 4,
-  },
-  ingredientName: {
-    fontSize: 10,
+  hoverTooltipCategory: {
+    fontSize: 12,
     fontWeight: '900',
     fontFamily: 'Bangers',
-    color: '#E0E0E0',
-    textAlign: 'center',
-    letterSpacing: 0.5,
-  },
-  ingredientNameSelected: {
     color: '#888',
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    marginTop: 2,
   },
-  checkMark: {
+  instructionContainer: {
     position: 'absolute',
-    top: 2,
-    right: 2,
+    bottom: 70,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 55,
   },
-  checkMarkText: {
+  instructionText: {
     fontSize: 14,
     fontWeight: '900',
-    color: '#4CAF50',
-  },
-  crossMark: {
-    position: 'absolute',
-    top: 2,
-    right: 2,
-  },
-  crossMarkText: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: '#FF1744',
+    fontFamily: 'Bangers',
+    color: '#666',
+    letterSpacing: 2,
   },
   hintButton: {
     position: 'absolute',
