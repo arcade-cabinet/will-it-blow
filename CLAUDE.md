@@ -45,7 +45,7 @@ Zustand store (`src/store/gameStore.ts`) — single source of truth. No React Co
 
 ### Game Flow
 
-```
+```text
 menu → loading → ingredients → grinding → stuffing → cooking → tasting → results
 ```
 
