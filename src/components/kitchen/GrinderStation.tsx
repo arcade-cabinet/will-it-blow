@@ -1,5 +1,5 @@
 import {useFrame} from '@react-three/fiber';
-import {useMemo, useRef} from 'react';
+import {useRef} from 'react';
 import * as THREE from 'three/webgpu';
 
 interface GrinderStationProps {
@@ -87,22 +87,6 @@ export const GrinderStation = ({grindProgress, crankAngle, isSplattering}: Grind
 
   // Output particle visibility: proportional to progress
   const visibleOutputCount = Math.floor((grindProgress / 100) * OUTPUT_PARTICLE_MAX);
-
-  // Memoize geometries to prevent re-creation each render
-  const _geometries = useMemo(
-    () => ({
-      counter: new THREE.BoxGeometry(2.5, COUNTER_HEIGHT, 1.2),
-      body: new THREE.CylinderGeometry(0.3, 0.3, BODY_HEIGHT, 16),
-      hopper: new THREE.CylinderGeometry(0.35, 0.15, HOPPER_HEIGHT, 12),
-      spout: new THREE.CylinderGeometry(0.1, 0.1, 0.4, 8),
-      crankArm: new THREE.CylinderGeometry(0.03, 0.03, CRANK_ARM_LENGTH, 8),
-      knob: new THREE.SphereGeometry(0.06, 8, 8),
-      meatChunk: new THREE.SphereGeometry(0.04, 6, 6), // Base radius, scaled per chunk
-      outputParticle: new THREE.SphereGeometry(0.03, 4, 4),
-      splatterParticle: new THREE.SphereGeometry(0.03, 4, 4),
-    }),
-    [],
-  );
 
   useFrame((_, delta) => {
     timeRef.current += delta;

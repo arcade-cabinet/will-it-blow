@@ -243,12 +243,16 @@ function IngredientMesh({
         e.stopPropagation();
         setHovered(true);
         onHover(index);
-        document.body.style.cursor = isSelected ? 'default' : 'pointer';
+        if (typeof document !== 'undefined') {
+          document.body.style.cursor = isSelected ? 'default' : 'pointer';
+        }
       }}
       onPointerOut={() => {
         setHovered(false);
         onHover(null);
-        document.body.style.cursor = 'default';
+        if (typeof document !== 'undefined') {
+          document.body.style.cursor = 'default';
+        }
       }}
     >
       {renderGeometry()}
