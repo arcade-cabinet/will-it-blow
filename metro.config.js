@@ -1,2 +1,9 @@
 const { getDefaultConfig } = require('expo/metro-config');
-module.exports = getDefaultConfig(__dirname);
+
+const config = getDefaultConfig(__dirname);
+
+// GLB/GLTF models must be treated as binary assets by Metro bundler
+// so they can be loaded by drei's useGLTF on native
+config.resolver.assetExts.push('glb', 'gltf');
+
+module.exports = config;
