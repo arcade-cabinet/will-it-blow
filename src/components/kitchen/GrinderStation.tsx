@@ -1,12 +1,6 @@
-import { useEffect, useRef } from 'react';
-import { useScene } from 'reactylon';
-import {
-	Color3,
-	MeshBuilder,
-	StandardMaterial,
-	Vector3,
-} from '@babylonjs/core';
-import type { AbstractMesh, Observer, Scene as BabylonScene } from '@babylonjs/core';
+import React, { useRef, useMemo } from 'react';
+import { useFrame } from '@react-three/fiber';
+import * as THREE from 'three';
 
 interface GrinderStationProps {
 	grindProgress: number; // 0-100
@@ -19,350 +13,267 @@ const GRINDER_POS: [number, number, number] = [0, 0, -5];
 const COUNTER_HEIGHT = 0.9;
 const GRINDER_BASE_Y = COUNTER_HEIGHT;
 
-// Meat chunk settings
+// Geometry constants
+const BODY_HEIGHT = 0.7;
+const HOPPER_HEIGHT = 0.5;
+const CRANK_ARM_LENGTH = 0.5;
+
+// Particle counts
 const MEAT_CHUNK_COUNT = 6;
 const OUTPUT_PARTICLE_MAX = 12;
 const SPLATTER_PARTICLE_COUNT = 10;
+
+// Splatter duration in seconds
+const SPLATTER_DURATION = 0.8;
+
+// Pre-compute meat chunk layout (deterministic for consistent rendering)
+const MEAT_CHUNK_LAYOUT = Array.from({ length: MEAT_CHUNK_COUNT }, (_, i) => {
+	const angle = (i / MEAT_CHUNK_COUNT) * Math.PI * 2;
+	const radius = 0.14 + (i * 0.013); // Deterministic spread instead of random
+	const yOffset = (i * 0.03) % 0.2;
+	const size = 0.08 + (i * 0.01); // Slight size variation, deterministic
+	return {
+		x: Math.cos(angle) * radius,
+		y: GRINDER_BASE_Y + BODY_HEIGHT + HOPPER_HEIGHT * 0.3 + yOffset,
+		z: Math.sin(angle) * radius,
+		size,
+	};
+});
+
+// Pre-compute output particle layout
+const OUTPUT_PARTICLE_LAYOUT = Array.from({ length: OUTPUT_PARTICLE_MAX }, (_, i) => ({
+	x: ((i % 3) - 1) * 0.05,
+	y: GRINDER_BASE_Y + BODY_HEIGHT * 0.2 - i * 0.04,
+	z: 0.55 + (i % 4) * 0.025,
+}));
+
+// Pre-compute splatter particle sizes
+const SPLATTER_SIZES = Array.from({ length: SPLATTER_PARTICLE_COUNT }, (_, i) => (
+	0.05 + (i * 0.008)
+));
 
 export const GrinderStation = ({
 	grindProgress,
 	crankAngle,
 	isSplattering,
 }: GrinderStationProps) => {
-	const scene = useScene();
+	const bodyRef = useRef<THREE.Mesh>(null);
+	const crankArmRef = useRef<THREE.Mesh>(null);
+	const knobRef = useRef<THREE.Mesh>(null);
 	const timeRef = useRef(0);
-	const progressRef = useRef(grindProgress);
-	const crankAngleRef = useRef(crankAngle);
-	const iseSplatteringRef = useRef(isSplattering);
 
-	// Keep refs in sync so the render loop reads current values
-	progressRef.current = grindProgress;
-	crankAngleRef.current = crankAngle;
-	iseSplatteringRef.current = isSplattering;
+	// Splatter animation state
+	const splatterStateRef = useRef({
+		active: false,
+		time: 0,
+		velocities: Array.from({ length: SPLATTER_PARTICLE_COUNT }, () => [0, 0, 0] as [number, number, number]),
+		positions: Array.from({ length: SPLATTER_PARTICLE_COUNT }, () => [0, 0, 0] as [number, number, number]),
+	});
+	const prevSplatteringRef = useRef(false);
 
-	useEffect(() => {
-		if (!scene) return;
+	// Refs for splatter particle meshes
+	const splatterRefs = useRef<(THREE.Mesh | null)[]>(
+		Array.from({ length: SPLATTER_PARTICLE_COUNT }, () => null)
+	);
 
-		const allMeshes: AbstractMesh[] = [];
-		const allMaterials: StandardMaterial[] = [];
-		let observer: Observer<BabylonScene> | null = null;
+	// Crank pivot point (right side of grinder body)
+	const crankPivotX = 0.3;
+	const crankPivotY = GRINDER_BASE_Y + BODY_HEIGHT * 0.5;
+	const armRadius = CRANK_ARM_LENGTH / 2;
 
-		const gx = GRINDER_POS[0];
-		const gz = GRINDER_POS[2];
+	// Meat chunk scale based on grind progress
+	const chunkScale = Math.max(0, 1.0 - grindProgress / 100);
+	const chunksVisible = chunkScale > 0.05;
 
-		// --- Counter / Table ---
+	// Output particle visibility: proportional to progress
+	const visibleOutputCount = Math.floor((grindProgress / 100) * OUTPUT_PARTICLE_MAX);
 
-		const counter = MeshBuilder.CreateBox(
-			'grinderCounter',
-			{ width: 2.5, height: COUNTER_HEIGHT, depth: 1.2 },
-			scene,
-		);
-		const counterMat = new StandardMaterial('grinderCounterMat', scene);
-		counterMat.disableLighting = true;
-		counterMat.emissiveColor = new Color3(0.25, 0.18, 0.12);
-		counter.material = counterMat;
-		counter.position = new Vector3(gx, COUNTER_HEIGHT / 2, gz);
-		allMeshes.push(counter);
-		allMaterials.push(counterMat);
+	// Memoize geometries to prevent re-creation each render
+	const geometries = useMemo(() => ({
+		counter: new THREE.BoxGeometry(2.5, COUNTER_HEIGHT, 1.2),
+		body: new THREE.CylinderGeometry(0.3, 0.3, BODY_HEIGHT, 16),
+		hopper: new THREE.CylinderGeometry(0.35, 0.15, HOPPER_HEIGHT, 12),
+		spout: new THREE.CylinderGeometry(0.1, 0.1, 0.4, 8),
+		crankArm: new THREE.CylinderGeometry(0.03, 0.03, CRANK_ARM_LENGTH, 8),
+		knob: new THREE.SphereGeometry(0.06, 8, 8),
+		meatChunk: new THREE.SphereGeometry(0.04, 6, 6), // Base radius, scaled per chunk
+		outputParticle: new THREE.SphereGeometry(0.03, 4, 4),
+		splatterParticle: new THREE.SphereGeometry(0.03, 4, 4),
+	}), []);
 
-		// --- Grinder Body (main cylinder) ---
+	useFrame((_, delta) => {
+		timeRef.current += delta;
 
-		const bodyHeight = 0.7;
-		const body = MeshBuilder.CreateCylinder(
-			'grinderBody',
-			{ height: bodyHeight, diameter: 0.6, tessellation: 16 },
-			scene,
-		);
-		const bodyMat = new StandardMaterial('grinderBodyMat', scene);
-		bodyMat.disableLighting = true;
-		bodyMat.emissiveColor = new Color3(0.5, 0.5, 0.55);
-		body.material = bodyMat;
-		body.position = new Vector3(gx, GRINDER_BASE_Y + bodyHeight / 2, gz);
-		allMeshes.push(body);
-		allMaterials.push(bodyMat);
-
-		// --- Hopper (inverted cone on top) ---
-
-		const hopperHeight = 0.5;
-		const hopper = MeshBuilder.CreateCylinder(
-			'grinderHopper',
-			{
-				height: hopperHeight,
-				diameterTop: 0.7,
-				diameterBottom: 0.3,
-				tessellation: 12,
-			},
-			scene,
-		);
-		const hopperMat = new StandardMaterial('grinderHopperMat', scene);
-		hopperMat.disableLighting = true;
-		hopperMat.emissiveColor = new Color3(0.55, 0.55, 0.6);
-		hopperMat.alpha = 0.85;
-		hopper.material = hopperMat;
-		hopper.position = new Vector3(
-			gx,
-			GRINDER_BASE_Y + bodyHeight + hopperHeight / 2,
-			gz,
-		);
-		allMeshes.push(hopper);
-		allMaterials.push(hopperMat);
-
-		// --- Spout (horizontal cylinder for meat output) ---
-
-		const spout = MeshBuilder.CreateCylinder(
-			'grinderSpout',
-			{ height: 0.4, diameter: 0.2, tessellation: 8 },
-			scene,
-		);
-		const spoutMat = new StandardMaterial('grinderSpoutMat', scene);
-		spoutMat.disableLighting = true;
-		spoutMat.emissiveColor = new Color3(0.45, 0.45, 0.5);
-		spout.material = spoutMat;
-		// Lay it horizontal and position at front of grinder body
-		spout.rotation.x = Math.PI / 2;
-		spout.position = new Vector3(
-			gx,
-			GRINDER_BASE_Y + bodyHeight * 0.35,
-			gz + 0.45,
-		);
-		allMeshes.push(spout);
-		allMaterials.push(spoutMat);
-
-		// --- Crank Arm (cylinder) ---
-
-		const crankArmLength = 0.5;
-		const crankArm = MeshBuilder.CreateCylinder(
-			'grinderCrankArm',
-			{ height: crankArmLength, diameter: 0.06, tessellation: 8 },
-			scene,
-		);
-		const crankMat = new StandardMaterial('grinderCrankMat', scene);
-		crankMat.disableLighting = true;
-		crankMat.emissiveColor = new Color3(0.6, 0.6, 0.65);
-		crankArm.material = crankMat;
-		// Position to the right side of the grinder body, will be animated
-		crankArm.rotation.z = Math.PI / 2;
-		crankArm.position = new Vector3(
-			gx + 0.55,
-			GRINDER_BASE_Y + bodyHeight * 0.5,
-			gz,
-		);
-		allMeshes.push(crankArm);
-		allMaterials.push(crankMat);
-
-		// --- Crank Knob (sphere at end of arm) ---
-
-		const knob = MeshBuilder.CreateSphere(
-			'grinderCrankKnob',
-			{ diameter: 0.12, segments: 8 },
-			scene,
-		);
-		const knobMat = new StandardMaterial('grinderKnobMat', scene);
-		knobMat.disableLighting = true;
-		knobMat.emissiveColor = new Color3(0.7, 0.2, 0.2);
-		knob.material = knobMat;
-		knob.position = new Vector3(
-			gx + 0.55 + crankArmLength / 2,
-			GRINDER_BASE_Y + bodyHeight * 0.5,
-			gz,
-		);
-		allMeshes.push(knob);
-		allMaterials.push(knobMat);
-
-		// --- Meat Chunks in Hopper ---
-
-		const meatChunks: AbstractMesh[] = [];
-		const meatMat = new StandardMaterial('meatChunkMat', scene);
-		meatMat.disableLighting = true;
-		meatMat.emissiveColor = new Color3(0.6, 0.15, 0.1);
-		allMaterials.push(meatMat);
-
-		for (let i = 0; i < MEAT_CHUNK_COUNT; i++) {
-			const chunk = MeshBuilder.CreateSphere(
-				`meatChunk_${i}`,
-				{ diameter: 0.08 + Math.random() * 0.06, segments: 6 },
-				scene,
-			);
-			chunk.material = meatMat;
-			// Distribute randomly inside the hopper area
-			const angle = (i / MEAT_CHUNK_COUNT) * Math.PI * 2;
-			const radius = 0.12 + Math.random() * 0.08;
-			chunk.position = new Vector3(
-				gx + Math.cos(angle) * radius,
-				GRINDER_BASE_Y + bodyHeight + hopperHeight * 0.3 + Math.random() * 0.2,
-				gz + Math.sin(angle) * radius,
-			);
-			meatChunks.push(chunk);
-			allMeshes.push(chunk);
+		// --- Crank arm rotation ---
+		if (crankArmRef.current) {
+			crankArmRef.current.position.x = crankPivotX + Math.cos(crankAngle) * armRadius;
+			crankArmRef.current.position.y = crankPivotY + Math.sin(crankAngle) * armRadius;
+			crankArmRef.current.rotation.z = crankAngle + Math.PI / 2;
 		}
 
-		// --- Ground Meat Output Particles ---
-
-		const outputParticles: AbstractMesh[] = [];
-		const outputMat = new StandardMaterial('groundMeatMat', scene);
-		outputMat.disableLighting = true;
-		outputMat.emissiveColor = new Color3(0.5, 0.12, 0.08);
-		allMaterials.push(outputMat);
-
-		for (let i = 0; i < OUTPUT_PARTICLE_MAX; i++) {
-			const particle = MeshBuilder.CreateSphere(
-				`groundMeat_${i}`,
-				{ diameter: 0.06, segments: 4 },
-				scene,
-			);
-			particle.material = outputMat;
-			// Start hidden below the spout
-			particle.position = new Vector3(
-				gx + (Math.random() - 0.5) * 0.15,
-				GRINDER_BASE_Y + bodyHeight * 0.2 - i * 0.04,
-				gz + 0.55 + Math.random() * 0.1,
-			);
-			particle.isVisible = false;
-			outputParticles.push(particle);
-			allMeshes.push(particle);
+		// --- Crank knob at end of arm ---
+		if (knobRef.current) {
+			knobRef.current.position.x = crankPivotX + Math.cos(crankAngle) * CRANK_ARM_LENGTH;
+			knobRef.current.position.y = crankPivotY + Math.sin(crankAngle) * CRANK_ARM_LENGTH;
 		}
 
-		// --- Splatter Particles ---
-
-		const splatterParticles: AbstractMesh[] = [];
-		const splatterMat = new StandardMaterial('splatterMat', scene);
-		splatterMat.disableLighting = true;
-		splatterMat.emissiveColor = new Color3(0.8, 0.05, 0.02);
-		allMaterials.push(splatterMat);
-
-		for (let i = 0; i < SPLATTER_PARTICLE_COUNT; i++) {
-			const splat = MeshBuilder.CreateSphere(
-				`splatter_${i}`,
-				{ diameter: 0.05 + Math.random() * 0.08, segments: 4 },
-				scene,
-			);
-			splat.material = splatterMat;
-			splat.isVisible = false;
-			splat.position = new Vector3(gx, GRINDER_BASE_Y + bodyHeight * 0.5, gz);
-			splatterParticles.push(splat);
-			allMeshes.push(splat);
-		}
-
-		// Splatter animation state
-		let splatterActive = false;
-		let splatterTime = 0;
-		const splatterVelocities: Vector3[] = splatterParticles.map(() => {
-			return new Vector3(
-				(Math.random() - 0.5) * 4,
-				Math.random() * 3 + 1,
-				(Math.random() - 0.5) * 4,
-			);
-		});
-
-		// --- Render Loop ---
-
-		observer = scene.onBeforeRenderObservable.add(() => {
-			const dt = scene.getEngine().getDeltaTime() / 1000;
-			timeRef.current += dt;
-			const progress = progressRef.current;
-			const angle = crankAngleRef.current;
-
-			// Animate crank rotation
-			const crankPivotX = gx + 0.3;
-			const crankPivotY = GRINDER_BASE_Y + bodyHeight * 0.5;
-			const crankPivotZ = gz;
-			const armRadius = crankArmLength / 2;
-
-			// Crank arm rotates around the side of the grinder body
-			crankArm.position.x = crankPivotX + Math.cos(angle) * armRadius;
-			crankArm.position.y = crankPivotY + Math.sin(angle) * armRadius;
-			crankArm.position.z = crankPivotZ;
-			crankArm.rotation.z = angle + Math.PI / 2;
-
-			// Knob at the end of the arm
-			knob.position.x = crankPivotX + Math.cos(angle) * crankArmLength;
-			knob.position.y = crankPivotY + Math.sin(angle) * crankArmLength;
-			knob.position.z = crankPivotZ;
-
-			// Meat chunks shrink as progress increases
-			const chunkScale = Math.max(0, 1.0 - progress / 100);
-			for (const chunk of meatChunks) {
-				chunk.scaling = new Vector3(chunkScale, chunkScale, chunkScale);
-				chunk.isVisible = chunkScale > 0.05;
-			}
-
-			// Show output particles proportional to progress
-			const visibleCount = Math.floor((progress / 100) * OUTPUT_PARTICLE_MAX);
-			for (let i = 0; i < OUTPUT_PARTICLE_MAX; i++) {
-				outputParticles[i].isVisible = i < visibleCount;
-			}
-
-			// Splatter animation
-			if (iseSplatteringRef.current && !splatterActive) {
-				// Start new splatter burst
-				splatterActive = true;
-				splatterTime = 0;
-				for (let i = 0; i < splatterParticles.length; i++) {
-					splatterParticles[i].isVisible = true;
-					splatterParticles[i].position = new Vector3(
-						gx,
-						GRINDER_BASE_Y + bodyHeight,
-						gz,
-					);
-					// Randomize velocities for each burst
-					splatterVelocities[i] = new Vector3(
-						(Math.random() - 0.5) * 4,
-						Math.random() * 3 + 1,
-						(Math.random() - 0.5) * 4,
-					);
-				}
-			}
-
-			if (splatterActive) {
-				splatterTime += dt;
-				for (let i = 0; i < splatterParticles.length; i++) {
-					const p = splatterParticles[i];
-					const v = splatterVelocities[i];
-					p.position.x += v.x * dt;
-					p.position.y += v.y * dt;
-					p.position.z += v.z * dt;
-					// Gravity
-					v.y -= 9.8 * dt;
-					// Fade out via scaling
-					const fadeScale = Math.max(0, 1.0 - splatterTime / 0.8);
-					p.scaling = new Vector3(fadeScale, fadeScale, fadeScale);
-				}
-
-				if (splatterTime > 0.8) {
-					splatterActive = false;
-					for (const p of splatterParticles) {
-						p.isVisible = false;
-					}
-				}
-			} else if (!iseSplatteringRef.current) {
-				// Ensure particles are hidden when not splattering
-				for (const p of splatterParticles) {
-					p.isVisible = false;
-				}
-			}
-
-			// Subtle idle vibration on the grinder body when making progress
-			if (progress > 0 && progress < 100) {
+		// --- Grinder body vibration ---
+		if (bodyRef.current) {
+			if (grindProgress > 0 && grindProgress < 100) {
 				const vibration = Math.sin(timeRef.current * 40) * 0.003;
-				body.position.x = gx + vibration;
+				bodyRef.current.position.x = vibration;
 			} else {
-				body.position.x = gx;
+				bodyRef.current.position.x = 0;
 			}
-		});
+		}
 
-		// --- Cleanup ---
+		// --- Splatter animation ---
+		const ss = splatterStateRef.current;
 
-		return () => {
-			if (observer) scene.onBeforeRenderObservable.remove(observer);
-
-			for (const mesh of allMeshes) {
-				mesh.dispose();
+		// Detect rising edge of isSplattering
+		if (isSplattering && !prevSplatteringRef.current) {
+			ss.active = true;
+			ss.time = 0;
+			for (let i = 0; i < SPLATTER_PARTICLE_COUNT; i++) {
+				ss.positions[i] = [0, GRINDER_BASE_Y + BODY_HEIGHT, 0];
+				ss.velocities[i] = [
+					(Math.sin(i * 1.7) * 0.5) * 4, // Pseudo-random spread
+					(Math.abs(Math.cos(i * 2.3)) * 3) + 1,
+					(Math.cos(i * 1.3) * 0.5) * 4,
+				];
 			}
-			for (const mat of allMaterials) {
-				mat.dispose();
-			}
-		};
-	}, [scene]);
+		}
+		prevSplatteringRef.current = isSplattering;
 
-	return null;
+		if (ss.active) {
+			ss.time += delta;
+			const fadeScale = Math.max(0, 1.0 - ss.time / SPLATTER_DURATION);
+
+			for (let i = 0; i < SPLATTER_PARTICLE_COUNT; i++) {
+				const mesh = splatterRefs.current[i];
+				if (!mesh) continue;
+
+				// Update positions
+				ss.positions[i][0] += ss.velocities[i][0] * delta;
+				ss.positions[i][1] += ss.velocities[i][1] * delta;
+				ss.positions[i][2] += ss.velocities[i][2] * delta;
+
+				// Apply gravity
+				ss.velocities[i][1] -= 9.8 * delta;
+
+				mesh.position.set(ss.positions[i][0], ss.positions[i][1], ss.positions[i][2]);
+				mesh.scale.setScalar(fadeScale);
+				mesh.visible = true;
+			}
+
+			if (ss.time > SPLATTER_DURATION) {
+				ss.active = false;
+				for (let i = 0; i < SPLATTER_PARTICLE_COUNT; i++) {
+					const mesh = splatterRefs.current[i];
+					if (mesh) mesh.visible = false;
+				}
+			}
+		} else {
+			// Ensure hidden when not splattering
+			for (let i = 0; i < SPLATTER_PARTICLE_COUNT; i++) {
+				const mesh = splatterRefs.current[i];
+				if (mesh) mesh.visible = false;
+			}
+		}
+	});
+
+	return (
+		<group position={GRINDER_POS}>
+			{/* --- Counter / Table --- */}
+			<mesh position={[0, COUNTER_HEIGHT / 2, 0]}>
+				<boxGeometry args={[2.5, COUNTER_HEIGHT, 1.2]} />
+				<meshBasicMaterial color={[0.25, 0.18, 0.12]} />
+			</mesh>
+
+			{/* --- Grinder Body (main cylinder) --- */}
+			<mesh
+				ref={bodyRef}
+				position={[0, GRINDER_BASE_Y + BODY_HEIGHT / 2, 0]}
+			>
+				<cylinderGeometry args={[0.3, 0.3, BODY_HEIGHT, 16]} />
+				<meshBasicMaterial color={[0.5, 0.5, 0.55]} />
+			</mesh>
+
+			{/* --- Hopper (wider top, narrower bottom — funnel shape) --- */}
+			<mesh position={[0, GRINDER_BASE_Y + BODY_HEIGHT + HOPPER_HEIGHT / 2, 0]}>
+				<cylinderGeometry args={[0.35, 0.15, HOPPER_HEIGHT, 12]} />
+				<meshBasicMaterial
+					color={[0.55, 0.55, 0.6]}
+					transparent
+					opacity={0.85}
+				/>
+			</mesh>
+
+			{/* --- Spout (horizontal cylinder for meat output) --- */}
+			<mesh
+				position={[0, GRINDER_BASE_Y + BODY_HEIGHT * 0.35, 0.45]}
+				rotation={[Math.PI / 2, 0, 0]}
+			>
+				<cylinderGeometry args={[0.1, 0.1, 0.4, 8]} />
+				<meshBasicMaterial color={[0.45, 0.45, 0.5]} />
+			</mesh>
+
+			{/* --- Crank Arm (animated in useFrame) --- */}
+			<mesh
+				ref={crankArmRef}
+				position={[crankPivotX + armRadius, crankPivotY, 0]}
+				rotation={[0, 0, Math.PI / 2]}
+			>
+				<cylinderGeometry args={[0.03, 0.03, CRANK_ARM_LENGTH, 8]} />
+				<meshBasicMaterial color={[0.6, 0.6, 0.65]} />
+			</mesh>
+
+			{/* --- Crank Knob (animated in useFrame) --- */}
+			<mesh
+				ref={knobRef}
+				position={[crankPivotX + CRANK_ARM_LENGTH, crankPivotY, 0]}
+			>
+				<sphereGeometry args={[0.06, 8, 8]} />
+				<meshBasicMaterial color={[0.7, 0.2, 0.2]} />
+			</mesh>
+
+			{/* --- Meat Chunks in Hopper --- */}
+			{chunksVisible && MEAT_CHUNK_LAYOUT.map((chunk, i) => (
+				<mesh
+					key={`meatChunk_${i}`}
+					position={[chunk.x, chunk.y, chunk.z]}
+					scale={[chunkScale * (chunk.size / 0.04), chunkScale * (chunk.size / 0.04), chunkScale * (chunk.size / 0.04)]}
+				>
+					<sphereGeometry args={[0.04, 6, 6]} />
+					<meshBasicMaterial color={[0.6, 0.15, 0.1]} />
+				</mesh>
+			))}
+
+			{/* --- Ground Meat Output Particles --- */}
+			{OUTPUT_PARTICLE_LAYOUT.map((p, i) => (
+				<mesh
+					key={`groundMeat_${i}`}
+					position={[p.x, p.y, p.z]}
+					visible={i < visibleOutputCount}
+				>
+					<sphereGeometry args={[0.03, 4, 4]} />
+					<meshBasicMaterial color={[0.5, 0.12, 0.08]} />
+				</mesh>
+			))}
+
+			{/* --- Splatter Particles (animated in useFrame) --- */}
+			{SPLATTER_SIZES.map((size, i) => (
+				<mesh
+					key={`splatter_${i}`}
+					ref={(el) => { splatterRefs.current[i] = el; }}
+					position={[0, GRINDER_BASE_Y + BODY_HEIGHT * 0.5, 0]}
+					visible={false}
+					scale={size / 0.03}
+				>
+					<sphereGeometry args={[0.03, 4, 4]} />
+					<meshBasicMaterial color={[0.8, 0.05, 0.02]} />
+				</mesh>
+			))}
+		</group>
+	);
 };
