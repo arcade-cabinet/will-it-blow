@@ -20,26 +20,32 @@ function createNode(value) {
     lessThan: () => createNode(),
     greaterThan: () => createNode(),
     or: () => createNode(),
-    get x() { return createNode(); },
-    get y() { return createNode(); },
-    get z() { return createNode(); },
+    get x() {
+      return createNode();
+    },
+    get y() {
+      return createNode();
+    },
+    get z() {
+      return createNode();
+    },
   };
   return node;
 }
 
 const fnStub = () => createNode();
-const fnFactory = (fn) => {
-  const wrapper = (...args) => createNode();
+const fnFactory = fn => {
+  const wrapper = (..._args) => createNode();
   return wrapper;
 };
 
 module.exports = {
-  uniform: (v) => createNode(v),
+  uniform: v => createNode(v),
   float: () => createNode(),
   vec2: () => createNode(),
   vec3: () => createNode(),
   vec4: () => createNode(),
-  Fn: (fn) => fnFactory(fn),
+  Fn: fn => fnFactory(fn),
   If: () => createNode(),
   abs: () => createNode(),
   add: () => createNode(),
