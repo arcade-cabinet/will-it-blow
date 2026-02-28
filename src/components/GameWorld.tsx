@@ -163,7 +163,8 @@ function CameraWalker({target}: CameraWalkerProps) {
     // --- Mouse-look: smooth the offset toward target ---
     const lerpFactor = Math.min(LOOK_SMOOTHING * dt, 1);
     lookCurrent.current.yaw += (lookTarget.current.yaw - lookCurrent.current.yaw) * lerpFactor;
-    lookCurrent.current.pitch += (lookTarget.current.pitch - lookCurrent.current.pitch) * lerpFactor;
+    lookCurrent.current.pitch +=
+      (lookTarget.current.pitch - lookCurrent.current.pitch) * lerpFactor;
 
     // Apply yaw/pitch rotation to the base direction
     const dir = baseDirection.current.clone();
@@ -216,7 +217,6 @@ const SceneContent = () => {
   const showGrinder = gameStatus === 'playing' && currentChallenge === 1;
   const showStuffer = gameStatus === 'playing' && currentChallenge === 2;
   const showStove = gameStatus === 'playing' && currentChallenge === 3;
-  const showTasting = gameStatus === 'playing' && currentChallenge === 4;
 
   // Grinder station state derived from store
   const grinderCrankAngle = useRef(0);

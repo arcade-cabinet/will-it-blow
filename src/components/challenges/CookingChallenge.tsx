@@ -1,8 +1,8 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {PanResponder, StyleSheet, Text, View} from 'react-native';
 import type {CookingVariant} from '../../data/challenges/variants';
-import {audioEngine} from '../../engine/AudioEngine';
 import {COOKING_DIALOGUE, COOKING_SUCCESS} from '../../data/dialogue/cooking';
+import {audioEngine} from '../../engine/AudioEngine';
 import {pickVariant} from '../../engine/ChallengeRegistry';
 import {useGameStore} from '../../store/gameStore';
 import type {Reaction} from '../characters/reactions';

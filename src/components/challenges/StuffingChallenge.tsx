@@ -1,8 +1,8 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {StyleSheet, Text, TouchableWithoutFeedback, View} from 'react-native';
 import type {StuffingVariant} from '../../data/challenges/variants';
-import {audioEngine} from '../../engine/AudioEngine';
 import {STUFFING_DIALOGUE, STUFFING_SUCCESS} from '../../data/dialogue/stuffing';
+import {audioEngine} from '../../engine/AudioEngine';
 import {pickVariant} from '../../engine/ChallengeRegistry';
 import {useGameStore} from '../../store/gameStore';
 import type {Reaction} from '../characters/reactions';

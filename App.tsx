@@ -80,34 +80,19 @@ const GameUI = () => {
           <StrikeCounter />
           {/* Challenge overlays */}
           {isIngredientChallenge && (
-            <IngredientChallenge
-              onComplete={completeChallenge}
-              onReaction={handleReaction}
-            />
+            <IngredientChallenge onComplete={completeChallenge} onReaction={handleReaction} />
           )}
           {isGrindingChallenge && (
-            <GrindingChallenge
-              onComplete={completeChallenge}
-              onReaction={handleReaction}
-            />
+            <GrindingChallenge onComplete={completeChallenge} onReaction={handleReaction} />
           )}
           {isStuffingChallenge && (
-            <StuffingChallenge
-              onComplete={completeChallenge}
-              onReaction={handleReaction}
-            />
+            <StuffingChallenge onComplete={completeChallenge} onReaction={handleReaction} />
           )}
           {isCookingChallenge && (
-            <CookingChallenge
-              onComplete={completeChallenge}
-              onReaction={handleReaction}
-            />
+            <CookingChallenge onComplete={completeChallenge} onReaction={handleReaction} />
           )}
           {isTastingChallenge && (
-            <TastingChallenge
-              onComplete={completeChallenge}
-              onReaction={handleReaction}
-            />
+            <TastingChallenge onComplete={completeChallenge} onReaction={handleReaction} />
           )}
         </>
       )}

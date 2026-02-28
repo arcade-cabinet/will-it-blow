@@ -56,6 +56,7 @@ export function LoadingScreen() {
   }, []);
 
   // Pre-fetch kitchen.glb to warm the browser cache
+  // biome-ignore lint/correctness/useExhaustiveDependencies: retryCount is an intentional trigger to re-run the preload
   useEffect(() => {
     const controller = new AbortController();
 

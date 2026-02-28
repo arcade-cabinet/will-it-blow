@@ -108,129 +108,135 @@ export const useGameStore = create<GameState>()(
     set => ({
       ...INITIAL_GAME_STATE,
 
-  setAppPhase: (phase: AppPhase) => set({appPhase: phase}),
+      setAppPhase: (phase: AppPhase) => set({appPhase: phase}),
 
-  startNewGame: () =>
-    set(state => ({
-      appPhase: 'playing' as AppPhase,
-      currentChallenge: 0,
-      challengeScores: [],
-      gameStatus: 'playing',
-      strikes: 0,
-      challengeProgress: 0,
-      challengePressure: 0,
-      challengeIsPressing: false,
-      challengeTemperature: 70,
-      challengeHeatLevel: 0,
-      mrSausageReaction: 'idle' as Reaction,
-      hintsRemaining: INITIAL_HINTS,
-      totalGamesPlayed: state.totalGamesPlayed + 1,
-      variantSeed: Date.now(),
-      fridgePool: [],
-      fridgeMatchingIndices: [],
-      fridgeSelectedIndices: [],
-      pendingFridgeClick: null,
-      fridgeHoveredIndex: null,
-    })),
+      startNewGame: () =>
+        set(state => ({
+          appPhase: 'playing' as AppPhase,
+          currentChallenge: 0,
+          challengeScores: [],
+          gameStatus: 'playing',
+          strikes: 0,
+          challengeProgress: 0,
+          challengePressure: 0,
+          challengeIsPressing: false,
+          challengeTemperature: 70,
+          challengeHeatLevel: 0,
+          mrSausageReaction: 'idle' as Reaction,
+          hintsRemaining: INITIAL_HINTS,
+          totalGamesPlayed: state.totalGamesPlayed + 1,
+          variantSeed: Date.now(),
+          fridgePool: [],
+          fridgeMatchingIndices: [],
+          fridgeSelectedIndices: [],
+          pendingFridgeClick: null,
+          fridgeHoveredIndex: null,
+        })),
 
-  continueGame: () =>
-    set({
-      appPhase: 'playing' as AppPhase,
-      gameStatus: 'playing',
-      strikes: 0,
-      challengeProgress: 0,
-      challengePressure: 0,
-      challengeIsPressing: false,
-      challengeTemperature: 70,
-      challengeHeatLevel: 0,
-    }),
+      continueGame: () =>
+        set({
+          appPhase: 'playing' as AppPhase,
+          gameStatus: 'playing',
+          strikes: 0,
+          challengeProgress: 0,
+          challengePressure: 0,
+          challengeIsPressing: false,
+          challengeTemperature: 70,
+          challengeHeatLevel: 0,
+        }),
 
-  completeChallenge: (score: number) =>
-    set(state => {
-      const nextChallenge = state.currentChallenge + 1;
-      const scores = [...state.challengeScores, score];
-      const isLastChallenge = nextChallenge >= TOTAL_CHALLENGES;
+      completeChallenge: (score: number) =>
+        set(state => {
+          const nextChallenge = state.currentChallenge + 1;
+          const scores = [...state.challengeScores, score];
+          const isLastChallenge = nextChallenge >= TOTAL_CHALLENGES;
 
-      return {
-        challengeScores: scores,
-        currentChallenge: nextChallenge,
-        strikes: 0,
-        challengeProgress: 0,
-        challengePressure: 0,
-        challengeIsPressing: false,
-        challengeTemperature: 70,
-        challengeHeatLevel: 0,
-        hintActive: false,
-        gameStatus: isLastChallenge ? 'victory' : state.gameStatus,
-      };
-    }),
+          return {
+            challengeScores: scores,
+            currentChallenge: nextChallenge,
+            strikes: 0,
+            challengeProgress: 0,
+            challengePressure: 0,
+            challengeIsPressing: false,
+            challengeTemperature: 70,
+            challengeHeatLevel: 0,
+            hintActive: false,
+            gameStatus: isLastChallenge ? 'victory' : state.gameStatus,
+          };
+        }),
 
-  addStrike: () =>
-    set(state => {
-      const newStrikes = state.strikes + 1;
-      return {
-        strikes: newStrikes,
-        gameStatus: newStrikes >= MAX_STRIKES ? 'defeat' : state.gameStatus,
-      };
-    }),
+      addStrike: () =>
+        set(state => {
+          const newStrikes = state.strikes + 1;
+          return {
+            strikes: newStrikes,
+            gameStatus: newStrikes >= MAX_STRIKES ? 'defeat' : state.gameStatus,
+          };
+        }),
 
-  useHint: () =>
-    set(state => {
-      if (state.hintsRemaining <= 0) return {};
-      return {
-        hintsRemaining: state.hintsRemaining - 1,
-        hintActive: true,
-      };
-    }),
+      useHint: () =>
+        set(state => {
+          if (state.hintsRemaining <= 0) return {};
+          return {
+            hintsRemaining: state.hintsRemaining - 1,
+            hintActive: true,
+          };
+        }),
 
-  setChallengeProgress: (progress: number) => set({challengeProgress: progress}),
+      setChallengeProgress: (progress: number) => set({challengeProgress: progress}),
 
-  setChallengePressure: (pressure: number) => set({challengePressure: pressure}),
+      setChallengePressure: (pressure: number) => set({challengePressure: pressure}),
 
-  setChallengeIsPressing: (pressing: boolean) => set({challengeIsPressing: pressing}),
+      setChallengeIsPressing: (pressing: boolean) => set({challengeIsPressing: pressing}),
 
-  setChallengeTemperature: (temperature: number) => set({challengeTemperature: temperature}),
+      setChallengeTemperature: (temperature: number) => set({challengeTemperature: temperature}),
 
-  setChallengeHeatLevel: (heatLevel: number) => set({challengeHeatLevel: heatLevel}),
+      setChallengeHeatLevel: (heatLevel: number) => set({challengeHeatLevel: heatLevel}),
 
-  setMrSausageReaction: (reaction: Reaction) => set({mrSausageReaction: reaction}),
+      setMrSausageReaction: (reaction: Reaction) => set({mrSausageReaction: reaction}),
 
-  setHintActive: (active: boolean) => set({hintActive: active}),
+      setHintActive: (active: boolean) => set({hintActive: active}),
 
-  setFridgePool: (pool: Ingredient[], matching: number[]) =>
-    set({fridgePool: pool, fridgeMatchingIndices: matching, fridgeSelectedIndices: [], pendingFridgeClick: null, fridgeHoveredIndex: null}),
+      setFridgePool: (pool: Ingredient[], matching: number[]) =>
+        set({
+          fridgePool: pool,
+          fridgeMatchingIndices: matching,
+          fridgeSelectedIndices: [],
+          pendingFridgeClick: null,
+          fridgeHoveredIndex: null,
+        }),
 
-  triggerFridgeClick: (index: number) => set({pendingFridgeClick: index}),
+      triggerFridgeClick: (index: number) => set({pendingFridgeClick: index}),
 
-  clearFridgeClick: () => set({pendingFridgeClick: null}),
+      clearFridgeClick: () => set({pendingFridgeClick: null}),
 
-  addFridgeSelected: (index: number) =>
-    set(state => ({fridgeSelectedIndices: [...state.fridgeSelectedIndices, index]})),
+      addFridgeSelected: (index: number) =>
+        set(state => ({fridgeSelectedIndices: [...state.fridgeSelectedIndices, index]})),
 
-  setFridgeHovered: (index: number | null) => set({fridgeHoveredIndex: index}),
+      setFridgeHovered: (index: number | null) => set({fridgeHoveredIndex: index}),
 
-  setMusicVolume: (volume: number) => set({musicVolume: Math.max(0, Math.min(1, volume))}),
-  setSfxVolume: (volume: number) => set({sfxVolume: Math.max(0, Math.min(1, volume))}),
-  setMusicMuted: (muted: boolean) => set({musicMuted: muted}),
-  setSfxMuted: (muted: boolean) => set({sfxMuted: muted}),
+      setMusicVolume: (volume: number) => set({musicVolume: Math.max(0, Math.min(1, volume))}),
+      setSfxVolume: (volume: number) => set({sfxVolume: Math.max(0, Math.min(1, volume))}),
+      setMusicMuted: (muted: boolean) => set({musicMuted: muted}),
+      setSfxMuted: (muted: boolean) => set({sfxMuted: muted}),
 
-  returnToMenu: () =>
-    set({
-      appPhase: 'menu' as AppPhase,
-      gameStatus: 'menu',
-      strikes: 0,
-      challengeProgress: 0,
-      challengePressure: 0,
-      challengeIsPressing: false,
-      challengeTemperature: 70,
-      challengeHeatLevel: 0,
-      mrSausageReaction: 'idle' as Reaction,
-      fridgePool: [],
-      fridgeMatchingIndices: [],
-      fridgeSelectedIndices: [],
-      pendingFridgeClick: null,
-      fridgeHoveredIndex: null,
-    }),
+      returnToMenu: () =>
+        set({
+          appPhase: 'menu' as AppPhase,
+          gameStatus: 'menu',
+          strikes: 0,
+          challengeProgress: 0,
+          challengePressure: 0,
+          challengeIsPressing: false,
+          challengeTemperature: 70,
+          challengeHeatLevel: 0,
+          mrSausageReaction: 'idle' as Reaction,
+          fridgePool: [],
+          fridgeMatchingIndices: [],
+          fridgeSelectedIndices: [],
+          pendingFridgeClick: null,
+          fridgeHoveredIndex: null,
+        }),
     }),
     {
       name: 'will-it-blow-save',

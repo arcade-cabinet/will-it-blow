@@ -1,13 +1,13 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import type {IngredientVariant} from '../../data/challenges/variants';
-import {audioEngine} from '../../engine/AudioEngine';
 import {
   INGREDIENTS_DIALOGUE,
   INGREDIENTS_FAIL,
   INGREDIENTS_SUCCESS,
 } from '../../data/dialogue/ingredients';
 import {INTRO_DIALOGUE} from '../../data/dialogue/intro';
+import {audioEngine} from '../../engine/AudioEngine';
 import {pickVariant} from '../../engine/ChallengeRegistry';
 import {matchesCriteria} from '../../engine/IngredientMatcher';
 import {getRandomIngredientPool} from '../../engine/Ingredients';
@@ -115,9 +115,7 @@ export function IngredientChallenge({onComplete, onReaction}: IngredientChalleng
 
       // Check if ingredient is "close" (shares at least one tag)
       const ing = fridgePool[index];
-      const isClose = ing && variant.criteria.tags.some(tag =>
-        matchesCriteria(ing, {tags: [tag]}),
-      );
+      const isClose = ing && variant.criteria.tags.some(tag => matchesCriteria(ing, {tags: [tag]}));
 
       if (isClose) {
         onReaction?.('nervous');

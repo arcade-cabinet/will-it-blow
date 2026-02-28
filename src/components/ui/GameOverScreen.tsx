@@ -88,7 +88,9 @@ export function GameOverScreen() {
               <View style={styles.challengeScores}>
                 {challengeScores.map((score, i) => (
                   <View key={i} style={styles.challengeScoreRow}>
-                    <Text style={styles.challengeScoreLabel}>{CHALLENGE_NAMES[i] ?? `Challenge ${i + 1}`}</Text>
+                    <Text style={styles.challengeScoreLabel}>
+                      {CHALLENGE_NAMES[i] ?? `Challenge ${i + 1}`}
+                    </Text>
                     <Text style={styles.challengeScoreValue}>{score}</Text>
                   </View>
                 ))}
@@ -98,26 +100,34 @@ export function GameOverScreen() {
             <>
               {/* Defeat — show rank if we have scores (A/B/F) */}
               <Text style={styles.gameOverTitle}>GAME OVER</Text>
-              {challengeScores.length > 0 && (() => {
-                const defeatVerdict = calculateFinalVerdict(challengeScores);
-                const defeatColor = defeatVerdict.rank === 'A' ? '#FF9800' : '#FF1744';
-                return (
-                  <>
-                    <Text style={[styles.rankLetter, {color: defeatColor, textShadowColor: defeatColor}]}>
-                      {defeatVerdict.rank}
-                    </Text>
-                    <Text style={styles.gameOverSubtitle}>{defeatVerdict.message}</Text>
-                    <View style={styles.challengeScores}>
-                      {challengeScores.map((score, i) => (
-                        <View key={i} style={styles.challengeScoreRow}>
-                          <Text style={styles.challengeScoreLabel}>{CHALLENGE_NAMES[i] ?? `Challenge ${i + 1}`}</Text>
-                          <Text style={styles.challengeScoreValue}>{Math.round(score)}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  </>
-                );
-              })()}
+              {challengeScores.length > 0 &&
+                (() => {
+                  const defeatVerdict = calculateFinalVerdict(challengeScores);
+                  const defeatColor = defeatVerdict.rank === 'A' ? '#FF9800' : '#FF1744';
+                  return (
+                    <>
+                      <Text
+                        style={[
+                          styles.rankLetter,
+                          {color: defeatColor, textShadowColor: defeatColor},
+                        ]}
+                      >
+                        {defeatVerdict.rank}
+                      </Text>
+                      <Text style={styles.gameOverSubtitle}>{defeatVerdict.message}</Text>
+                      <View style={styles.challengeScores}>
+                        {challengeScores.map((score, i) => (
+                          <View key={i} style={styles.challengeScoreRow}>
+                            <Text style={styles.challengeScoreLabel}>
+                              {CHALLENGE_NAMES[i] ?? `Challenge ${i + 1}`}
+                            </Text>
+                            <Text style={styles.challengeScoreValue}>{Math.round(score)}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    </>
+                  );
+                })()}
               {challengeScores.length === 0 && (
                 <Text style={styles.gameOverSubtitle}>You are the sausage now.</Text>
               )}

@@ -1,8 +1,8 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {PanResponder, StyleSheet, Text, View} from 'react-native';
 import type {GrindingVariant} from '../../data/challenges/variants';
-import {audioEngine} from '../../engine/AudioEngine';
 import {GRINDING_DIALOGUE, GRINDING_SUCCESS} from '../../data/dialogue/grinding';
+import {audioEngine} from '../../engine/AudioEngine';
 import {pickVariant} from '../../engine/ChallengeRegistry';
 import {useGameStore} from '../../store/gameStore';
 import type {Reaction} from '../characters/reactions';

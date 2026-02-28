@@ -145,11 +145,7 @@ function useRoomTextures() {
 // RoomEnclosure — floor, ceiling, walls with PBR textures
 // -------------------------------------------------------
 
-function RoomEnclosure({
-  textures,
-}: {
-  textures: ReturnType<typeof useRoomTextures>;
-}) {
+function RoomEnclosure({textures}: {textures: ReturnType<typeof useRoomTextures>}) {
   const upperH = ROOM_H - TILE_LINE;
 
   return (
