@@ -19,6 +19,9 @@ class WebGPURenderer {
   constructor() {
     this.domElement = null;
   }
+  async init() {
+    return Promise.resolve();
+  }
   setSize() {}
   render() {}
   dispose() {}

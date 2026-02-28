@@ -8,22 +8,19 @@
  * scanlines, RGB sub-pixel pattern, chromatic aberration, flicker, static noise,
  * interlace shimmer, vignette, edge bloom, warm color grading, OOB masking.
  */
-import {NodeMaterial} from 'three/webgpu';
+
 import {
-  Fn,
-  If,
   abs,
   add,
   clamp,
   dot,
   exp,
+  Fn,
   float,
   floor,
   fract,
-  hash,
   length,
   max,
-  min,
   mix,
   mod,
   mul,
@@ -38,6 +35,7 @@ import {
   vec3,
   vec4,
 } from 'three/tsl';
+import {NodeMaterial} from 'three/webgpu';
 
 /* ------------------------------------------------------------------ */
 /*  Uniforms — exported so CrtTelevision.tsx can update them per-frame */
@@ -102,7 +100,9 @@ const crtFragment = Fn(() => {
   const rollBand = smoothstep(float(0.0), float(0.06), abs(sub(uvCoord.y, rollY))).mul(
     smoothstep(float(0.0), float(0.06), abs(sub(uvCoord.y, sub(rollY, 1.0)))),
   );
-  const rollShift = sub(1.0, rollBand).mul(0.03).mul(add(1.0, mul(reaction, 4.0)));
+  const rollShift = sub(1.0, rollBand)
+    .mul(0.03)
+    .mul(add(1.0, mul(reaction, 4.0)));
   uvCoord.x.addAssign(rollShift);
 
   // --- Horizontal tear (signal glitch) ---
@@ -146,8 +146,14 @@ const crtFragment = Fn(() => {
 
   // --- Chromatic aberration ---
   const chromaStr = add(0.004, mul(reaction, 0.006), mul(distSq, 0.008));
-  const rShiftFactor = add(1.0, mul(noise2D(add(mul(uvCoord, 40.0), mul(t, 0.3))), 0.08));
-  const bShiftFactor = add(1.0, mul(noise2D(sub(mul(uvCoord, 35.0), mul(t, 0.2))), 0.06));
+  const rShiftFactor = add(
+    1.0,
+    mul(noise2D(add(mul(uvCoord, 40.0), mul(t, 0.3))), chromaStr, 0.08),
+  );
+  const bShiftFactor = add(
+    1.0,
+    mul(noise2D(sub(mul(uvCoord, 35.0), mul(t, 0.2))), chromaStr, 0.06),
+  );
   color.x.mulAssign(rShiftFactor);
   color.z.mulAssign(bShiftFactor);
 

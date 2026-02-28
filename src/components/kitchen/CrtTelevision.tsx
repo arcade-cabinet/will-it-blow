@@ -1,6 +1,6 @@
 import {useFrame} from '@react-three/fiber';
 import {useMemo, useRef} from 'react';
-import type * as THREE from 'three';
+import type * as THREE from 'three/webgpu';
 import {MrSausage3D} from '../characters/MrSausage3D';
 import type {Reaction} from '../characters/reactions';
 import {createCrtMaterial, crtUniforms} from '../effects/CrtShader';

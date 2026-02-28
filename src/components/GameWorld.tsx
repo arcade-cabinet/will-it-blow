@@ -316,13 +316,18 @@ export const GameWorld = () => {
       <Canvas
         camera={{fov: 70, near: 0.1, far: 100, position: [0, 1.6, 2]}}
         style={{width: '100%', height: '100%'}}
-        gl={async (props) => {
-          const renderer = new WebGPURenderer({
-            canvas: props.canvas as HTMLCanvasElement,
-            antialias: true,
-          });
-          await renderer.init();
-          return renderer;
+        gl={async props => {
+          try {
+            const renderer = new WebGPURenderer({
+              canvas: props.canvas as HTMLCanvasElement,
+              antialias: true,
+            });
+            await renderer.init();
+            return renderer;
+          } catch (error) {
+            console.error('WebGPU initialization failed, device may not support WebGPU:', error);
+            throw error;
+          }
         }}
       >
         <XR store={xrStore}>

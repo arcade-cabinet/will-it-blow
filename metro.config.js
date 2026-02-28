@@ -1,5 +1,5 @@
 const {getDefaultConfig} = require('expo/metro-config');
-const path = require('path');
+const path = require('node:path');
 
 const config = getDefaultConfig(__dirname);
 
@@ -12,15 +12,17 @@ config.resolver.assetExts.push('glb', 'gltf');
 // so Three.js and R3F should use their web/WebGPU code paths.
 
 // Map bare 'three' imports to 'three/webgpu' for the WebGPU renderer + TSL
-const threeWebGPU = path.resolve(
-  __dirname,
-  'node_modules/three/src/Three.WebGPU.js',
-);
+const threeWebGPU = path.resolve(__dirname, 'node_modules/three/src/Three.WebGPU.js');
 
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   // Redirect 'three' → 'three/webgpu' (but not sub-paths like 'three/examples/...')
   if (moduleName === 'three' && platform !== 'web') {
-    return context.resolveRequest(context, threeWebGPU, platform);
+    try {
+      return context.resolveRequest(context, threeWebGPU, platform);
+    } catch {
+      // Fall back to standard 'three' if WebGPU entry point is missing
+      return context.resolveRequest(context, moduleName, platform);
+    }
   }
   return context.resolveRequest(context, moduleName, platform);
 };
