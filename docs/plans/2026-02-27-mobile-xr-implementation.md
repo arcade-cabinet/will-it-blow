@@ -203,7 +203,7 @@ Expected: all 9 tests PASS.
 **Step 6: Commit**
 
 ```bash
-git add package.json package-lock.json src/input/InputActions.ts src/input/__tests__/InputActions.test.ts
+git add package.json pnpm-lock.yaml src/input/InputActions.ts src/input/__tests__/InputActions.test.ts
 git commit -m "feat(input): add InputActions types + action creators with TDD
 
 Foundation for the Input Abstraction Layer. All input sources normalize

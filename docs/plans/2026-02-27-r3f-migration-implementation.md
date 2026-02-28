@@ -130,7 +130,7 @@ Expected: All 199 tests pass. (Pure logic + InputActions + HapticService + gameS
 **Step 6: Commit**
 
 ```bash
-git add package.json package-lock.json metro.config.js babel.config.js jest.config.js
+git add package.json pnpm-lock.yaml metro.config.js babel.config.js jest.config.js
 git commit -m "feat: install R3F ecosystem alongside Babylon.js, update configs"
 ```
 
@@ -1791,7 +1791,7 @@ Expected: No new type errors (ignore existing Jest type warnings in test files).
 **Step 5: Commit**
 
 ```bash
-git add package.json package-lock.json
+git add package.json pnpm-lock.yaml
 git commit -m "chore: remove Babylon.js + reactylon dependencies"
 ```
 
