@@ -168,6 +168,48 @@ describe('returnToMenu', () => {
   });
 });
 
+describe('input settings', () => {
+  it('defaults gyroEnabled to false', () => {
+    expect(store().gyroEnabled).toBe(false);
+  });
+
+  it('defaults motionControlsEnabled to true', () => {
+    expect(store().motionControlsEnabled).toBe(true);
+  });
+
+  it('defaults xrMode to none', () => {
+    expect(store().xrMode).toBe('none');
+  });
+
+  it('setGyroEnabled toggles gyroscope', () => {
+    store().setGyroEnabled(true);
+    expect(store().gyroEnabled).toBe(true);
+    store().setGyroEnabled(false);
+    expect(store().gyroEnabled).toBe(false);
+  });
+
+  it('setMotionControlsEnabled toggles motion controls', () => {
+    store().setMotionControlsEnabled(false);
+    expect(store().motionControlsEnabled).toBe(false);
+  });
+
+  it('setXrMode changes XR mode', () => {
+    store().setXrMode('ar');
+    expect(store().xrMode).toBe('ar');
+    store().setXrMode('vr');
+    expect(store().xrMode).toBe('vr');
+  });
+
+  it('returnToMenu preserves input settings', () => {
+    store().setGyroEnabled(true);
+    store().setXrMode('ar');
+    store().startNewGame();
+    store().returnToMenu();
+    expect(store().gyroEnabled).toBe(true);
+    expect(store().xrMode).toBe('ar');
+  });
+});
+
 describe('useHint', () => {
   it('decrements hints', () => {
     store().startNewGame();

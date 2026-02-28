@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
 export type AppPhase = 'menu' | 'loading' | 'playing';
+export type XrMode = 'none' | 'ar' | 'vr';
 
 export interface GameState {
   // App lifecycle (menu → loading → playing)
@@ -25,6 +26,16 @@ export interface GameState {
 
   // Variant seed
   variantSeed: number;
+
+  // Input settings (persist across games)
+  gyroEnabled: boolean;
+  motionControlsEnabled: boolean;
+  xrMode: XrMode;
+
+  // Input setting actions
+  setGyroEnabled: (enabled: boolean) => void;
+  setMotionControlsEnabled: (enabled: boolean) => void;
+  setXrMode: (mode: XrMode) => void;
 
   // Actions
   setAppPhase: (phase: AppPhase) => void;
@@ -59,6 +70,9 @@ export const INITIAL_GAME_STATE = {
   hintsRemaining: INITIAL_HINTS,
   totalGamesPlayed: 0,
   variantSeed: 0,
+  gyroEnabled: false,
+  motionControlsEnabled: true,
+  xrMode: 'none' as XrMode,
 };
 
 export const useGameStore = create<GameState>()((set) => ({
@@ -141,6 +155,10 @@ export const useGameStore = create<GameState>()((set) => ({
 
   setChallengeHeatLevel: (heatLevel: number) =>
     set({ challengeHeatLevel: heatLevel }),
+
+  setGyroEnabled: (enabled: boolean) => set({ gyroEnabled: enabled }),
+  setMotionControlsEnabled: (enabled: boolean) => set({ motionControlsEnabled: enabled }),
+  setXrMode: (mode: XrMode) => set({ xrMode: mode }),
 
   returnToMenu: () =>
     set({
