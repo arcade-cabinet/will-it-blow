@@ -105,11 +105,12 @@ const SceneContent = () => {
     challengeTemperature,
     challengeHeatLevel,
     strikes,
+    mrSausageReaction,
+    hintActive,
   } = useGameStore();
 
   // Fridge station state for 3D visual feedback
   const [fridgeSelectedIds, setFridgeSelectedIds] = useState<Set<number>>(new Set());
-  const [fridgeHintActive] = useState(false);
 
   const showFridge = gameStatus === 'playing' && currentChallenge === 0;
   const showGrinder = gameStatus === 'playing' && currentChallenge === 1;
@@ -178,12 +179,12 @@ const SceneContent = () => {
       <ambientLight intensity={0.15} />
       <CameraWalker target={cameraTarget} />
       <KitchenEnvironment />
-      <CrtTelevision reaction={gameStatus === 'defeat' ? 'laugh' : showTasting ? 'talk' : 'idle'} />
+      <CrtTelevision reaction={gameStatus === 'defeat' ? 'laugh' : mrSausageReaction} />
       {showFridge && fridgeData && (
         <FridgeStation
           ingredients={fridgeData.pool}
           selectedIds={fridgeSelectedIds}
-          hintActive={fridgeHintActive}
+          hintActive={hintActive}
           matchingIndices={fridgeData.matching}
           onSelect={index => {
             setFridgeSelectedIds(prev => {

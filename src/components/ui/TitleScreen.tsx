@@ -1,6 +1,7 @@
-import {useEffect, useRef, useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {Animated, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {useGameStore} from '../../store/gameStore';
+import {SettingsScreen} from './SettingsScreen';
 
 const MENU_ITEMS = ['NEW GAME', 'CONTINUE', 'SETTINGS'] as const;
 
@@ -8,6 +9,7 @@ export function TitleScreen() {
   const {setAppPhase, continueGame, currentChallenge, challengeScores} = useGameStore();
   const hasSaveData = challengeScores.length > 0;
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [showSettings, setShowSettings] = useState(false);
 
   // Fade-in animation
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -62,9 +64,16 @@ export function TitleScreen() {
       // LoadingScreen only handles asset preloading — it doesn't touch game state.
       continueGame();
       setAppPhase('loading');
+    } else if (item === 'SETTINGS') {
+      setShowSettings(true);
     }
-    // SETTINGS: no-op for now
   };
+
+  const handleSettingsBack = useCallback(() => setShowSettings(false), []);
+
+  if (showSettings) {
+    return <SettingsScreen onBack={handleSettingsBack} />;
+  }
 
   return (
     <Animated.View
@@ -98,7 +107,7 @@ export function TitleScreen() {
       {/* Menu items */}
       <View style={styles.menuContainer}>
         {MENU_ITEMS.map((item, index) => {
-          const isDisabled = (item === 'CONTINUE' && !hasSaveData) || item === 'SETTINGS';
+          const isDisabled = item === 'CONTINUE' && !hasSaveData;
           const isSelected = selectedIndex === index;
 
           return (

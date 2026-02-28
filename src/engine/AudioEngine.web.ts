@@ -114,6 +114,28 @@ class AudioEngine {
     this.sfxSynths.sizzle.triggerAttackRelease('8n');
   }
 
+  playCorrectPick() {
+    if (!this.isInitialized) return;
+    const synth = new Tone.Synth({
+      oscillator: {type: 'triangle'},
+      envelope: {attack: 0.01, decay: 0.15, sustain: 0, release: 0.1},
+      volume: -8,
+    }).toDestination();
+    synth.triggerAttackRelease('E5', '16n');
+    setTimeout(() => synth.dispose(), 500);
+  }
+
+  playWrongPick() {
+    if (!this.isInitialized) return;
+    const synth = new Tone.Synth({
+      oscillator: {type: 'sawtooth'},
+      envelope: {attack: 0.01, decay: 0.3, sustain: 0, release: 0.1},
+      volume: -10,
+    }).toDestination();
+    synth.triggerAttackRelease('C2', '8n');
+    setTimeout(() => synth.dispose(), 500);
+  }
+
   updatePressure(intensity: number) {
     if (!this.isInitialized) return;
     if (this.sfxSynths.pressure.state !== 'started') {
@@ -197,6 +219,51 @@ class AudioEngine {
     Tone.getTransport().start();
   }
 
+  /** Start an eerie ambient drone for the horror atmosphere */
+  startAmbientDrone() {
+    if (!this.isInitialized) return;
+    this.stopAmbientDrone();
+
+    // Low rumble
+    const drone = new Tone.Oscillator(55, 'sawtooth').toDestination();
+    drone.volume.value = -28;
+    drone.start();
+    this.sfxSynths.ambientDrone = drone;
+
+    // Slow LFO on drone pitch for unease
+    const lfo = new Tone.LFO(0.1, 50, 60).start();
+    lfo.connect(drone.frequency);
+    this.sfxSynths.ambientDroneLfo = lfo;
+
+    // Subtle high-frequency whisper noise
+    const hiss = new Tone.NoiseSynth({
+      noise: {type: 'pink'},
+      envelope: {attack: 2, decay: 0, sustain: 1, release: 2},
+      volume: -32,
+    }).toDestination();
+    hiss.triggerAttack();
+    this.sfxSynths.ambientHiss = hiss;
+  }
+
+  stopAmbientDrone() {
+    if (this.sfxSynths.ambientDrone) {
+      this.sfxSynths.ambientDrone.stop();
+      this.sfxSynths.ambientDrone.dispose();
+      delete this.sfxSynths.ambientDrone;
+    }
+    if (this.sfxSynths.ambientDroneLfo) {
+      this.sfxSynths.ambientDroneLfo.dispose();
+      delete this.sfxSynths.ambientDroneLfo;
+    }
+    if (this.sfxSynths.ambientHiss) {
+      this.sfxSynths.ambientHiss.triggerRelease();
+      setTimeout(() => {
+        this.sfxSynths.ambientHiss?.dispose();
+        delete this.sfxSynths.ambientHiss;
+      }, 2500);
+    }
+  }
+
   stopEngine() {
     if (this.currentSong) {
       this.currentSong.dispose();
@@ -206,6 +273,7 @@ class AudioEngine {
       s.dispose();
     }
     this.synths = [];
+    this.stopAmbientDrone();
     if (this.isInitialized) {
       try {
         this.stopGrinder();

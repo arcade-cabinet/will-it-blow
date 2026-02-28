@@ -1,6 +1,7 @@
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import type {IngredientVariant} from '../../data/challenges/variants';
+import {audioEngine} from '../../engine/AudioEngine';
 import {
   INGREDIENTS_DIALOGUE,
   INGREDIENTS_FAIL,
@@ -37,8 +38,15 @@ export function IngredientChallenge({onComplete, onReaction}: IngredientChalleng
   const [hintActive, setHintActive] = useState(false);
   const [lastResult, setLastResult] = useState<'correct' | 'wrong' | null>(null);
 
-  const {strikes, addStrike, hintsRemaining, variantSeed, setChallengeProgress, gameStatus} =
-    useGameStore();
+  const {
+    strikes,
+    addStrike,
+    hintsRemaining,
+    variantSeed,
+    setChallengeProgress,
+    gameStatus,
+    setHintActive: setStoreHintActive,
+  } = useGameStore();
 
   // Initialize variant and ingredient pool on mount
   useEffect(() => {
@@ -79,6 +87,7 @@ export function IngredientChallenge({onComplete, onReaction}: IngredientChalleng
         setCorrectCount(newCount);
         setLastResult('correct');
         onReaction?.('excitement');
+        audioEngine.playCorrectPick();
         setChallengeProgress((newCount / variant.requiredCount) * 100);
 
         if (newCount >= variant.requiredCount) {
@@ -103,6 +112,7 @@ export function IngredientChallenge({onComplete, onReaction}: IngredientChalleng
         }
 
         addStrike();
+        audioEngine.playWrongPick();
       }
 
       // Reset result indicator after delay
@@ -130,9 +140,12 @@ export function IngredientChallenge({onComplete, onReaction}: IngredientChalleng
       // biome-ignore lint/correctness/useHookAtTopLevel: useHint is a Zustand store action, not a React hook
       useGameStore.getState().useHint();
       setHintActive(true);
-      setTimeout(() => setHintActive(false), 3000);
+      setTimeout(() => {
+        setHintActive(false);
+        setStoreHintActive(false);
+      }, 3000);
     }
-  }, [hintsRemaining]);
+  }, [hintsRemaining, setStoreHintActive]);
 
   // Handle dialogue completion
   const handleDialogueComplete = useCallback(
@@ -140,12 +153,16 @@ export function IngredientChallenge({onComplete, onReaction}: IngredientChalleng
       // If player got a hint from dialogue, activate hint glow
       if (effects.includes('hint')) {
         setHintActive(true);
-        setTimeout(() => setHintActive(false), 3000);
+        setStoreHintActive(true);
+        setTimeout(() => {
+          setHintActive(false);
+          setStoreHintActive(false);
+        }, 3000);
       }
       setPhase('selecting');
       onReaction?.('idle');
     },
-    [onReaction],
+    [onReaction, setStoreHintActive],
   );
 
   // Handle success dialogue completion

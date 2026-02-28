@@ -1,5 +1,6 @@
 import {useEffect, useRef, useState} from 'react';
 import {Animated, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {audioEngine} from '../../engine/AudioEngine';
 import {useGameStore} from '../../store/gameStore';
 
 const LOADING_QUOTES = [
@@ -46,6 +47,11 @@ export function LoadingScreen() {
       setQuoteIndex(prev => (prev + 1) % LOADING_QUOTES.length);
     }, 2000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Initialize audio engine (requires user gesture — loading screen comes after menu tap)
+  useEffect(() => {
+    audioEngine.initTone();
   }, []);
 
   // Pre-fetch kitchen.glb to warm the browser cache

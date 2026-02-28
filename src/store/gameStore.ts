@@ -1,8 +1,9 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {create} from 'zustand';
+import {createJSONStorage, persist} from 'zustand/middleware';
+import type {Reaction} from '../components/characters/reactions';
 
 export type AppPhase = 'menu' | 'loading' | 'playing';
-export type XrMode = 'none' | 'ar' | 'vr';
-
 export interface GameState {
   // App lifecycle (menu → loading → playing)
   appPhase: AppPhase;
@@ -20,22 +21,22 @@ export interface GameState {
   challengeTemperature: number;
   challengeHeatLevel: number;
 
-  // Meta
+  // Mr. Sausage CRT reaction (shared between UI overlays and 3D scene)
+  mrSausageReaction: Reaction;
+
+  // Hints
+  hintActive: boolean;
   hintsRemaining: number;
   totalGamesPlayed: number;
 
   // Variant seed
   variantSeed: number;
 
-  // Input settings (persist across games)
-  gyroEnabled: boolean;
-  motionControlsEnabled: boolean;
-  xrMode: XrMode;
-
-  // Input setting actions
-  setGyroEnabled: (enabled: boolean) => void;
-  setMotionControlsEnabled: (enabled: boolean) => void;
-  setXrMode: (mode: XrMode) => void;
+  // Settings (persist across games)
+  musicVolume: number; // 0-1
+  sfxVolume: number; // 0-1
+  musicMuted: boolean;
+  sfxMuted: boolean;
 
   // Actions
   setAppPhase: (phase: AppPhase) => void;
@@ -49,6 +50,12 @@ export interface GameState {
   setChallengeIsPressing: (pressing: boolean) => void;
   setChallengeTemperature: (temperature: number) => void;
   setChallengeHeatLevel: (heatLevel: number) => void;
+  setMrSausageReaction: (reaction: Reaction) => void;
+  setHintActive: (active: boolean) => void;
+  setMusicVolume: (volume: number) => void;
+  setSfxVolume: (volume: number) => void;
+  setMusicMuted: (muted: boolean) => void;
+  setSfxMuted: (muted: boolean) => void;
   returnToMenu: () => void;
 }
 
@@ -67,16 +74,21 @@ export const INITIAL_GAME_STATE = {
   challengeIsPressing: false,
   challengeTemperature: 70,
   challengeHeatLevel: 0,
+  mrSausageReaction: 'idle' as Reaction,
+  hintActive: false,
   hintsRemaining: INITIAL_HINTS,
   totalGamesPlayed: 0,
   variantSeed: 0,
-  gyroEnabled: false,
-  motionControlsEnabled: true,
-  xrMode: 'none' as XrMode,
+  musicVolume: 0.7,
+  sfxVolume: 0.8,
+  musicMuted: false,
+  sfxMuted: false,
 };
 
-export const useGameStore = create<GameState>()(set => ({
-  ...INITIAL_GAME_STATE,
+export const useGameStore = create<GameState>()(
+  persist(
+    set => ({
+      ...INITIAL_GAME_STATE,
 
   setAppPhase: (phase: AppPhase) => set({appPhase: phase}),
 
@@ -92,6 +104,7 @@ export const useGameStore = create<GameState>()(set => ({
       challengeIsPressing: false,
       challengeTemperature: 70,
       challengeHeatLevel: 0,
+      mrSausageReaction: 'idle' as Reaction,
       hintsRemaining: INITIAL_HINTS,
       totalGamesPlayed: state.totalGamesPlayed + 1,
       variantSeed: Date.now(),
@@ -123,6 +136,7 @@ export const useGameStore = create<GameState>()(set => ({
         challengeIsPressing: false,
         challengeTemperature: 70,
         challengeHeatLevel: 0,
+        hintActive: false,
         gameStatus: isLastChallenge ? 'victory' : state.gameStatus,
       };
     }),
@@ -137,9 +151,13 @@ export const useGameStore = create<GameState>()(set => ({
     }),
 
   useHint: () =>
-    set(state => ({
-      hintsRemaining: Math.max(0, state.hintsRemaining - 1),
-    })),
+    set(state => {
+      if (state.hintsRemaining <= 0) return {};
+      return {
+        hintsRemaining: state.hintsRemaining - 1,
+        hintActive: true,
+      };
+    }),
 
   setChallengeProgress: (progress: number) => set({challengeProgress: progress}),
 
@@ -151,9 +169,14 @@ export const useGameStore = create<GameState>()(set => ({
 
   setChallengeHeatLevel: (heatLevel: number) => set({challengeHeatLevel: heatLevel}),
 
-  setGyroEnabled: (enabled: boolean) => set({gyroEnabled: enabled}),
-  setMotionControlsEnabled: (enabled: boolean) => set({motionControlsEnabled: enabled}),
-  setXrMode: (mode: XrMode) => set({xrMode: mode}),
+  setMrSausageReaction: (reaction: Reaction) => set({mrSausageReaction: reaction}),
+
+  setHintActive: (active: boolean) => set({hintActive: active}),
+
+  setMusicVolume: (volume: number) => set({musicVolume: Math.max(0, Math.min(1, volume))}),
+  setSfxVolume: (volume: number) => set({sfxVolume: Math.max(0, Math.min(1, volume))}),
+  setMusicMuted: (muted: boolean) => set({musicMuted: muted}),
+  setSfxMuted: (muted: boolean) => set({sfxMuted: muted}),
 
   returnToMenu: () =>
     set({
@@ -165,5 +188,24 @@ export const useGameStore = create<GameState>()(set => ({
       challengeIsPressing: false,
       challengeTemperature: 70,
       challengeHeatLevel: 0,
+      mrSausageReaction: 'idle' as Reaction,
     }),
-}));
+    }),
+    {
+      name: 'will-it-blow-save',
+      storage: createJSONStorage(() => AsyncStorage),
+      // Only persist progress and settings — not ephemeral game state
+      partialize: state => ({
+        totalGamesPlayed: state.totalGamesPlayed,
+        currentChallenge: state.currentChallenge,
+        challengeScores: state.challengeScores,
+        hintsRemaining: state.hintsRemaining,
+        variantSeed: state.variantSeed,
+        musicVolume: state.musicVolume,
+        sfxVolume: state.sfxVolume,
+        musicMuted: state.musicMuted,
+        sfxMuted: state.sfxMuted,
+      }),
+    },
+  ),
+);
