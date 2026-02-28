@@ -2,7 +2,7 @@ import {useGLTF, useTexture} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
 import type React from 'react';
 import {useEffect, useMemo, useRef} from 'react';
-import * as THREE from 'three';
+import * as THREE from 'three/webgpu';
 
 // --- Room dimensions (slightly larger than 12x12 kitchen GLB to avoid z-fighting) ---
 const ROOM_W = 13; // x-axis

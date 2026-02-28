@@ -1,6 +1,6 @@
 import {useFrame} from '@react-three/fiber';
 import {useRef} from 'react';
-import type * as THREE from 'three';
+import type * as THREE from 'three/webgpu';
 
 interface StoveStationProps {
   temperature: number; // Current temp (room temp ~70 to max ~250)

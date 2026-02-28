@@ -1,6 +1,6 @@
 import {useFrame, useThree} from '@react-three/fiber';
 import {useMemo, useRef} from 'react';
-import * as THREE from 'three';
+import * as THREE from 'three/webgpu';
 import {REACTIONS, type Reaction} from './reactions';
 
 interface MrSausage3DProps {

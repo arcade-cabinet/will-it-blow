@@ -1,6 +1,6 @@
 import {useFrame} from '@react-three/fiber';
 import {useRef, useState} from 'react';
-import * as THREE from 'three';
+import * as THREE from 'three/webgpu';
 import type {Ingredient} from '../../engine/Ingredients';
 
 interface FridgeStationProps {
