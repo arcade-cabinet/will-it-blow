@@ -2,5 +2,18 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true
-  }
+  },
+  "exclude": [
+    "node_modules",
+    "__tests__",
+    "e2e",
+    "android",
+    "ios",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "jest.setup.js",
+    "jest.config.js",
+    "babel.config.js",
+    "metro.config.js"
+  ]
 }

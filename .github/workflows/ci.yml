@@ -17,12 +17,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+          cache: pnpm
 
-      - run: npm ci
+      - run: pnpm install --frozen-lockfile
+
+      - name: Biome lint & format check
+        run: pnpm lint
+
+      - name: Type check
+        run: npx tsc --noEmit
 
       - name: Run tests
-        run: npm test -- --ci --forceExit
+        run: pnpm test:ci

@@ -1,0 +1,92 @@
+name: Release — Deploy Web + Build Android APKs
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  # ─── GitHub Pages Deployment ───────────────────────────────
+  deploy-web:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Export static web build
+        run: npx expo export --platform web --output-dir dist
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  # ─── Android Debug APK Builds ──────────────────────────────
+  build-android:
+    name: Build Android Debug APKs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build debug APKs (all architectures)
+        working-directory: android
+        run: ./gradlew assembleDebug
+
+      - name: List built APKs
+        run: find android/app/build/outputs/apk -name "*.apk" -type f
+
+      - name: Upload APKs to release
+        env:
+          GH_TOKEN: ${{ secrets.CI_GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          for apk in android/app/build/outputs/apk/debug/*.apk; do
+            filename=$(basename "$apk")
+            echo "Uploading $filename to release $RELEASE_TAG..."
+            gh release upload "$RELEASE_TAG" "$apk" --clobber
+          done

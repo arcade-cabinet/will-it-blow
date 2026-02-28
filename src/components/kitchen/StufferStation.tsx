@@ -1,18 +1,12 @@
-import { useEffect, useRef } from 'react';
-import { useScene } from 'reactylon';
-import {
-	Color3,
-	MeshBuilder,
-	StandardMaterial,
-	Vector3,
-} from '@babylonjs/core';
-import type { AbstractMesh, Observer, Scene as BabylonScene } from '@babylonjs/core';
+import {useFrame} from '@react-three/fiber';
+import {useRef} from 'react';
+import * as THREE from 'three';
 
 interface StufferStationProps {
-	fillLevel: number; // 0-100
-	pressureLevel: number; // 0-100
-	isPressing: boolean; // Whether player is pressing
-	hasBurst: boolean; // Trigger burst animation
+  fillLevel: number; // 0-100
+  pressureLevel: number; // 0-100
+  isPressing: boolean; // Whether player is pressing
+  hasBurst: boolean; // Trigger burst animation
 }
 
 // Stuffer sits on a counter near the stuffer waypoint
@@ -20,414 +14,343 @@ const STUFFER_POS: [number, number, number] = [5, 0, -4];
 const COUNTER_HEIGHT = 0.9;
 const STUFFER_BASE_Y = COUNTER_HEIGHT;
 
+// Geometry constants
+const BODY_HEIGHT = 1.0;
+const BODY_DIAMETER = 0.5;
+const PLUNGER_HEIGHT = 0.15;
+const HANDLE_HEIGHT = 0.5;
+const CASING_BASE_LENGTH = 1.2;
+const CASING_BASE_DIAMETER = 0.15;
+
 // Burst particle settings
 const BURST_PARTICLE_COUNT = 16;
 
-/** Linearly interpolate between two Color3 values. */
-function lerpColor(a: Color3, b: Color3, t: number): Color3 {
-	return new Color3(
-		a.r + (b.r - a.r) * t,
-		a.g + (b.g - a.g) * t,
-		a.b + (b.b - a.b) * t,
-	);
+// Pre-compute burst particle sizes (deterministic)
+const BURST_PARTICLE_SIZES = Array.from(
+  {length: BURST_PARTICLE_COUNT},
+  (_, i) => 0.03 + ((i * 0.005) % 0.04),
+);
+
+/** Linearly interpolate between two [r,g,b] tuples. */
+function lerpColor(
+  a: [number, number, number],
+  b: [number, number, number],
+  t: number,
+): [number, number, number] {
+  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 }
 
-/** Map pressureLevel (0-100) to a green->yellow->red color. */
-function pressureToColor(pressure: number): Color3 {
-	const green = new Color3(0.2, 0.7, 0.15);
-	const yellow = new Color3(0.85, 0.75, 0.1);
-	const red = new Color3(0.9, 0.1, 0.05);
+/** Map pressureLevel (0-100) to a green->yellow->red color as [r,g,b]. */
+export function pressureToColor(pressure: number): [number, number, number] {
+  const green: [number, number, number] = [0.2, 0.7, 0.15];
+  const yellow: [number, number, number] = [0.85, 0.75, 0.1];
+  const red: [number, number, number] = [0.9, 0.1, 0.05];
 
-	if (pressure <= 50) {
-		return lerpColor(green, yellow, pressure / 50);
-	}
-	return lerpColor(yellow, red, (pressure - 50) / 50);
+  if (pressure <= 50) {
+    return lerpColor(green, yellow, pressure / 50);
+  }
+  return lerpColor(yellow, red, (pressure - 50) / 50);
 }
 
 export const StufferStation = ({
-	fillLevel,
-	pressureLevel,
-	isPressing,
-	hasBurst,
+  fillLevel,
+  pressureLevel,
+  isPressing,
+  hasBurst,
 }: StufferStationProps) => {
-	const scene = useScene();
-	const timeRef = useRef(0);
-	const fillRef = useRef(fillLevel);
-	const pressureRef = useRef(pressureLevel);
-	const isPressingRef = useRef(isPressing);
-	const hasBurstRef = useRef(hasBurst);
+  const timeRef = useRef(0);
 
-	// Keep refs in sync so the render loop reads current values
-	fillRef.current = fillLevel;
-	pressureRef.current = pressureLevel;
-	isPressingRef.current = isPressing;
-	hasBurstRef.current = hasBurst;
+  // Refs for animated meshes
+  const bodyRef = useRef<THREE.Mesh>(null);
+  const plungerRef = useRef<THREE.Mesh>(null);
+  const handleRef = useRef<THREE.Mesh>(null);
+  const handleKnobRef = useRef<THREE.Mesh>(null);
+  const meatFillRef = useRef<THREE.Mesh>(null);
+  const casingRef = useRef<THREE.Mesh>(null);
+  const casingMatRef = useRef<THREE.MeshBasicMaterial>(null);
+  const casingEndRef = useRef<THREE.Mesh>(null);
+  const casingEndMatRef = useRef<THREE.MeshBasicMaterial>(null);
 
-	useEffect(() => {
-		if (!scene) return;
+  // Burst animation state
+  const burstStateRef = useRef({
+    active: false,
+    time: 0,
+    velocities: Array.from(
+      {length: BURST_PARTICLE_COUNT},
+      () => [0, 0, 0] as [number, number, number],
+    ),
+    positions: Array.from(
+      {length: BURST_PARTICLE_COUNT},
+      () => [0, 0, 0] as [number, number, number],
+    ),
+  });
+  const prevBurstRef = useRef(false);
 
-		const allMeshes: AbstractMesh[] = [];
-		const allMaterials: StandardMaterial[] = [];
-		let observer: Observer<BabylonScene> | null = null;
+  // Refs for burst particle meshes
+  const burstRefs = useRef<(THREE.Mesh | null)[]>(
+    Array.from({length: BURST_PARTICLE_COUNT}, () => null),
+  );
 
-		const sx = STUFFER_POS[0];
-		const sz = STUFFER_POS[2];
+  // Derived values for casing inflation
+  const inflationFactor = 1 + (fillLevel / 100) * 2.5; // Up to 3.5x diameter
 
-		// --- Counter / Work Surface ---
+  // Meat fill scale
+  const meatScale = Math.max(0.05, 1.0 - fillLevel / 100);
+  const meatVisible = meatScale > 0.06;
 
-		const counter = MeshBuilder.CreateBox(
-			'stufferCounter',
-			{ width: 2.5, height: COUNTER_HEIGHT, depth: 1.4 },
-			scene,
-		);
-		const counterMat = new StandardMaterial('stufferCounterMat', scene);
-		counterMat.disableLighting = true;
-		counterMat.emissiveColor = new Color3(0.22, 0.16, 0.1);
-		counter.material = counterMat;
-		counter.position = new Vector3(sx, COUNTER_HEIGHT / 2, sz);
-		allMeshes.push(counter);
-		allMaterials.push(counterMat);
+  useFrame((_, delta) => {
+    timeRef.current += delta;
 
-		// --- Stuffer Body (vertical cylinder - the main tube) ---
+    // --- Plunger movement: moves down as fill increases ---
+    const plungerTravel = BODY_HEIGHT * 0.8;
+    const plungerTopY = STUFFER_BASE_Y + BODY_HEIGHT - PLUNGER_HEIGHT / 2;
+    const plungerTargetY = plungerTopY - (fillLevel / 100) * plungerTravel;
 
-		const bodyHeight = 1.0;
-		const bodyDiameter = 0.5;
-		const body = MeshBuilder.CreateCylinder(
-			'stufferBody',
-			{ height: bodyHeight, diameter: bodyDiameter, tessellation: 16 },
-			scene,
-		);
-		const bodyMat = new StandardMaterial('stufferBodyMat', scene);
-		bodyMat.disableLighting = true;
-		bodyMat.emissiveColor = new Color3(0.5, 0.5, 0.55);
-		body.material = bodyMat;
-		body.position = new Vector3(sx, STUFFER_BASE_Y + bodyHeight / 2, sz);
-		allMeshes.push(body);
-		allMaterials.push(bodyMat);
+    if (plungerRef.current) {
+      plungerRef.current.position.y = plungerTargetY;
+    }
+    if (handleRef.current) {
+      handleRef.current.position.y = plungerTargetY + PLUNGER_HEIGHT / 2 + HANDLE_HEIGHT / 2;
+    }
+    if (handleKnobRef.current) {
+      handleKnobRef.current.position.y = plungerTargetY + PLUNGER_HEIGHT / 2 + HANDLE_HEIGHT;
+    }
 
-		// --- Plunger (cylinder that moves down as fillLevel increases) ---
+    // Plunger jiggle when pressing
+    if (isPressing) {
+      const jiggle = Math.sin(timeRef.current * 30) * 0.008;
+      if (plungerRef.current) plungerRef.current.position.x = jiggle;
+      if (handleRef.current) handleRef.current.position.x = jiggle;
+      if (handleKnobRef.current) handleKnobRef.current.position.x = jiggle;
+    } else {
+      if (plungerRef.current) plungerRef.current.position.x = 0;
+      if (handleRef.current) handleRef.current.position.x = 0;
+      if (handleKnobRef.current) handleKnobRef.current.position.x = 0;
+    }
 
-		const plungerHeight = 0.15;
-		const plunger = MeshBuilder.CreateCylinder(
-			'stufferPlunger',
-			{ height: plungerHeight, diameter: bodyDiameter * 0.9, tessellation: 16 },
-			scene,
-		);
-		const plungerMat = new StandardMaterial('stufferPlungerMat', scene);
-		plungerMat.disableLighting = true;
-		plungerMat.emissiveColor = new Color3(0.6, 0.6, 0.65);
-		plunger.material = plungerMat;
-		// Starts at the top of the body, moves down with fill
-		plunger.position = new Vector3(
-			sx,
-			STUFFER_BASE_Y + bodyHeight - plungerHeight / 2,
-			sz,
-		);
-		allMeshes.push(plunger);
-		allMaterials.push(plungerMat);
+    // --- Meat fill decreases as fill goes up ---
+    if (meatFillRef.current) {
+      meatFillRef.current.scale.y = meatScale;
+      meatFillRef.current.position.y = STUFFER_BASE_Y + BODY_HEIGHT * 0.45 * meatScale;
+      meatFillRef.current.visible = meatVisible;
+    }
 
-		// --- Plunger Handle (thin cylinder on top of plunger) ---
+    // --- Casing inflation and pressure color ---
+    const casingColor = pressureToColor(pressureLevel);
+    const threeColor = new THREE.Color(casingColor[0], casingColor[1], casingColor[2]);
 
-		const handleHeight = 0.5;
-		const handle = MeshBuilder.CreateCylinder(
-			'stufferHandle',
-			{ height: handleHeight, diameter: 0.06, tessellation: 8 },
-			scene,
-		);
-		const handleMat = new StandardMaterial('stufferHandleMat', scene);
-		handleMat.disableLighting = true;
-		handleMat.emissiveColor = new Color3(0.55, 0.55, 0.6);
-		handle.material = handleMat;
-		handle.position = new Vector3(
-			sx,
-			STUFFER_BASE_Y + bodyHeight + handleHeight / 2,
-			sz,
-		);
-		allMeshes.push(handle);
-		allMaterials.push(handleMat);
+    let currentInflation = inflationFactor;
 
-		// --- Handle Knob (sphere at top of handle) ---
+    // Casing pulsing when pressure is high
+    if (pressureLevel > 70) {
+      const pulseIntensity = ((pressureLevel - 70) / 30) * 0.08;
+      const pulse = 1 + Math.sin(timeRef.current * 15) * pulseIntensity;
+      currentInflation = inflationFactor * pulse;
+    }
 
-		const handleKnob = MeshBuilder.CreateSphere(
-			'stufferHandleKnob',
-			{ diameter: 0.14, segments: 8 },
-			scene,
-		);
-		const handleKnobMat = new StandardMaterial('stufferHandleKnobMat', scene);
-		handleKnobMat.disableLighting = true;
-		handleKnobMat.emissiveColor = new Color3(0.7, 0.2, 0.2);
-		handleKnob.material = handleKnobMat;
-		handleKnob.position = new Vector3(
-			sx,
-			STUFFER_BASE_Y + bodyHeight + handleHeight,
-			sz,
-		);
-		allMeshes.push(handleKnob);
-		allMaterials.push(handleKnobMat);
+    if (casingRef.current) {
+      casingRef.current.scale.x = currentInflation;
+      casingRef.current.scale.z = currentInflation;
+      casingRef.current.scale.y = 1; // Length stays constant (horizontal)
+    }
+    if (casingMatRef.current) {
+      casingMatRef.current.color.copy(threeColor);
+    }
+    if (casingEndRef.current) {
+      casingEndRef.current.scale.set(currentInflation, currentInflation, currentInflation);
+    }
+    if (casingEndMatRef.current) {
+      casingEndMatRef.current.color.copy(threeColor);
+    }
 
-		// --- Spout (small horizontal cylinder connecting body to casing) ---
+    // --- Burst animation ---
+    const bs = burstStateRef.current;
 
-		const spout = MeshBuilder.CreateCylinder(
-			'stufferSpout',
-			{ height: 0.3, diameter: 0.12, tessellation: 8 },
-			scene,
-		);
-		const spoutMat = new StandardMaterial('stufferSpoutMat', scene);
-		spoutMat.disableLighting = true;
-		spoutMat.emissiveColor = new Color3(0.45, 0.45, 0.5);
-		spout.material = spoutMat;
-		spout.rotation.z = Math.PI / 2; // Lay horizontal
-		spout.position = new Vector3(
-			sx + bodyDiameter / 2 + 0.15,
-			STUFFER_BASE_Y + bodyHeight * 0.25,
-			sz,
-		);
-		allMeshes.push(spout);
-		allMaterials.push(spoutMat);
+    // Detect rising edge of hasBurst
+    if (hasBurst && !prevBurstRef.current) {
+      bs.active = true;
+      bs.time = 0;
 
-		// --- Casing (horizontal cylinder emerging from spout, inflates with fill) ---
+      // Hide casing temporarily during burst
+      if (casingRef.current) {
+        casingRef.current.scale.x = 0.01;
+        casingRef.current.scale.z = 0.01;
+      }
+      if (casingEndRef.current) {
+        casingEndRef.current.visible = false;
+      }
 
-		const casingBaseLength = 1.2;
-		const casingBaseDiameter = 0.15;
-		const casing = MeshBuilder.CreateCylinder(
-			'stufferCasing',
-			{
-				height: casingBaseLength,
-				diameter: casingBaseDiameter,
-				tessellation: 16,
-			},
-			scene,
-		);
-		const casingMat = new StandardMaterial('stufferCasingMat', scene);
-		casingMat.disableLighting = true;
-		casingMat.emissiveColor = pressureToColor(0);
-		casingMat.alpha = 0.85;
-		casing.material = casingMat;
-		casing.rotation.z = Math.PI / 2; // Lay horizontal
-		casing.position = new Vector3(
-			sx + bodyDiameter / 2 + 0.3 + casingBaseLength / 2,
-			STUFFER_BASE_Y + bodyHeight * 0.25,
-			sz,
-		);
-		allMeshes.push(casing);
-		allMaterials.push(casingMat);
+      // Launch particles from casing position
+      const burstOriginX = BODY_DIAMETER / 2 + 0.3 + CASING_BASE_LENGTH / 2;
+      const burstOriginY = STUFFER_BASE_Y + BODY_HEIGHT * 0.25;
+      for (let i = 0; i < BURST_PARTICLE_COUNT; i++) {
+        bs.positions[i] = [
+          burstOriginX + Math.sin(i * 1.7) * 0.15,
+          burstOriginY + Math.cos(i * 2.3) * 0.1,
+          Math.sin(i * 1.3) * 0.15,
+        ];
+        bs.velocities[i] = [
+          (Math.sin(i * 1.7) - 0.5) * 6,
+          Math.abs(Math.cos(i * 2.3)) * 4 + 1,
+          (Math.cos(i * 1.3) - 0.5) * 6,
+        ];
+      }
+    }
+    prevBurstRef.current = hasBurst;
 
-		// --- Casing End Cap (sphere at end of casing) ---
+    if (bs.active) {
+      bs.time += delta;
+      const fadeScale = Math.max(0, 1.0 - bs.time / 1.0);
 
-		const casingEnd = MeshBuilder.CreateSphere(
-			'stufferCasingEnd',
-			{ diameter: casingBaseDiameter, segments: 8 },
-			scene,
-		);
-		const casingEndMat = new StandardMaterial('stufferCasingEndMat', scene);
-		casingEndMat.disableLighting = true;
-		casingEndMat.emissiveColor = pressureToColor(0);
-		casingEndMat.alpha = 0.85;
-		casingEnd.material = casingEndMat;
-		casingEnd.position = new Vector3(
-			sx + bodyDiameter / 2 + 0.3 + casingBaseLength,
-			STUFFER_BASE_Y + bodyHeight * 0.25,
-			sz,
-		);
-		allMeshes.push(casingEnd);
-		allMaterials.push(casingEndMat);
+      for (let i = 0; i < BURST_PARTICLE_COUNT; i++) {
+        const mesh = burstRefs.current[i];
+        if (!mesh) continue;
 
-		// --- Meat Fill Inside Body (shows how much meat is left in the tube) ---
+        // Update positions
+        bs.positions[i][0] += bs.velocities[i][0] * delta;
+        bs.positions[i][1] += bs.velocities[i][1] * delta;
+        bs.positions[i][2] += bs.velocities[i][2] * delta;
 
-		const meatFill = MeshBuilder.CreateCylinder(
-			'stufferMeatFill',
-			{ height: bodyHeight * 0.9, diameter: bodyDiameter * 0.85, tessellation: 16 },
-			scene,
-		);
-		const meatFillMat = new StandardMaterial('stufferMeatFillMat', scene);
-		meatFillMat.disableLighting = true;
-		meatFillMat.emissiveColor = new Color3(0.55, 0.12, 0.08);
-		meatFill.material = meatFillMat;
-		meatFill.position = new Vector3(sx, STUFFER_BASE_Y + bodyHeight * 0.45, sz);
-		allMeshes.push(meatFill);
-		allMaterials.push(meatFillMat);
+        // Apply gravity
+        bs.velocities[i][1] -= 9.8 * delta;
 
-		// --- Burst Particles ---
+        mesh.position.set(bs.positions[i][0], bs.positions[i][1], bs.positions[i][2]);
+        mesh.scale.setScalar(fadeScale);
+        mesh.visible = true;
+      }
 
-		const burstParticles: AbstractMesh[] = [];
-		const burstMat = new StandardMaterial('burstParticleMat', scene);
-		burstMat.disableLighting = true;
-		burstMat.emissiveColor = new Color3(0.8, 0.08, 0.03);
-		allMaterials.push(burstMat);
+      if (bs.time > 1.0) {
+        bs.active = false;
+        for (let i = 0; i < BURST_PARTICLE_COUNT; i++) {
+          const mesh = burstRefs.current[i];
+          if (mesh) mesh.visible = false;
+        }
+        // Restore casing visibility
+        if (casingEndRef.current) {
+          casingEndRef.current.visible = true;
+        }
+      }
+    } else {
+      // Ensure particles are hidden when not bursting
+      for (let i = 0; i < BURST_PARTICLE_COUNT; i++) {
+        const mesh = burstRefs.current[i];
+        if (mesh) mesh.visible = false;
+      }
+    }
 
-		for (let i = 0; i < BURST_PARTICLE_COUNT; i++) {
-			const particle = MeshBuilder.CreateSphere(
-				`burstParticle_${i}`,
-				{ diameter: 0.06 + Math.random() * 0.08, segments: 4 },
-				scene,
-			);
-			particle.material = burstMat;
-			particle.isVisible = false;
-			particle.position = new Vector3(
-				sx + bodyDiameter / 2 + 0.3 + casingBaseLength / 2,
-				STUFFER_BASE_Y + bodyHeight * 0.25,
-				sz,
-			);
-			burstParticles.push(particle);
-			allMeshes.push(particle);
-		}
+    // --- Subtle body vibration when pressing ---
+    if (bodyRef.current) {
+      if (isPressing && fillLevel > 0 && fillLevel < 100) {
+        const vibration = Math.sin(timeRef.current * 35) * 0.004;
+        bodyRef.current.position.x = vibration;
+      } else {
+        bodyRef.current.position.x = 0;
+      }
+    }
+  });
 
-		// Burst animation state
-		let burstActive = false;
-		let burstTime = 0;
-		const burstVelocities: Vector3[] = burstParticles.map(() => {
-			return new Vector3(
-				(Math.random() - 0.5) * 5,
-				Math.random() * 3 + 1.5,
-				(Math.random() - 0.5) * 5,
-			);
-		});
+  return (
+    <group position={STUFFER_POS}>
+      {/* --- Counter / Work Surface --- */}
+      <mesh position={[0, COUNTER_HEIGHT / 2, 0]}>
+        <boxGeometry args={[2.5, COUNTER_HEIGHT, 1.4]} />
+        <meshBasicMaterial color={[0.22, 0.16, 0.1]} />
+      </mesh>
 
-		// --- Render Loop ---
+      {/* --- Stuffer Body (vertical cylinder - main tube) --- */}
+      <mesh ref={bodyRef} position={[0, STUFFER_BASE_Y + BODY_HEIGHT / 2, 0]}>
+        <cylinderGeometry args={[BODY_DIAMETER / 2, BODY_DIAMETER / 2, BODY_HEIGHT, 16]} />
+        <meshBasicMaterial color={[0.5, 0.5, 0.55]} />
+      </mesh>
 
-		observer = scene.onBeforeRenderObservable.add(() => {
-			const dt = scene.getEngine().getDeltaTime() / 1000;
-			timeRef.current += dt;
-			const fill = fillRef.current;
-			const pressure = pressureRef.current;
-			const pressing = isPressingRef.current;
-			const burst = hasBurstRef.current;
+      {/* --- Plunger (moves down with fill, animated in useFrame) --- */}
+      <mesh ref={plungerRef} position={[0, STUFFER_BASE_Y + BODY_HEIGHT - PLUNGER_HEIGHT / 2, 0]}>
+        <cylinderGeometry args={[BODY_DIAMETER * 0.45, BODY_DIAMETER * 0.45, PLUNGER_HEIGHT, 16]} />
+        <meshBasicMaterial color={[0.6, 0.6, 0.65]} />
+      </mesh>
 
-			// --- Plunger movement: moves down as fill increases ---
-			const plungerTravel = bodyHeight * 0.8;
-			const plungerTopY = STUFFER_BASE_Y + bodyHeight - plungerHeight / 2;
-			const plungerTargetY = plungerTopY - (fill / 100) * plungerTravel;
-			plunger.position.y = plungerTargetY;
-			handle.position.y = plungerTargetY + plungerHeight / 2 + handleHeight / 2;
-			handleKnob.position.y = plungerTargetY + plungerHeight / 2 + handleHeight;
+      {/* --- Plunger Handle (thin cylinder on top of plunger) --- */}
+      <mesh ref={handleRef} position={[0, STUFFER_BASE_Y + BODY_HEIGHT + HANDLE_HEIGHT / 2, 0]}>
+        <cylinderGeometry args={[0.03, 0.03, HANDLE_HEIGHT, 8]} />
+        <meshBasicMaterial color={[0.55, 0.55, 0.6]} />
+      </mesh>
 
-			// Plunger jiggle when pressing
-			if (pressing) {
-				const jiggle = Math.sin(timeRef.current * 30) * 0.008;
-				plunger.position.x = sx + jiggle;
-				handle.position.x = sx + jiggle;
-				handleKnob.position.x = sx + jiggle;
-			} else {
-				plunger.position.x = sx;
-				handle.position.x = sx;
-				handleKnob.position.x = sx;
-			}
+      {/* --- Handle Knob (sphere at top of handle) --- */}
+      <mesh ref={handleKnobRef} position={[0, STUFFER_BASE_Y + BODY_HEIGHT + HANDLE_HEIGHT, 0]}>
+        <sphereGeometry args={[0.07, 8, 8]} />
+        <meshBasicMaterial color={[0.7, 0.2, 0.2]} />
+      </mesh>
 
-			// --- Meat fill decreases as fill goes up (meat leaves the tube) ---
-			const meatScale = Math.max(0.05, 1.0 - fill / 100);
-			meatFill.scaling.y = meatScale;
-			meatFill.position.y = STUFFER_BASE_Y + (bodyHeight * 0.45) * meatScale;
-			meatFill.isVisible = meatScale > 0.06;
+      {/* --- Spout (horizontal cylinder connecting body to casing) --- */}
+      <mesh
+        position={[BODY_DIAMETER / 2 + 0.15, STUFFER_BASE_Y + BODY_HEIGHT * 0.25, 0]}
+        rotation={[0, 0, Math.PI / 2]}
+      >
+        <cylinderGeometry args={[0.06, 0.06, 0.3, 8]} />
+        <meshBasicMaterial color={[0.45, 0.45, 0.5]} />
+      </mesh>
 
-			// --- Casing inflation based on fill level ---
-			const inflationFactor = 1 + (fill / 100) * 2.5; // Up to 3.5x diameter
-			casing.scaling.y = 1; // Length stays constant (horizontal)
-			casing.scaling.x = inflationFactor;
-			casing.scaling.z = inflationFactor;
+      {/* --- Casing (horizontal cylinder, inflates with fill, color from pressure) --- */}
+      <mesh
+        ref={casingRef}
+        position={[
+          BODY_DIAMETER / 2 + 0.3 + CASING_BASE_LENGTH / 2,
+          STUFFER_BASE_Y + BODY_HEIGHT * 0.25,
+          0,
+        ]}
+        rotation={[0, 0, Math.PI / 2]}
+      >
+        <cylinderGeometry
+          args={[CASING_BASE_DIAMETER / 2, CASING_BASE_DIAMETER / 2, CASING_BASE_LENGTH, 16]}
+        />
+        <meshBasicMaterial ref={casingMatRef} color={[0.2, 0.7, 0.15]} transparent opacity={0.85} />
+      </mesh>
 
-			// Casing end cap matches inflation
-			casingEnd.scaling = new Vector3(inflationFactor, inflationFactor, inflationFactor);
+      {/* --- Casing End Cap (sphere at end of casing) --- */}
+      <mesh
+        ref={casingEndRef}
+        position={[
+          BODY_DIAMETER / 2 + 0.3 + CASING_BASE_LENGTH,
+          STUFFER_BASE_Y + BODY_HEIGHT * 0.25,
+          0,
+        ]}
+      >
+        <sphereGeometry args={[CASING_BASE_DIAMETER / 2, 8, 8]} />
+        <meshBasicMaterial
+          ref={casingEndMatRef}
+          color={[0.2, 0.7, 0.15]}
+          transparent
+          opacity={0.85}
+        />
+      </mesh>
 
-			// --- Casing color based on pressure level ---
-			const casingColor = pressureToColor(pressure);
-			casingMat.emissiveColor = casingColor;
-			casingEndMat.emissiveColor = casingColor;
+      {/* --- Meat Fill Inside Body --- */}
+      <mesh ref={meatFillRef} position={[0, STUFFER_BASE_Y + BODY_HEIGHT * 0.45, 0]}>
+        <cylinderGeometry
+          args={[BODY_DIAMETER * 0.425, BODY_DIAMETER * 0.425, BODY_HEIGHT * 0.9, 16]}
+        />
+        <meshBasicMaterial color={[0.55, 0.12, 0.08]} />
+      </mesh>
 
-			// Casing pulsing when pressure is high
-			if (pressure > 70) {
-				const pulseIntensity = ((pressure - 70) / 30) * 0.08;
-				const pulse = 1 + Math.sin(timeRef.current * 15) * pulseIntensity;
-				casing.scaling.x = inflationFactor * pulse;
-				casing.scaling.z = inflationFactor * pulse;
-				casingEnd.scaling = new Vector3(
-					inflationFactor * pulse,
-					inflationFactor * pulse,
-					inflationFactor * pulse,
-				);
-			}
-
-			// --- Burst animation ---
-			if (burst && !burstActive) {
-				burstActive = true;
-				burstTime = 0;
-
-				// Hide the casing temporarily during burst
-				casing.scaling.x = 0.01;
-				casing.scaling.z = 0.01;
-				casingEnd.isVisible = false;
-
-				// Launch particles from casing position
-				const burstOriginX = sx + bodyDiameter / 2 + 0.3 + casingBaseLength / 2;
-				const burstOriginY = STUFFER_BASE_Y + bodyHeight * 0.25;
-				for (let i = 0; i < burstParticles.length; i++) {
-					burstParticles[i].isVisible = true;
-					burstParticles[i].position = new Vector3(
-						burstOriginX + (Math.random() - 0.5) * 0.3,
-						burstOriginY + (Math.random() - 0.5) * 0.2,
-						sz + (Math.random() - 0.5) * 0.3,
-					);
-					burstParticles[i].scaling = new Vector3(1, 1, 1);
-					// Randomize velocities for each burst
-					burstVelocities[i] = new Vector3(
-						(Math.random() - 0.5) * 6,
-						Math.random() * 4 + 1,
-						(Math.random() - 0.5) * 6,
-					);
-				}
-			}
-
-			if (burstActive) {
-				burstTime += dt;
-				for (let i = 0; i < burstParticles.length; i++) {
-					const p = burstParticles[i];
-					const v = burstVelocities[i];
-					p.position.x += v.x * dt;
-					p.position.y += v.y * dt;
-					p.position.z += v.z * dt;
-					// Gravity
-					v.y -= 9.8 * dt;
-					// Fade out via scaling
-					const fadeScale = Math.max(0, 1.0 - burstTime / 1.0);
-					p.scaling = new Vector3(fadeScale, fadeScale, fadeScale);
-				}
-
-				if (burstTime > 1.0) {
-					burstActive = false;
-					for (const p of burstParticles) {
-						p.isVisible = false;
-					}
-					// Restore casing visibility
-					casingEnd.isVisible = true;
-				}
-			} else if (!burst) {
-				// Ensure particles are hidden when not bursting
-				for (const p of burstParticles) {
-					p.isVisible = false;
-				}
-			}
-
-			// --- Subtle body vibration when pressing ---
-			if (pressing && fill > 0 && fill < 100) {
-				const vibration = Math.sin(timeRef.current * 35) * 0.004;
-				body.position.x = sx + vibration;
-			} else {
-				body.position.x = sx;
-			}
-		});
-
-		// --- Cleanup ---
-
-		return () => {
-			if (observer) scene.onBeforeRenderObservable.remove(observer);
-
-			for (const mesh of allMeshes) {
-				mesh.dispose();
-			}
-			for (const mat of allMaterials) {
-				mat.dispose();
-			}
-		};
-	}, [scene]);
-
-	return null;
+      {/* --- Burst Particles (animated in useFrame) --- */}
+      {BURST_PARTICLE_SIZES.map((size, i) => (
+        <mesh
+          key={`burstParticle_${i}`}
+          ref={el => {
+            burstRefs.current[i] = el;
+          }}
+          position={[
+            BODY_DIAMETER / 2 + 0.3 + CASING_BASE_LENGTH / 2,
+            STUFFER_BASE_Y + BODY_HEIGHT * 0.25,
+            0,
+          ]}
+          visible={false}
+          scale={size / 0.03}
+        >
+          <sphereGeometry args={[0.03, 4, 4]} />
+          <meshBasicMaterial color={[0.8, 0.08, 0.03]} />
+        </mesh>
+      ))}
+    </group>
+  );
 };

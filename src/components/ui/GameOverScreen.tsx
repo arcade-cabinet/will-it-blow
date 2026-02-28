@@ -1,18 +1,15 @@
-import React, { useEffect, useRef } from 'react';
-import {
-  Animated,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { useGameStore } from '../../store/gameStore';
-import { calculateFinalVerdict } from '../../engine/ChallengeRegistry';
+import {useEffect, useRef} from 'react';
+import {Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {audioEngine} from '../../engine/AudioEngine';
+import {calculateFinalVerdict} from '../../engine/ChallengeRegistry';
+import {useGameStore} from '../../store/gameStore';
+
+const CHALLENGE_NAMES = ['Ingredients', 'Grinding', 'Stuffing', 'Cooking', 'Tasting'];
 
 export function GameOverScreen() {
-  const { gameStatus, challengeScores, startNewGame, returnToMenu } =
-    useGameStore();
+  const {gameStatus, challengeScores, startNewGame, returnToMenu} = useGameStore();
+  const isVictory = gameStatus === 'victory';
+  const verdict = isVictory ? calculateFinalVerdict(challengeScores) : null;
 
   // Rank scale-in animation
   const rankScale = useRef(new Animated.Value(0.3)).current;
@@ -33,10 +30,16 @@ export function GameOverScreen() {
         delay: 300,
       }),
     ]).start();
-  }, [fadeAnim, rankScale]);
 
-  const isVictory = gameStatus === 'victory';
-  const verdict = isVictory ? calculateFinalVerdict(challengeScores) : null;
+    // Play rating song based on outcome
+    const ratingMap: Record<string, number> = {S: 5, A: 3, B: 2, F: 0};
+    if (isVictory && challengeScores.length > 0) {
+      const v = calculateFinalVerdict(challengeScores);
+      audioEngine.playRatingSong(ratingMap[v.rank] ?? 1);
+    } else {
+      audioEngine.playRatingSong(0);
+    }
+  }, [fadeAnim, rankScale, isVictory, challengeScores]);
 
   const rankColor =
     verdict?.rank === 'S'
@@ -48,11 +51,8 @@ export function GameOverScreen() {
           : '#FF1744';
 
   return (
-    <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        style={styles.scrollView}
-      >
+    <Animated.View style={[styles.overlay, {opacity: fadeAnim}]}>
+      <ScrollView contentContainerStyle={styles.scrollContent} style={styles.scrollView}>
         <View style={styles.content}>
           {isVictory && verdict ? (
             <>
@@ -62,7 +62,7 @@ export function GameOverScreen() {
                   styles.rankLetter,
                   {
                     color: rankColor,
-                    transform: [{ scale: rankScale }],
+                    transform: [{scale: rankScale}],
                     textShadowColor: rankColor,
                   },
                 ]}
@@ -79,7 +79,7 @@ export function GameOverScreen() {
               {/* Average score */}
               <View style={styles.scoreCard}>
                 <Text style={styles.scoreLabel}>AVERAGE SCORE</Text>
-                <Text style={[styles.scoreValue, { color: rankColor }]}>
+                <Text style={[styles.scoreValue, {color: rankColor}]}>
                   {Math.round(verdict.averageScore)}
                 </Text>
               </View>
@@ -89,7 +89,7 @@ export function GameOverScreen() {
                 {challengeScores.map((score, i) => (
                   <View key={i} style={styles.challengeScoreRow}>
                     <Text style={styles.challengeScoreLabel}>
-                      Challenge {i + 1}
+                      {CHALLENGE_NAMES[i] ?? `Challenge ${i + 1}`}
                     </Text>
                     <Text style={styles.challengeScoreValue}>{score}</Text>
                   </View>
@@ -98,11 +98,39 @@ export function GameOverScreen() {
             </>
           ) : (
             <>
-              {/* Defeat */}
+              {/* Defeat — show rank if we have scores (A/B/F) */}
               <Text style={styles.gameOverTitle}>GAME OVER</Text>
-              <Text style={styles.gameOverSubtitle}>
-                You are the sausage now.
-              </Text>
+              {challengeScores.length > 0 &&
+                (() => {
+                  const defeatVerdict = calculateFinalVerdict(challengeScores);
+                  const defeatColor = defeatVerdict.rank === 'A' ? '#FF9800' : '#FF1744';
+                  return (
+                    <>
+                      <Text
+                        style={[
+                          styles.rankLetter,
+                          {color: defeatColor, textShadowColor: defeatColor},
+                        ]}
+                      >
+                        {defeatVerdict.rank}
+                      </Text>
+                      <Text style={styles.gameOverSubtitle}>{defeatVerdict.message}</Text>
+                      <View style={styles.challengeScores}>
+                        {challengeScores.map((score, i) => (
+                          <View key={i} style={styles.challengeScoreRow}>
+                            <Text style={styles.challengeScoreLabel}>
+                              {CHALLENGE_NAMES[i] ?? `Challenge ${i + 1}`}
+                            </Text>
+                            <Text style={styles.challengeScoreValue}>{Math.round(score)}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    </>
+                  );
+                })()}
+              {challengeScores.length === 0 && (
+                <Text style={styles.gameOverSubtitle}>You are the sausage now.</Text>
+              )}
             </>
           )}
 
@@ -116,11 +144,7 @@ export function GameOverScreen() {
               <Text style={styles.buttonText}>NEW GAME</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.menuButton}
-              onPress={returnToMenu}
-              activeOpacity={0.7}
-            >
+            <TouchableOpacity style={styles.menuButton} onPress={returnToMenu} activeOpacity={0.7}>
               <Text style={styles.menuButtonText}>MENU</Text>
             </TouchableOpacity>
           </View>
@@ -157,7 +181,7 @@ const styles = StyleSheet.create({
     fontSize: 72,
     fontWeight: '900',
     fontFamily: 'Bangers',
-    textShadowOffset: { width: 0, height: 0 },
+    textShadowOffset: {width: 0, height: 0},
     textShadowRadius: 30,
     marginBottom: 8,
   },
@@ -236,7 +260,7 @@ const styles = StyleSheet.create({
     letterSpacing: 4,
     textAlign: 'center',
     textShadowColor: 'rgba(255, 23, 68, 0.6)',
-    textShadowOffset: { width: 0, height: 0 },
+    textShadowOffset: {width: 0, height: 0},
     textShadowRadius: 20,
     marginBottom: 16,
   },
@@ -263,7 +287,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 36,
     shadowColor: '#FF1744',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.4,
     shadowRadius: 12,
     elevation: 8,

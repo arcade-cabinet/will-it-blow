@@ -1,5 +1,4 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import {StyleSheet, Text, View} from 'react-native';
 
 interface ProgressGaugeProps {
   value: number; // 0-100
@@ -15,8 +14,7 @@ export function ProgressGauge({
   dangerThreshold,
 }: ProgressGaugeProps) {
   const clampedValue = Math.max(0, Math.min(100, value));
-  const isAboveDanger =
-    dangerThreshold !== undefined && clampedValue > dangerThreshold;
+  const isAboveDanger = dangerThreshold !== undefined && clampedValue > dangerThreshold;
   const fillColor = isAboveDanger ? '#FF1744' : color;
   const percentage = Math.round(clampedValue);
 
@@ -24,9 +22,7 @@ export function ProgressGauge({
     <View style={styles.container}>
       <View style={styles.labelRow}>
         <Text style={styles.label}>{label}</Text>
-        <Text style={[styles.percentage, { color: fillColor }]}>
-          {percentage}%
-        </Text>
+        <Text style={[styles.percentage, {color: fillColor}]}>{percentage}%</Text>
       </View>
       <View style={styles.track}>
         <View
@@ -38,7 +34,7 @@ export function ProgressGauge({
             },
             clampedValue > 5 && {
               shadowColor: fillColor,
-              shadowOffset: { width: 0, height: 0 },
+              shadowOffset: {width: 0, height: 0},
               shadowOpacity: 0.6,
               shadowRadius: 6,
               elevation: 4,
@@ -46,12 +42,7 @@ export function ProgressGauge({
           ]}
         />
         {dangerThreshold !== undefined && (
-          <View
-            style={[
-              styles.thresholdMarker,
-              { left: `${dangerThreshold}%` },
-            ]}
-          />
+          <View style={[styles.thresholdMarker, {left: `${dangerThreshold}%`}]} />
         )}
       </View>
     </View>
