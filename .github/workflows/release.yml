@@ -1,4 +1,4 @@
-name: Release — Deploy Web + Build Android APKs
+name: Release — Build Android APKs
 
 on:
   release:
@@ -6,49 +6,12 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 concurrency:
   group: release
   cancel-in-progress: false
 
 jobs:
-  # ─── GitHub Pages Deployment ───────────────────────────────
-  deploy-web:
-    name: Deploy to GitHub Pages
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: main
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
-
-      - name: Export static web build
-        run: npx expo export --platform web --output-dir dist
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
-
   # ─── Android Debug APK Builds ──────────────────────────────
   build-android:
     name: Build Android Debug APKs
@@ -72,6 +35,9 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+
+      - name: Use hoisted node_modules for Gradle compatibility
+        run: echo "node-linker=hoisted" >> .npmrc
 
       - run: pnpm install --frozen-lockfile
 

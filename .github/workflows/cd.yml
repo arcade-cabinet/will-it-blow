@@ -1,4 +1,4 @@
-name: CD — Release Please
+name: CD — Release Please + Deploy Web
 
 on:
   push:
@@ -7,6 +7,8 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  pages: write
+  id-token: write
 
 jobs:
   release-please:
@@ -22,3 +24,39 @@ jobs:
         with:
           release-type: node
           token: ${{ secrets.CI_GITHUB_TOKEN }}
+
+  # ─── GitHub Pages Deployment ───────────────────────────────
+  deploy-web:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-web
+      cancel-in-progress: true
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Export static web build
+        run: npx expo export --platform web --output-dir dist
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
