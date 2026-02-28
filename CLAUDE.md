@@ -52,6 +52,7 @@ menu → loading → ingredients → grinding → stuffing → cooking → tasti
 Managed by `appPhase` (menu/loading/playing) and `currentChallenge` (0–4) in the store.
 
 ### Platform Splitting (Metro file extensions)
+
 - `GameWorld.web.tsx` / `GameWorld.native.tsx` — Engine wrapper
 - `AudioEngine.web.ts` (Tone.js) / `AudioEngine.ts` (native no-op stub)
 

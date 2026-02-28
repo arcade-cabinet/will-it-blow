@@ -108,7 +108,7 @@ export function TitleScreen() {
               key={item}
               style={styles.menuItem}
               onPress={() => handleMenuPress(index)}
-              onPressIn={() => setSelectedIndex(index)}
+              onPressIn={() => { if (!isDisabled) setSelectedIndex(index); }}
               disabled={isDisabled}
               activeOpacity={0.7}
             >

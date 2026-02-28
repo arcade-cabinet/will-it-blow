@@ -620,6 +620,10 @@ export const MrSausage3D = ({
       lipMat.dispose();
       cheekMat.dispose();
     };
+  // Intentionally depends on [scene] only. rotationY and trackCamera are read
+  // inside the onBeforeRender loop via closure/ref — they don't need to trigger
+  // a full mesh rebuild. Position/scale changes also use the initial value.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scene]);
 
   return null;

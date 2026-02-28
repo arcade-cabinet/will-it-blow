@@ -86,3 +86,10 @@ test-results/
 
 # Worktrees
 .worktrees/
+
+# Loose asset packs (large, not needed in repo)
+Kitchen Sound Effects.zip
+KitchenTools.zip
+cocina.glb
+fbxfileskitchenbystyloo.zip
+funny sausag.obj

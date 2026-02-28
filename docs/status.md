@@ -35,27 +35,9 @@
 - 172 passing tests
 - GitHub Pages deployment
 
-## Uncommitted Work
+## Untracked Assets (not in git)
 
-**Branch `feat/fix-visibility-and-lighting`** has ~806 insertions across 10 files:
-
-| File | What Changed |
-|------|-------------|
-| `App.tsx` | Phase-based rendering (menu/loading/playing) |
-| `gameStore.ts` | Added `appPhase`, `setAppPhase`, `returnToMenu` |
-| `gameStore.test.ts` | Tests for new store actions |
-| `GameWorld.web.tsx` | Station cameras, camera walk animation, canvas sizing |
-| `GameWorld.native.tsx` | Parallel native changes |
-| `CrtShader.ts` | GLSL chromatic aberration post-process |
-| `CrtTelevision.tsx` | CRT TV mesh + shader integration |
-| `KitchenEnvironment.tsx` | Full room enclosure, GLB loading, PBR materials, grime decals, lighting, flicker |
-| `FridgeStation.tsx` | Darkened procedural fridge materials for horror aesthetic |
-| `TitleScreen.tsx` | Butcher shop sign restyle |
-
-**New file:** `LoadingScreen.tsx` — Asset preload with sausage progress bar
-
-**Untracked assets (not in git):**
-- `public/models/kitchen.glb` (15.5 MB) — **Required for game to render**
+- `public/models/kitchen.glb` (15.5 MB) — **Required for game to render**. Consider Git LFS.
 - `public/models/kitchen-original.glb` (970 KB)
 - `public/models/sausage.glb` (1 MB)
 - `public/textures/` (19 texture files, ~10 MB total)
@@ -83,46 +65,42 @@ This work is NOT merged and may conflict with the main branch's FridgeStation ch
 ### Priority 1: Ship What Exists
 
 1. **Commit `public/` assets** — The game literally doesn't render without these. Consider Git LFS for kitchen.glb (15.5 MB).
-2. **Commit the feature branch** — 806 lines of uncommitted lighting/material/menu work.
-3. **Push and create PR** for `feat/fix-visibility-and-lighting`.
-4. **Add `.gitignore` entries** for loose zip files and asset packs.
-5. **Fix CI** — Add `npx tsc --noEmit` and lint steps to ci.yml.
+2. **Add `.gitignore` entries** for loose zip files and asset packs.
+3. **Fix CI** — Add `npx tsc --noEmit` and lint steps to ci.yml.
 
 ### Priority 2: Complete Core Features
 
-6. **Hint system** — Wire HintButton to trigger ingredient glow in FridgeStation. The `hintActive` prop exists but the button is only shown when NO challenge is active (bug in App.tsx line 43-48).
-7. **Ingredient challenge audio** — No sound on correct/wrong pick. Add `playCountdownBeep()` on correct, a short low tone on wrong.
-8. **Reconcile 3d-fridge worktree** — Decide whether to merge the Kenney food model 3D selection or keep the current procedural approach.
+4. **Hint system** — Wire HintButton to trigger ingredient glow in FridgeStation. The `hintActive` prop exists but the button is only shown when NO challenge is active (bug in App.tsx line 43-48).
+5. **Ingredient challenge audio** — No sound on correct/wrong pick. Add `playCountdownBeep()` on correct, a short low tone on wrong.
+6. **Reconcile 3d-fridge worktree** — Decide whether to merge the Kenney food model 3D selection or keep the current procedural approach.
 
 ### Priority 3: Polish & Production
 
-9. **BUT FIRST events** — Design referenced in docs, scoring formula accounts for bonus points. Need to implement mid-challenge interruption mechanic.
-10. **Settings menu** — Volume control, mute toggle, maybe difficulty selection.
-11. **Save/load** — Persist `totalGamesPlayed` and high scores to AsyncStorage/localStorage.
-12. **Background music** — Ambient horror drone or dark synth loop.
-13. **Ambient SFX** — Fridge hum, dripping water, distant clanking, flickering light buzz.
-14. **Integrate Kitchen Sound Effects.zip** — Replace or supplement synth SFX with recorded samples.
+7. **BUT FIRST events** — Design referenced in docs, scoring formula accounts for bonus points. Need to implement mid-challenge interruption mechanic.
+8. **Settings menu** — Volume control, mute toggle, maybe difficulty selection.
+9. **Save/load** — Persist `totalGamesPlayed` and high scores to AsyncStorage/localStorage.
+10. **Background music** — Ambient horror drone or dark synth loop.
+11. **Ambient SFX** — Fridge hum, dripping water, distant clanking, flickering light buzz.
+12. **Integrate Kitchen Sound Effects.zip** — Replace or supplement synth SFX with recorded samples.
 
 ### Priority 4: Cross-Platform
 
-15. **Native audio engine** — Implement `AudioEngine.ts` using `expo-av` or `react-native-audio-api`.
-16. **Mobile testing** — Verify touch interactions, layout scaling, performance on actual devices.
-17. **Android APK build** — Set up in CI (currently documented but not implemented).
+13. **Native audio engine** — Implement `AudioEngine.ts` using `expo-av` or `react-native-audio-api`.
+14. **Mobile testing** — Verify touch interactions, layout scaling, performance on actual devices.
+15. **Android APK build** — Set up in CI (currently documented but not implemented).
 
 ### Priority 5: Visual Polish
 
-18. **Remove duplicate fridge geometry** — Either remove FridgeStation's procedural box and use the GLB fridge directly, or remove the GLB fridge mesh. Currently both render (procedural occludes GLB).
-19. **Other station polish** — Grinder, stuffer, stove stations may have similar procedural-vs-GLB issues.
-20. **MrSausage3D on CRT** — Verify character renders correctly on the CRT TV plane with shader.
-21. **Mobile viewport scaling** — Verify 375×667 (iPhone SE) and tablet layouts work.
+16. **Remove duplicate fridge geometry** — Either remove FridgeStation's procedural box and use the GLB fridge directly, or remove the GLB fridge mesh. Currently both render (procedural occludes GLB).
+17. **Other station polish** — Grinder, stuffer, stove stations may have similar procedural-vs-GLB issues.
+18. **Mobile viewport scaling** — Verify 375×667 (iPhone SE) and tablet layouts work.
 
 ### Priority 6: Nice-to-Have
 
-22. **Leaderboard** — Local or cloud-based high score tracking.
-23. **More ingredients** — Expand from 25 to 50+ for variety.
-24. **More variants** — Additional challenge difficulty configs.
-25. **Achievements** — "First S Rank", "Complete without hints", etc.
-26. **Update CLAUDE.md** — Fix inaccuracies (claimed Android CI build, test count, etc.).
+19. **Leaderboard** — Local or cloud-based high score tracking.
+20. **More ingredients** — Expand from 25 to 50+ for variety.
+21. **More variants** — Additional challenge difficulty configs.
+22. **Achievements** — "First S Rank", "Complete without hints", etc.
 
 ## Architecture Decisions Still Open
 
