@@ -1,6 +1,7 @@
 import {Canvas, useFrame, useThree} from '@react-three/fiber';
 import {useEffect, useRef, useState} from 'react';
-import * as THREE from 'three';
+import * as THREE from 'three/webgpu';
+import {WebGPURenderer} from 'three/webgpu';
 import {useGameStore} from '../store/gameStore';
 import {CrtTelevision} from './kitchen/CrtTelevision';
 import {FridgeStation} from './kitchen/FridgeStation';
@@ -310,7 +311,14 @@ export const GameWorld = () => {
     <Canvas
       camera={{fov: 70, near: 0.1, far: 100, position: [0, 1.6, 2]}}
       style={{width: '100%', height: '100%'}}
-      gl={{preserveDrawingBuffer: true, antialias: true}}
+      gl={async (props) => {
+        const renderer = new WebGPURenderer({
+          canvas: props.canvas as HTMLCanvasElement,
+          antialias: true,
+        });
+        await renderer.init();
+        return renderer;
+      }}
     >
       <SceneContent />
     </Canvas>
