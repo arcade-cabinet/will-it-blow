@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.2.0](https://github.com/arcade-cabinet/will-it-blow/compare/v1.1.4...v1.2.0) (2026-02-28)
+
+
+### Features
+
+* WebGPU + React Three Fiber migration ([09ad9bd](https://github.com/arcade-cabinet/will-it-blow/commit/09ad9bda09fde5de853e8f5f977185cea94697a3))
+
+
+### Bug Fixes
+
+* derive Expo baseUrl from script tags for asset loading ([#18](https://github.com/arcade-cabinet/will-it-blow/issues/18)) ([1f4ad10](https://github.com/arcade-cabinet/will-it-blow/commit/1f4ad10dd4e16c9ddb6ded2e8b7e7667b17a804a))
+
 ## [1.1.4](https://github.com/arcade-cabinet/will-it-blow/compare/v1.1.3...v1.1.4) (2026-02-28)
 
 
