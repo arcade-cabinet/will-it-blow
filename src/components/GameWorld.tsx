@@ -1,5 +1,7 @@
 import {Canvas, useFrame, useThree} from '@react-three/fiber';
+import {createXRStore, XR} from '@react-three/xr';
 import {useEffect, useRef, useState} from 'react';
+import {Platform, Pressable, Text, View} from 'react-native';
 import * as THREE from 'three/webgpu';
 import {WebGPURenderer} from 'three/webgpu';
 import {useGameStore} from '../store/gameStore';
@@ -306,21 +308,43 @@ const SceneContent = () => {
 // GameWorld — top-level 3D scene container
 // -----------------------------------------------------------------
 
+const xrStore = createXRStore();
+
 export const GameWorld = () => {
   return (
-    <Canvas
-      camera={{fov: 70, near: 0.1, far: 100, position: [0, 1.6, 2]}}
-      style={{width: '100%', height: '100%'}}
-      gl={async (props) => {
-        const renderer = new WebGPURenderer({
-          canvas: props.canvas as HTMLCanvasElement,
-          antialias: true,
-        });
-        await renderer.init();
-        return renderer;
-      }}
-    >
-      <SceneContent />
-    </Canvas>
+    <View style={{flex: 1}}>
+      <Canvas
+        camera={{fov: 70, near: 0.1, far: 100, position: [0, 1.6, 2]}}
+        style={{width: '100%', height: '100%'}}
+        gl={async (props) => {
+          const renderer = new WebGPURenderer({
+            canvas: props.canvas as HTMLCanvasElement,
+            antialias: true,
+          });
+          await renderer.init();
+          return renderer;
+        }}
+      >
+        <XR store={xrStore}>
+          <SceneContent />
+        </XR>
+      </Canvas>
+      {Platform.OS === 'web' && (
+        <Pressable
+          onPress={() => xrStore.enterVR()}
+          style={{
+            position: 'absolute',
+            zIndex: 20,
+            bottom: 20,
+            right: 20,
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            padding: 12,
+            borderRadius: 8,
+          }}
+        >
+          <Text style={{color: '#fff', fontWeight: 'bold'}}>Enter VR</Text>
+        </Pressable>
+      )}
+    </View>
   );
 };
