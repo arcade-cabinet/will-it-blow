@@ -1,13 +1,9 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { useGameStore } from '../../store/gameStore';
-import {
-  getChallengeConfig,
-  CHALLENGE_ORDER,
-} from '../../engine/ChallengeRegistry';
+import {StyleSheet, Text, View} from 'react-native';
+import {CHALLENGE_ORDER, getChallengeConfig} from '../../engine/ChallengeRegistry';
+import {useGameStore} from '../../store/gameStore';
 
 export function ChallengeHeader() {
-  const { currentChallenge } = useGameStore();
+  const {currentChallenge} = useGameStore();
 
   const challengeId = CHALLENGE_ORDER[currentChallenge];
   if (!challengeId) return null;
@@ -50,7 +46,7 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     textAlign: 'center',
     textShadowColor: 'rgba(255, 23, 68, 0.4)',
-    textShadowOffset: { width: 0, height: 0 },
+    textShadowOffset: {width: 0, height: 0},
     textShadowRadius: 10,
   },
 });

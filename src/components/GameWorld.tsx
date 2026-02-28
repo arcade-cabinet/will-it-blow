@@ -1,17 +1,17 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import {Canvas, useFrame, useThree} from '@react-three/fiber';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
-import { useGameStore } from '../store/gameStore';
-import { KitchenEnvironment } from './kitchen/KitchenEnvironment';
-import { CrtTelevision } from './kitchen/CrtTelevision';
-import { FridgeStation } from './kitchen/FridgeStation';
-import { GrinderStation } from './kitchen/GrinderStation';
-import { StufferStation } from './kitchen/StufferStation';
-import { StoveStation } from './kitchen/StoveStation';
-import { getRandomIngredientPool } from '../engine/Ingredients';
-import { matchesCriteria } from '../engine/IngredientMatcher';
-import { pickVariant } from '../engine/ChallengeRegistry';
-import type { IngredientVariant } from '../data/challenges/variants';
+import type {IngredientVariant} from '../data/challenges/variants';
+import {pickVariant} from '../engine/ChallengeRegistry';
+import {matchesCriteria} from '../engine/IngredientMatcher';
+import {getRandomIngredientPool} from '../engine/Ingredients';
+import {useGameStore} from '../store/gameStore';
+import {CrtTelevision} from './kitchen/CrtTelevision';
+import {FridgeStation} from './kitchen/FridgeStation';
+import {GrinderStation} from './kitchen/GrinderStation';
+import {KitchenEnvironment} from './kitchen/KitchenEnvironment';
+import {StoveStation} from './kitchen/StoveStation';
+import {StufferStation} from './kitchen/StufferStation';
 
 /** Menu camera: center of room, facing the kitchen */
 const MENU_CAMERA = {
@@ -27,22 +27,22 @@ const MENU_CAMERA = {
  * - Stove burners: right side (~x=2.4, z=1.2)
  * - Table: center-back (~x=0, z=-3)
  */
-const STATION_CAMERAS: { position: [number, number, number]; lookAt: [number, number, number] }[] = [
+const STATION_CAMERAS: {position: [number, number, number]; lookAt: [number, number, number]}[] = [
   // 0: Fridge — stand near center, look toward back-left (stay inside room)
-  { position: [0, 1.6, 0], lookAt: [-3, 1.4, -3] },
+  {position: [0, 1.6, 0], lookAt: [-3, 1.4, -3]},
   // 1: Grinder — step to left side, face the counter/shelf on left wall
-  { position: [-1, 1.6, 0], lookAt: [-4, 1.4, 0] },
+  {position: [-1, 1.6, 0], lookAt: [-4, 1.4, 0]},
   // 2: Stuffer — walk toward main counter/island on right side
-  { position: [0, 1.6, 1], lookAt: [3, 1.2, 2] },
+  {position: [0, 1.6, 1], lookAt: [3, 1.2, 2]},
   // 3: Stove — face the gas burners on the right counter
-  { position: [0, 1.6, 0], lookAt: [2.5, 2.0, 1.5] },
+  {position: [0, 1.6, 0], lookAt: [2.5, 2.0, 1.5]},
   // 4: Tasting — walk to table, face the CRT TV on back wall
-  { position: [-1, 1.6, -1], lookAt: [0, 2.5, -5.5] },
+  {position: [-1, 1.6, -1], lookAt: [0, 2.5, -5.5]},
 ];
 
 /** Quadratic ease-in-out for smooth camera transitions */
 function easeInOutQuad(t: number): number {
-  return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+  return t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
 }
 
 // -----------------------------------------------------------------
@@ -50,11 +50,11 @@ function easeInOutQuad(t: number): number {
 // -----------------------------------------------------------------
 
 interface CameraWalkerProps {
-  target: { position: [number, number, number]; lookAt: [number, number, number] };
+  target: {position: [number, number, number]; lookAt: [number, number, number]};
 }
 
-function CameraWalker({ target }: CameraWalkerProps) {
-  const { camera } = useThree();
+function CameraWalker({target}: CameraWalkerProps) {
+  const {camera} = useThree();
   const progressRef = useRef(0);
   const startPos = useRef(new THREE.Vector3());
   const startLookAt = useRef(new THREE.Vector3());
@@ -165,13 +165,12 @@ const SceneContent = () => {
         if (matchesCriteria(ing, v.criteria)) matching.add(i);
       });
     }
-    return { pool, matching };
+    return {pool, matching};
   }, [showFridge, variantSeed]);
 
   // Determine camera target based on game state
-  const cameraTarget = gameStatus === 'playing'
-    ? STATION_CAMERAS[currentChallenge] ?? MENU_CAMERA
-    : MENU_CAMERA;
+  const cameraTarget =
+    gameStatus === 'playing' ? (STATION_CAMERAS[currentChallenge] ?? MENU_CAMERA) : MENU_CAMERA;
 
   return (
     <>
@@ -186,8 +185,8 @@ const SceneContent = () => {
           selectedIds={fridgeSelectedIds}
           hintActive={fridgeHintActive}
           matchingIndices={fridgeData.matching}
-          onSelect={(index) => {
-            setFridgeSelectedIds((prev) => {
+          onSelect={index => {
+            setFridgeSelectedIds(prev => {
               const next = new Set(prev);
               next.add(index);
               return next;
@@ -211,11 +210,7 @@ const SceneContent = () => {
         />
       )}
       {showStove && (
-        <StoveStation
-          temperature={challengeTemperature}
-          heatLevel={challengeHeatLevel}
-          holdProgress={challengeProgress}
-        />
+        <StoveStation temperature={challengeTemperature} heatLevel={challengeHeatLevel} />
       )}
     </>
   );
@@ -228,9 +223,9 @@ const SceneContent = () => {
 export const GameWorld = () => {
   return (
     <Canvas
-      camera={{ fov: 70, near: 0.1, far: 100, position: [0, 1.6, 2] }}
-      style={{ width: '100%', height: '100%' }}
-      gl={{ preserveDrawingBuffer: true, antialias: true }}
+      camera={{fov: 70, near: 0.1, far: 100, position: [0, 1.6, 2]}}
+      style={{width: '100%', height: '100%'}}
+      gl={{preserveDrawingBuffer: true, antialias: true}}
     >
       <SceneContent />
     </Canvas>

@@ -43,15 +43,14 @@ export type InputAction =
 export const MAX_YAW = 0.52;
 export const MAX_PITCH = 0.35;
 
-const clamp = (v: number, min: number, max: number) =>
-  Math.max(min, Math.min(max, v));
+const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 
 export function createGrab(meshId: string): GrabAction {
-  return { type: 'grab', meshId };
+  return {type: 'grab', meshId};
 }
 
 export function createRelease(meshId: string): ReleaseAction {
-  return { type: 'release', meshId };
+  return {type: 'release', meshId};
 }
 
 export function createLook(yaw: number, pitch: number): LookAction {
@@ -63,16 +62,13 @@ export function createLook(yaw: number, pitch: number): LookAction {
 }
 
 export function createPress(force: number): PressAction {
-  return { type: 'press', force: clamp(force, 0, 1) };
+  return {type: 'press', force: clamp(force, 0, 1)};
 }
 
-export function createSwipe(
-  direction: SwipeAction['direction'],
-  velocity: number,
-): SwipeAction {
-  return { type: 'swipe', direction, velocity };
+export function createSwipe(direction: SwipeAction['direction'], velocity: number): SwipeAction {
+  return {type: 'swipe', direction, velocity};
 }
 
 export function createTap(meshId: string): TapAction {
-  return { type: 'tap', meshId };
+  return {type: 'tap', meshId};
 }

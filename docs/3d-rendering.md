@@ -2,80 +2,50 @@
 
 ## Engine Setup
 
-The Babylon.js engine is mounted via reactylon's `<Engine>` and `<Scene>` JSX components in `GameWorld.web.tsx`:
+The 3D scene is rendered via React Three Fiber (R3F), a React reconciler for Three.js. The `<Canvas>` component in `GameWorld.tsx` mounts the WebGL renderer:
 
 ```tsx
-<Engine engineOptions={{ preserveDrawingBuffer: true, stencil: true, antialias: true }}
-        style={{ width: '100%', height: '100%' }}>
-  <Scene onSceneReady={onSceneReady}>
-    <KitchenEnvironment />
-    <CrtTelevision />
-    {showFridge && <FridgeStation ... />}
-    {showGrinder && <GrinderStation ... />}
-    ...
-  </Scene>
-</Engine>
+<Canvas camera={{ fov: 70, near: 0.1, far: 100 }}>
+  <KitchenEnvironment />
+  <CrtTelevision />
+  {showFridge && <FridgeStation ... />}
+  {showGrinder && <GrinderStation ... />}
+  ...
+</Canvas>
 ```
 
-- **WebGPU** is the primary renderer (Babylon.js 8.53 detects and uses it automatically)
-- **WebGL** is the fallback for browsers without WebGPU support
-- **Physics:** cannon-es via `CannonJSPlugin`, gravity at -9.81 m/s²
-- **Canvas sizing:** CSS `100vw × 100vh`, `engine.resize()` on window resize events
+- **WebGL** renderer via Three.js (auto-configured by R3F Canvas)
+- **expo-gl** provides the GL context on iOS/Android (same Canvas works cross-platform)
+- **Physics:** `@react-three/cannon` available for physics interactions
+- **Canvas sizing:** Fills parent container via R3F's built-in resize handling
 
-### Light Budget
+### Lighting Setup
 
-WebGPU uniform buffers limit simultaneous lights per material. We stay within budget:
+Lighting is set up in `KitchenEnvironment.tsx`:
 
 | Light | Type | Intensity | Purpose |
 |-------|------|-----------|---------|
-| ambientLight | Hemispheric | 0.15 | Dim ambient fill (GameWorld) |
-| hemiLight | Hemispheric | 0.6 | Main fluorescent tone (KitchenEnvironment) |
-| centerFill | Point | 0.8 | Mid-room wall illumination |
-| tubeLight0 | Point | 2.0 | Fluorescent tube fixture |
-| tubeLight1 | Point | 2.0 | Fluorescent tube fixture |
-| tubeLight2 | Point | 2.0 | Fluorescent tube fixture |
+| ambientLight | Ambient | 0.15 | Dim ambient fill |
+| hemiLight | Hemisphere | 0.6 | Main fluorescent tone |
+| tubeLight0-2 | Point | 2.0 | Fluorescent tube fixtures (with flicker) |
 
-**Total: 6 lights.** All PBR materials set `maxSimultaneousLights = 4` to limit uniform buffer size.
+Fluorescent tube lights have procedural flicker animation via `useFrame`:
+- Random tube selected every 3–8 seconds
+- Flicker duration: 0.1–0.4 seconds
+- Flicker pattern: `sin(time * 60) > 0 ? 0.4 : 2.0`
 
 ## Kitchen Environment (KitchenEnvironment.tsx)
 
-### Room Enclosure
+### GLB Model
 
-Procedural room constructed from planes and grounds:
-- **Floor:** 13×13 ground with checkered tile PBR
-- **Ceiling:** 13×13 ground (flipped via `rotation.x = PI`)
-- **4 Walls:** Each wall is TWO stacked planes:
-  - Lower: subway tile (0 → 2.4m height) with AO map
-  - Upper: cracked concrete (2.4m → 5.5m)
-  - Both use `DOUBLESIDE` + `backFaceCulling = false` + `twoSidedLighting = true`
+`kitchen.glb` (15.5 MB) is loaded via `useGLTF` from `@react-three/drei`:
 
-### PBR Material Pipeline
-
-Materials use AmbientCG texture sets with the `makePBR()` helper:
-
-```text
-albedoTexture   ← Color map (JPG)
-bumpTexture     ← NormalGL map (JPG)
-metallicTexture ← Roughness map (JPG, read from Green channel)
-ambientTexture  ← AO map (JPG, optional)
+```tsx
+const { scene } = useGLTF('/models/kitchen.glb');
+return <primitive object={scene} />;
 ```
 
-Key settings:
-- `useRoughnessFromMetallicTextureGreen = true` (grayscale roughness in G channel)
-- `useRoughnessFromMetallicTextureAlpha = false` (JPGs have no alpha)
-- `metallic = 0` (multiplier: zeroes out metallic read)
-- `roughness = 1` (multiplier: preserves roughness texture values)
-
-### IBL (Image-Based Lighting)
-
-`environment.env` is a prefiltered cubemap loaded at scene init. Required for PBR indirect lighting — without it, all PBR surfaces render nearly black (no reflection/ambient contribution).
-
-- `scene.environmentIntensity = 0.5` (global)
-- Per-material overrides: floor `0.1`, ceiling `0.3`, GLB materials `0.05`
-
-### Kitchen GLB Model
-
-`kitchen.glb` (15.5 MB) is loaded via `SceneLoader.ImportMeshAsync`. It contains:
+The GLB contains:
 - Baked AmbientCG PBR textures (via Blender Python script)
 - French material names from the original SketchFab model:
   - `blancblanc` = white (appliances)
@@ -88,17 +58,12 @@ Key settings:
   - `blancemission` = emissive (lamp meshes only)
   - `VERRE` = glass
 
-**Material overrides** are applied after load to control brightness under scene lighting:
+### Room Enclosure
 
-```typescript
-const brightMaterialOverrides = {
-  blancblanc:    { albedo: [0.28, 0.27, 0.24], directI: 0.3 },
-  blanccarreaux: { albedo: [0.30, 0.28, 0.24], directI: 0.4 },
-  blancemission: { albedo: [0.25, 0.24, 0.20], directI: 0.25, killEmissive: true },
-};
-```
-
-All PBR materials get `environmentIntensity = 0.05` and `directIntensity = 0.5`.
+Procedural room constructed from R3F mesh primitives:
+- **Floor:** 13×13 plane with checkered tile texture
+- **Ceiling:** 13×13 plane (rotated)
+- **4 Walls:** Planes with PBR textures (subway tile lower, concrete upper)
 
 ### Grime Decals
 
@@ -106,116 +71,129 @@ Transparent PBR planes offset 0.02–0.03 units from walls:
 - **Drip decals** (Leaking003): 4 placements on different walls
 - **Baseboard mold** (Leaking008): 4 placements along floor line
 
-Use `ALPHA_BLEND` (not `ALPHA_TEST`) for soft gradient edges. Rendered after opaque geometry (`alphaIndex = 10`).
+### PBR Materials
 
-### Fluorescent Tube Flicker
+Materials use Three.js `meshStandardMaterial` with texture maps:
 
-3 tube lights with procedural flicker animation in `onBeforeRenderObservable`:
-- Random tube selected every 3–8 seconds
-- Flicker duration: 0.1–0.4 seconds
-- Flicker pattern: `sin(time * 60) > 0 ? 0.4 : 2.0`
+```tsx
+<meshStandardMaterial
+  map={colorTexture}
+  normalMap={normalTexture}
+  roughnessMap={roughnessTexture}
+  aoMap={aoTexture}
+/>
+```
+
+### IBL (Image-Based Lighting)
+
+`environment.env` provides ambient reflections for PBR surfaces. Without it, standard materials lack indirect lighting contribution.
 
 ## Station Components
 
-Each station creates procedural `StandardMaterial` meshes in a `useEffect` that depends on `[scene, ...]`. All meshes and materials are tracked in arrays and disposed on cleanup.
+Each station is a declarative R3F component using `<mesh>` primitives. Animation runs in `useFrame` hooks. Props come from the Zustand store (passed through GameWorld).
 
 ### FridgeStation.tsx
 
-- **Fridge body:** Box (1.5 × 3 × 1) at position [-5, 1.5, -4]
-- **Door:** Box (1.5 × 3 × 0.08) pivoted 90° open
-- **Interior light:** Emissive plane (dim sickly blue glow)
-- **3 shelves:** Thin boxes
-- **Ingredient meshes:** Shape-based (sphere, box, cylinder, cone, elongated) with self-lit emissive materials
-- **Interactions:** ActionManager + OnPickTrigger for ingredient selection
-- **Animations:** Selected items slide forward on Z, hint-matching items pulse emissive
-
-**Important:** The procedural fridge body renders ON TOP of the GLB's fridge model. The GLB `blancblanc` material is occluded by these procedural meshes. Material colors are set dark (diffuseColor ~0.18) to avoid blown-out white under heavy scene lighting.
+- Fridge body, door (pivoted open), interior light, 3 shelves
+- Ingredient meshes: shape-based (via `Ingredient3D` component) with `meshBasicMaterial` (self-lit)
+- **Interactions:** `onClick` prop on mesh elements for ingredient selection
+- Selected items slide forward on Z, hint-matching items pulse emissive
 
 ### GrinderStation.tsx
 
 - Grinder body, hopper, crank arm
-- Crank rotation driven by `challengeProgress` via store
+- Crank rotation driven by `challengeProgress` via `useFrame`
+- Meat chunk meshes fed through hopper
 - Splatter particle effect on strike
 
 ### StufferStation.tsx
 
 - Plunger, casing tube
 - Casing length grows with fill level
-- Pressure-to-color interpolation (green → yellow → red)
+- `pressureToColor(pressure)` — exported pure function for green → yellow → red interpolation
 - Burst particle spray and flash on pressure overflow
 
 ### StoveStation.tsx
 
 - Stove body, burner rings, pan
-- Burner glow intensity follows heat level
-- Sausage mesh in pan
+- Burner glow intensity follows heat level via `useFrame`
+- `sausageColor(progress)` — exported pure function for raw → cooked color progression
+- Sizzle/smoke particle systems
 
 ### CrtTelevision.tsx
 
-- TV body mesh with screen plane
-- Renders Mr. Sausage's face via the CRT shader
-- Chromatic aberration + scanline post-process effect
+- TV housing mesh with screen plane
+- Screen uses custom `ShaderMaterial` from `CrtShader.ts` (chromatic aberration + scanlines)
+- Embeds `<MrSausage3D />` as child, rendered on the TV screen
 - `reaction` prop drives Mr. Sausage's expression
 
 ## Camera System
 
-5 fixed station cameras + 1 menu camera, defined in `GameWorld.web.tsx`:
+5 fixed station cameras + 1 menu camera, defined in `GameWorld.tsx`:
 
 ```typescript
 const STATION_CAMERAS = [
-  { position: [0, 1.6, 0],   lookAt: [-3, 1.4, -3] },   // 0: Fridge
-  { position: [-1, 1.6, 0],  lookAt: [-4, 1.4, 0] },     // 1: Grinder
-  { position: [0, 1.6, 1],   lookAt: [3, 1.2, 2] },      // 2: Stuffer
-  { position: [0, 1.6, 0],   lookAt: [2.5, 2.0, 1.5] },  // 3: Stove
-  { position: [-1, 1.6, -1], lookAt: [0, 2.5, -5.5] },   // 4: Tasting/CRT
+  { position: [-2, 1.6, -3], lookAt: [-5, 1.2, -4.5] },  // 0: Fridge
+  { position: [-1, 1.6, 0],  lookAt: [-4, 1.4, 0] },      // 1: Grinder
+  { position: [0, 1.6, 1],   lookAt: [3, 1.2, 2] },        // 2: Stuffer
+  { position: [0, 1.6, 0],   lookAt: [2.5, 2.0, 1.5] },    // 3: Stove
+  { position: [-1, 1.6, -1], lookAt: [0, 2.5, -5.5] },     // 4: Tasting/CRT
 ];
 ```
 
 - All positions use `y = 1.6` (standing eye height)
-- Camera type: `FreeCamera` with keyboard input disabled (no WASD)
-- `fov = 1.2` (~70° for first-person feel)
-- `minZ = 0.1` (close clipping for tight spaces)
+- Camera managed by `CameraWalker` component inside the Canvas
+- `fov = 70` (~70° for first-person feel)
+- `near = 0.1` (close clipping for tight spaces)
 
-### Camera Walk Animation
+### CameraWalker Component
 
-On challenge transition, the camera smoothly interpolates from current position to next station:
-- Duration: ~2.5 seconds (`t += dt * 0.4`)
-- Easing: Quadratic ease-in-out
-- Both position and lookAt target are lerped
-- Runs in `onBeforeRenderObservable`, cleaned up on completion
+On challenge transition, smoothly interpolates camera from current to next station:
+- Duration: ~2.5 seconds
+- Easing: Quadratic ease-in-out (`easeInOutQuad`)
+- Both `camera.position` and lookAt target are lerped
+- Runs in `useFrame`, cleans up on completion
 
 ## MrSausage3D (Procedural Character)
 
-All geometry is created programmatically — no external model files:
-- **Head:** Sphere (diameter 3.6)
+All geometry is declarative R3F JSX — no external model files:
+- **Head:** `<sphereGeometry args={[1.8, 24, 24]} />` (radius 1.8)
 - **Mustache:** Wavy torus knot
 - **Sunglasses:** Paired tori
 - **Chef hat:** Stacked cones
-- **Self-lit:** All materials use `disableLighting: true` + `emissiveColor`
+- **Self-lit:** All parts use `<meshBasicMaterial />` (unlit, always visible regardless of scene lighting)
 
-9 reaction animations controlled by the `reaction` prop, driven by challenge events.
+9 reaction animations controlled by the `reaction` prop, driven by challenge events. Animation runs in `useFrame`.
 
-## Common Pitfalls
+## Ingredient3D
 
-1. **Babylon ESM in Jest:** Cannot import `@babylonjs/core` in test files. Only test pure logic modules.
-2. **Stale closures in render loops:** Use `useRef` for values read inside `onBeforeRenderObservable` callbacks. React state would be stale.
-3. **Canvas.width mutation kills WebGPU:** Never set `canvas.width` or `canvas.height` directly — this invalidates the WebGPU swap chain. Only set CSS size and call `engine.resize()`.
-4. **PBR nearly black without IBL:** If `scene.environmentTexture` is null, PBR materials render almost entirely black (no indirect light contribution).
-5. **Light accumulation on StandardMaterial:** With 6 lights totaling ~7× intensity, `diffuseColor` values above 0.15 will clip to white on directly-lit surfaces.
-6. **Double geometry:** Station components create procedural meshes at the same positions as GLB model meshes. The procedural geometry occludes the GLB textures. If you want to see the GLB textures, hide or remove the procedural station meshes.
+8 shape types rendered as declarative mesh JSX:
+- sphere, box, cylinder, cone, torus, elongated, wedge, ring
+- All use `<meshBasicMaterial />` (self-lit) with ingredient-specific colors
+- `onClick` handler for selection interaction
+
+## CRT Shader (CrtShader.ts)
+
+Three.js `ShaderMaterial` with custom GLSL:
+- Vertex: standard `projectionMatrix * modelViewMatrix * vec4(position, 1.0)`
+- Fragment: chromatic aberration (RGB channel offset) + scanline overlay + vignette
+- Uniforms: `time` (animated in `useFrame`), `resolution`
 
 ## Texture Bake Pipeline
 
 The kitchen GLB's PBR textures were baked using a Blender Python script (`bake_kitchen_textures.py`):
 
 1. Import `kitchen-original.glb` into Blender
-2. For each material, map to an AmbientCG texture set:
-   - Color, NormalGL, Roughness, Metalness maps
-   - UV scale tuned per material
-   - Color tint multiplier for horror atmosphere
-3. Export as `kitchen.glb` with:
-   - Draco mesh compression (level 6)
-   - JPEG image format (quality 80)
-   - Applied transforms
+2. For each material, map to an AmbientCG texture set
+3. Export as `kitchen.glb` with Draco mesh compression (level 6) + JPEG (quality 80)
 
 Source textures: AmbientCG 1K-JPG sets (not in repo, downloaded separately per material).
+
+## Common Pitfalls
+
+1. **useGLTF mocking in tests:** `useGLTF` must be mocked in Jest tests — it depends on file loading unavailable in Node.js.
+2. **Stale closures in useFrame:** Use `useRef` for values read inside `useFrame` callbacks. React state would be stale.
+3. **sphereGeometry radius vs diameter:** Three.js sphereGeometry takes radius, not diameter (unlike Babylon.js).
+4. **Camera inside mesh:** Check STATION_CAMERAS values. Camera needs ≥0.5 units from any solid mesh.
+5. **import.meta compatibility:** Zustand ESM uses `import.meta.env.MODE`. Requires `unstable_transformImportMeta: true` in babel config.
+6. **Three.js ESM in Jest:** `three` and `@react-three` must be in the `transformIgnorePatterns` allowlist in jest.config.js.

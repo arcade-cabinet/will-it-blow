@@ -1,18 +1,18 @@
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity } from 'react-native';
-import { useGameStore } from '../../store/gameStore';
+import {StyleSheet, Text, TouchableOpacity} from 'react-native';
+import {useGameStore} from '../../store/gameStore';
 
 interface HintButtonProps {
   onHint: () => void;
 }
 
-export function HintButton({ onHint }: HintButtonProps) {
-  const { hintsRemaining, useHint } = useGameStore();
+export function HintButton({onHint}: HintButtonProps) {
+  const {hintsRemaining} = useGameStore();
   const isDisabled = hintsRemaining <= 0;
 
   const handlePress = () => {
     if (isDisabled) return;
-    useHint();
+    // biome-ignore lint/correctness/useHookAtTopLevel: Zustand store action, not a React hook
+    useGameStore.getState().useHint();
     onHint();
   };
 
@@ -24,9 +24,7 @@ export function HintButton({ onHint }: HintButtonProps) {
       disabled={isDisabled}
     >
       <Text style={styles.emoji}>💡</Text>
-      <Text style={[styles.countText, isDisabled && styles.countDisabled]}>
-        {hintsRemaining}
-      </Text>
+      <Text style={[styles.countText, isDisabled && styles.countDisabled]}>{hintsRemaining}</Text>
     </TouchableOpacity>
   );
 }

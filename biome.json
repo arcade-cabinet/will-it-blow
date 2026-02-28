@@ -1,0 +1,50 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.4.4/schema.json",
+  "files": {
+    "includes": [
+      "**",
+      "!!**/dist",
+      "!!**/.expo",
+      "!!**/.worktrees",
+      "!!**/public",
+      "!!**/android",
+      "!!**/ios",
+      "!!**/coverage",
+      "!!**/test-results",
+      "!!**/playwright-report",
+      "!!**/.playwright-mcp"
+    ]
+  },
+  "formatter": {
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "trailingCommas": "all",
+      "arrowParentheses": "asNeeded",
+      "bracketSpacing": false
+    }
+  },
+  "linter": {
+    "rules": {
+      "recommended": true,
+      "correctness": {
+        "noUnusedImports": "warn",
+        "noUnusedVariables": "warn"
+      },
+      "style": {
+        "noNonNullAssertion": "off"
+      },
+      "suspicious": {
+        "noExplicitAny": "off",
+        "noArrayIndexKey": "off"
+      },
+      "a11y": {
+        "noStaticElementInteractions": "off"
+      }
+    }
+  }
+}

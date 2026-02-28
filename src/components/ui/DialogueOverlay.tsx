@@ -1,10 +1,6 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import {
-  DialogueEngine,
-  type DialogueChoice,
-  type DialogueLine,
-} from '../../engine/DialogueEngine';
+import {useCallback, useEffect, useRef, useState} from 'react';
+import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {type DialogueChoice, DialogueEngine, type DialogueLine} from '../../engine/DialogueEngine';
 
 interface DialogueOverlayProps {
   lines: DialogueLine[];
@@ -13,32 +9,14 @@ interface DialogueOverlayProps {
 
 const CHAR_DELAY_MS = 30;
 
-export function DialogueOverlay({ lines, onComplete }: DialogueOverlayProps) {
+export function DialogueOverlay({lines, onComplete}: DialogueOverlayProps) {
   const engineRef = useRef(new DialogueEngine(lines));
-  const [currentLine, setCurrentLine] = useState<DialogueLine | undefined>(
-    undefined,
-  );
+  const [currentLine, setCurrentLine] = useState<DialogueLine | undefined>(undefined);
   const [displayedText, setDisplayedText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [choices, setChoices] = useState<DialogueChoice[]>([]);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fullTextRef = useRef('');
-
-  // Initialize on mount
-  useEffect(() => {
-    const engine = new DialogueEngine(lines);
-    engineRef.current = engine;
-    const line = engine.getCurrentLine();
-    setCurrentLine(line);
-    if (line) {
-      startTypewriter(line.text);
-      setChoices(engine.getChoices());
-    }
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lines]);
 
   const startTypewriter = useCallback((text: string) => {
     fullTextRef.current = text;
@@ -58,6 +36,21 @@ export function DialogueOverlay({ lines, onComplete }: DialogueOverlayProps) {
 
     timerRef.current = setTimeout(tick, CHAR_DELAY_MS);
   }, []);
+
+  // Initialize on mount
+  useEffect(() => {
+    const engine = new DialogueEngine(lines);
+    engineRef.current = engine;
+    const line = engine.getCurrentLine();
+    setCurrentLine(line);
+    if (line) {
+      startTypewriter(line.text);
+      setChoices(engine.getChoices());
+    }
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [lines, startTypewriter]);
 
   const skipTypewriter = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -113,29 +106,23 @@ export function DialogueOverlay({ lines, onComplete }: DialogueOverlayProps) {
 
   if (!currentLine) return null;
 
-  const speakerLabel =
-    currentLine.speaker === 'sausage' ? 'MR. SAUSAGE' : 'YOU';
-  const speakerColor =
-    currentLine.speaker === 'sausage' ? '#FF1744' : '#FFC832';
+  const speakerLabel = currentLine.speaker === 'sausage' ? 'MR. SAUSAGE' : 'YOU';
+  const speakerColor = currentLine.speaker === 'sausage' ? '#FF1744' : '#FFC832';
 
   return (
-    <TouchableOpacity
-      style={styles.overlay}
-      activeOpacity={1}
-      onPress={handleTap}
-    >
+    <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={handleTap}>
       <View style={styles.dialogueBox}>
         {/* Speaker label */}
-        <Text style={[styles.speakerLabel, { color: speakerColor }]}>
-          {speakerLabel}
-        </Text>
+        <Text style={[styles.speakerLabel, {color: speakerColor}]}>{speakerLabel}</Text>
 
         {/* Dialogue text */}
         <Text style={styles.dialogueText}>{displayedText}</Text>
 
         {/* Tap to continue indicator */}
         {!isTyping && choices.length === 0 && (
-          <Text style={styles.tapHint} testID="dialogue-tap">Tap to continue...</Text>
+          <Text style={styles.tapHint} testID="dialogue-tap">
+            Tap to continue...
+          </Text>
         )}
 
         {/* Player choices */}

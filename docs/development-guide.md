@@ -4,15 +4,15 @@
 
 ```bash
 # Install dependencies
-npm install
+pnpm install
 
 # Start web dev server
 npx expo start --web
 
 # Run tests
-npm test
+pnpm test
 
-# Type check (ignore Jest type warnings in __tests__/)
+# Type check
 npx tsc --noEmit
 ```
 
@@ -20,11 +20,12 @@ npx tsc --noEmit
 
 ### File Organization
 
-- **Pure logic** goes in `src/engine/` — no React, no Babylon imports
-- **3D components** go in `src/components/kitchen/` — Babylon.js mesh/material creation
+- **Pure logic** goes in `src/engine/` — no React, no Three.js imports
+- **3D components** go in `src/components/kitchen/` — R3F declarative mesh components
 - **UI overlays** go in `src/components/ui/` — React Native views
 - **Challenge overlays** go in `src/components/challenges/` — game phase UX
 - **Data** goes in `src/data/` — dialogue trees, challenge variants
+- **Component tests** go in `src/components/*/__tests__/` — co-located with source
 
 ### Challenge Component Pattern
 
@@ -32,7 +33,7 @@ Each challenge follows this structure:
 
 ```text
 src/components/challenges/FooChallenge.tsx    ← React Native overlay (UI + game logic)
-src/components/kitchen/FooStation.tsx          ← Babylon.js 3D visuals
+src/components/kitchen/FooStation.tsx          ← R3F 3D visuals
 src/data/dialogue/foo.ts                       ← Mr. Sausage dialogue for this phase
 src/data/challenges/variants.ts                ← Variant config (shared file)
 ```
@@ -44,19 +45,21 @@ The challenge overlay:
 4. Calls `completeChallenge(score)` when done
 
 The station component:
-1. Creates 3D meshes in a `useEffect([scene, ...])`
+1. Renders declarative `<mesh>` elements with R3F JSX
 2. Reads store state via props (passed from GameWorld)
-3. Animates meshes in `onBeforeRenderObservable`
-4. Disposes everything on cleanup
+3. Animates meshes in `useFrame` callbacks
+4. Cleanup is automatic (R3F unmounts Three.js objects when component unmounts)
 
-### 3D Scene Rules
+### R3F 3D Scene Rules
 
-1. **All meshes and materials must be tracked for disposal.** Push to a `disposables` or `allMeshes`/`allMaterials` array and dispose in the cleanup function.
-2. **Use `useRef` for values read in render loops.** React state is stale inside `onBeforeRenderObservable` callbacks. Store current values in refs.
-3. **Scene setup effects should depend on `[scene]` only** (plus stable props). Avoid dependencies that change frequently or the entire scene rebuilds.
-4. **Self-lit materials** for non-physical objects: `disableLighting = true` + `emissiveColor`. Used for MrSausage3D, ingredient meshes, fluorescent tubes.
-5. **PBR materials** for physical surfaces: Use `albedoTexture` + `bumpTexture` + `metallicTexture` (roughness in G channel).
-6. **StandardMaterial `diffuseColor` must be very low** (0.15–0.20) because scene lights total ~7× intensity. Values above 0.3 will clip to white on directly-lit faces.
+1. **Declarative JSX:** Use `<mesh><boxGeometry /><meshStandardMaterial /></mesh>` — no imperative mesh creation.
+2. **useFrame for animation:** `useFrame((state, delta) => { ref.current.rotation.y += delta; })` — runs every frame.
+3. **useRef for mutable state:** Values read in `useFrame` must be in refs, not React state (avoids stale closures).
+4. **Self-lit materials:** `<meshBasicMaterial color="..." />` for non-physical objects (MrSausage3D, ingredients, fluorescent tubes).
+5. **PBR materials:** `<meshStandardMaterial map={...} normalMap={...} roughnessMap={...} />` for physical surfaces.
+6. **GLB loading:** `useGLTF('/models/kitchen.glb')` from `@react-three/drei`. Mock in tests.
+7. **Mesh picking:** `onClick` prop directly on `<mesh>` elements — no action manager needed.
+8. **Cleanup is automatic:** R3F disposes Three.js objects when components unmount. No manual disposal arrays needed.
 
 ### UI Rules
 
@@ -92,22 +95,25 @@ The station component:
    - Call `onComplete(score)` when done
 
 5. **Create the 3D station** at `src/components/kitchen/FooStation.tsx`:
+   - Declarative R3F JSX (`<mesh>`, `<group>`, etc.)
    - Props: challenge-specific state (progress, etc.)
-   - Create meshes in `useEffect([scene, ...])`
-   - Animate in `onBeforeRenderObservable`
-   - Dispose everything on cleanup
+   - Animation in `useFrame`
+   - Export pure functions for testability where appropriate
 
-6. **Wire into GameWorld.web.tsx**:
+6. **Add station test** at `src/components/kitchen/__tests__/FooStation.test.tsx`:
+   - Use `@react-three/test-renderer`
+   - Test mesh presence, prop reactions, exported pure functions
+
+7. **Wire into GameWorld.tsx**:
    - Add camera position to `STATION_CAMERAS`
    - Add visibility flag: `const showFoo = gameStatus === 'playing' && currentChallenge === N`
    - Add station component in JSX
-   - Update `TOTAL_CHALLENGES` in gameStore if needed
 
-7. **Wire into App.tsx** (GameUI):
+8. **Wire into App.tsx** (GameUI):
    - Add challenge flag: `const isFooChallenge = ...`
    - Add challenge overlay in JSX
 
-8. **Add tests** for any pure logic in `__tests__/`
+9. **Add tests** for any pure logic in `__tests__/`
 
 ## Adding Store State
 
@@ -121,43 +127,38 @@ If a new challenge needs new ephemeral state:
 
 ## Common Pitfalls
 
-### Babylon.js ESM in Jest
-**Problem:** `import { Vector3 } from '@babylonjs/core'` fails in tests.
-**Solution:** Only test pure logic modules. Never import Babylon or reactylon in test files.
+### import.meta in Metro
+**Problem:** White screen on load — `Cannot use 'import.meta' outside a module`.
+**Solution:** Ensure `unstable_transformImportMeta: true` in `babel.config.js` preset options. Run `npx expo start --web --clear` after changing babel config.
 
-### Stale closure in render loops
-**Problem:** `onBeforeRenderObservable` callback captures state from mount time.
-**Solution:** Use `useRef` and update `.current` on each render. Read from ref inside the callback.
+### useGLTF in Jest
+**Problem:** `useGLTF` fails in tests — file loading not available in Node.js.
+**Solution:** Mock `@react-three/drei` in your test file. See `docs/testing.md` for the mock pattern.
 
-### Canvas.width mutation
-**Problem:** Setting `canvas.width = N` directly invalidates the WebGPU swap chain, causing a black screen.
-**Solution:** Only set CSS dimensions (`canvas.style.width`). Call `engine.resize()` to sync.
+### Stale closure in useFrame
+**Problem:** `useFrame` callback captures state from mount time.
+**Solution:** Use `useRef` and update `.current` on each render. Read from ref inside `useFrame`.
+
+### Three.js ESM in Jest
+**Problem:** `SyntaxError: Unexpected token 'export'` when importing Three.js or R3F in tests.
+**Solution:** `jest.config.js` must include `three` and `@react-three` in the `transformIgnorePatterns` allowlist.
 
 ### Camera inside mesh
 **Problem:** Camera positioned inside or too close to a mesh → black screen.
 **Solution:** Check STATION_CAMERAS values. Ensure camera is at least 0.5 units from any solid mesh.
 
 ### MrSausage3D overlap
-**Problem:** Character's head sphere (diameter 3.6, extends ~3.5 units tall) clips into scene geometry.
-**Solution:** Verify position in each scene. Check that animated geometry (casing, etc.) doesn't grow into the character.
-
-### Double geometry at stations
-**Problem:** Station components create procedural meshes at the same location as GLB model meshes.
-**Solution:** This is by design — the procedural meshes ARE the interactive elements. The GLB provides the backdrop. Don't expect PBR material overrides on the GLB to affect the visual appearance of a station.
-
-### Light budget overflow
-**Problem:** More than 4 lights hitting a single mesh causes incorrect rendering.
-**Solution:** All materials set `maxSimultaneousLights = 4`. Keep total scene lights ≤ 6.
+**Problem:** Character's head sphere (radius 1.8, extends ~3.5 units tall) clips into scene geometry.
+**Solution:** Verify position in each scene. Check that animated geometry doesn't grow into the character.
 
 ## Debugging 3D Scenes
 
-Since you can't easily inspect Babylon.js from DevTools (tree-shaken by bundler):
-
-1. **Add `console.log` in material loops** — Log material names, types, albedo values, texture presence
-2. **Use color coding** — Set materials to bright red/green/blue to identify which mesh is which
-3. **Toggle visibility** — Set `mesh.isVisible = false` to isolate which mesh produces a visual artifact
-4. **Playwright MCP** — Use browser automation to navigate through the game and take screenshots programmatically
-5. **Blender re-export** — For GLB issues, import into Blender to inspect material nodes
+1. **React DevTools** — R3F components appear in the React tree. Inspect props and state.
+2. **drei helpers** — Add `<axesHelper />`, `<gridHelper />`, `<Stats />` temporarily for visual debugging.
+3. **Color coding** — Set materials to bright red/green/blue to identify which mesh is which.
+4. **Toggle visibility** — Set `visible={false}` on mesh to isolate visual artifacts.
+5. **Playwright MCP** — Use browser automation to navigate the game and take screenshots programmatically.
+6. **Console in useFrame** — Add `console.log` inside `useFrame` (but remove before commit — runs 60fps).
 
 ## External Assets
 

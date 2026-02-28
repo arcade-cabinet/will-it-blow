@@ -1,19 +1,15 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { useGameStore } from '../../store/gameStore';
+import {StyleSheet, Text, View} from 'react-native';
+import {useGameStore} from '../../store/gameStore';
 
 const MAX_STRIKES = 3;
 
 export function StrikeCounter() {
-  const { strikes } = useGameStore();
+  const {strikes} = useGameStore();
 
   return (
     <View style={styles.container}>
-      {Array.from({ length: MAX_STRIKES }, (_, i) => (
-        <Text
-          key={i}
-          style={[styles.strike, i < strikes ? styles.used : styles.unused]}
-        >
+      {Array.from({length: MAX_STRIKES}, (_, i) => (
+        <Text key={i} style={[styles.strike, i < strikes ? styles.used : styles.unused]}>
           {i < strikes ? '\u2715' : '\u25CB'}
         </Text>
       ))}
@@ -38,7 +34,7 @@ const styles = StyleSheet.create({
   used: {
     color: '#FF1744',
     textShadowColor: 'rgba(255, 23, 68, 0.6)',
-    textShadowOffset: { width: 0, height: 0 },
+    textShadowOffset: {width: 0, height: 0},
     textShadowRadius: 8,
   },
   unused: {

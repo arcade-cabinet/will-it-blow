@@ -1,4 +1,4 @@
-import { createCrtMaterial } from '../CrtShader';
+import {createCrtMaterial} from '../CrtShader';
 
 describe('CrtShader', () => {
   it('creates a ShaderMaterial with correct uniforms', () => {

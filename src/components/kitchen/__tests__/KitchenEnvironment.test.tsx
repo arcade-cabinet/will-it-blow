@@ -1,6 +1,5 @@
-import React from 'react';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { KitchenEnvironment } from '../KitchenEnvironment';
+import {KitchenEnvironment} from '../KitchenEnvironment';
 
 // Mock useGLTF since we don't have the actual GLB in tests
 jest.mock('@react-three/drei', () => ({
@@ -16,62 +15,46 @@ jest.mock('@react-three/drei', () => ({
 
 describe('KitchenEnvironment', () => {
   it('renders without crashing', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <KitchenEnvironment />
-    );
+    const renderer = await ReactThreeTestRenderer.create(<KitchenEnvironment />);
     expect(renderer.scene.children.length).toBeGreaterThan(0);
   });
 
   it('creates room geometry (floor, ceiling, walls)', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <KitchenEnvironment />
-    );
+    const renderer = await ReactThreeTestRenderer.create(<KitchenEnvironment />);
     // Root group should have many children: room meshes + lights + GLB + grime decals
     const root = renderer.scene.children[0];
     expect(root.children.length).toBeGreaterThan(3);
   });
 
   it('includes floor at y=0', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <KitchenEnvironment />
-    );
+    const renderer = await ReactThreeTestRenderer.create(<KitchenEnvironment />);
     const root = renderer.scene.children[0];
     // Find a mesh at y=0 with downward-facing rotation (floor)
     const floor = root.children.find(
       (child: any) =>
         child.instance.position.y === 0 &&
-        Math.abs(child.instance.rotation.x - (-Math.PI / 2)) < 0.01
+        Math.abs(child.instance.rotation.x - -Math.PI / 2) < 0.01,
     );
     expect(floor).toBeDefined();
   });
 
   it('includes ceiling at room height', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <KitchenEnvironment />
-    );
+    const renderer = await ReactThreeTestRenderer.create(<KitchenEnvironment />);
     const root = renderer.scene.children[0];
     // Ceiling is at y=5.5 (ROOM_H)
-    const ceiling = root.children.find(
-      (child: any) => child.instance.position.y === 5.5
-    );
+    const ceiling = root.children.find((child: any) => child.instance.position.y === 5.5);
     expect(ceiling).toBeDefined();
   });
 
   it('includes hemisphere light', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <KitchenEnvironment />
-    );
+    const renderer = await ReactThreeTestRenderer.create(<KitchenEnvironment />);
     const root = renderer.scene.children[0];
-    const hemiLight = root.children.find(
-      (child: any) => child.instance.type === 'HemisphereLight'
-    );
+    const hemiLight = root.children.find((child: any) => child.instance.type === 'HemisphereLight');
     expect(hemiLight).toBeDefined();
   });
 
   it('includes point lights for fluorescent tubes', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <KitchenEnvironment />
-    );
+    const renderer = await ReactThreeTestRenderer.create(<KitchenEnvironment />);
     // Collect all PointLights recursively (tube lights are nested inside groups)
     const pointLights: any[] = [];
     function findPointLights(node: any) {
@@ -91,12 +74,9 @@ describe('KitchenEnvironment', () => {
 
   it('has no Babylon.js imports', async () => {
     // Static check: read the source file and ensure no Babylon imports
-    const fs = require('fs');
-    const path = require('path');
-    const source = fs.readFileSync(
-      path.resolve(__dirname, '../KitchenEnvironment.tsx'),
-      'utf8'
-    );
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../KitchenEnvironment.tsx'), 'utf8');
     expect(source).not.toContain('@babylonjs/core');
     expect(source).not.toContain('reactylon');
   });

@@ -2,88 +2,98 @@
 
 ## Overview
 
-Tests cover **pure logic only**. There are zero React component render tests because Babylon.js ESM imports are incompatible with Jest's CommonJS transform pipeline. This is a known, accepted limitation.
+Tests cover both **pure logic** and **R3F 3D component** behavior. R3F components are tested via `@react-three/test-renderer`, which renders the Three.js scene graph in Node.js without a canvas.
 
 - **Framework:** Jest 29.6.3 with `react-native` preset + `babel-preset-expo`
-- **Test count:** 172 tests across 7 test files (+ duplicate tests from 3d-fridge worktree)
-- **Runtime:** ~0.6 seconds
+- **Test count:** 265 tests across ~17 test files
+- **Runtime:** ~1.6 seconds
 
 ## Running Tests
 
 ```bash
 # All tests
-npm test
+pnpm test
 
 # CI mode (no watch, force exit)
-npm test -- --ci --forceExit
+pnpm test -- --ci --forceExit
 
 # Watch mode (development)
-npm test -- --watch
+pnpm test -- --watch
 
 # Single file
-npm test -- SausagePhysics
+pnpm test -- SausagePhysics
 ```
 
 ## Test Files
 
-### `__tests__/SausagePhysics.test.ts` (~32 tests)
+### Pure Logic Tests (`__tests__/`)
+
+#### `SausagePhysics.test.ts` (~32 tests)
 Tests the 5 pure scoring functions:
 - `calculateBlowRuffalos()` — blow power from hold duration × ingredient stats
 - `checkBurst()` — probabilistic burst check against average risk
 - `calculateTasteRating()` — taste score from ingredient stats + burst penalty
 - `calculateFinalScore()` — weighted formula combining taste, blow, burst, bonus
-- `getTitleTier()` — maps score (0–100) to tier name ("Sausage Disaster" → "THE SAUSAGE KING")
+- `getTitleTier()` — maps score (0–100) to tier name
 
-### `__tests__/Ingredients.test.ts` (~15 tests)
-Data integrity validation:
-- At least 11 ingredients exist
-- All required properties present (name, tasteMod, textureMod, burstRisk, blowPower, color, shape)
-- All names unique
-- Stat ranges validated (tasteMod: -1 to 5, burstRisk: 0 to 1, etc.)
-- Pool randomization works (returns requested count)
+#### `Ingredients.test.ts` (~15 tests)
+Data integrity: all properties present, names unique, stat ranges valid, pool randomization works.
 
-### `__tests__/ChallengeRegistry.test.ts` (~12 tests)
-- Variant seeding is deterministic (same seed → same variant)
-- All challenge configs exist and have required fields
-- `calculateFinalVerdict()` returns correct ranks for score ranges
-- Challenge order matches expected sequence
+#### `ChallengeRegistry.test.ts` (~12 tests)
+Variant seeding, challenge configs, `calculateFinalVerdict()` ranks, challenge order.
 
-### `__tests__/IngredientMatcher.test.ts` (~10 tests)
-- Tag system maps categories correctly
-- Keyword-based meat detection works
-- Criteria matching returns correct ingredients
-- Edge cases: empty criteria, no matches
+#### `IngredientMatcher.test.ts` (~10 tests)
+Tag system, keyword-based matching, criteria matching, edge cases.
 
-### `__tests__/DialogueEngine.test.ts` (~12 tests)
-- Line traversal advances correctly
-- Choice selection branches to correct next line
-- Effect tracking accumulates across choices
-- Edge cases: empty dialogue, single line
+#### `DialogueEngine.test.ts` (~12 tests)
+Line traversal, choice selection branching, effect tracking.
 
-### `__tests__/gameStore.test.ts` (~20 tests)
-- Initial state matches INITIAL_GAME_STATE
-- `setAppPhase()` transitions correctly
-- `startNewGame()` resets all state, increments totalGamesPlayed
-- `completeChallenge()` advances challenge, triggers victory at end
-- `addStrike()` increments strikes, triggers defeat at 3
-- `useHint()` decrements (minimum 0)
-- `returnToMenu()` resets to menu state
+#### `gameStore.test.ts` (~20 tests)
+Store state transitions, `startNewGame()`, `completeChallenge()`, `addStrike()`, `returnToMenu()`.
 
-### `__tests__/App.test.tsx` (~15 tests)
-End-to-end scoring pipeline tests:
-- Full game simulation (select → grind → stuff → cook → taste)
-- Balance sanity checks (ingredient stat distributions)
-- Title tier distribution covers all tiers
-- Scoring formula edge cases
+#### `App.test.tsx` (~15 tests)
+End-to-end scoring pipeline, balance sanity checks, title tier distribution.
+
+### R3F Component Tests (`src/components/**/\__tests__/`)
+
+These use `@react-three/test-renderer` to render R3F components and inspect the Three.js scene graph.
+
+#### `CrtShader.test.ts` (2 tests)
+Verifies shader material creation and uniform presence.
+
+#### `MrSausage3D.test.tsx` (4 tests)
+Head sphere present, reaction prop updates, self-lit material verification.
+
+#### `CrtTelevision.test.tsx` (5 tests)
+TV housing geometry, CRT shader screen, Mr. Sausage embedded.
+
+#### `KitchenEnvironment.test.tsx` (7 tests)
+Room enclosure geometry, lighting setup, GLB model integration (useGLTF mocked).
+
+#### `FridgeStation.test.tsx` (7 tests)
+Fridge geometry, ingredient meshes, onClick picking, hint glow.
+
+#### `GrinderStation.test.tsx` (7 tests)
+Grinder geometry, crank animation, meat chunks, splatter particles.
+
+#### `StufferStation.test.tsx` (12 tests)
+Plunger animation, casing inflation, pressureToColor pure function, burst particles.
+
+#### `StoveStation.test.tsx` (11 tests)
+Burner glow, sausageColor pure function, sizzle/smoke particles.
+
+#### `Ingredient3D.test.tsx` (4 tests)
+8 shape types render correctly, self-lit material, color prop.
+
+#### `GameWorld.test.tsx` (7 tests)
+Canvas mounting, CameraWalker, station visibility logic.
 
 ## What's NOT Tested
 
-1. **React component rendering** — Babylon.js ESM breaks Jest. No snapshot tests, no interaction tests.
-2. **3D scene behavior** — Camera walks, mesh creation, material setup
-3. **Audio engine** — Tone.js synthesis (would need audio context mock)
-4. **Platform-specific code** — Metro file extension splitting (GameWorld.web vs .native)
-5. **Visual correctness** — No screenshot regression tests
-6. **Challenge overlay interactions** — Touch/drag handlers, timer logic, sub-phase transitions
+1. **Audio engine** — Tone.js synthesis (would need audio context mock)
+2. **Visual correctness** — No screenshot regression tests (use Playwright MCP for manual verification)
+3. **Challenge overlay interactions** — Touch/drag handlers, timer logic, sub-phase transitions
+4. **Real GLB loading** — useGLTF is mocked; actual model parsing not tested in Jest
 
 ## Type Checking
 
@@ -91,26 +101,20 @@ End-to-end scoring pipeline tests:
 npx tsc --noEmit
 ```
 
-TypeScript strict mode is enabled. Test files produce Jest type warnings (`Cannot find name 'describe'`) because `@types/jest` is not installed — these are expected and documented in CLAUDE.md. Source files should produce zero errors.
+TypeScript strict mode is enabled. Source files should produce zero errors.
 
 ## CI Integration
 
 `.github/workflows/ci.yml` runs tests on push to `main` and `feat/**` branches:
 
 ```yaml
-- run: npm ci
-- run: npm test -- --ci --forceExit
+- run: pnpm install --frozen-lockfile
+- run: pnpm test -- --ci --forceExit
 ```
-
-**Known CI gaps:**
-- No `npx tsc --noEmit` step (type errors not caught in CI)
-- No lint step (ESLint/Biome not run in CI)
-- No Android build step (despite CLAUDE.md claiming it exists)
 
 ## Adding New Tests
 
-Only test pure logic modules that don't import from `@babylonjs/core`, `reactylon`, `tone`, or `react-native` components. Safe modules to test:
-
+### Pure logic modules (safe to test directly)
 - `src/engine/SausagePhysics.ts`
 - `src/engine/Ingredients.ts`
 - `src/engine/ChallengeRegistry.ts`
@@ -120,6 +124,36 @@ Only test pure logic modules that don't import from `@babylonjs/core`, `reactylo
 - `src/data/challenges/variants.ts`
 - `src/data/dialogue/*.ts`
 
-If you need to test component behavior, consider:
-- Extracting logic into pure functions and testing those
-- Using Playwright for visual/integration testing (see deployment docs)
+### R3F components (test via @react-three/test-renderer)
+
+```tsx
+import ReactThreeTestRenderer from '@react-three/test-renderer';
+
+it('renders the mesh', async () => {
+  const renderer = await ReactThreeTestRenderer.create(
+    <MyComponent prop="value" />
+  );
+  const meshes = renderer.scene.findAll((node) => node.type === 'Mesh');
+  expect(meshes.length).toBeGreaterThan(0);
+});
+```
+
+**Important:** Mock `useGLTF` if the component loads GLB files:
+
+```tsx
+jest.mock('@react-three/drei', () => ({
+  useGLTF: jest.fn(() => ({
+    scene: new THREE.Group(),
+    nodes: {},
+    materials: {},
+  })),
+}));
+```
+
+### Exported pure functions from R3F components
+
+Some station components export pure functions for testability:
+- `StufferStation.tsx` → `pressureToColor(pressure: number)`
+- `StoveStation.tsx` → `sausageColor(progress: number)`
+
+These can be tested directly without the test renderer.

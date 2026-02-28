@@ -108,15 +108,15 @@ void main() {
 }
 `;
 
-export function createCrtMaterial(name: string): THREE.ShaderMaterial {
+export function createCrtMaterial(_name: string): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     vertexShader: CRT_VERTEX,
     fragmentShader: CRT_FRAGMENT,
     uniforms: {
-      time: { value: 0 },
-      flickerIntensity: { value: 1.0 },
-      staticIntensity: { value: 0.05 },
-      reactionIntensity: { value: 0.0 },
+      time: {value: 0},
+      flickerIntensity: {value: 1.0},
+      staticIntensity: {value: 0.05},
+      reactionIntensity: {value: 0.0},
     },
   });
 }

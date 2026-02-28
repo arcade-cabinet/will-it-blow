@@ -1,12 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useGameStore } from '../../store/gameStore';
+import {useEffect, useRef, useState} from 'react';
+import {Animated, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {useGameStore} from '../../store/gameStore';
 
 const MENU_ITEMS = ['NEW GAME', 'CONTINUE', 'SETTINGS'] as const;
 
 export function TitleScreen() {
-  const { setAppPhase, continueGame, currentChallenge, challengeScores } =
-    useGameStore();
+  const {setAppPhase, continueGame, currentChallenge, challengeScores} = useGameStore();
   const hasSaveData = challengeScores.length > 0;
   const [selectedIndex, setSelectedIndex] = useState(0);
 
@@ -73,12 +72,12 @@ export function TitleScreen() {
         styles.container,
         {
           opacity: fadeAnim,
-          transform: [{ translateY: slideAnim }],
+          transform: [{translateY: slideAnim}],
         },
       ]}
     >
       {/* Butcher shop sign */}
-      <Animated.View style={[styles.sign, { transform: [{ rotate }] }]}>
+      <Animated.View style={[styles.sign, {transform: [{rotate}]}]}>
         {/* Hanging chains */}
         <View style={styles.chainRow}>
           <View style={styles.chain} />
@@ -99,8 +98,7 @@ export function TitleScreen() {
       {/* Menu items */}
       <View style={styles.menuContainer}>
         {MENU_ITEMS.map((item, index) => {
-          const isDisabled =
-            (item === 'CONTINUE' && !hasSaveData) || item === 'SETTINGS';
+          const isDisabled = (item === 'CONTINUE' && !hasSaveData) || item === 'SETTINGS';
           const isSelected = selectedIndex === index;
 
           return (
@@ -108,13 +106,13 @@ export function TitleScreen() {
               key={item}
               style={styles.menuItem}
               onPress={() => handleMenuPress(index)}
-              onPressIn={() => { if (!isDisabled) setSelectedIndex(index); }}
+              onPressIn={() => {
+                if (!isDisabled) setSelectedIndex(index);
+              }}
               disabled={isDisabled}
               activeOpacity={0.7}
             >
-              <Text style={styles.marker}>
-                {isSelected && !isDisabled ? '\u25B8 ' : '  '}
-              </Text>
+              <Text style={styles.marker}>{isSelected && !isDisabled ? '\u25B8 ' : '  '}</Text>
               <Text
                 style={[
                   styles.menuText,
@@ -123,9 +121,7 @@ export function TitleScreen() {
                 ]}
               >
                 {item}
-                {item === 'CONTINUE' && hasSaveData
-                  ? ` (${currentChallenge + 1}/5)`
-                  : ''}
+                {item === 'CONTINUE' && hasSaveData ? ` (${currentChallenge + 1}/5)` : ''}
               </Text>
             </TouchableOpacity>
           );
@@ -169,7 +165,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 4,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
+    shadowOffset: {width: 0, height: 8},
     shadowOpacity: 0.8,
     shadowRadius: 16,
     elevation: 12,
@@ -196,7 +192,7 @@ const styles = StyleSheet.create({
     lineHeight: 52,
     letterSpacing: 2,
     textShadowColor: 'rgba(255, 23, 68, 0.4)',
-    textShadowOffset: { width: 0, height: 0 },
+    textShadowOffset: {width: 0, height: 0},
     textShadowRadius: 16,
   },
   divider: {
@@ -240,7 +236,7 @@ const styles = StyleSheet.create({
   menuTextSelected: {
     color: '#FFFFFF',
     textShadowColor: 'rgba(255, 255, 255, 0.15)',
-    textShadowOffset: { width: 0, height: 0 },
+    textShadowOffset: {width: 0, height: 0},
     textShadowRadius: 8,
   },
   footer: {

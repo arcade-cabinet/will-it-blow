@@ -16,11 +16,7 @@ jest.mock('expo-haptics', () => ({
 }));
 
 import * as Haptics from 'expo-haptics';
-import {
-  getHapticPattern,
-  fireHaptic,
-  type HapticEvent,
-} from '../HapticService';
+import {fireHaptic, getHapticPattern, type HapticEvent} from '../HapticService';
 
 const mockImpact = Haptics.impactAsync as jest.Mock;
 const mockNotification = Haptics.notificationAsync as jest.Mock;

@@ -1,18 +1,10 @@
-import React, { useEffect, useRef } from 'react';
-import {
-  Animated,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { useGameStore } from '../../store/gameStore';
-import { calculateFinalVerdict } from '../../engine/ChallengeRegistry';
+import {useEffect, useRef} from 'react';
+import {Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {calculateFinalVerdict} from '../../engine/ChallengeRegistry';
+import {useGameStore} from '../../store/gameStore';
 
 export function GameOverScreen() {
-  const { gameStatus, challengeScores, startNewGame, returnToMenu } =
-    useGameStore();
+  const {gameStatus, challengeScores, startNewGame, returnToMenu} = useGameStore();
 
   // Rank scale-in animation
   const rankScale = useRef(new Animated.Value(0.3)).current;
@@ -48,11 +40,8 @@ export function GameOverScreen() {
           : '#FF1744';
 
   return (
-    <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        style={styles.scrollView}
-      >
+    <Animated.View style={[styles.overlay, {opacity: fadeAnim}]}>
+      <ScrollView contentContainerStyle={styles.scrollContent} style={styles.scrollView}>
         <View style={styles.content}>
           {isVictory && verdict ? (
             <>
@@ -62,7 +51,7 @@ export function GameOverScreen() {
                   styles.rankLetter,
                   {
                     color: rankColor,
-                    transform: [{ scale: rankScale }],
+                    transform: [{scale: rankScale}],
                     textShadowColor: rankColor,
                   },
                 ]}
@@ -79,7 +68,7 @@ export function GameOverScreen() {
               {/* Average score */}
               <View style={styles.scoreCard}>
                 <Text style={styles.scoreLabel}>AVERAGE SCORE</Text>
-                <Text style={[styles.scoreValue, { color: rankColor }]}>
+                <Text style={[styles.scoreValue, {color: rankColor}]}>
                   {Math.round(verdict.averageScore)}
                 </Text>
               </View>
@@ -88,9 +77,7 @@ export function GameOverScreen() {
               <View style={styles.challengeScores}>
                 {challengeScores.map((score, i) => (
                   <View key={i} style={styles.challengeScoreRow}>
-                    <Text style={styles.challengeScoreLabel}>
-                      Challenge {i + 1}
-                    </Text>
+                    <Text style={styles.challengeScoreLabel}>Challenge {i + 1}</Text>
                     <Text style={styles.challengeScoreValue}>{score}</Text>
                   </View>
                 ))}
@@ -100,9 +87,7 @@ export function GameOverScreen() {
             <>
               {/* Defeat */}
               <Text style={styles.gameOverTitle}>GAME OVER</Text>
-              <Text style={styles.gameOverSubtitle}>
-                You are the sausage now.
-              </Text>
+              <Text style={styles.gameOverSubtitle}>You are the sausage now.</Text>
             </>
           )}
 
@@ -116,11 +101,7 @@ export function GameOverScreen() {
               <Text style={styles.buttonText}>NEW GAME</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.menuButton}
-              onPress={returnToMenu}
-              activeOpacity={0.7}
-            >
+            <TouchableOpacity style={styles.menuButton} onPress={returnToMenu} activeOpacity={0.7}>
               <Text style={styles.menuButtonText}>MENU</Text>
             </TouchableOpacity>
           </View>
@@ -157,7 +138,7 @@ const styles = StyleSheet.create({
     fontSize: 72,
     fontWeight: '900',
     fontFamily: 'Bangers',
-    textShadowOffset: { width: 0, height: 0 },
+    textShadowOffset: {width: 0, height: 0},
     textShadowRadius: 30,
     marginBottom: 8,
   },
@@ -236,7 +217,7 @@ const styles = StyleSheet.create({
     letterSpacing: 4,
     textAlign: 'center',
     textShadowColor: 'rgba(255, 23, 68, 0.6)',
-    textShadowOffset: { width: 0, height: 0 },
+    textShadowOffset: {width: 0, height: 0},
     textShadowRadius: 20,
     marginBottom: 16,
   },
@@ -263,7 +244,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 36,
     shadowColor: '#FF1744',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.4,
     shadowRadius: 12,
     elevation: 8,

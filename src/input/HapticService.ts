@@ -18,24 +18,24 @@ export type HapticEvent =
 // --- Pattern types ---
 
 export type HapticPattern =
-  | { type: 'impact'; style: 'light' | 'medium' | 'heavy' }
-  | { type: 'notification'; style: 'success' | 'warning' | 'error' }
-  | { type: 'selection' };
+  | {type: 'impact'; style: 'light' | 'medium' | 'heavy'}
+  | {type: 'notification'; style: 'success' | 'warning' | 'error'}
+  | {type: 'selection'};
 
 // --- Event -> pattern mapping ---
 
 const HAPTIC_MAP: Record<HapticEvent, HapticPattern> = {
-  ingredient_tap: { type: 'impact', style: 'light' },
-  grinding_pulse: { type: 'impact', style: 'medium' },
-  stuffing_pressure: { type: 'impact', style: 'medium' },
-  strike: { type: 'impact', style: 'heavy' },
-  defeat: { type: 'notification', style: 'error' },
-  victory: { type: 'notification', style: 'success' },
-  mr_sausage_flinch: { type: 'impact', style: 'medium' },
-  mr_sausage_laugh: { type: 'impact', style: 'light' },
-  mr_sausage_disgust: { type: 'impact', style: 'medium' },
-  temperature_change: { type: 'selection' },
-  cooking_complete: { type: 'notification', style: 'success' },
+  ingredient_tap: {type: 'impact', style: 'light'},
+  grinding_pulse: {type: 'impact', style: 'medium'},
+  stuffing_pressure: {type: 'impact', style: 'medium'},
+  strike: {type: 'impact', style: 'heavy'},
+  defeat: {type: 'notification', style: 'error'},
+  victory: {type: 'notification', style: 'success'},
+  mr_sausage_flinch: {type: 'impact', style: 'medium'},
+  mr_sausage_laugh: {type: 'impact', style: 'light'},
+  mr_sausage_disgust: {type: 'impact', style: 'medium'},
+  temperature_change: {type: 'selection'},
+  cooking_complete: {type: 'notification', style: 'success'},
 };
 
 export function getHapticPattern(event: HapticEvent): HapticPattern | undefined {

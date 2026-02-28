@@ -4,15 +4,15 @@ Project-specific instructions for Claude Code when working in this repository.
 
 ## What This Is
 
-A first-person horror sausage-making mini-game. SAW meets cooking show. Built with React Native 0.83 + Babylon.js 8.53 (via reactylon 3.5) + Expo SDK 55. Primary target: web. Also targets iOS and Android.
+A first-person horror sausage-making mini-game. SAW meets cooking show. Built with React Native 0.83 + React Three Fiber 9.5 (Three.js 0.183) + Expo SDK 55. Cross-platform: web, iOS, Android.
 
 **Full documentation:** See `docs/` directory for detailed guides:
 - `docs/architecture.md` — System design, directory structure, data flow
 - `docs/game-design.md` — Gameplay mechanics, scoring, challenges, Mr. Sausage
-- `docs/3d-rendering.md` — Babylon.js setup, materials, lighting, cameras, stations
+- `docs/3d-rendering.md` — R3F setup, materials, lighting, cameras, stations
 - `docs/state-management.md` — Zustand store schema, actions, state flow
 - `docs/audio.md` — Tone.js synthesis, sound design, integration points
-- `docs/testing.md` — Strategy, coverage, limitations, adding tests
+- `docs/testing.md` — Strategy, coverage, R3F component testing, adding tests
 - `docs/deployment.md` — CI/CD, GitHub Pages, build commands
 - `docs/development-guide.md` — Conventions, patterns, pitfalls, how to add features
 - `docs/status.md` — Current completion status and remaining work
@@ -24,8 +24,12 @@ A first-person horror sausage-making mini-game. SAW meets cooking show. Built wi
 npx expo start --web          # Web dev server (primary dev target)
 
 # Testing
-npm test                      # Run all 172 Jest tests
-npm test -- --ci --forceExit  # CI mode
+pnpm test                     # Run all 265 Jest tests
+pnpm test:ci                  # CI mode (--ci --forceExit)
+
+# Linting & formatting (Biome)
+pnpm lint                     # Check lint + format errors
+pnpm format                   # Auto-fix lint + format errors
 
 # Type checking
 npx tsc --noEmit
@@ -33,11 +37,10 @@ npx tsc --noEmit
 
 ## Architecture
 
-### Three-Layer Rendering
+### Two-Layer Rendering
 
-1. **Babylon.js 3D scene** (reactylon) — Kitchen GLB model + procedural station meshes + lighting
+1. **React Three Fiber 3D scene** (`<Canvas>`) — Kitchen GLB model + declarative station meshes + lighting
 2. **React Native overlay** — All UI (challenges, dialogue, menus, results)
-3. **MrSausage3D** — Procedural self-lit character on CRT television
 
 ### State Management
 
@@ -51,10 +54,11 @@ menu → loading → ingredients → grinding → stuffing → cooking → tasti
 
 Managed by `appPhase` (menu/loading/playing) and `currentChallenge` (0–4) in the store.
 
-### Platform Splitting (Metro file extensions)
+### Unified Cross-Platform
 
-- `GameWorld.web.tsx` / `GameWorld.native.tsx` — Engine wrapper
-- `AudioEngine.web.ts` (Tone.js) / `AudioEngine.ts` (native no-op stub)
+Single `GameWorld.tsx` uses `@react-three/fiber` Canvas — works on both web and native via `expo-gl`. No platform-specific file splitting for the 3D layer.
+
+- `AudioEngine.web.ts` (Tone.js) / `AudioEngine.ts` (native no-op stub) — only remaining platform split
 
 ## Key Files
 
@@ -65,23 +69,35 @@ Managed by `appPhase` (menu/loading/playing) and `currentChallenge` (0–4) in t
 | `src/engine/ChallengeRegistry.ts` | Challenge configs, variant selection, final verdict |
 | `src/engine/SausagePhysics.ts` | 5 pure scoring functions |
 | `src/engine/Ingredients.ts` | 25 ingredients with stats |
-| `src/components/GameWorld.web.tsx` | Babylon.js scene orchestrator, camera system |
-| `src/components/kitchen/KitchenEnvironment.tsx` | Room enclosure, GLB loading, PBR materials, lighting |
-| `src/components/kitchen/FridgeStation.tsx` | 3D fridge with ingredient meshes |
+| `src/components/GameWorld.tsx` | R3F Canvas, CameraWalker, station visibility, scene orchestrator |
+| `src/components/kitchen/KitchenEnvironment.tsx` | Room enclosure, GLB loading (useGLTF), lighting |
+| `src/components/kitchen/FridgeStation.tsx` | 3D fridge with ingredient meshes (onClick picking) |
+| `src/components/kitchen/GrinderStation.tsx` | 3D grinder with crank animation |
+| `src/components/kitchen/StufferStation.tsx` | 3D stuffer with pressure visualization |
+| `src/components/kitchen/StoveStation.tsx` | 3D stove with temperature glow |
 | `src/components/kitchen/CrtTelevision.tsx` | CRT TV with Mr. Sausage + shader |
+| `src/components/characters/MrSausage3D.tsx` | Procedural 3D character with reaction animations |
+| `src/components/effects/CrtShader.ts` | Three.js ShaderMaterial (chromatic aberration + scanlines) |
+| `src/components/ingredients/Ingredient3D.tsx` | Shape-based ingredient meshes (8 shape types) |
 | `src/components/challenges/*.tsx` | 5 challenge overlays (game mechanics + UI) |
 | `src/components/ui/*.tsx` | Menu, loading, dialogue, progress, strikes, game over |
 
 ## Patterns and Conventions
 
-### 3D Scenes
+### R3F 3D Components
 
-- Mesh/material creation in `useEffect([scene, ...])` with full disposal on cleanup
-- `useRef` for values read inside `onBeforeRenderObservable` (avoids stale closures)
-- Self-lit materials: `disableLighting: true` + `emissiveColor` for non-physical objects
-- PBR materials: `albedoTexture` + `bumpTexture` + roughness in metallicTexture green channel
-- All PBR materials: `maxSimultaneousLights = 4` (WebGPU uniform buffer limit)
-- StandardMaterial `diffuseColor` must be ≤0.20 (6 scene lights totaling ~7× intensity)
+- Declarative JSX: `<mesh><boxGeometry /><meshStandardMaterial /></mesh>`
+- Per-frame animation via `useFrame((state, delta) => { ... })` — replaces imperative render loops
+- Camera/scene access via `useThree()` hook
+- Refs for mutable state read in `useFrame`: `const ref = useRef<THREE.Mesh>(null)`
+- Self-lit materials: `<meshBasicMaterial color="..." />` (unlit, always visible)
+- PBR materials: `<meshStandardMaterial map={...} normalMap={...} roughnessMap={...} />`
+- GLB loading: `useGLTF('/models/kitchen.glb')` from `@react-three/drei`
+- Mesh picking: `onClick` prop directly on `<mesh>` elements
+
+### CameraWalker Component
+
+Located in `GameWorld.tsx`. Smoothly interpolates camera between station positions using `easeInOutQuad`. Updates `camera.position` and `camera.lookAt` target in `useFrame`.
 
 ### Challenge Component Pattern
 
@@ -92,9 +108,11 @@ Each challenge = overlay (`challenges/`) + 3D station (`kitchen/`) + dialogue (`
 
 ### Testing
 
-- Jest with react-native preset — **pure logic only**
-- Cannot import Babylon.js or reactylon in tests (ESM incompatible)
-- 172 tests covering: SausagePhysics, Ingredients, ChallengeRegistry, IngredientMatcher, DialogueEngine, gameStore
+- Jest with react-native preset — **both pure logic AND R3F component tests**
+- R3F components tested via `@react-three/test-renderer` (renders Three.js scene graph in Node.js)
+- 265 tests across ~17 test files
+- Pure logic: SausagePhysics, Ingredients, ChallengeRegistry, IngredientMatcher, DialogueEngine, gameStore
+- Component tests: MrSausage3D, CrtTelevision, KitchenEnvironment, FridgeStation, GrinderStation, StufferStation, StoveStation, Ingredient3D, GameWorld, CrtShader
 
 ## CI/CD
 
@@ -104,10 +122,10 @@ Each challenge = overlay (`challenges/`) + 3D station (`kitchen/`) + dialogue (`
 
 ## Common Pitfalls
 
-- **Babylon.js ESM in Jest**: Can't import Babylon or reactylon in tests. Test pure logic modules only.
-- **Stale closure in render loops**: Use `useRef` for values read inside `onBeforeRenderObservable` callbacks.
-- **Canvas.width mutation kills WebGPU**: Never set canvas.width directly. Only CSS sizing + `engine.resize()`.
-- **PBR black without IBL**: Scene needs `environmentTexture` or PBR surfaces render nearly black.
-- **Light accumulation**: With ~7× total intensity, `diffuseColor > 0.20` clips to white.
-- **Double geometry**: Station components create procedural meshes that occlude GLB model meshes at the same positions. PBR material overrides on the GLB won't visually affect stations.
+- **import.meta in Metro**: Zustand ESM uses `import.meta.env.MODE`. Must have `unstable_transformImportMeta: true` in babel.config.js or you get a white screen.
+- **useGLTF mocking in tests**: `@react-three/drei`'s `useGLTF` must be mocked in Jest — it depends on file loading that doesn't work in Node.js.
+- **Stale closure in useFrame**: Use `useRef` for values read inside `useFrame` callbacks. React state captured at mount time would be stale.
+- **sphereGeometry takes radius, not diameter**: Babylon.js used `diameter: 3.6` → R3F uses `args={[1.8, 24, 24]}` (radius, widthSegments, heightSegments).
 - **Camera inside mesh**: Check STATION_CAMERAS values. Camera needs ≥0.5 units clearance from solid meshes.
+- **MrSausage3D overlap**: The character is ~3.5 units tall at scale 1.0. Verify position in each scene doesn't clip animated geometry.
+- **Three.js transform allowlist**: `jest.config.js` must include `three` and `@react-three` in `transformIgnorePatterns` or tests fail with ESM syntax errors.

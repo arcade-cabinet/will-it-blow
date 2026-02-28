@@ -4,44 +4,44 @@
 
 Will It Blow? is a first-person horror sausage-making mini-game. The player is trapped in a grimy basement kitchen and must complete 5 sequential challenges under the watchful eye of Mr. Sausage, a menacing sentient sausage displayed on a CRT television.
 
-### Three-Layer Rendering Stack
+### Two-Layer Rendering Stack
 
 ```text
 ┌──────────────────────────────────────────┐
-│  Layer 3: React Native UI Overlays       │  ← Buttons, progress bars, dialogue
+│  Layer 2: React Native UI Overlays       │  ← Buttons, progress bars, dialogue
 │  (StyleSheet.absoluteFillObject, z=10)   │
 ├──────────────────────────────────────────┤
-│  Layer 2: Babylon.js 3D Scene            │  ← Kitchen GLB, stations, lighting
-│  (Engine → Scene → Camera/Meshes/Lights) │
+│  Layer 1: React Three Fiber Canvas       │  ← Kitchen GLB, stations, lighting
+│  (Three.js WebGL via R3F reconciler)     │
 ├──────────────────────────────────────────┤
-│  Layer 1: SafeAreaView (React Native)    │  ← Root container, flex: 1
+│  Root: SafeAreaView (React Native)       │  ← Root container, flex: 1
 └──────────────────────────────────────────┘
 ```
 
-- **Layer 1** provides the root container and background color (#0a0a0a).
-- **Layer 2** is the Babylon.js engine running inside a `<canvas>` element (web) or NativeEngine (mobile). It renders the 3D kitchen environment, station meshes, and CRT TV.
-- **Layer 3** is React Native overlays (`pointerEvents="box-none"`) that float above the 3D scene. All game UI lives here: challenge controls, dialogue, menus, results.
+- **Root** provides the container and background color (#0a0a0a).
+- **Layer 1** is the R3F `<Canvas>` rendering Three.js via WebGL. On web, this is a `<canvas>` element. On native, it uses `expo-gl` for the GL context. It renders the 3D kitchen environment, station meshes, and CRT TV.
+- **Layer 2** is React Native overlays (`pointerEvents="box-none"`) that float above the 3D scene. All game UI lives here: challenge controls, dialogue, menus, results.
 
 ### Platform Strategy
 
 The app targets web (primary), iOS, and Android via Expo SDK 55 + React Native 0.83.
 
-Platform-specific code uses Metro file extensions:
-- `GameWorld.web.tsx` — Uses `reactylon/web` Engine (WebGPU/WebGL canvas)
-- `GameWorld.native.tsx` — Uses `reactylon/native` NativeEngine
+A single `GameWorld.tsx` works on all platforms — R3F's `<Canvas>` uses `expo-gl` on native and standard WebGL on web. No platform-specific file splitting for the 3D layer.
+
+Only remaining platform split:
 - `AudioEngine.web.ts` — Full Tone.js synthesis
 - `AudioEngine.ts` — Native stub (no-op placeholder)
-
-All other code is cross-platform.
 
 ### Key Technology Choices
 
 | Technology | Version | Role |
 |-----------|---------|------|
 | React Native | 0.83.2 | UI framework, cross-platform |
-| Babylon.js | 8.53.0 | 3D engine (WebGPU primary, WebGL fallback) |
-| reactylon | 3.5.4 | React reconciler for Babylon.js (JSX scene graph) |
-| cannon-es | 0.20.0 | Physics engine (gravity, collisions) |
+| Three.js | 0.183.1 | 3D engine (WebGL) |
+| React Three Fiber | 9.5.0 | React reconciler for Three.js (declarative JSX scene graph) |
+| @react-three/drei | 10.7.7 | Helpers: useGLTF, Environment, etc. |
+| @react-three/cannon | 6.6.0 | Physics (optional, available) |
+| expo-gl | 55.0.9 | Native GL context for Three.js on iOS/Android |
 | Zustand | 5.0.11 | State management (replaces React Context) |
 | Tone.js | 15.1.22 | Web audio synthesis (procedural SFX) |
 | Expo | 55.0.0 | Build toolchain, dev server, deployment |
@@ -51,12 +51,12 @@ All other code is cross-platform.
 ```text
 App.tsx
   └─ useGameStore(s => s.appPhase)
-     ├─ 'menu'    → <TitleScreen />           Pure 2D, no Babylon engine
+     ├─ 'menu'    → <TitleScreen />           Pure 2D, no R3F Canvas mounted
      ├─ 'loading' → <LoadingScreen />          Preloads kitchen.glb via fetch()
-     └─ 'playing' → <GameWorld /> + <GameUI /> Babylon engine + overlay stack
+     └─ 'playing' → <GameWorld /> + <GameUI /> R3F Canvas + overlay stack
 ```
 
-The `appPhase` state machine prevents the heavy Babylon.js engine from mounting until the player actually starts a game. This keeps the menu fast and avoids loading delays on first paint.
+The `appPhase` state machine prevents the heavy R3F Canvas and GLB model from mounting until the player actually starts a game. This keeps the menu fast and avoids loading delays on first paint.
 
 ## Directory Structure
 
@@ -75,35 +75,40 @@ will-it-blow/
 │   │   ├── AudioEngine.ts           Native audio stub (no-op)
 │   │   └── AudioEngine.web.ts       Tone.js synthesis engine
 │   ├── components/
-│   │   ├── GameWorld.tsx             Platform resolver (Metro extension)
-│   │   ├── GameWorld.web.tsx         Babylon.js scene orchestrator (web)
-│   │   ├── GameWorld.native.tsx      Babylon.js scene orchestrator (native)
+│   │   ├── GameWorld.tsx             R3F Canvas, CameraWalker, station orchestrator
 │   │   ├── characters/
-│   │   │   └── MrSausage3D.tsx       Procedural 3D character (self-lit)
+│   │   │   ├── MrSausage3D.tsx       Procedural 3D character (meshBasicMaterial, self-lit)
+│   │   │   └── __tests__/MrSausage3D.test.tsx
 │   │   ├── kitchen/
 │   │   │   ├── KitchenEnvironment.tsx Room: walls, floor, ceiling, GLB model, lighting
-│   │   │   ├── FridgeStation.tsx      3D fridge with ingredient meshes
+│   │   │   ├── FridgeStation.tsx      3D fridge with ingredient meshes (onClick picking)
 │   │   │   ├── GrinderStation.tsx     3D grinder with crank animation
 │   │   │   ├── StufferStation.tsx     3D stuffer with pressure visualization
 │   │   │   ├── StoveStation.tsx       3D stove with temperature glow
-│   │   │   └── CrtTelevision.tsx      CRT TV with Mr. Sausage + shader
+│   │   │   ├── CrtTelevision.tsx      CRT TV with Mr. Sausage + shader
+│   │   │   └── __tests__/            Tests for all station components
 │   │   ├── effects/
-│   │   │   └── CrtShader.ts          GLSL chromatic aberration post-process
+│   │   │   ├── CrtShader.ts          Three.js ShaderMaterial (chromatic aberration)
+│   │   │   └── __tests__/CrtShader.test.ts
+│   │   ├── ingredients/
+│   │   │   ├── Ingredient3D.tsx      Shape-based ingredient meshes (8 types)
+│   │   │   └── __tests__/Ingredient3D.test.tsx
 │   │   ├── challenges/
 │   │   │   ├── IngredientChallenge.tsx Fridge: pick matching ingredients
 │   │   │   ├── GrindingChallenge.tsx   Grinder: speed control drag mechanic
 │   │   │   ├── StuffingChallenge.tsx   Stuffer: hold-to-fill pressure mgmt
 │   │   │   ├── CookingChallenge.tsx    Stove: temperature control
 │   │   │   └── TastingChallenge.tsx    Verdict: score reveal + rank
-│   │   └── ui/
-│   │       ├── TitleScreen.tsx         Butcher shop menu
-│   │       ├── LoadingScreen.tsx       Asset preload + progress
-│   │       ├── ChallengeHeader.tsx     "CHALLENGE N/5" header
-│   │       ├── StrikeCounter.tsx       3 lives display
-│   │       ├── HintButton.tsx          Hint trigger (stub)
-│   │       ├── ProgressGauge.tsx       Animated progress bar
-│   │       ├── DialogueOverlay.tsx     Typewriter text + choices
-│   │       └── GameOverScreen.tsx      Victory/defeat + rank badge
+│   │   ├── ui/
+│   │   │   ├── TitleScreen.tsx         Butcher shop menu
+│   │   │   ├── LoadingScreen.tsx       Asset preload + progress
+│   │   │   ├── ChallengeHeader.tsx     "CHALLENGE N/5" header
+│   │   │   ├── StrikeCounter.tsx       3 lives display
+│   │   │   ├── HintButton.tsx          Hint trigger (stub)
+│   │   │   ├── ProgressGauge.tsx       Animated progress bar
+│   │   │   ├── DialogueOverlay.tsx     Typewriter text + choices
+│   │   │   └── GameOverScreen.tsx      Victory/defeat + rank badge
+│   │   └── __tests__/GameWorld.test.tsx
 │   └── data/
 │       ├── challenges/
 │       │   └── variants.ts            6 ingredient + 3 grinding + 3 stuffing + 3 cooking variants
@@ -126,7 +131,7 @@ will-it-blow/
 │       ├── tile_wall_*.jpg + ao       Wall tile PBR set (with ambient occlusion)
 │       ├── grime_drip_*.jpg           Drip overlay (color, normal, opacity, roughness)
 │       └── grime_base_*.jpg           Baseboard mold overlay
-├── __tests__/                        Jest test files (pure logic only)
+├── __tests__/                        Jest test files (pure logic)
 ├── docs/plans/                       Design & implementation documents
 ├── .github/workflows/
 │   ├── ci.yml                        Tests on push (main + feat/**)
@@ -141,11 +146,11 @@ User Input (touch/click)
   → React Native event handler (challenge overlay)
     → Zustand store action (setChallengeProgress, addStrike, etc.)
       → React re-render
-        → GameWorld reads store → updates 3D station visuals
+        → GameWorld reads store → updates 3D station visuals (via useFrame)
         → Challenge overlay reads store → updates UI (progress bar, strikes)
         → On completeChallenge(score):
           → Store advances currentChallenge
-          → GameWorld animates camera walk to next station
+          → CameraWalker animates camera to next station
           → Next challenge overlay mounts
 ```
 

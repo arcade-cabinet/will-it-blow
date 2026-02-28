@@ -1,6 +1,5 @@
-import React from 'react';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { FridgeStation } from '../FridgeStation';
+import {FridgeStation} from '../FridgeStation';
 
 const mockIngredients = [
   {
@@ -12,7 +11,7 @@ const mockIngredients = [
     burstRisk: 0.2,
     blowPower: 2,
     category: 'fast food' as const,
-    shape: { base: 'box' as const, detail: 'rounded' as const },
+    shape: {base: 'box' as const, detail: 'rounded' as const},
   },
   {
     name: 'SpaghettiOs',
@@ -23,7 +22,7 @@ const mockIngredients = [
     burstRisk: 0.5,
     blowPower: 4,
     category: 'canned' as const,
-    shape: { base: 'sphere' as const, detail: 'wobbly' as const },
+    shape: {base: 'sphere' as const, detail: 'wobbly' as const},
   },
   {
     name: 'Lobster',
@@ -34,7 +33,7 @@ const mockIngredients = [
     burstRisk: 0.1,
     blowPower: 1,
     category: 'fancy' as const,
-    shape: { base: 'elongated' as const, detail: 'claws' as const },
+    shape: {base: 'elongated' as const, detail: 'claws' as const},
   },
 ];
 
@@ -47,7 +46,7 @@ describe('FridgeStation', () => {
         hintActive={false}
         matchingIndices={new Set()}
         onSelect={jest.fn()}
-      />
+      />,
     );
     expect(renderer.scene.children.length).toBeGreaterThan(0);
   });
@@ -60,7 +59,7 @@ describe('FridgeStation', () => {
         hintActive={false}
         matchingIndices={new Set()}
         onSelect={jest.fn()}
-      />
+      />,
     );
     // Root group should contain fridge body, door, shelves, interior light, and ingredient meshes
     const root = renderer.scene.children[0];
@@ -76,7 +75,7 @@ describe('FridgeStation', () => {
         hintActive={false}
         matchingIndices={new Set()}
         onSelect={jest.fn()}
-      />
+      />,
     );
     const root = renderer.scene.children[0];
     expect(root.instance.position.x).toBe(-5);
@@ -92,7 +91,7 @@ describe('FridgeStation', () => {
         hintActive={false}
         matchingIndices={new Set()}
         onSelect={jest.fn()}
-      />
+      />,
     );
     const pointLights: any[] = [];
     function findLights(node: any) {
@@ -117,7 +116,7 @@ describe('FridgeStation', () => {
         hintActive={false}
         matchingIndices={new Set()}
         onSelect={jest.fn()}
-      />
+      />,
     );
     expect(renderer.scene.children.length).toBeGreaterThan(0);
   });
@@ -130,18 +129,15 @@ describe('FridgeStation', () => {
         hintActive={true}
         matchingIndices={new Set([1])}
         onSelect={jest.fn()}
-      />
+      />,
     );
     expect(renderer.scene.children.length).toBeGreaterThan(0);
   });
 
   it('has no Babylon.js imports', async () => {
-    const fs = require('fs');
-    const path = require('path');
-    const source = fs.readFileSync(
-      path.resolve(__dirname, '../FridgeStation.tsx'),
-      'utf8'
-    );
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../FridgeStation.tsx'), 'utf8');
     expect(source).not.toContain('@babylonjs/core');
     expect(source).not.toContain('reactylon');
   });

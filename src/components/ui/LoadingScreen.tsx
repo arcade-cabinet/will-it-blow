@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useGameStore } from '../../store/gameStore';
+import {useEffect, useRef, useState} from 'react';
+import {Animated, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {useGameStore} from '../../store/gameStore';
 
 const LOADING_QUOTES = [
   'Selecting the finest meats...',
@@ -23,8 +23,8 @@ function getModelUrl(filename: string): string {
 }
 
 export function LoadingScreen() {
-  const startNewGame = useGameStore((s) => s.startNewGame);
-  const gameStatus = useGameStore((s) => s.gameStatus);
+  const startNewGame = useGameStore(s => s.startNewGame);
+  const gameStatus = useGameStore(s => s.gameStatus);
   const [progress, setProgress] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [quoteIndex, setQuoteIndex] = useState(0);
@@ -43,7 +43,7 @@ export function LoadingScreen() {
   // Cycle quotes every 2 seconds
   useEffect(() => {
     const interval = setInterval(() => {
-      setQuoteIndex((prev) => (prev + 1) % LOADING_QUOTES.length);
+      setQuoteIndex(prev => (prev + 1) % LOADING_QUOTES.length);
     }, 2000);
     return () => clearInterval(interval);
   }, []);
@@ -55,7 +55,7 @@ export function LoadingScreen() {
     async function preload() {
       try {
         const url = getModelUrl('kitchen.glb');
-        const response = await fetch(url, { signal: controller.signal });
+        const response = await fetch(url, {signal: controller.signal});
 
         if (!response.ok) {
           console.warn('Failed to preload kitchen.glb:', response.status);
@@ -77,7 +77,7 @@ export function LoadingScreen() {
 
         let received = 0;
         while (true) {
-          const { done, value } = await reader.read();
+          const {done, value} = await reader.read();
           if (done || controller.signal.aborted) break;
           received += value.byteLength;
           const pct = Math.min(Math.round((received / contentLength) * 100), 99);
@@ -88,14 +88,17 @@ export function LoadingScreen() {
       } catch (error) {
         if (error instanceof DOMException && error.name === 'AbortError') return;
         console.warn('Error preloading kitchen.glb:', error);
-        if (!controller.signal.aborted) setLoadError('Failed to load assets. Check your connection.');
+        if (!controller.signal.aborted)
+          setLoadError('Failed to load assets. Check your connection.');
       }
     }
 
     preload();
-    return () => { controller.abort(); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadError]);
+    return () => {
+      controller.abort();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // When loading completes, transition to playing
   useEffect(() => {
@@ -122,7 +125,7 @@ export function LoadingScreen() {
   };
 
   return (
-    <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
+    <Animated.View style={[styles.container, {opacity: fadeAnim}]}>
       {loadError ? (
         <View style={styles.progressArea}>
           <Text style={styles.errorText}>{loadError}</Text>
@@ -135,7 +138,7 @@ export function LoadingScreen() {
           {/* Sausage progress bar */}
           <View style={styles.progressArea}>
             <View style={styles.sausageTrack}>
-              <View style={[styles.sausageFill, { width: fillWidth }]}>
+              <View style={[styles.sausageFill, {width: fillWidth}]}>
                 {/* Left end cap */}
                 <View style={styles.sausageCapLeft} />
                 {/* Right end cap */}

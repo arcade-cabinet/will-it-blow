@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import {create} from 'zustand';
 
 export type AppPhase = 'menu' | 'loading' | 'playing';
 export type XrMode = 'none' | 'ar' | 'vr';
@@ -75,13 +75,13 @@ export const INITIAL_GAME_STATE = {
   xrMode: 'none' as XrMode,
 };
 
-export const useGameStore = create<GameState>()((set) => ({
+export const useGameStore = create<GameState>()(set => ({
   ...INITIAL_GAME_STATE,
 
-  setAppPhase: (phase: AppPhase) => set({ appPhase: phase }),
+  setAppPhase: (phase: AppPhase) => set({appPhase: phase}),
 
   startNewGame: () =>
-    set((state) => ({
+    set(state => ({
       appPhase: 'playing' as AppPhase,
       currentChallenge: 0,
       challengeScores: [],
@@ -109,7 +109,7 @@ export const useGameStore = create<GameState>()((set) => ({
     }),
 
   completeChallenge: (score: number) =>
-    set((state) => {
+    set(state => {
       const nextChallenge = state.currentChallenge + 1;
       const scores = [...state.challengeScores, score];
       const isLastChallenge = nextChallenge >= TOTAL_CHALLENGES;
@@ -128,7 +128,7 @@ export const useGameStore = create<GameState>()((set) => ({
     }),
 
   addStrike: () =>
-    set((state) => {
+    set(state => {
       const newStrikes = state.strikes + 1;
       return {
         strikes: newStrikes,
@@ -137,28 +137,23 @@ export const useGameStore = create<GameState>()((set) => ({
     }),
 
   useHint: () =>
-    set((state) => ({
+    set(state => ({
       hintsRemaining: Math.max(0, state.hintsRemaining - 1),
     })),
 
-  setChallengeProgress: (progress: number) =>
-    set({ challengeProgress: progress }),
+  setChallengeProgress: (progress: number) => set({challengeProgress: progress}),
 
-  setChallengePressure: (pressure: number) =>
-    set({ challengePressure: pressure }),
+  setChallengePressure: (pressure: number) => set({challengePressure: pressure}),
 
-  setChallengeIsPressing: (pressing: boolean) =>
-    set({ challengeIsPressing: pressing }),
+  setChallengeIsPressing: (pressing: boolean) => set({challengeIsPressing: pressing}),
 
-  setChallengeTemperature: (temperature: number) =>
-    set({ challengeTemperature: temperature }),
+  setChallengeTemperature: (temperature: number) => set({challengeTemperature: temperature}),
 
-  setChallengeHeatLevel: (heatLevel: number) =>
-    set({ challengeHeatLevel: heatLevel }),
+  setChallengeHeatLevel: (heatLevel: number) => set({challengeHeatLevel: heatLevel}),
 
-  setGyroEnabled: (enabled: boolean) => set({ gyroEnabled: enabled }),
-  setMotionControlsEnabled: (enabled: boolean) => set({ motionControlsEnabled: enabled }),
-  setXrMode: (mode: XrMode) => set({ xrMode: mode }),
+  setGyroEnabled: (enabled: boolean) => set({gyroEnabled: enabled}),
+  setMotionControlsEnabled: (enabled: boolean) => set({motionControlsEnabled: enabled}),
+  setXrMode: (mode: XrMode) => set({xrMode: mode}),
 
   returnToMenu: () =>
     set({

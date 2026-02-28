@@ -1,7 +1,7 @@
-import React, { useRef, useMemo } from "react";
-import { useFrame, useThree } from "@react-three/fiber";
-import * as THREE from "three";
-import { REACTIONS, type Reaction } from "./reactions";
+import {useFrame, useThree} from '@react-three/fiber';
+import {useMemo, useRef} from 'react';
+import * as THREE from 'three';
+import {REACTIONS, type Reaction} from './reactions';
 
 interface MrSausage3DProps {
   reaction?: Reaction;
@@ -26,7 +26,7 @@ interface MrSausage3DProps {
  * - Camera tracking: head slowly follows the player's camera
  */
 export const MrSausage3D = ({
-  reaction = "idle",
+  reaction = 'idle',
   position = [0, 0, 0],
   scale = 1,
   rotationY = 0,
@@ -72,13 +72,10 @@ export const MrSausage3D = ({
     trackPitch: 0,
   });
 
-  const { camera } = useThree();
+  const {camera} = useThree();
 
   // Precompute torus geometries for mustache curls
-  const torusGeo = useMemo(
-    () => new THREE.TorusGeometry(0.425, 0.11, 12, 20),
-    [],
-  );
+  const torusGeo = useMemo(() => new THREE.TorusGeometry(0.425, 0.11, 12, 20), []);
 
   // --- Animation loop ---
   useFrame((_state, delta) => {
@@ -132,11 +129,7 @@ export const MrSausage3D = ({
       if (s.blinkPhase >= 2) s.blinkPhase = 0;
     }
     const naturalBlink =
-      s.blinkPhase > 0
-        ? s.blinkPhase < 1
-          ? s.blinkPhase
-          : 2 - s.blinkPhase
-        : 0;
+      s.blinkPhase > 0 ? (s.blinkPhase < 1 ? s.blinkPhase : 2 - s.blinkPhase) : 0;
 
     // ---- Default state (reset each frame) ----
     let lidCloseL = naturalBlink;
@@ -152,22 +145,19 @@ export const MrSausage3D = ({
 
     // ---- Per-reaction animation ----
     switch (currentReaction) {
-      case "idle": {
+      case 'idle': {
         root.position.y = baseY + Math.sin(time * 1.8) * 0.15;
         root.rotation.y = rotationY + s.trackYaw + Math.sin(time * 0.6) * 0.06;
         root.rotation.x = s.trackPitch;
         root.rotation.z = Math.sin(time * 1.2) * 0.03;
-        if (stacheCenterRef.current)
-          stacheCenterRef.current.rotation.z = Math.sin(time * 3) * 0.04;
-        if (curlLRef.current)
-          curlLRef.current.rotation.z = Math.sin(time * 3) * 0.05;
-        if (curlRRef.current)
-          curlRRef.current.rotation.z = -Math.sin(time * 3) * 0.05;
+        if (stacheCenterRef.current) stacheCenterRef.current.rotation.z = Math.sin(time * 3) * 0.04;
+        if (curlLRef.current) curlLRef.current.rotation.z = Math.sin(time * 3) * 0.05;
+        if (curlRRef.current) curlRRef.current.rotation.z = -Math.sin(time * 3) * 0.05;
         pupilX = Math.sin(time * 0.4) * 0.02;
         pupilY = Math.sin(time * 0.3) * 0.01;
         break;
       }
-      case "flinch": {
+      case 'flinch': {
         if (active) {
           root.rotation.z = -0.15;
           root.rotation.x = -0.1 + s.trackPitch;
@@ -186,21 +176,20 @@ export const MrSausage3D = ({
         }
         break;
       }
-      case "laugh": {
+      case 'laugh': {
         root.position.x = position[0] + Math.sin(time * 22) * 0.12;
         root.position.y = baseY + Math.abs(Math.sin(time * 7)) * 0.3;
         root.rotation.z = Math.sin(time * 18) * 0.06;
         root.rotation.y = rotationY + s.trackYaw;
         root.rotation.x = s.trackPitch;
-        if (stacheCenterRef.current)
-          stacheCenterRef.current.rotation.z = Math.sin(time * 5) * 0.08;
+        if (stacheCenterRef.current) stacheCenterRef.current.rotation.z = Math.sin(time * 5) * 0.08;
         lidCloseL = 0.8;
         lidCloseR = 0.8;
         mouthOpen = 0.6 + Math.sin(time * 12) * 0.3;
         cheekBlush = 0.3;
         break;
       }
-      case "disgust": {
+      case 'disgust': {
         if (active) {
           root.rotation.z = 0.12;
           root.rotation.x = -0.2 + s.trackPitch;
@@ -220,7 +209,7 @@ export const MrSausage3D = ({
         root.position.y = baseY;
         break;
       }
-      case "excitement": {
+      case 'excitement': {
         root.position.y = baseY + Math.abs(Math.sin(time * 6)) * 0.5;
         const pulse = 1 + Math.sin(time * 8) * 0.04;
         head.scale.y = 1.05 * pulse;
@@ -232,7 +221,7 @@ export const MrSausage3D = ({
         cheekBlush = 0.2;
         break;
       }
-      case "nervous": {
+      case 'nervous': {
         root.position.x = position[0] + Math.sin(time * 14) * 0.04;
         root.position.y = baseY + Math.sin(time * 2) * 0.06;
         root.rotation.z = Math.sin(time * 3) * 0.04;
@@ -245,7 +234,7 @@ export const MrSausage3D = ({
         pupilSize = 0.8;
         break;
       }
-      case "nod": {
+      case 'nod': {
         const nodPhase = (s.reactionElapsed / 300) * Math.PI;
         root.rotation.x = Math.abs(Math.sin(nodPhase)) * 0.25 + s.trackPitch;
         root.rotation.y = rotationY + s.trackYaw;
@@ -255,17 +244,15 @@ export const MrSausage3D = ({
         lidCloseR = Math.max(naturalBlink, nodClose);
         break;
       }
-      case "talk": {
+      case 'talk': {
         root.position.y = baseY + Math.sin(time * 2) * 0.05;
         const talkPulse = 1 + Math.sin(time * 10) * 0.015;
         head.scale.y = 1.05 * talkPulse;
-        if (stacheCenterRef.current)
-          stacheCenterRef.current.rotation.z = Math.sin(time * 7) * 0.03;
+        if (stacheCenterRef.current) stacheCenterRef.current.rotation.z = Math.sin(time * 7) * 0.03;
         root.rotation.y = rotationY + s.trackYaw;
         root.rotation.x = s.trackPitch;
         mouthOpen = 0.15 + Math.abs(Math.sin(time * 8)) * 0.35;
-        if (stacheCenterRef.current)
-          stacheCenterRef.current.position.y = -0.35 - mouthOpen * 0.08;
+        if (stacheCenterRef.current) stacheCenterRef.current.position.y = -0.35 - mouthOpen * 0.08;
         break;
       }
     }
@@ -273,12 +260,8 @@ export const MrSausage3D = ({
     // ---- Apply facial rig values ----
 
     // Lids
-    if (lidLRef.current)
-      lidLRef.current.scale.y =
-        Math.max(0, Math.min(1, lidCloseL)) * 0.5;
-    if (lidRRef.current)
-      lidRRef.current.scale.y =
-        Math.max(0, Math.min(1, lidCloseR)) * 0.5;
+    if (lidLRef.current) lidLRef.current.scale.y = Math.max(0, Math.min(1, lidCloseL)) * 0.5;
+    if (lidRRef.current) lidRRef.current.scale.y = Math.max(0, Math.min(1, lidCloseR)) * 0.5;
 
     // Pupil look direction
     const clampX = Math.max(-0.08, Math.min(0.08, pupilX));
@@ -312,10 +295,8 @@ export const MrSausage3D = ({
 
     // Mouth openness
     const clampedMouth = Math.max(0, Math.min(1, mouthOpen));
-    if (mouthRef.current)
-      mouthRef.current.scale.y = clampedMouth * 0.6;
-    if (lowerLipRef.current)
-      lowerLipRef.current.position.y = -0.88 - clampedMouth * 0.25;
+    if (mouthRef.current) mouthRef.current.scale.y = clampedMouth * 0.6;
+    if (lowerLipRef.current) lowerLipRef.current.position.y = -0.88 - clampedMouth * 0.25;
 
     // Cheek blush
     if (cheekMatRef.current) {
@@ -335,11 +316,7 @@ export const MrSausage3D = ({
     for (let i = 0; i < count; i++) {
       const t = i / (count - 1);
       const y = 0.6 + t * 1.0;
-      positions.push([
-        Math.sin(t * Math.PI * 3) * 0.2,
-        y,
-        -1.55 + t * 0.3,
-      ]);
+      positions.push([Math.sin(t * Math.PI * 3) * 0.2, y, -1.55 + t * 0.3]);
     }
     return positions;
   }, []);
@@ -381,20 +358,12 @@ export const MrSausage3D = ({
           <meshBasicMaterial color={[0.25, 0.55, 0.3]} />
         </mesh>
         {/* Pupil */}
-        <mesh
-          ref={pupilLRef}
-          position={[0, 0, -0.15]}
-          scale={[1.0, 1.0, 0.3]}
-        >
+        <mesh ref={pupilLRef} position={[0, 0, -0.15]} scale={[1.0, 1.0, 0.3]}>
           <sphereGeometry args={[0.06, 8, 8]} />
           <meshBasicMaterial color={[0.02, 0.02, 0.02]} />
         </mesh>
         {/* Eyelid */}
-        <mesh
-          ref={lidLRef}
-          position={[0, 0.12, -0.02]}
-          scale={[1.05, 0.0, 0.45]}
-        >
+        <mesh ref={lidLRef} position={[0, 0.12, -0.02]} scale={[1.05, 0.0, 0.45]}>
           <sphereGeometry args={[0.27, 10, 10]} />
           <meshBasicMaterial color={[0.85, 0.55, 0.3]} />
         </mesh>
@@ -413,20 +382,12 @@ export const MrSausage3D = ({
           <meshBasicMaterial color={[0.25, 0.55, 0.3]} />
         </mesh>
         {/* Pupil */}
-        <mesh
-          ref={pupilRRef}
-          position={[0, 0, -0.15]}
-          scale={[1.0, 1.0, 0.3]}
-        >
+        <mesh ref={pupilRRef} position={[0, 0, -0.15]} scale={[1.0, 1.0, 0.3]}>
           <sphereGeometry args={[0.06, 8, 8]} />
           <meshBasicMaterial color={[0.02, 0.02, 0.02]} />
         </mesh>
         {/* Eyelid */}
-        <mesh
-          ref={lidRRef}
-          position={[0, 0.12, -0.02]}
-          scale={[1.05, 0.0, 0.45]}
-        >
+        <mesh ref={lidRRef} position={[0, 0.12, -0.02]} scale={[1.05, 0.0, 0.45]}>
           <sphereGeometry args={[0.27, 10, 10]} />
           <meshBasicMaterial color={[0.85, 0.55, 0.3]} />
         </mesh>
@@ -466,11 +427,7 @@ export const MrSausage3D = ({
 
       {/* ========== MOUTH ========== */}
       {/* Mouth opening (dark interior) */}
-      <mesh
-        ref={mouthRef}
-        position={[0, -0.85, -1.4]}
-        scale={[1.2, 0.0, 0.35]}
-      >
+      <mesh ref={mouthRef} position={[0, -0.85, -1.4]} scale={[1.2, 0.0, 0.35]}>
         <sphereGeometry args={[0.35, 12, 12]} />
         <meshBasicMaterial color={[0.15, 0.04, 0.02]} />
       </mesh>
@@ -488,21 +445,12 @@ export const MrSausage3D = ({
       {/* ========== CHEEKS ========== */}
       <mesh position={[-1.1, -0.1, -1.2]} scale={[0.5, 0.4, 0.2]}>
         <sphereGeometry args={[0.4, 10, 10]} />
-        <meshBasicMaterial
-          ref={cheekMatRef}
-          color={[0.92, 0.62, 0.35]}
-          transparent
-          opacity={0.6}
-        />
+        <meshBasicMaterial ref={cheekMatRef} color={[0.92, 0.62, 0.35]} transparent opacity={0.6} />
       </mesh>
       <mesh position={[1.1, -0.1, -1.2]} scale={[0.5, 0.4, 0.2]}>
         <sphereGeometry args={[0.4, 10, 10]} />
         {/* Both cheeks share the same ref material for color updates */}
-        <meshBasicMaterial
-          color={[0.92, 0.62, 0.35]}
-          transparent
-          opacity={0.6}
-        />
+        <meshBasicMaterial color={[0.92, 0.62, 0.35]} transparent opacity={0.6} />
       </mesh>
 
       {/* ========== MUSTACHE ========== */}
