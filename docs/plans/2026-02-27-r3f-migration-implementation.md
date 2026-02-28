@@ -68,8 +68,8 @@ Key R3F differences from Babylon.js:
 
 Run:
 ```bash
-npm install three @react-three/fiber @react-three/drei @react-three/cannon expo-gl
-npm install --save-dev @types/three @react-three/test-renderer
+pnpm add three @react-three/fiber @react-three/drei @react-three/cannon expo-gl
+pnpm add --save-dev @types/three @react-three/test-renderer
 ```
 
 Expected: All packages install without errors. `package.json` now has both `reactylon`/`@babylonjs/*` AND `three`/`@react-three/*`.
@@ -123,7 +123,7 @@ The key change: added `three` and `@react-three` to the transform allowlist so J
 
 **Step 5: Verify pure logic tests still pass**
 
-Run: `npm test -- --ci --forceExit`
+Run: `pnpm test -- --ci --forceExit`
 
 Expected: All 199 tests pass. (Pure logic + InputActions + HapticService + gameStore tests are unaffected.)
 
@@ -168,7 +168,7 @@ describe('CrtShader', () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `npm test -- --testPathPattern CrtShader --ci --forceExit`
+Run: `pnpm test -- --testPathPattern CrtShader --ci --forceExit`
 
 Expected: FAIL — current `createCrtMaterial` returns a Babylon ShaderMaterial, not a Three.js one.
 
@@ -309,13 +309,13 @@ Key changes from Babylon version:
 
 **Step 4: Run tests**
 
-Run: `npm test -- --testPathPattern CrtShader --ci --forceExit`
+Run: `pnpm test -- --testPathPattern CrtShader --ci --forceExit`
 
 Expected: 2 tests PASS.
 
 **Step 5: Run all tests to verify no regressions**
 
-Run: `npm test -- --ci --forceExit`
+Run: `pnpm test -- --ci --forceExit`
 
 Expected: 201 tests pass (199 existing + 2 new).
 
@@ -388,7 +388,7 @@ describe('MrSausage3D', () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `npm test -- --testPathPattern MrSausage3D --ci --forceExit`
+Run: `pnpm test -- --testPathPattern MrSausage3D --ci --forceExit`
 
 Expected: FAIL — current component uses Babylon imports.
 
@@ -840,13 +840,13 @@ export const MrSausage3D = ({
 
 **Step 4: Run tests**
 
-Run: `npm test -- --testPathPattern MrSausage3D --ci --forceExit`
+Run: `pnpm test -- --testPathPattern MrSausage3D --ci --forceExit`
 
 Expected: 4 tests PASS.
 
 **Step 5: Run all tests**
 
-Run: `npm test -- --ci --forceExit`
+Run: `pnpm test -- --ci --forceExit`
 
 Expected: 205 tests pass (201 + 4 new).
 
@@ -1033,7 +1033,7 @@ export const CrtTelevision = ({
 
 **Step 2: Run all tests**
 
-Run: `npm test -- --ci --forceExit`
+Run: `pnpm test -- --ci --forceExit`
 
 Expected: All tests pass. (CrtTelevision has no dedicated test file — it's tested visually and via MrSausage3D integration.)
 
@@ -1366,7 +1366,7 @@ export const KitchenEnvironment = () => {
 
 **Step 2: Run all tests**
 
-Run: `npm test -- --ci --forceExit`
+Run: `pnpm test -- --ci --forceExit`
 
 Expected: All tests pass.
 
@@ -1740,7 +1740,7 @@ The stub `GameWorld.tsx` is replaced by the new file above (same path).
 
 **Step 3: Run tests**
 
-Run: `npm test -- --ci --forceExit`
+Run: `pnpm test -- --ci --forceExit`
 
 Expected: All tests pass (no tests import GameWorld directly).
 
@@ -1763,7 +1763,7 @@ git commit -m "feat: unified GameWorld.tsx with R3F Canvas — eliminates platfo
 
 Run:
 ```bash
-npm uninstall reactylon @babylonjs/core @babylonjs/gui @babylonjs/loaders @babylonjs/havok babel-plugin-reactylon
+pnpm remove reactylon @babylonjs/core @babylonjs/gui @babylonjs/loaders @babylonjs/havok babel-plugin-reactylon
 ```
 
 **Step 2: Verify no Babylon imports remain**
@@ -1778,7 +1778,7 @@ Expected: Both echo "No ... imports"
 
 **Step 3: Run all tests**
 
-Run: `npm test -- --ci --forceExit`
+Run: `pnpm test -- --ci --forceExit`
 
 Expected: All tests pass.
 
@@ -1824,7 +1824,7 @@ Open the app in browser and verify:
 
 **Step 3: Run full test suite one final time**
 
-Run: `npm test -- --ci --forceExit`
+Run: `pnpm test -- --ci --forceExit`
 
 Expected: All tests pass.
 

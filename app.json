@@ -4,9 +4,14 @@
     "slug": "will-it-blow",
     "version": "0.0.1",
     "platforms": ["ios", "android", "web"],
-    "web": { "bundler": "metro" },
+    "web": {
+      "bundler": "metro"
+    },
     "experiments": {
       "baseUrl": "/will-it-blow"
+    },
+    "android": {
+      "package": "com.jbcom.willitblow"
     }
   },
   "name": "WillItBlow",

@@ -39,7 +39,7 @@ Titles: Sausage Disaster (0-19) → Apprentice → Maker → Chef → Master →
 
 ```bash
 # Install dependencies
-npm install
+pnpm install
 
 # Web (recommended for development)
 npx expo start --web
@@ -81,7 +81,7 @@ will-it-blow/
 ## Testing
 
 ```bash
-npm test
+pnpm test
 ```
 
 61 tests across 4 suites:

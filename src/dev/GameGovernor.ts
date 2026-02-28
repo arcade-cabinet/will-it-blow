@@ -30,20 +30,53 @@ export interface GameGov {
   /** Skip directly to a specific challenge index (0-4) */
   skipToChallenge: (index: number) => void;
 
+  /** Skip to a specific challenge with custom scores for preceding challenges */
+  skipToChallengeWithScores: (index: number, scores: number[]) => void;
+
   /** Set appPhase directly */
   setPhase: (phase: 'menu' | 'loading' | 'playing') => void;
 
   /** Trigger defeat */
   triggerDefeat: () => void;
 
+  /** Trigger defeat at a specific challenge with partial scores */
+  triggerDefeatAtChallenge: (challengeIndex: number, precedingScores: number[]) => void;
+
   /** Trigger victory with given scores */
   triggerVictory: (scores: number[]) => void;
+
+  /** Add a single strike (for testing incremental strike behavior) */
+  addStrike: () => void;
+
+  /** Use a hint (for testing hint system) */
+  useHint: () => void;
+
+  /** Return to menu (for testing menu return flow) */
+  returnToMenu: () => void;
+
+  /** Simulate the CONTINUE flow (restore saved state → loading) */
+  simulateContinue: () => void;
+
+  /** Clear all persisted state (for clean test starts) */
+  clearSaveData: () => void;
 
   /** Set challenge ephemeral state */
   setChallengeProgress: (v: number) => void;
   setChallengePressure: (v: number) => void;
   setChallengeTemperature: (v: number) => void;
   setChallengeHeatLevel: (v: number) => void;
+
+  /** Set fridge-specific state for ingredient challenge testing */
+  triggerFridgeClick: (index: number) => void;
+
+  /** Get fridge state snapshot */
+  getFridgeState: () => Record<string, unknown>;
+
+  /** Set audio volume/mute for testing persistence */
+  setMusicVolume: (v: number) => void;
+  setSfxVolume: (v: number) => void;
+  setMusicMuted: (v: boolean) => void;
+  setSfxMuted: (v: boolean) => void;
 }
 
 function createGovernor(): GameGov {
@@ -61,21 +94,27 @@ function createGovernor(): GameGov {
         challengeScores: s.challengeScores,
         strikes: s.strikes,
         hintsRemaining: s.hintsRemaining,
+        hintActive: s.hintActive,
         challengeProgress: s.challengeProgress,
         challengePressure: s.challengePressure,
+        challengeIsPressing: s.challengeIsPressing,
         challengeTemperature: s.challengeTemperature,
         challengeHeatLevel: s.challengeHeatLevel,
+        mrSausageReaction: s.mrSausageReaction,
+        totalGamesPlayed: s.totalGamesPlayed,
+        variantSeed: s.variantSeed,
+        musicVolume: s.musicVolume,
+        sfxVolume: s.sfxVolume,
+        musicMuted: s.musicMuted,
+        sfxMuted: s.sfxMuted,
       };
     },
 
     startGame() {
-      // Trigger the loading phase — LoadingScreen will pre-fetch kitchen.glb
-      // and call startNewGame() when complete, transitioning to 'playing'.
       store.getState().setAppPhase('loading');
     },
 
     startGameDirect() {
-      // Bypass loading screen — use when GLB is already cached
       store.getState().startNewGame();
     },
 
@@ -85,14 +124,21 @@ function createGovernor(): GameGov {
 
     skipToChallenge(index: number) {
       const state = store.getState();
-      // Ensure we're in playing state
       if (state.appPhase !== 'playing') {
         state.startNewGame();
       }
-      // Complete challenges up to the target index, re-reading state each
-      // iteration to avoid stale currentChallenge after completeChallenge()
       while (store.getState().currentChallenge < index) {
-        store.getState().completeChallenge(75); // default decent score
+        store.getState().completeChallenge(75);
+      }
+    },
+
+    skipToChallengeWithScores(index: number, scores: number[]) {
+      const state = store.getState();
+      if (state.appPhase !== 'playing') {
+        state.startNewGame();
+      }
+      for (let i = 0; i < index; i++) {
+        store.getState().completeChallenge(scores[i] ?? 75);
       }
     },
 
@@ -105,7 +151,21 @@ function createGovernor(): GameGov {
       if (state.appPhase !== 'playing') {
         state.startNewGame();
       }
-      // 3 strikes = defeat
+      store.getState().addStrike();
+      store.getState().addStrike();
+      store.getState().addStrike();
+    },
+
+    triggerDefeatAtChallenge(challengeIndex: number, precedingScores: number[]) {
+      const state = store.getState();
+      if (state.appPhase !== 'playing') {
+        state.startNewGame();
+      }
+      // Complete preceding challenges with given scores
+      for (let i = 0; i < challengeIndex; i++) {
+        store.getState().completeChallenge(precedingScores[i] ?? 75);
+      }
+      // Trigger 3 strikes at the target challenge
       store.getState().addStrike();
       store.getState().addStrike();
       store.getState().addStrike();
@@ -116,10 +176,36 @@ function createGovernor(): GameGov {
       if (state.appPhase !== 'playing') {
         state.startNewGame();
       }
-      // Complete all 5 challenges with provided scores
       for (let i = 0; i < 5; i++) {
         store.getState().completeChallenge(scores[i] ?? 75);
       }
+    },
+
+    addStrike() {
+      store.getState().addStrike();
+    },
+
+    useHint() {
+      store.getState().useHint();
+    },
+
+    returnToMenu() {
+      store.getState().returnToMenu();
+    },
+
+    simulateContinue() {
+      store.getState().setAppPhase('loading');
+      store.getState().continueGame();
+    },
+
+    clearSaveData() {
+      store.setState({
+        currentChallenge: 0,
+        challengeScores: [],
+        totalGamesPlayed: 0,
+        hintsRemaining: 3,
+        variantSeed: 0,
+      });
     },
 
     setChallengeProgress(v) {
@@ -133,6 +219,34 @@ function createGovernor(): GameGov {
     },
     setChallengeHeatLevel(v) {
       store.getState().setChallengeHeatLevel(v);
+    },
+
+    triggerFridgeClick(index: number) {
+      store.getState().triggerFridgeClick(index);
+    },
+
+    getFridgeState() {
+      const s = store.getState();
+      return {
+        fridgePool: s.fridgePool.map(ing => ({name: ing.name, category: ing.category})),
+        fridgeMatchingIndices: s.fridgeMatchingIndices,
+        fridgeSelectedIndices: s.fridgeSelectedIndices,
+        pendingFridgeClick: s.pendingFridgeClick,
+        fridgeHoveredIndex: s.fridgeHoveredIndex,
+      };
+    },
+
+    setMusicVolume(v) {
+      store.getState().setMusicVolume(v);
+    },
+    setSfxVolume(v) {
+      store.getState().setSfxVolume(v);
+    },
+    setMusicMuted(v) {
+      store.getState().setMusicMuted(v);
+    },
+    setSfxMuted(v) {
+      store.getState().setSfxMuted(v);
     },
   };
 }

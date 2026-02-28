@@ -1,6 +1,6 @@
 import {useFrame, useThree} from '@react-three/fiber';
 import {useMemo, useRef} from 'react';
-import * as THREE from 'three';
+import * as THREE from 'three/webgpu';
 import {REACTIONS, type Reaction} from './reactions';
 
 interface MrSausage3DProps {
@@ -50,8 +50,16 @@ export const MrSausage3D = ({
   const mouthRef = useRef<THREE.Mesh>(null);
   const lowerLipRef = useRef<THREE.Mesh>(null);
 
-  // Cheeks
-  const cheekMatRef = useRef<THREE.MeshBasicMaterial>(null);
+  // Cheeks — shared material so both update together
+  const cheekMat = useMemo(
+    () =>
+      new THREE.MeshBasicMaterial({
+        color: new THREE.Color(0.92, 0.62, 0.35),
+        transparent: true,
+        opacity: 0.6,
+      }),
+    [],
+  );
 
   // Mustache
   const stacheCenterRef = useRef<THREE.Mesh>(null);
@@ -86,6 +94,10 @@ export const MrSausage3D = ({
     const root = rootRef.current;
     const head = headRef.current;
     if (!root || !head) return;
+
+    // Reset animated properties to defaults before applying reaction-specific values
+    head.scale.y = 1.05;
+    root.position.x = position[0];
 
     const currentReaction = reactionRef.current;
     const reactionDef = REACTIONS[currentReaction];
@@ -298,14 +310,14 @@ export const MrSausage3D = ({
     if (mouthRef.current) mouthRef.current.scale.y = clampedMouth * 0.6;
     if (lowerLipRef.current) lowerLipRef.current.position.y = -0.88 - clampedMouth * 0.25;
 
-    // Cheek blush
-    if (cheekMatRef.current) {
+    // Cheek blush (shared material — both cheeks update)
+    {
       const clampedBlush = Math.max(0, Math.min(1, cheekBlush));
       const r = 0.92 + (0.85 - 0.92) * clampedBlush;
       const g = 0.62 + (0.15 - 0.62) * clampedBlush;
       const b = 0.35 + (0.1 - 0.35) * clampedBlush;
-      cheekMatRef.current.color.setRGB(r, g, b);
-      cheekMatRef.current.opacity = 0.6 + clampedBlush * 0.4;
+      cheekMat.color.setRGB(r, g, b);
+      cheekMat.opacity = 0.6 + clampedBlush * 0.4;
     }
   });
 
@@ -443,14 +455,11 @@ export const MrSausage3D = ({
       </mesh>
 
       {/* ========== CHEEKS ========== */}
-      <mesh position={[-1.1, -0.1, -1.2]} scale={[0.5, 0.4, 0.2]}>
+      <mesh position={[-1.1, -0.1, -1.2]} scale={[0.5, 0.4, 0.2]} material={cheekMat}>
         <sphereGeometry args={[0.4, 10, 10]} />
-        <meshBasicMaterial ref={cheekMatRef} color={[0.92, 0.62, 0.35]} transparent opacity={0.6} />
       </mesh>
-      <mesh position={[1.1, -0.1, -1.2]} scale={[0.5, 0.4, 0.2]}>
+      <mesh position={[1.1, -0.1, -1.2]} scale={[0.5, 0.4, 0.2]} material={cheekMat}>
         <sphereGeometry args={[0.4, 10, 10]} />
-        {/* Both cheeks share the same ref material for color updates */}
-        <meshBasicMaterial color={[0.92, 0.62, 0.35]} transparent opacity={0.6} />
       </mesh>
 
       {/* ========== MUSTACHE ========== */}

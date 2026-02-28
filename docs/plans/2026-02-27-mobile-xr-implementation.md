@@ -22,11 +22,11 @@
 **Step 1: Install new packages, remove cannon-es**
 
 ```bash
-npm install @babylonjs/havok expo-haptics expo-sensors react-native-gesture-handler
-npm uninstall cannon-es
+pnpm add @babylonjs/havok expo-haptics expo-sensors react-native-gesture-handler
+pnpm remove cannon-es
 ```
 
-Verify: `npm ls @babylonjs/havok expo-haptics expo-sensors react-native-gesture-handler` shows all installed. `npm ls cannon-es` shows empty.
+Verify: `pnpm ls @babylonjs/havok expo-haptics expo-sensors react-native-gesture-handler` shows all installed. `pnpm ls cannon-es` shows empty.
 
 **Step 2: Write the failing test**
 
@@ -96,7 +96,7 @@ describe('InputActions', () => {
 **Step 3: Run test to verify it fails**
 
 ```bash
-npm test -- --testPathPattern="InputActions" --ci
+pnpm test -- --testPathPattern="InputActions" --ci
 ```
 
 Expected: FAIL — module `../InputActions` not found.
@@ -195,7 +195,7 @@ export function createTap(meshId: string): TapAction {
 **Step 5: Run tests to verify they pass**
 
 ```bash
-npm test -- --testPathPattern="InputActions" --ci
+pnpm test -- --testPathPattern="InputActions" --ci
 ```
 
 Expected: all 9 tests PASS.
@@ -271,7 +271,7 @@ describe('input settings', () => {
 **Step 2: Run test to verify it fails**
 
 ```bash
-npm test -- --testPathPattern="gameStore" --ci
+pnpm test -- --testPathPattern="gameStore" --ci
 ```
 
 Expected: FAIL — `store().gyroEnabled` is undefined.
@@ -321,7 +321,7 @@ Add to the `GameState` interface (after `variantSeed: number;`):
 **Step 4: Run tests to verify they pass**
 
 ```bash
-npm test -- --testPathPattern="gameStore" --ci
+pnpm test -- --testPathPattern="gameStore" --ci
 ```
 
 Expected: all tests PASS (including new input settings tests).
@@ -466,7 +466,7 @@ describe('fireHaptic', () => {
 **Step 2: Run test to verify it fails**
 
 ```bash
-npm test -- --testPathPattern="HapticService" --ci
+pnpm test -- --testPathPattern="HapticService" --ci
 ```
 
 Expected: FAIL — module `../HapticService` not found.
@@ -553,7 +553,7 @@ export async function fireHaptic(event: HapticEvent): Promise<void> {
 **Step 4: Run tests to verify they pass**
 
 ```bash
-npm test -- --testPathPattern="HapticService" --ci
+pnpm test -- --testPathPattern="HapticService" --ci
 ```
 
 Expected: all tests PASS.
@@ -651,7 +651,7 @@ describe('integrateGyro', () => {
 **Step 2: Run test to verify it fails**
 
 ```bash
-npm test -- --testPathPattern="GyroAdapter" --ci
+pnpm test -- --testPathPattern="GyroAdapter" --ci
 ```
 
 Expected: FAIL — module not found.
@@ -720,7 +720,7 @@ export function integrateGyro(
 **Step 4: Run tests to verify they pass**
 
 ```bash
-npm test -- --testPathPattern="GyroAdapter" --ci
+pnpm test -- --testPathPattern="GyroAdapter" --ci
 ```
 
 Expected: all tests PASS.
@@ -793,7 +793,7 @@ Same changes as web — remove cannon-es, add Havok, async physics init.
 
 ```bash
 npx tsc --noEmit
-npm test -- --ci --forceExit
+pnpm test -- --ci --forceExit
 ```
 
 Expected: tsc passes (no cannon-es references), all existing tests pass (tests don't import GameWorld).
@@ -1227,7 +1227,7 @@ In both `GameWorld.web.tsx` and `GameWorld.native.tsx`:
 
 ```bash
 npx tsc --noEmit
-npm test -- --ci --forceExit
+pnpm test -- --ci --forceExit
 ```
 
 Expected: tsc passes, all tests pass. Visual verification needed via `npx expo start --web`.
@@ -1613,7 +1613,7 @@ If reactylon/mobile doesn't support standalone Engine mounting, keep the current
 
 ```bash
 npx tsc --noEmit
-npm test -- --ci --forceExit
+pnpm test -- --ci --forceExit
 ```
 
 Expected: tsc passes, all tests pass. Visual verification via `npx expo start --web`.
@@ -1843,7 +1843,7 @@ Note: `baseRotation` needs updating when the camera walks to a new station. The 
 
 ```bash
 npx tsc --noEmit
-npm test -- --ci --forceExit
+pnpm test -- --ci --forceExit
 ```
 
 Expected: tsc passes, tests pass. Gyro only activates on mobile with `gyroEnabled: true`.
@@ -1995,7 +1995,7 @@ After all 11 tasks:
 
 ```bash
 # 1. All tests pass
-npm test -- --ci --forceExit
+pnpm test -- --ci --forceExit
 
 # 2. No type errors
 npx tsc --noEmit

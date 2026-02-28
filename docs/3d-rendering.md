@@ -2,20 +2,33 @@
 
 ## Engine Setup
 
-The 3D scene is rendered via React Three Fiber (R3F), a React reconciler for Three.js. The `<Canvas>` component in `GameWorld.tsx` mounts the WebGL renderer:
+The 3D scene is rendered via React Three Fiber (R3F), a React reconciler for Three.js. The `<Canvas>` component in `GameWorld.tsx` creates a `WebGPURenderer`:
 
 ```tsx
-<Canvas camera={{ fov: 70, near: 0.1, far: 100 }}>
-  <KitchenEnvironment />
-  <CrtTelevision />
-  {showFridge && <FridgeStation ... />}
-  {showGrinder && <GrinderStation ... />}
-  ...
+<Canvas
+  gl={async (props) => {
+    const renderer = new WebGPURenderer({
+      canvas: props.canvas as HTMLCanvasElement,
+    });
+    await renderer.init();
+    return renderer;
+  }}
+  camera={{ fov: 70, near: 0.1, far: 100 }}
+>
+  <XR store={xrStore}>
+    <KitchenEnvironment />
+    <CrtTelevision />
+    {showFridge && <FridgeStation ... />}
+    {showGrinder && <GrinderStation ... />}
+    ...
+  </XR>
 </Canvas>
 ```
 
-- **WebGL** renderer via Three.js (auto-configured by R3F Canvas)
-- **expo-gl** provides the GL context on iOS/Android (same Canvas works cross-platform)
+- **WebGPU** renderer via Three.js `WebGPURenderer` (imported from `'three/webgpu'`)
+- **react-native-wgpu** provides a Dawn-based WebGPU surface on iOS/Android; browser WebGPU on web
+- **@react-three/xr** wraps scene content for WebXR support (web only)
+- **Metro resolver** maps bare `'three'` imports to `'three/webgpu'` on native platforms
 - **Physics:** `@react-three/cannon` available for physics interactions
 - **Canvas sizing:** Fills parent container via R3F's built-in resize handling
 
@@ -123,7 +136,7 @@ Each station is a declarative R3F component using `<mesh>` primitives. Animation
 ### CrtTelevision.tsx
 
 - TV housing mesh with screen plane
-- Screen uses custom `ShaderMaterial` from `CrtShader.ts` (chromatic aberration + scanlines)
+- Screen uses TSL `NodeMaterial` from `CrtShader.ts` (chromatic aberration + scanlines, compiles to WGSL/GLSL)
 - Embeds `<MrSausage3D />` as child, rendered on the TV screen
 - `reaction` prop drives Mr. Sausage's expression
 
@@ -174,10 +187,13 @@ All geometry is declarative R3F JSX — no external model files:
 
 ## CRT Shader (CrtShader.ts)
 
-Three.js `ShaderMaterial` with custom GLSL:
-- Vertex: standard `projectionMatrix * modelViewMatrix * vec4(position, 1.0)`
-- Fragment: chromatic aberration (RGB channel offset) + scanline overlay + vignette
-- Uniforms: `time` (animated in `useFrame`), `resolution`
+TSL (Three Shading Language) `NodeMaterial` — compiles to WGSL for WebGPU or GLSL for WebGL2 fallback:
+- Built with TSL node functions (`Fn`, `uv`, `sin`, `mix`, etc.) imported from `'three/tsl'`
+- Effects: barrel distortion, horizontal roll/tear, phosphor glow, scanlines, RGB sub-pixel pattern, chromatic aberration, flicker, static noise, interlace shimmer, vignette, edge bloom, warm color grading
+- Uniforms: `time`, `flickerIntensity`, `staticIntensity`, `reactionIntensity` (exported as `crtUniforms`, updated per-frame by `CrtTelevision.tsx`)
+- Factory: `createCrtMaterial(name)` returns a ready-to-use `NodeMaterial`
+
+**Note:** Raw GLSL `ShaderMaterial` is not compatible with the WebGPU renderer. All custom shaders must use TSL `NodeMaterial`.
 
 ## Texture Bake Pipeline
 
@@ -197,3 +213,5 @@ Source textures: AmbientCG 1K-JPG sets (not in repo, downloaded separately per m
 4. **Camera inside mesh:** Check STATION_CAMERAS values. Camera needs ≥0.5 units from any solid mesh.
 5. **import.meta compatibility:** Zustand ESM uses `import.meta.env.MODE`. Requires `unstable_transformImportMeta: true` in babel config.
 6. **Three.js ESM in Jest:** `three` and `@react-three` must be in the `transformIgnorePatterns` allowlist in jest.config.js.
+7. **GLSL ShaderMaterial with WebGPU:** The WebGPU renderer does not support raw GLSL `ShaderMaterial`. Use TSL `NodeMaterial` instead — import node functions from `'three/tsl'` and `NodeMaterial` from `'three/webgpu'`.
+8. **Metro WebGPU resolver:** On native, bare `'three'` imports are remapped to `'three/webgpu'` by `metro.config.js`. Direct `'three/webgpu'` imports work on all platforms.

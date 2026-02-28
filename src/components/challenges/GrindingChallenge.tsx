@@ -407,15 +407,6 @@ export function GrindingChallenge({onComplete, onReaction}: GrindingChallengePro
   );
 }
 
-// Export grind state hook for GameWorld to read
-export function useGrindState() {
-  return {
-    grindProgress: 0,
-    crankAngle: 0,
-    isSplattering: false,
-  };
-}
-
 const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,

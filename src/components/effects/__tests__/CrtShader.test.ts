@@ -1,17 +1,29 @@
-import {createCrtMaterial} from '../CrtShader';
+import {createCrtMaterial, crtUniforms} from '../CrtShader';
 
 describe('CrtShader', () => {
-  it('creates a ShaderMaterial with correct uniforms', () => {
-    const mat = createCrtMaterial('test');
-    expect(mat.uniforms.time.value).toBe(0);
-    expect(mat.uniforms.flickerIntensity.value).toBe(1.0);
-    expect(mat.uniforms.staticIntensity.value).toBe(0.06);
-    expect(mat.uniforms.reactionIntensity.value).toBe(0.0);
+  afterEach(() => {
+    crtUniforms.time.value = 0;
+    crtUniforms.reactionIntensity.value = 0.0;
   });
 
-  it('has vertex and fragment shaders defined', () => {
+  it('creates a NodeMaterial with fragmentNode set', () => {
     const mat = createCrtMaterial('test');
-    expect(mat.vertexShader).toContain('gl_Position');
-    expect(mat.fragmentShader).toContain('gl_FragColor');
+    expect(mat.type).toBe('NodeMaterial');
+    expect(mat.fragmentNode).toBeDefined();
+  });
+
+  it('exports uniforms with correct default values', () => {
+    expect(crtUniforms.time.value).toBe(0);
+    expect(crtUniforms.flickerIntensity.value).toBe(1.0);
+    expect(crtUniforms.staticIntensity.value).toBe(0.06);
+    expect(crtUniforms.reactionIntensity.value).toBe(0.0);
+  });
+
+  it('allows uniform values to be updated', () => {
+    crtUniforms.time.value = 5.0;
+    expect(crtUniforms.time.value).toBe(5.0);
+
+    crtUniforms.reactionIntensity.value = 0.8;
+    expect(crtUniforms.reactionIntensity.value).toBe(0.8);
   });
 });

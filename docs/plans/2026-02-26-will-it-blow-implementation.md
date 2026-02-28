@@ -1078,7 +1078,7 @@ Change background-color from white to #0a0a0a, ensure title says "Will It Blow? 
 **Step 3: Verify build**
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 Open http://localhost:3000, play through all 8 phases, verify:

@@ -7,7 +7,7 @@ import {useGameStore} from '../../store/gameStore';
 const CHALLENGE_NAMES = ['Ingredients', 'Grinding', 'Stuffing', 'Cooking', 'Tasting'];
 
 export function GameOverScreen() {
-  const {gameStatus, challengeScores, startNewGame, returnToMenu} = useGameStore();
+  const {gameStatus, challengeScores, returnToMenu, setAppPhase} = useGameStore();
   const isVictory = gameStatus === 'victory';
   const verdict = isVictory ? calculateFinalVerdict(challengeScores) : null;
 
@@ -138,7 +138,7 @@ export function GameOverScreen() {
           <View style={styles.buttonContainer}>
             <TouchableOpacity
               style={styles.newGameButton}
-              onPress={startNewGame}
+              onPress={() => setAppPhase('loading')}
               activeOpacity={0.7}
             >
               <Text style={styles.buttonText}>NEW GAME</Text>

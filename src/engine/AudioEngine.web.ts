@@ -162,6 +162,7 @@ class AudioEngine {
       volume: -5,
     }).toDestination();
     burst.triggerAttackRelease('8n');
+    setTimeout(() => burst.dispose(), 1000);
   }
 
   playTitleJingle() {

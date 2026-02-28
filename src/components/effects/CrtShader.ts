@@ -1,156 +1,213 @@
-import * as THREE from 'three';
+/**
+ * CRT television shader — TSL (Three Shading Language) NodeMaterial version.
+ *
+ * Replaces the old GLSL ShaderMaterial with a node graph that compiles to
+ * WGSL (WebGPU) or GLSL (WebGL2 fallback) automatically.
+ *
+ * Effects: barrel distortion, horizontal roll, horizontal tear, phosphor glow,
+ * scanlines, RGB sub-pixel pattern, chromatic aberration, flicker, static noise,
+ * interlace shimmer, vignette, edge bloom, warm color grading, OOB masking.
+ */
 
-const CRT_VERTEX = `
-precision highp float;
+import {
+  abs,
+  add,
+  clamp,
+  dot,
+  exp,
+  Fn,
+  float,
+  floor,
+  fract,
+  length,
+  max,
+  mix,
+  mod,
+  mul,
+  select,
+  sin,
+  smoothstep,
+  step,
+  sub,
+  uniform,
+  uv,
+  vec2,
+  vec3,
+  vec4,
+} from 'three/tsl';
+import {NodeMaterial} from 'three/webgpu';
 
-varying vec2 vUV;
+/* ------------------------------------------------------------------ */
+/*  Uniforms — exported so CrtTelevision.tsx can update them per-frame */
+/* ------------------------------------------------------------------ */
 
-void main() {
-  vUV = uv;
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-}
-`;
+export const crtUniforms = {
+  time: uniform(0),
+  flickerIntensity: uniform(1.0),
+  staticIntensity: uniform(0.06),
+  reactionIntensity: uniform(0.0),
+};
 
-const CRT_FRAGMENT = `
-precision highp float;
+/* ------------------------------------------------------------------ */
+/*  Helper: deterministic pseudo-random (replaces GLSL rand)          */
+/* ------------------------------------------------------------------ */
 
-varying vec2 vUV;
+const rand = Fn(([co_immutable]: [ReturnType<typeof vec2>]) => {
+  const co = co_immutable.toVar();
+  return fract(sin(dot(co, vec2(12.9898, 78.233))).mul(43758.5453));
+});
 
-uniform float time;
-uniform float flickerIntensity;
-uniform float staticIntensity;
-uniform float reactionIntensity;
+/* ------------------------------------------------------------------ */
+/*  Helper: smooth 2D noise (bilinear interpolation of hash corners)  */
+/* ------------------------------------------------------------------ */
 
-float rand(vec2 co) {
-  return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
-}
+const noise2D = Fn(([p_immutable]: [ReturnType<typeof vec2>]) => {
+  const p = p_immutable.toVar();
+  const i = floor(p).toVar();
+  const f = fract(p).toVar();
 
-// Smooth noise for organic effects
-float noise2D(vec2 p) {
-  vec2 i = floor(p);
-  vec2 f = fract(p);
-  f = f * f * (3.0 - 2.0 * f); // smoothstep
-  float a = rand(i);
-  float b = rand(i + vec2(1.0, 0.0));
-  float c = rand(i + vec2(0.0, 1.0));
-  float d = rand(i + vec2(1.0, 1.0));
+  // smoothstep: f = f * f * (3 - 2*f)
+  f.assign(f.mul(f).mul(sub(3.0, mul(2.0, f))));
+
+  const a = rand(i);
+  const b = rand(add(i, vec2(1.0, 0.0)));
+  const c = rand(add(i, vec2(0.0, 1.0)));
+  const d = rand(add(i, vec2(1.0, 1.0)));
+
   return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
-}
+});
 
-void main() {
-  vec2 uv = vUV;
+/* ------------------------------------------------------------------ */
+/*  Main CRT fragment shader                                          */
+/* ------------------------------------------------------------------ */
+
+const crtFragment = Fn(() => {
+  const t = crtUniforms.time;
+  const reaction = crtUniforms.reactionIntensity;
+
+  // Current UV from mesh attribute
+  const uvCoord = uv().toVar();
 
   // --- Barrel distortion (CRT glass curvature) ---
-  vec2 centered = uv - 0.5;
-  float dist = length(centered);
-  float distSq = dist * dist;
-  uv = 0.5 + centered * (1.0 + 0.22 * distSq);
+  const centered = sub(uvCoord, vec2(0.5, 0.5)).toVar();
+  const dist = length(centered);
+  const distSq = dist.mul(dist).toVar();
+  uvCoord.assign(add(vec2(0.5, 0.5), centered.mul(add(1.0, mul(0.22, distSq)))));
 
   // --- Horizontal roll (VHS tracking artifact) ---
-  float rollSpeed = 0.6 + reactionIntensity * 2.0;
-  float rollY = fract(time * rollSpeed * 0.08);
-  float rollBand = smoothstep(0.0, 0.06, abs(uv.y - rollY)) *
-                   smoothstep(0.0, 0.06, abs(uv.y - rollY - 1.0));
-  float rollShift = (1.0 - rollBand) * 0.03 * (1.0 + reactionIntensity * 4.0);
-  uv.x += rollShift;
+  const rollSpeed = add(0.6, mul(reaction, 2.0));
+  const rollY = fract(mul(t, rollSpeed, 0.08));
+  const rollBand = smoothstep(float(0.0), float(0.06), abs(sub(uvCoord.y, rollY))).mul(
+    smoothstep(float(0.0), float(0.06), abs(sub(uvCoord.y, sub(rollY, 1.0)))),
+  );
+  const rollShift = sub(1.0, rollBand)
+    .mul(0.03)
+    .mul(add(1.0, mul(reaction, 4.0)));
+  uvCoord.x.addAssign(rollShift);
 
   // --- Horizontal tear (signal glitch) ---
-  float tearLine = step(0.993, rand(vec2(floor(time * 10.0), 0.0)));
-  float tearY = rand(vec2(floor(time * 10.0), 1.0));
-  float tearActive = tearLine * step(abs(uv.y - tearY), 0.015);
-  uv.x += tearActive * 0.08 * (1.0 + reactionIntensity * 3.0);
+  const tearLine = step(0.993, rand(vec2(floor(mul(t, 10.0)), float(0.0))));
+  const tearY = rand(vec2(floor(mul(t, 10.0)), float(1.0)));
+  const tearActive = tearLine.mul(step(abs(sub(uvCoord.y, tearY)), float(0.015)));
+  uvCoord.x.addAssign(tearActive.mul(0.08).mul(add(1.0, mul(reaction, 3.0))));
 
-  // --- Base phosphor glow (BRIGHT -- sells the CRT effect) ---
-  vec3 coldGreen = vec3(0.25, 0.85, 0.35);
-  vec3 warmAmber = vec3(0.90, 0.60, 0.15);
-  vec3 hotWhite  = vec3(0.95, 1.0, 0.90);
+  // --- Base phosphor glow ---
+  const coldGreen = vec3(0.25, 0.85, 0.35);
+  const warmAmber = vec3(0.9, 0.6, 0.15);
+  const hotWhite = vec3(0.95, 1.0, 0.9);
 
-  // Pulse between green and amber; reactions push toward hot white
-  float amberMix = 0.2 + 0.15 * sin(time * 1.2) + reactionIntensity * 0.5;
-  vec3 baseColor = mix(coldGreen, warmAmber, clamp(amberMix, 0.0, 1.0));
-  baseColor = mix(baseColor, hotWhite, clamp(reactionIntensity * 0.6, 0.0, 1.0));
+  const amberMix = clamp(add(0.2, mul(0.15, sin(mul(t, 1.2))), mul(reaction, 0.5)), 0.0, 1.0);
+  const baseColor = mix(
+    mix(coldGreen, warmAmber, amberMix),
+    hotWhite,
+    clamp(mul(reaction, 0.6), 0.0, 1.0),
+  ).toVar();
 
-  // Brighter center hotspot (like real CRT electron beam convergence)
-  float centerGlow = 1.0 + 0.6 * exp(-distSq * 6.0);
-  vec3 color = baseColor * centerGlow;
+  // Center hotspot (electron beam convergence)
+  const centerGlow = add(1.0, mul(0.6, exp(mul(distSq, -6.0))));
+  const color = mul(baseColor, centerGlow).toVar();
 
-  // --- Scanlines (visible horizontal bands) ---
-  float scanFreq = 280.0;
-  float scanWobble = sin(time * 0.7 + uv.x * 15.0) * 0.8;
-  float scanRaw = sin(uv.y * scanFreq + time * 1.5 + scanWobble);
-  // Darken scan valleys, brighten peaks
-  float scanEffect = 0.85 + 0.15 * scanRaw;
-  color *= scanEffect;
+  // --- Scanlines ---
+  const scanFreq = float(280.0);
+  const scanWobble = mul(sin(add(mul(t, 0.7), mul(uvCoord.x, 15.0))), 0.8);
+  const scanRaw = sin(add(mul(uvCoord.y, scanFreq), mul(t, 1.5), scanWobble));
+  const scanEffect = add(0.85, mul(0.15, scanRaw));
+  color.mulAssign(scanEffect);
 
   // --- RGB phosphor sub-pixel pattern ---
-  float subpixelFreq = 500.0;
-  float px = mod(uv.x * subpixelFreq, 3.0);
-  vec3 subpixelMask = vec3(
-    smoothstep(0.0, 0.8, 1.0 - abs(px - 0.5)),
-    smoothstep(0.0, 0.8, 1.0 - abs(px - 1.5)),
-    smoothstep(0.0, 0.8, 1.0 - abs(px - 2.5))
+  const subpixelFreq = float(500.0);
+  const px = mod(mul(uvCoord.x, subpixelFreq), 3.0);
+  const subpixelMask = vec3(
+    smoothstep(float(0.0), float(0.8), sub(1.0, abs(sub(px, 0.5)))),
+    smoothstep(float(0.0), float(0.8), sub(1.0, abs(sub(px, 1.5)))),
+    smoothstep(float(0.0), float(0.8), sub(1.0, abs(sub(px, 2.5)))),
   );
-  // Blend: 70% colored sub-pixels + 30% white (so it doesn't go too dark)
-  color *= mix(vec3(1.0), subpixelMask * 1.4, 0.3);
+  color.mulAssign(mix(vec3(1.0, 1.0, 1.0), mul(subpixelMask, 1.4), 0.3));
 
-  // --- Chromatic aberration (RGB fringing at edges) ---
-  float chromaStr = 0.004 + reactionIntensity * 0.006 + distSq * 0.008;
-  vec2 rOffset = centered * chromaStr;
-  vec2 bOffset = -centered * chromaStr * 0.7;
-  // Approximate: shift R and B channels by sampling base color at offset UVs
-  float rShiftFactor = 1.0 + noise2D(uv * 40.0 + time * 0.3) * 0.08;
-  float bShiftFactor = 1.0 + noise2D(uv * 35.0 - time * 0.2) * 0.06;
-  color.r *= rShiftFactor;
-  color.b *= bShiftFactor;
+  // --- Chromatic aberration ---
+  const chromaStr = add(0.004, mul(reaction, 0.006), mul(distSq, 0.008));
+  const rShiftFactor = add(
+    1.0,
+    mul(noise2D(add(mul(uvCoord, 40.0), mul(t, 0.3))), chromaStr, 0.08),
+  );
+  const bShiftFactor = add(
+    1.0,
+    mul(noise2D(sub(mul(uvCoord, 35.0), mul(t, 0.2))), chromaStr, 0.06),
+  );
+  color.x.mulAssign(rShiftFactor);
+  color.z.mulAssign(bShiftFactor);
 
   // --- Flicker (power instability) ---
-  float flicker = 1.0 - flickerIntensity * rand(vec2(floor(time * 6.0), 0.0)) * 0.08;
-  flicker -= reactionIntensity * 0.06 * sin(time * 25.0);
-  color *= flicker;
+  const flicker = sub(
+    sub(1.0, mul(crtUniforms.flickerIntensity, rand(vec2(floor(mul(t, 6.0)), float(0.0))), 0.08)),
+    mul(reaction, 0.06, sin(mul(t, 25.0))),
+  );
+  color.mulAssign(flicker);
 
-  // --- Static noise (signal interference) ---
-  float noiseAmount = staticIntensity + reactionIntensity * 0.12;
-  float noiseVal = rand(uv * 800.0 + time * 7.0) * noiseAmount;
-  color += noiseVal * vec3(0.15, 0.2, 0.12);
+  // --- Static noise ---
+  const noiseAmount = add(crtUniforms.staticIntensity, mul(reaction, 0.12));
+  const noiseVal = mul(rand(add(mul(uvCoord, 800.0), mul(t, 7.0))), noiseAmount);
+  color.addAssign(mul(noiseVal, vec3(0.15, 0.2, 0.12)));
 
-  // --- Interlace shimmer (alternating field visibility) ---
-  float interlace = 0.96 + 0.04 * step(0.5, mod(uv.y * 560.0 + time * 4.0, 2.0));
-  color *= interlace;
+  // --- Interlace shimmer ---
+  const interlace = add(
+    0.96,
+    mul(0.04, step(0.5, mod(add(mul(uvCoord.y, 560.0), mul(t, 4.0)), 2.0))),
+  );
+  color.mulAssign(interlace);
 
-  // --- Vignette (darker edges like real CRT) ---
-  float vignette = 1.0 - 0.5 * distSq * 2.5;
-  vignette = max(vignette, 0.0);
-  color *= vignette;
+  // --- Vignette ---
+  const vignette = max(sub(1.0, mul(distSq, 2.5, 0.5)), 0.0);
+  color.mulAssign(vignette);
 
   // --- Screen edge phosphor bloom ---
-  float edgeDist = max(abs(centered.x), abs(centered.y));
-  float edgeBloom = smoothstep(0.38, 0.48, edgeDist) * 0.15;
-  color += vec3(edgeBloom * 0.4, edgeBloom, edgeBloom * 0.6);
+  const edgeDist = max(abs(centered.x), abs(centered.y));
+  const edgeBloom = mul(smoothstep(float(0.38), float(0.48), edgeDist), 0.15);
+  color.addAssign(vec3(mul(edgeBloom, 0.4), edgeBloom, mul(edgeBloom, 0.6)));
 
-  // --- Warm color grading (CRT phosphor temperature) ---
-  color *= vec3(0.82, 1.0, 0.88);
+  // --- Warm color grading ---
+  color.mulAssign(vec3(0.82, 1.0, 0.88));
 
-  // --- Final brightness (cranked up to make the CRT POP in the dark kitchen) ---
-  color *= 2.8 + reactionIntensity * 1.2;
+  // --- Final brightness ---
+  color.mulAssign(add(2.8, mul(reaction, 1.2)));
 
-  // --- Out-of-bounds (barrel distortion overflow) ---
-  if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
-    color = vec3(0.0);
-  }
+  // --- Out-of-bounds masking (barrel distortion overflow) ---
+  const oob = uvCoord.x
+    .lessThan(0.0)
+    .or(uvCoord.x.greaterThan(1.0))
+    .or(uvCoord.y.lessThan(0.0))
+    .or(uvCoord.y.greaterThan(1.0));
+  const finalColor = select(oob, vec3(0.0, 0.0, 0.0), color);
 
-  gl_FragColor = vec4(color, 1.0);
-}
-`;
+  return vec4(finalColor, 1.0);
+});
 
-export function createCrtMaterial(_name: string): THREE.ShaderMaterial {
-  return new THREE.ShaderMaterial({
-    vertexShader: CRT_VERTEX,
-    fragmentShader: CRT_FRAGMENT,
-    uniforms: {
-      time: {value: 0},
-      flickerIntensity: {value: 1.0},
-      staticIntensity: {value: 0.06},
-      reactionIntensity: {value: 0.0},
-    },
-  });
+/* ------------------------------------------------------------------ */
+/*  Factory — creates a ready-to-use NodeMaterial                     */
+/* ------------------------------------------------------------------ */
+
+export function createCrtMaterial(_name: string): InstanceType<typeof NodeMaterial> {
+  const mat = new NodeMaterial();
+  mat.fragmentNode = crtFragment();
+  return mat;
 }

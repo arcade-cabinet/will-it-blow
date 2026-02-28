@@ -1,6 +1,6 @@
 import {useFrame} from '@react-three/fiber';
-import {useRef} from 'react';
-import type * as THREE from 'three';
+import {useMemo, useRef} from 'react';
+import * as THREE from 'three/webgpu';
 
 interface StoveStationProps {
   temperature: number; // Current temp (room temp ~70 to max ~250)
@@ -80,6 +80,10 @@ export const StoveStation = ({temperature, heatLevel}: StoveStationProps) => {
   const sausageCapLRef = useRef<THREE.Mesh>(null);
   const sausageCapRRef = useRef<THREE.Mesh>(null);
   const sausageMatRef = useRef<THREE.MeshBasicMaterial>(null);
+  const sausageCapMat = useMemo(
+    () => new THREE.MeshBasicMaterial({color: new THREE.Color(...COLOR_PINK)}),
+    [],
+  );
   const thermoFillRef = useRef<THREE.Mesh>(null);
   const thermoFillMatRef = useRef<THREE.MeshBasicMaterial>(null);
   const panRef = useRef<THREE.Mesh>(null);
@@ -149,9 +153,12 @@ export const StoveStation = ({temperature, heatLevel}: StoveStationProps) => {
     }
 
     // --- Sausage color based on temperature ---
-    if (sausageMatRef.current) {
+    {
       const [r, g, b] = sausageColor(temp);
-      sausageMatRef.current.color.setRGB(r, g, b);
+      if (sausageMatRef.current) {
+        sausageMatRef.current.color.setRGB(r, g, b);
+      }
+      sausageCapMat.color.setRGB(r, g, b);
     }
 
     // --- Sausage wobble when hot ---
@@ -353,13 +360,11 @@ export const StoveStation = ({temperature, heatLevel}: StoveStationProps) => {
       </mesh>
 
       {/* --- Sausage End Caps (spheres) --- */}
-      <mesh ref={sausageCapLRef} position={[-0.25, sausageBaseY, 0]}>
+      <mesh ref={sausageCapLRef} position={[-0.25, sausageBaseY, 0]} material={sausageCapMat}>
         <sphereGeometry args={[0.07, 8, 8]} />
-        <meshBasicMaterial color={COLOR_PINK} />
       </mesh>
-      <mesh ref={sausageCapRRef} position={[0.25, sausageBaseY, 0]}>
+      <mesh ref={sausageCapRRef} position={[0.25, sausageBaseY, 0]} material={sausageCapMat}>
         <sphereGeometry args={[0.07, 8, 8]} />
-        <meshBasicMaterial color={COLOR_PINK} />
       </mesh>
 
       {/* --- Thermometer Tube (outer) --- */}
