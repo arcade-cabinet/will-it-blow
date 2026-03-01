@@ -107,4 +107,21 @@ describe('GameWorld', () => {
     // Native fallback should be gated on Platform.OS
     expect(source).toContain('Platform.OS');
   });
+
+  it('supports inter-station physics flow with dynamic bowl and sausage', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
+    // Dynamic bowl positioning from store state
+    expect(source).toContain('bowlPosition');
+    expect(source).toContain('MixingBowl');
+    // Sausage spawning after stuffer challenge
+    expect(source).toContain('GrabbableSausage');
+    expect(source).toContain('sausagePlaced');
+    // StoveStation receives onSausagePlaced callback
+    expect(source).toContain('onSausagePlaced');
+    expect(source).toContain('handleSausagePlaced');
+    // GrabSystem for carry mechanics
+    expect(source).toContain('GrabSystem');
+  });
 });

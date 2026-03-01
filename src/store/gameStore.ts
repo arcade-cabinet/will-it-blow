@@ -6,7 +6,13 @@ import {INGREDIENTS, type Ingredient} from '../engine/Ingredients';
 
 export type AppPhase = 'menu' | 'loading' | 'playing';
 export type GrabbedObjectType = 'ingredient' | 'bowl' | 'sausage' | 'pan' | null;
-export type BowlPosition = 'fridge' | 'grinder' | 'stuffer' | 'carried';
+export type BowlPosition =
+  | 'fridge' // At fridge: receiving ingredients or ready to carry
+  | 'grinder' // Placed on grinder: being ground (hidden)
+  | 'grinder-output' // Grinding done: ground meat bowl at grinder, grabbable
+  | 'stuffer' // Placed on stuffer: being stuffed (hidden)
+  | 'done' // Stuffing done: bowl no longer needed, sausage exists
+  | 'carried'; // Being carried by GrabSystem
 
 export interface GameState {
   // App lifecycle (menu -> loading -> playing)
@@ -54,6 +60,9 @@ export interface GameState {
   blendRoughness: number;
   blendChunkiness: number;
 
+  // Sausage tracking (post-stuffing)
+  sausagePlaced: boolean; // true once sausage is dropped on the stove pan
+
   // Fridge challenge — shared state between 3D scene and 2D overlay
   fridgePool: Ingredient[];
   fridgeMatchingIndices: number[];
@@ -90,6 +99,7 @@ export interface GameState {
   addToBowl: (ingredientId: string) => void;
   clearBowl: () => void;
   setBowlPosition: (pos: BowlPosition) => void;
+  setSausagePlaced: () => void;
   updateBlendProperties: () => void;
   setPlayerPosition: (pos: [number, number, number]) => void;
   triggerChallenge: () => void;
@@ -187,6 +197,7 @@ export const INITIAL_GAME_STATE = {
   blendColor: '#888888',
   blendRoughness: 0.5,
   blendChunkiness: 0.5,
+  sausagePlaced: false,
   fridgePool: [] as Ingredient[],
   fridgeMatchingIndices: [] as number[],
   fridgeSelectedIndices: [] as number[],
@@ -230,6 +241,7 @@ export const useGameStore = create<GameState>()(
           blendColor: '#888888',
           blendRoughness: 0.5,
           blendChunkiness: 0.5,
+          sausagePlaced: false,
           fridgePool: [],
           fridgeMatchingIndices: [],
           fridgeSelectedIndices: [],
@@ -256,6 +268,7 @@ export const useGameStore = create<GameState>()(
           blendColor: '#888888',
           blendRoughness: 0.5,
           blendChunkiness: 0.5,
+          sausagePlaced: false,
           fridgePool: [],
           fridgeMatchingIndices: [],
           fridgeSelectedIndices: [],
@@ -274,6 +287,19 @@ export const useGameStore = create<GameState>()(
           const scores = [...state.challengeScores, score];
           const isLastChallenge = nextChallenge >= TOTAL_CHALLENGES;
 
+          // Bowl/sausage transitions per challenge completion:
+          // Challenge 0 (ingredients) → bowl stays at fridge, player carries to grinder
+          // Challenge 1 (grinding) → ground meat bowl appears at grinder output
+          // Challenge 2 (stuffing) → bowl done, sausage spawns at stuffer output
+          let bowlPosition = state.bowlPosition;
+          let sausagePlaced = state.sausagePlaced;
+          if (state.currentChallenge === 1) {
+            bowlPosition = 'grinder-output';
+          } else if (state.currentChallenge === 2) {
+            bowlPosition = 'done';
+            sausagePlaced = false;
+          }
+
           return {
             challengeScores: scores,
             currentChallenge: nextChallenge,
@@ -286,6 +312,8 @@ export const useGameStore = create<GameState>()(
             hintActive: false,
             challengeTriggered: false,
             gameStatus: isLastChallenge ? 'victory' : state.gameStatus,
+            bowlPosition,
+            sausagePlaced,
           };
         }),
 
@@ -360,6 +388,8 @@ export const useGameStore = create<GameState>()(
 
       setBowlPosition: (pos: BowlPosition) => set({bowlPosition: pos}),
 
+      setSausagePlaced: () => set({sausagePlaced: true}),
+
       updateBlendProperties: () => set(state => computeBlendProperties(state.bowlContents)),
 
       setPlayerPosition: (pos: [number, number, number]) => set({playerPosition: pos}),
@@ -389,6 +419,7 @@ export const useGameStore = create<GameState>()(
           blendColor: '#888888',
           blendRoughness: 0.5,
           blendChunkiness: 0.5,
+          sausagePlaced: false,
           fridgePool: [],
           fridgeMatchingIndices: [],
           fridgeSelectedIndices: [],

@@ -17,6 +17,7 @@ import {FPSController} from './controls/FPSController';
 import {GrabSystem} from './controls/GrabSystem';
 import {CrtTelevision} from './kitchen/CrtTelevision';
 import {FridgeStation} from './kitchen/FridgeStation';
+import {GrabbableSausage} from './kitchen/GrabbableSausage';
 import {GrinderStation} from './kitchen/GrinderStation';
 import {KitchenEnvironment} from './kitchen/KitchenEnvironment';
 import {MixingBowl} from './kitchen/MixingBowl';
@@ -40,6 +41,20 @@ const STATIONS = STATION_TARGET_NAMES.map(name => {
     markerY: t.markerY ?? t.position[1],
   };
 });
+
+// Output positions for carried objects between stations
+// Grinder output: slightly in front of grinder (toward +Z), on the counter surface
+const GRINDER_OUTPUT_POS: [number, number, number] = [
+  STATIONS[1].position[0] + 0.6,
+  STATIONS[1].position[1] - 0.2,
+  STATIONS[1].position[2] + 0.5,
+];
+// Stuffer output: slightly in front of stuffer, on the table
+const STUFFER_OUTPUT_POS: [number, number, number] = [
+  STATIONS[2].position[0] + 0.5,
+  STATIONS[2].position[1] - 0.3,
+  STATIONS[2].position[2] + 0.5,
+];
 
 // -----------------------------------------------------------------
 // PlayerBody — kinematic rigid body that follows the camera
@@ -178,6 +193,10 @@ const SceneContent = ({
   const strikes = useGameStore(s => s.strikes);
   const mrSausageReaction = useGameStore(s => s.mrSausageReaction);
   const hintActive = useGameStore(s => s.hintActive);
+  // Bowl & sausage tracking for inter-station physics flow
+  const bowlPosition = useGameStore(s => s.bowlPosition);
+  const sausagePlaced = useGameStore(s => s.sausagePlaced);
+  const setSausagePlaced = useGameStore(s => s.setSausagePlaced);
   // Shared fridge state from store (IngredientChallenge writes, 3D reads)
   const fridgePool = useGameStore(s => s.fridgePool);
   const fridgeMatchingIndices = useGameStore(s => s.fridgeMatchingIndices);
@@ -227,6 +246,23 @@ const SceneContent = ({
     }
     prevStufferStrikesRef.current = strikes;
   }, [isStufferActive, strikes]);
+
+  // Callback for when sausage is dropped on the stove pan
+  const handleSausagePlaced = useCallback(() => {
+    setSausagePlaced();
+  }, [setSausagePlaced]);
+
+  // Determine bowl rendering position based on bowlPosition store state
+  const bowlRenderPos =
+    bowlPosition === 'fridge'
+      ? RESOLVED_TARGETS['mixing-bowl'].position
+      : bowlPosition === 'grinder-output'
+        ? GRINDER_OUTPUT_POS
+        : null;
+  const showBowl = bowlRenderPos !== null;
+
+  // Show sausage at stuffer output after Challenge 2, until placed on stove
+  const showSausage = bowlPosition === 'done' && currentChallenge >= 3 && !sausagePlaced;
 
   // Convert store arrays to Sets for FridgeStation props
   const fridgeSelectedSet = new Set(fridgeSelectedIndices);
@@ -278,8 +314,18 @@ const SceneContent = ({
         />
       ))}
 
-      {/* Mixing bowl — near fridge, receives dropped ingredients */}
-      <MixingBowl position={RESOLVED_TARGETS['mixing-bowl'].position} />
+      {/* Mixing bowl — position tracked by bowlPosition store state.
+          Key changes on position change to force remount (fresh visible mesh). */}
+      {showBowl && (
+        <MixingBowl
+          key={`bowl-${bowlPosition}`}
+          position={bowlRenderPos}
+          receivingIngredients={bowlPosition === 'fridge'}
+        />
+      )}
+
+      {/* Grabbable sausage — spawns at stuffer output after Challenge 2 */}
+      {showSausage && <GrabbableSausage position={STUFFER_OUTPUT_POS} />}
 
       {/* All stations always rendered — positions from target system */}
       {isFridgeActive && fridgePool.length > 0 && (
@@ -310,6 +356,7 @@ const SceneContent = ({
         position={STATIONS[3].position}
         temperature={isStoveActive ? challengeTemperature : 70}
         heatLevel={isStoveActive ? challengeHeatLevel : 0}
+        onSausagePlaced={handleSausagePlaced}
       />
     </>
   );

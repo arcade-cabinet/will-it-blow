@@ -10,6 +10,8 @@ import {useGameStore} from '../../store/gameStore';
 
 interface MixingBowlProps {
   position: [number, number, number];
+  /** Whether the bowl should accept dropped ingredients (only at fridge). */
+  receivingIngredients?: boolean;
 }
 
 // GLB bowl is ~0.62 wide, 0.255 tall — scale to fit nicely in scene
@@ -26,7 +28,7 @@ const bowlUrl = getAssetUrl('models', 'mixing_bowl.glb');
  * MixingBowl — GLB bowl model where the player drops ingredients.
  * Tracks contents via GrabSystem receiver callback and updates the Zustand store.
  */
-export const MixingBowl = ({position}: MixingBowlProps) => {
+export const MixingBowl = ({position, receivingIngredients = true}: MixingBowlProps) => {
   const {scene} = useGLTF(bowlUrl);
   const clonedScene = useMemo(() => scene.clone(), [scene]);
   const fillRef = useRef<THREE.Mesh>(null);
@@ -68,14 +70,16 @@ export const MixingBowl = ({position}: MixingBowlProps) => {
       {/* GLB bowl model */}
       <primitive object={clonedScene} scale={BOWL_SCALE} />
 
-      {/* Invisible receiver mesh at bowl opening for GrabSystem drop detection */}
-      <mesh
-        position={[0, BOWL_HEIGHT * 0.3, 0]}
-        userData={{receiver: true, onReceive: handleReceive}}
-      >
-        <cylinderGeometry args={[BOWL_RADIUS * 0.85, BOWL_RADIUS * 0.85, 0.04, 16]} />
-        <meshBasicMaterial visible={false} />
-      </mesh>
+      {/* Invisible receiver mesh at bowl opening — only active when at fridge */}
+      {receivingIngredients && (
+        <mesh
+          position={[0, BOWL_HEIGHT * 0.3, 0]}
+          userData={{receiver: true, onReceive: handleReceive}}
+        >
+          <cylinderGeometry args={[BOWL_RADIUS * 0.85, BOWL_RADIUS * 0.85, 0.04, 16]} />
+          <meshBasicMaterial visible={false} />
+        </mesh>
+      )}
 
       {/* Fill mass — colored cylinder that grows with contents */}
       {bowlContents.length > 0 && (

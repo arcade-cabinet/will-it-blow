@@ -135,6 +135,38 @@ describe('completeChallenge', () => {
     store().completeChallenge(75);
     expect(store().strikes).toBe(0);
   });
+
+  it('transitions bowlPosition to grinder-output after challenge 1', () => {
+    useGameStore.setState({
+      gameStatus: 'playing',
+      currentChallenge: 1,
+      bowlPosition: 'grinder',
+    });
+    store().completeChallenge(80);
+    expect(store().bowlPosition).toBe('grinder-output');
+  });
+
+  it('transitions bowlPosition to done after challenge 2 and resets sausagePlaced', () => {
+    useGameStore.setState({
+      gameStatus: 'playing',
+      currentChallenge: 2,
+      bowlPosition: 'stuffer',
+      sausagePlaced: true,
+    });
+    store().completeChallenge(70);
+    expect(store().bowlPosition).toBe('done');
+    expect(store().sausagePlaced).toBe(false);
+  });
+
+  it('does not change bowlPosition after challenge 0', () => {
+    useGameStore.setState({
+      gameStatus: 'playing',
+      currentChallenge: 0,
+      bowlPosition: 'fridge',
+    });
+    store().completeChallenge(90);
+    expect(store().bowlPosition).toBe('fridge');
+  });
 });
 
 describe('addStrike', () => {
