@@ -111,11 +111,14 @@ export interface Verdict {
 
 /** Averages challenge scores and returns a final verdict. */
 export function calculateFinalVerdict(challengeScores: number[]): Verdict {
-  const validScores = challengeScores.filter(s => Number.isFinite(s));
-  if (validScores.length === 0) {
+  if (challengeScores.length === 0) {
     return {rank: 'F', averageScore: 0, title: 'FAILED', message: 'No challenges completed.'};
   }
-  const averageScore = validScores.reduce((sum, s) => sum + s, 0) / validScores.length;
+  const bad = challengeScores.find(s => !Number.isFinite(s));
+  if (bad !== undefined) {
+    throw new Error(`calculateFinalVerdict received non-finite score: ${bad}`);
+  }
+  const averageScore = challengeScores.reduce((sum, s) => sum + s, 0) / challengeScores.length;
 
   if (averageScore >= 92) {
     return {

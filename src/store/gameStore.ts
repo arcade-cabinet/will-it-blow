@@ -164,7 +164,10 @@ export const useGameStore = create<GameState>()(
       completeChallenge: (score: number) =>
         set(state => {
           const nextChallenge = state.currentChallenge + 1;
-          const scores = [...state.challengeScores, Number.isFinite(score) ? score : 0];
+          if (!Number.isFinite(score)) {
+            throw new Error(`completeChallenge called with invalid score: ${score}`);
+          }
+          const scores = [...state.challengeScores, score];
           const isLastChallenge = nextChallenge >= TOTAL_CHALLENGES;
 
           return {
