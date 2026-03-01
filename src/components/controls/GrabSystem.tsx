@@ -65,6 +65,17 @@ function GrabSystemInner() {
 
   const setGrabbedObject = useGameStore(s => s.setGrabbedObject);
 
+  // Walk up the scene graph to find the nearest grabbable ancestor.
+  // Raycasts hit child meshes, but userData.grabbable lives on the parent group.
+  const findGrabbableRoot = useCallback((obj: THREE.Object3D | null): THREE.Object3D | null => {
+    let current = obj;
+    while (current) {
+      if (current.userData?.grabbable) return current;
+      current = current.parent;
+    }
+    return null;
+  }, []);
+
   // Find the Rapier rigid body for a mesh by walking up the scene graph.
   // @react-three/rapier attaches the rigid body API to the parent Object3D.
   const findRigidBody = useCallback((mesh: THREE.Object3D): any | null => {
@@ -141,12 +152,13 @@ function GrabSystemInner() {
           if (typeof onReceive === 'function') {
             onReceive(grabbed.objectType, grabbed.objectId);
           }
-          // Hide the dropped object (it has been "consumed" by the receiver)
+          // Hide the dropped object and deactivate its rigid body
           audioEngine.playDrop();
           grabbed.mesh.visible = false;
           if (grabbed.rigidBody) {
-            grabbed.rigidBody.setBodyType(BODY_TYPE_DYNAMIC, true);
             grabbed.rigidBody.setLinvel({x: 0, y: 0, z: 0}, true);
+            grabbed.rigidBody.setAngvel({x: 0, y: 0, z: 0}, true);
+            grabbed.rigidBody.setTranslation({x: 0, y: -1000, z: 0}, true);
           }
         } else {
           // Release to physics — let it fall
@@ -166,10 +178,11 @@ function GrabSystemInner() {
         const intersections = getIntersections();
 
         for (const hit of intersections) {
-          const obj = hit.object;
-          if (obj.userData?.grabbable) {
-            const mesh = obj as THREE.Mesh;
-            const rb = findRigidBody(mesh);
+          // Walk up the scene graph to find the grabbable root (userData lives on parent group)
+          const grabbableRoot = findGrabbableRoot(hit.object);
+          if (grabbableRoot) {
+            const mesh = hit.object as THREE.Mesh;
+            const rb = findRigidBody(grabbableRoot);
 
             // Switch to kinematic so we control its position
             if (rb) {
@@ -192,18 +205,26 @@ function GrabSystemInner() {
               rigidBody: rb,
               originalOpacity: origOpacity,
               originalTransparent: origTransparent,
-              objectType: obj.userData.objectType ?? 'unknown',
-              objectId: obj.userData.objectId ?? '',
+              objectType: grabbableRoot.userData.objectType ?? 'unknown',
+              objectId: grabbableRoot.userData.objectId ?? '',
             };
 
-            setGrabbedObject(obj.userData.objectId ?? obj.name ?? 'object');
+            setGrabbedObject(grabbableRoot.userData.objectId ?? grabbableRoot.name ?? 'object');
             audioEngine.playGrab();
             break;
           }
         }
       }
     },
-    [camera, gl, getIntersections, findRigidBody, setGrabbedObject, clearReceiverHighlight],
+    [
+      camera,
+      gl,
+      getIntersections,
+      findGrabbableRoot,
+      findRigidBody,
+      setGrabbedObject,
+      clearReceiverHighlight,
+    ],
   );
 
   // Register click handler on the canvas
