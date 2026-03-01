@@ -1,14 +1,49 @@
+/**
+ * @module StoveStation
+ * 3D stove top with burner ring, frying pan, sausage, thermometer,
+ * and particle effects (sizzle + smoke).
+ *
+ * The stove body itself comes from the GLB model (Cube.002 in the
+ * furniture GLB), so this component only renders the interactive elements
+ * on top: a torus burner ring whose color flickers with heat, a frying
+ * pan with a capsule-collider sausage, a mercury-style thermometer,
+ * sizzle particles when heat > 0.3, and smoke particles when temperature
+ * exceeds the target zone.
+ *
+ * Rendering paths:
+ * - **Web (Rapier):** Pan and handle are fixed RigidBodies; sausage is
+ *   a dynamic CapsuleCollider that receives random torque impulses
+ *   proportional to heat, making it wobble and roll realistically.
+ * - **Native (manual):** Sausage wobbles via sinusoidal `useFrame`
+ *   animation; pan gets subtle heat haze shimmer.
+ *
+ * Sausage color transitions pink -> brown -> black based on temperature
+ * relative to a notional target zone (see `sausageColor()`). Includes
+ * a GrabSystem receiver mesh on the pan surface for sausage drop events.
+ *
+ * @see CookingChallenge — the 2D overlay that drives temperature and
+ *   heatLevel via props passed through GameWorld.
+ */
+
 import {useFrame} from '@react-three/fiber';
 import type {RapierRigidBody} from '@react-three/rapier';
 import {CapsuleCollider, CuboidCollider, CylinderCollider, RigidBody} from '@react-three/rapier';
-import {useMemo, useRef} from 'react';
+import {useCallback, useMemo, useRef} from 'react';
 import {Platform} from 'react-native';
 import * as THREE from 'three/webgpu';
+import {audioEngine} from '../../engine/AudioEngine';
 
+/**
+ * @param props.position - World position from resolveTargets()
+ * @param props.temperature - Current temp (room ~70 to max ~250), drives sausage color and thermometer
+ * @param props.heatLevel - 0-1 burner intensity (drives burner glow, sizzle, and sausage wobble)
+ * @param props.onSausagePlaced - Called when the sausage is dropped onto the frying pan via GrabSystem
+ */
 interface StoveStationProps {
   position: [number, number, number];
   temperature: number; // Current temp (room temp ~70 to max ~250)
   heatLevel: number; // 0-1 (burner intensity)
+  onSausagePlaced?: () => void; // Called when sausage is dropped on the pan
 }
 
 const isWeb = Platform.OS === 'web';
@@ -81,8 +116,34 @@ export function sausageColor(temp: number): [number, number, number] {
   return COLOR_BLACK;
 }
 
-export const StoveStation = ({position, temperature, heatLevel}: StoveStationProps) => {
+/**
+ * 3D stove top with burner, frying pan, sausage, thermometer, and
+ * sizzle/smoke particle effects.
+ *
+ * The `useFrame` loop handles: burner color flicker, sausage color
+ * transition (pink->brown->black), sausage physics torque (web) or
+ * manual wobble (native), thermometer fill + color, heat haze shimmer,
+ * sizzle particle spawning/animation, and smoke particle spawning when
+ * overheating.
+ */
+export const StoveStation = ({
+  position,
+  temperature,
+  heatLevel,
+  onSausagePlaced,
+}: StoveStationProps) => {
   const timeRef = useRef(0);
+
+  // Receiver callback: accepts sausage being placed on the frying pan
+  const handleReceive = useCallback(
+    (objectType: string, _objectId: string) => {
+      if (objectType === 'sausage') {
+        audioEngine.playDrop();
+        onSausagePlaced?.();
+      }
+    },
+    [onSausagePlaced],
+  );
 
   // Refs for animated meshes/materials
   const burnerMatRef = useRef<THREE.MeshBasicMaterial>(null);
@@ -400,6 +461,15 @@ export const StoveStation = ({position, temperature, heatLevel}: StoveStationPro
       ) : (
         <group position={[0, PAN_Y, 0]}>{panMesh}</group>
       )}
+
+      {/* --- Invisible receiver on pan surface for sausage drop --- */}
+      <mesh
+        position={[0, PAN_Y + PAN_HEIGHT / 2 + 0.02, 0]}
+        userData={{receiver: true, onReceive: handleReceive}}
+      >
+        <cylinderGeometry args={[PAN_RADIUS * 0.85, PAN_RADIUS * 0.85, 0.04, 16]} />
+        <meshBasicMaterial visible={false} />
+      </mesh>
 
       {/* --- Pan Handle --- */}
       {isWeb ? (

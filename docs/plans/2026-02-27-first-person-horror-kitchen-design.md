@@ -1,3 +1,14 @@
+<!--
+title: First-Person Horror Kitchen Redesign — Design Document
+domain: plan
+status: historical
+engine: babylon→r3f
+last-verified: 2026-03-01
+depends-on: ["2026-02-26-gameplay-elevation-design.md"]
+agent-context: scene-architect, challenge-dev
+summary: Design for transforming the game into a SAW-meets-Muppets horror escape room with sequential challenges, waypoint navigation, CRT TV Mr. Sausage, and Zustand state management.
+-->
+
 # Will It Blow? — Horror Kitchen Redesign
 
 **Date:** 2026-02-27

@@ -1,5 +1,12 @@
+/**
+ * @module dialogue/grinding
+ * Mr. Sausage's commentary lines for the grinding challenge (challenge 2).
+ * The player operates the grinder crank to achieve the right meat consistency.
+ * Lines are fed to the DialogueEngine at challenge start and on completion.
+ */
 import type {DialogueLine} from '../../engine/DialogueEngine';
 
+/** Opening dialogue when the grinding challenge begins. Includes a taunt choice path. */
 export const GRINDING_DIALOGUE: DialogueLine[] = [
   {
     speaker: 'sausage',
@@ -32,6 +39,7 @@ export const GRINDING_DIALOGUE: DialogueLine[] = [
   },
 ];
 
+/** Played when the player achieves good grind consistency. */
 export const GRINDING_SUCCESS: DialogueLine[] = [
   {
     speaker: 'sausage',

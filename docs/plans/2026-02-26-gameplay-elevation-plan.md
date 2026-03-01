@@ -1,3 +1,14 @@
+<!--
+title: Gameplay Elevation Implementation Plan
+domain: plan
+status: historical
+engine: babylon
+last-verified: 2026-03-01
+depends-on: ["2026-02-26-gameplay-elevation-design.md"]
+agent-context: scene-architect, challenge-dev
+summary: Task-by-task implementation plan for physics mini-games, MrSausage3D character, Ingredient3D factory, and scene rewrites using Babylon.js.
+-->
+
 # Gameplay Elevation Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.

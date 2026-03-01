@@ -1,0 +1,11 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["../src"],
+  "entryPointStrategy": "expand",
+  "out": "./api",
+  "exclude": ["**/__tests__/**", "**/*.test.*"],
+  "excludePrivate": true,
+  "skipErrorChecking": true,
+  "readme": "none",
+  "name": "Will It Blow? — Internal API Docs"
+}

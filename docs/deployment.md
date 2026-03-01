@@ -1,3 +1,14 @@
+<!--
+title: Deployment & CI/CD
+domain: core
+status: current
+engine: r3f
+last-verified: 2026-03-01
+depends-on: [testing, architecture]
+agent-context: asset-pipeline, doc-keeper
+summary: CI/CD pipeline, GitHub Pages, build commands
+-->
+
 # Deployment & CI/CD
 
 ## Live URL

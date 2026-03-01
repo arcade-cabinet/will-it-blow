@@ -97,6 +97,9 @@ e2e/screenshots/
 playwright-report/
 test-results/
 
+# TypeDoc generated API docs
+docs/api/
+
 # Worktrees
 .worktrees/
 

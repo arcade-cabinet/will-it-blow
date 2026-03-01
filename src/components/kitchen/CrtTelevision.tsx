@@ -1,3 +1,26 @@
+/**
+ * @module CrtTelevision
+ * Wall-mounted CRT television with TSL shader screen and Mr. Sausage inside.
+ *
+ * Builds the full TV as procedural geometry: plastic housing box, inner
+ * bezel recess, CRT shader plane (chromatic aberration + scanlines via
+ * `CrtShader.ts`), semi-transparent glass overlay, frame borders, control
+ * knobs, speaker grille slots, rabbit-ear antennas, wall bracket, and a
+ * blinking power LED.
+ *
+ * Mr. Sausage is rendered inside the TV via `MrSausage3D` with
+ * `trackCamera` enabled so he creepily follows the player. The CRT
+ * shader's `reactionIntensity` uniform is smoothly interpolated toward
+ * the current reaction's intensity value, creating signal distortion
+ * that matches Mr. Sausage's emotional state.
+ *
+ * Z-layering (front to back): Mr. Sausage [screenZ+0.05] > glass [bezelZ+0.02]
+ * > CRT screen [screenZ=0.835] > bezel recess [bezelZ-0.04] > housing [center].
+ *
+ * @see CrtShader — TSL NodeMaterial that compiles to WGSL/GLSL
+ * @see MrSausage3D — procedural character rendered inside the screen
+ */
+
 import {useFrame} from '@react-three/fiber';
 import {useMemo, useRef} from 'react';
 import type * as THREE from 'three/webgpu';
@@ -43,6 +66,17 @@ interface CrtTelevisionProps {
   position: [number, number, number];
 }
 
+/**
+ * Wall-mounted CRT television with procedural housing geometry, TSL
+ * shader screen, and Mr. Sausage character inside.
+ *
+ * The `useFrame` loop handles: CRT time uniform, smooth reaction intensity
+ * interpolation (fast attack / slow release), power LED blink, housing
+ * emissive glow from screen light bleed, and glass reflection pulse.
+ *
+ * @param props.reaction - Current Mr. Sausage reaction (drives CRT distortion intensity)
+ * @param props.position - World position from resolveTargets()
+ */
 export const CrtTelevision = ({reaction = 'idle', position}: CrtTelevisionProps) => {
   // --- Refs for animated materials ---
   const housingMatRef = useRef<THREE.MeshStandardMaterial>(null);

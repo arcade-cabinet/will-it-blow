@@ -4,18 +4,9 @@ Project-specific instructions for Claude Code when working in this repository.
 
 ## What This Is
 
-A first-person horror sausage-making mini-game. SAW meets cooking show. Built with React Native 0.83 + React Three Fiber 9.5 (Three.js 0.183 WebGPU) + Expo SDK 55. WebGPU rendering via `react-native-wgpu` (Dawn-based on native, browser WebGPU on web). Cross-platform: web, iOS, Android.
+A first-person horror sausage-making mini-game (SAW meets cooking show). React Native 0.83 + React Three Fiber 9.5 + Expo SDK 55. Cross-platform: web, iOS, Android.
 
-**Full documentation:** See `docs/` directory for detailed guides:
-- `docs/architecture.md` — System design, directory structure, data flow
-- `docs/game-design.md` — Gameplay mechanics, scoring, challenges, Mr. Sausage
-- `docs/3d-rendering.md` — R3F setup, materials, lighting, cameras, stations
-- `docs/state-management.md` — Zustand store schema, actions, state flow
-- `docs/audio.md` — Tone.js synthesis, sound design, integration points
-- `docs/testing.md` — Strategy, coverage, R3F component testing, adding tests
-- `docs/deployment.md` — CI/CD, GitHub Pages, build commands
-- `docs/development-guide.md` — Conventions, patterns, pitfalls, how to add features
-- `docs/status.md` — Current completion status and remaining work
+For full codebase knowledge, see `AGENTS.md`. For persistent context, see `memory-bank/`.
 
 ## Commands
 
@@ -34,101 +25,6 @@ pnpm format                   # Auto-fix lint + format errors
 # Type checking (needs increased stack for Three.js recursive types)
 pnpm typecheck
 ```
-
-## Architecture
-
-### Two-Layer Rendering
-
-1. **React Three Fiber 3D scene** (`<Canvas>` with `WebGPURenderer`) — Kitchen GLB model + declarative station meshes + lighting. WebXR support via `@react-three/xr`.
-2. **React Native overlay** — All UI (challenges, dialogue, menus, results)
-
-### State Management
-
-Zustand store (`src/store/gameStore.ts`) — single source of truth. No React Context.
-
-### Game Flow
-
-```text
-menu → loading → ingredients → grinding → stuffing → cooking → tasting → results
-```
-
-Managed by `appPhase` (menu/loading/playing) and `currentChallenge` (0–4) in the store.
-
-### Unified Cross-Platform
-
-Single `GameWorld.tsx` uses `@react-three/fiber` Canvas with `WebGPURenderer` — works on both web and native via `react-native-wgpu`. No platform-specific file splitting for the 3D layer.
-
-- Metro config has a WebGPU resolver that maps bare `'three'` imports to `'three/webgpu'` on native platforms
-- `AudioEngine.web.ts` (Tone.js) / `AudioEngine.ts` (native no-op stub) — only remaining platform split
-
-### Code Splitting (Dynamic Imports)
-
-`App.tsx` uses `React.lazy()` + `Suspense` to split the bundle at phase boundaries:
-
-- **Static imports** (in initial bundle): `TitleScreen`, `LoadingScreen`, small UI chrome
-- **Lazy-loaded**: `GameWorld` (Three.js + R3F + all stations — biggest chunk), all 5 challenge components, `GameOverScreen`
-- **Prefetching**: During the loading phase, `import('./src/components/GameWorld')` and first challenge are prefetched so the JS chunk is cached before the phase transitions to `playing`
-- **Production chunks**: Metro splits into 17 separate JS files. Menu loads ~1.2MB; GameWorld chunk (~4.6MB with Three.js) only loads when game starts
-
-## Key Files
-
-| File | Purpose |
-|------|---------|
-| `App.tsx` | Root layout — phase routing + React.lazy code splitting + chunk prefetch |
-| `src/store/gameStore.ts` | Zustand store (all game state + actions) |
-| `src/engine/ChallengeRegistry.ts` | Challenge configs, variant selection, final verdict |
-| `src/engine/SausagePhysics.ts` | 5 pure scoring functions |
-| `src/engine/Ingredients.ts` | 25 ingredients with stats |
-| `src/engine/FurnitureLayout.ts` | Target-based placement system — resolveTargets(), FURNITURE_RULES |
-| `src/components/GameWorld.tsx` | R3F Canvas, FPS controller, target-derived station triggers, scene orchestrator |
-| `src/components/kitchen/KitchenEnvironment.tsx` | Room enclosure (walls/floor/ceiling PBR), lighting, FurnitureLoader |
-| `src/components/kitchen/FurnitureLoader.tsx` | Loads GLB furniture segments, positions at targets, handles animations |
-| `src/components/kitchen/FridgeStation.tsx` | 3D fridge with ingredient meshes (onClick picking) |
-| `src/components/kitchen/GrinderStation.tsx` | 3D grinder with crank animation |
-| `src/components/kitchen/StufferStation.tsx` | 3D stuffer with pressure visualization |
-| `src/components/kitchen/StoveStation.tsx` | 3D stove with temperature glow |
-| `src/components/kitchen/CrtTelevision.tsx` | CRT TV with Mr. Sausage + shader |
-| `src/components/characters/MrSausage3D.tsx` | Procedural 3D character with reaction animations |
-| `src/components/effects/CrtShader.ts` | TSL NodeMaterial (chromatic aberration + scanlines, compiles to WGSL/GLSL) |
-| `src/components/ingredients/Ingredient3D.tsx` | Shape-based ingredient meshes (8 shape types) |
-| `src/components/challenges/*.tsx` | 5 challenge overlays (game mechanics + UI) |
-| `src/components/ui/*.tsx` | Menu, loading, dialogue, progress, strikes, game over |
-
-## Patterns and Conventions
-
-### R3F 3D Components
-
-- Declarative JSX: `<mesh><boxGeometry /><meshStandardMaterial /></mesh>`
-- Per-frame animation via `useFrame((state, delta) => { ... })` — replaces imperative render loops
-- Camera/scene access via `useThree()` hook
-- Refs for mutable state read in `useFrame`: `const ref = useRef<THREE.Mesh>(null)`
-- Self-lit materials: `<meshBasicMaterial color="..." />` (unlit, always visible)
-- PBR materials: `<meshStandardMaterial map={...} normalMap={...} roughnessMap={...} />`
-- GLB loading: `useGLTF('/models/<segment>.glb')` from `@react-three/drei` — discrete furniture GLBs, not one monolith
-- Mesh picking: `onClick` prop directly on `<mesh>` elements
-
-### Target-Based Placement
-
-`FurnitureLayout.ts` defines named targets computed from room dimensions. All furniture, stations, triggers, and waypoint markers reference targets by name — no hardcoded coordinates in any consumer. `resolveTargets(room)` is the single source of truth. If room dimensions change, everything follows.
-
-### FPS Controller
-
-`FPSController.tsx` in `src/components/controls/`. WASD/arrow keys + pointer-lock mouse look for free-roam navigation. `MobileJoystick.tsx` for touch controls. `ProximityTrigger` in GameWorld checks player distance to station targets.
-
-### Challenge Component Pattern
-
-Each challenge = overlay (`challenges/`) + 3D station (`kitchen/`) + dialogue (`data/dialogue/`)
-- Overlay writes to store (progress, pressure, strikes)
-- Station reads from store via props (passed through GameWorld)
-- No direct communication between overlay and station
-
-### Testing
-
-- Jest with react-native preset — **both pure logic AND R3F component tests**
-- R3F components tested via `@react-three/test-renderer` (renders Three.js scene graph in Node.js)
-- 256+ tests across ~24 test files
-- Pure logic: SausagePhysics, Ingredients, ChallengeRegistry, IngredientMatcher, DialogueEngine, gameStore
-- Component tests: MrSausage3D, CrtTelevision, KitchenEnvironment, FridgeStation, GrinderStation, StufferStation, StoveStation, Ingredient3D, GameWorld, CrtShader
 
 ## CI/CD
 

@@ -1,3 +1,16 @@
+/**
+ * @module Ingredients
+ * Defines the 25 ingredients available for sausage-making, along with their
+ * gameplay stats, visual properties, and categories. This is the data layer
+ * that drives ingredient selection, scoring (via SausagePhysics), and 3D
+ * rendering (via Ingredient3D shape/color).
+ */
+
+/**
+ * Describes the 3D mesh shape used to render an ingredient in the fridge.
+ * The `base` determines the geometry primitive; `detail` adds a visual modifier
+ * (e.g., 'wobbly' deforms the sphere, 'claws' adds appendages to elongated).
+ */
 export type IngredientShape =
   | {base: 'sphere'; detail?: 'wobbly'}
   | {base: 'box'; detail?: 'rounded'}
@@ -8,9 +21,16 @@ export type IngredientShape =
   | {base: 'small-sphere'}
   | {base: 'irregular'};
 
+/**
+ * A single ingredient with gameplay stats and visual properties.
+ * Stats drive scoring in SausagePhysics; visual props drive 3D rendering.
+ */
 export interface Ingredient {
+  /** Display name shown in the fridge UI and results screen */
   name: string;
+  /** Emoji used in 2D overlay displays */
   emoji: string;
+  /** Flavor category — used by IngredientMatcher for tag-based matching */
   category:
     | 'fast food'
     | 'canned'
@@ -20,14 +40,30 @@ export interface Ingredient {
     | 'spicy'
     | 'comfort'
     | 'international';
+  /** Flavor quality 0-5 (or -1 for repulsive). Higher = better taste score. */
   tasteMod: number;
+  /** Texture quality 0-5. Higher = better mouthfeel. Affects 40% of taste rating. */
   textureMod: number;
+  /** Probability 0-1 that the casing bursts. Water=0.9, Lobster=0.1. */
   burstRisk: number;
+  /** Explosive power 0-5. Drives the "Blow Ruffalos" score. */
   blowPower: number;
+  /** Hex color for the 3D ingredient mesh material */
   color: string;
+  /** 3D shape descriptor used by Ingredient3D to select the mesh geometry */
   shape: IngredientShape;
 }
 
+/**
+ * The full pool of 25 ingredients spanning 8 categories.
+ * Each game session draws a random subset via {@link getRandomIngredientPool}.
+ *
+ * Category distribution: fast food (5), absurd (7), fancy (3), sweet (5),
+ * spicy (2), comfort (2), canned (1), international (1).
+ *
+ * Design: "absurd" ingredients are intentional trap picks — they look
+ * funny but have terrible stats (tasteMod 0, high burstRisk).
+ */
 export const INGREDIENTS: Ingredient[] = [
   {
     name: 'Big Mac',
@@ -317,6 +353,7 @@ export const INGREDIENTS: Ingredient[] = [
   },
 ];
 
+/** Fisher-Yates shuffle — returns a new shuffled copy, does not mutate input. */
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -326,11 +363,19 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
+/**
+ * Draws a random subset of ingredients from the full INGREDIENTS pool.
+ * Used at the start of each game to populate the fridge with a fresh selection.
+ *
+ * @param count - Number of ingredients to include (default 12, the fridge capacity)
+ * @returns A shuffled subset of INGREDIENTS with `count` items
+ */
 export function getRandomIngredientPool(count = 12): Ingredient[] {
   const shuffled = shuffle(INGREDIENTS);
   return shuffled.slice(0, count);
 }
 
+/** Hex color associated with each ingredient category, used for UI badges and labels. */
 export const CATEGORY_COLORS: Record<string, string> = {
   'fast food': '#FF6B35',
   canned: '#E85D2C',

@@ -1,3 +1,22 @@
+/**
+ * @module GrindingChallenge
+ * Challenge 2 of 5: Rhythm-based meat grinding.
+ *
+ * The player drags in circles on a gesture area to simulate cranking the
+ * grinder. Angular velocity is tracked via a PanResponder and smoothed
+ * with an exponential moving average (EMA).
+ *
+ * **Speed zone mechanic:**
+ * - **Too slow**: Timer counts down 1.5x faster, progress stalls.
+ * - **Good zone**: Progress increases proportional to velocity.
+ * - **Too fast**: Splatter strike + visual flash, cooldown before next strike.
+ *
+ * **Scoring:** 100 - (strikes * 15) - (overtime_seconds * 5).
+ * Timer expires = immediate score based on current progress.
+ *
+ * **Phases:** dialogue -> grinding -> success -> complete
+ */
+
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {PanResponder, StyleSheet, Text, View} from 'react-native';
 import type {GrindingVariant} from '../../data/challenges/variants';
@@ -9,6 +28,10 @@ import type {Reaction} from '../characters/reactions';
 import {DialogueOverlay} from '../ui/DialogueOverlay';
 import {ProgressGauge} from '../ui/ProgressGauge';
 
+/**
+ * @param props.onComplete - Called with the final score (0-100) when the challenge ends
+ * @param props.onReaction - Triggers Mr. Sausage reactions on the CRT TV
+ */
 interface GrindingChallengeProps {
   onComplete: (score: number) => void;
   onReaction?: (reaction: Reaction) => void;
@@ -238,6 +261,7 @@ export function GrindingChallenge({onComplete, onReaction}: GrindingChallengePro
   useEffect(() => {
     if (phase === 'grinding') {
       audioEngine.startGrinder();
+      audioEngine.playPour(); // Pour ingredients into grinder
     } else {
       audioEngine.stopGrinder();
     }

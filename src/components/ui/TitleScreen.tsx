@@ -1,3 +1,17 @@
+/**
+ * @module TitleScreen
+ * Main menu screen styled as a hanging butcher shop sign.
+ *
+ * Displays the game title with a swinging sign animation, three menu options
+ * (New Game, Continue, Settings), and a footer. The sign subtly sways on a
+ * looped Animated timing sequence.
+ *
+ * - **New Game**: Transitions to the loading phase (resets all state).
+ * - **Continue**: Restores saved progress via `continueGame()` then loads.
+ *   Disabled (grayed out) when no save data exists.
+ * - **Settings**: Renders SettingsScreen in-place (replaces this component).
+ */
+
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {Animated, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {useGameStore} from '../../store/gameStore';

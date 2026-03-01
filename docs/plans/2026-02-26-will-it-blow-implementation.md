@@ -1,3 +1,14 @@
+<!--
+title: Will It Blow? — Original Implementation Plan
+domain: plan
+status: historical
+engine: babylon
+last-verified: 2026-03-01
+depends-on: ["2026-02-26-will-it-blow-game-design.md"]
+agent-context: challenge-dev, scene-architect
+summary: Full implementation plan for the original BabylonJS game — data layer, game engine, audio, UI components, 3D scenes, and app wiring across 16 tasks.
+-->
+
 # Will It Blow? Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.

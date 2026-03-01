@@ -1,3 +1,14 @@
+<!--
+title: Development Guide
+domain: core
+status: current
+engine: r3f
+last-verified: 2026-03-01
+depends-on: [architecture, state-management, 3d-rendering, testing]
+agent-context: scene-architect, challenge-dev, store-warden
+summary: Conventions, patterns, pitfalls, how to add features
+-->
+
 # Development Guide
 
 ## Quick Start

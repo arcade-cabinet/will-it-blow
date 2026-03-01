@@ -1,10 +1,45 @@
+/**
+ * @module GrinderStation
+ * 3D meat grinder station with interactive crank animation and physics particles.
+ *
+ * Renders a procedural grinder (body, hopper, spout, crank arm/knob), meat chunks
+ * in the hopper that disappear as grindProgress increases, ground meat output
+ * particles, and splatter particles on strike events.
+ *
+ * Two rendering paths:
+ * - **Web**: Uses Rapier rigid bodies for meat chunks and splatter particles
+ *   (gravity applied per-body since world gravity is zero).
+ * - **Native**: Uses manual `useFrame` animation for chunks and splatters.
+ *
+ * Accepts a bowl drop via the GrabSystem receiver pattern: an invisible mesh
+ * at the hopper opening with `userData.receiver` triggers bowl placement.
+ */
+
 import {useFrame} from '@react-three/fiber';
 import type {RapierRigidBody} from '@react-three/rapier';
 import {BallCollider, CylinderCollider, RigidBody} from '@react-three/rapier';
-import {useEffect, useRef} from 'react';
+import {useCallback, useEffect, useRef} from 'react';
 import {Platform} from 'react-native';
 import type * as THREE from 'three/webgpu';
+import {audioEngine} from '../../engine/AudioEngine';
+import {DEFAULT_ROOM, resolveTargets} from '../../engine/FurnitureLayout';
+import {useGameStore} from '../../store/gameStore';
 
+// Pre-resolve receiver position as a local offset from the grinder station
+const _targets = resolveTargets(DEFAULT_ROOM);
+const _grinderPos = _targets.grinder.position;
+const _receiverPos = _targets['grinder-receiver'].position;
+const RECEIVER_LOCAL_POS: [number, number, number] = [
+  _receiverPos[0] - _grinderPos[0],
+  _receiverPos[1] - _grinderPos[1],
+  _receiverPos[2] - _grinderPos[2],
+];
+
+/**
+ * Props for the GrinderStation 3D component.
+ * All values are passed down from SceneContent, which derives them
+ * from the Zustand store's challenge state.
+ */
 interface GrinderStationProps {
   position: [number, number, number];
   grindProgress: number; // 0-100
@@ -63,6 +98,11 @@ const SPLATTER_VELOCITIES = Array.from({length: SPLATTER_PARTICLE_COUNT}, (_, i)
 // PhysicsMeatChunk — a single dynamic rigid body meat chunk (web only)
 // -----------------------------------------------------------------
 
+/**
+ * Single Rapier dynamic rigid body representing a meat chunk in the hopper.
+ * Applies per-body gravity each frame (world gravity is zero for the sensor system).
+ * Resets position when transitioning from hidden to visible (new round).
+ */
 function PhysicsMeatChunk({
   chunk,
   visible,
@@ -120,6 +160,11 @@ function PhysicsMeatChunk({
 // PhysicsSplatterParticle — a single dynamic splatter particle (web only)
 // -----------------------------------------------------------------
 
+/**
+ * Single Rapier dynamic rigid body for a splatter particle (web only).
+ * On the rising edge of `active`, resets position and applies an impulse
+ * from pre-computed velocities. Fades out over SPLATTER_DURATION seconds.
+ */
 function PhysicsSplatterParticle({
   index,
   size,
@@ -193,6 +238,7 @@ function PhysicsSplatterParticle({
 // ManualMeatChunks — original manual animation (native fallback)
 // -----------------------------------------------------------------
 
+/** Static meat chunk spheres for native platforms. Scale decreases as grindProgress increases. */
 function ManualMeatChunks({chunkScale}: {chunkScale: number}) {
   const chunksVisible = chunkScale > 0.05;
   if (!chunksVisible) return null;
@@ -215,6 +261,11 @@ function ManualMeatChunks({chunkScale}: {chunkScale: number}) {
 // ManualSplatterParticles — original manual particle sim (native fallback)
 // -----------------------------------------------------------------
 
+/**
+ * Manual splatter particle simulation for native platforms (no Rapier).
+ * Uses refs to track position/velocity per particle and animates via useFrame.
+ * Particles launch on the rising edge of isSplattering and fade over SPLATTER_DURATION.
+ */
 function ManualSplatterParticles({isSplattering}: {isSplattering: boolean}) {
   const splatterRefs = useRef<(THREE.Mesh | null)[]>(
     Array.from({length: SPLATTER_PARTICLE_COUNT}, () => null),
@@ -304,6 +355,20 @@ function ManualSplatterParticles({isSplattering}: {isSplattering: boolean}) {
 // GrinderStation — main exported component
 // -----------------------------------------------------------------
 
+/**
+ * 3D grinder station with interactive crank animation.
+ *
+ * Reads grind progress from props (sourced from Zustand store via SceneContent)
+ * and animates the crank arm/knob via useFrame. The grinder body vibrates
+ * while grinding is in progress (0 < progress < 100).
+ *
+ * Positioned at the 'grinder' target from FurnitureLayout (passed as `position`).
+ *
+ * @param props.position - World position from resolveTargets()
+ * @param props.grindProgress - Current grind progress (0-100)
+ * @param props.crankAngle - Cumulative crank rotation in radians
+ * @param props.isSplattering - Whether a splatter burst is active (from strike)
+ */
 export const GrinderStation = ({
   position,
   grindProgress,
@@ -314,6 +379,18 @@ export const GrinderStation = ({
   const crankArmRef = useRef<THREE.Mesh>(null);
   const knobRef = useRef<THREE.Mesh>(null);
   const timeRef = useRef(0);
+  const setBowlPosition = useGameStore(s => s.setBowlPosition);
+
+  // Receiver callback: accepts the mixing bowl being placed on the hopper
+  const handleReceive = useCallback(
+    (objectType: string, _objectId: string) => {
+      if (objectType === 'bowl') {
+        setBowlPosition('grinder');
+        audioEngine.playPour();
+      }
+    },
+    [setBowlPosition],
+  );
 
   // Crank pivot point (right side of grinder body)
   const crankPivotX = 0.3;
@@ -380,6 +457,12 @@ export const GrinderStation = ({
       <mesh position={[0, GRINDER_BASE_Y + BODY_HEIGHT + HOPPER_HEIGHT / 2, 0]}>
         <cylinderGeometry args={[0.35, 0.15, HOPPER_HEIGHT, 12]} />
         <meshBasicMaterial color={[0.55, 0.55, 0.6]} transparent opacity={0.85} />
+      </mesh>
+
+      {/* --- Invisible receiver at hopper opening for bowl drop --- */}
+      <mesh position={RECEIVER_LOCAL_POS} userData={{receiver: true, onReceive: handleReceive}}>
+        <cylinderGeometry args={[0.35, 0.35, 0.1, 12]} />
+        <meshBasicMaterial visible={false} />
       </mesh>
 
       {/* --- Spout (horizontal cylinder for meat output) --- */}

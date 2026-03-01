@@ -1,3 +1,21 @@
+/**
+ * @module KitchenEnvironment
+ * Room enclosure, PBR textures, grime decals, fluorescent lighting, and
+ * furniture loader for the horror kitchen scene.
+ *
+ * Builds the room as a box of plane meshes (floor, ceiling, 4 walls) with
+ * tiled PBR textures from ambientCG. Walls have a two-part split: subway
+ * tile below TILE_LINE and exposed concrete above. Grime decals (drips +
+ * baseboard mold) are alpha-blended transparent planes placed slightly
+ * in front of the walls.
+ *
+ * Lighting uses a combination of:
+ * - Hemisphere light (cool sky, warm ground)
+ * - Center fill point light
+ * - 3 fluorescent tube fixtures with randomized flicker bursts
+ * - Red emergency light and under-counter horror glow
+ */
+
 import {useTexture} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
 import type React from 'react';
@@ -81,6 +99,12 @@ function getAssetRootUrl(subdir: string): string {
 // useRoomTextures — loads ambientCG PBR texture sets for the room enclosure
 // -------------------------------------------------------
 
+/**
+ * Loads and configures all PBR texture sets for the room enclosure.
+ * Uses drei's useTexture to load color, normal, roughness, and AO maps
+ * in parallel. Applies RepeatWrapping tiling after load.
+ */
+
 /** Configure a texture for tiling: RepeatWrapping + repeat count */
 function tileTex(tex: THREE.Texture, repeatX: number, repeatY: number): THREE.Texture {
   tex.wrapS = THREE.RepeatWrapping;
@@ -140,6 +164,11 @@ function useRoomTextures() {
 // RoomEnclosure — floor, ceiling, walls with PBR textures
 // -------------------------------------------------------
 
+/**
+ * Floor, ceiling, and four walls rendered as plane meshes with PBR materials.
+ * Walls are split at TILE_LINE: subway tile below, exposed concrete above.
+ * DoubleSide on walls ensures correct lighting regardless of face winding.
+ */
 function RoomEnclosure({textures}: {textures: ReturnType<typeof useRoomTextures>}) {
   const upperH = ROOM_H - TILE_LINE;
 
@@ -276,12 +305,28 @@ function FluorescentTube({position, lightRef}: FluorescentTubeProps) {
 // KitchenEnvironment — room enclosure, furniture, lighting, grime
 // -------------------------------------------------------
 
+/**
+ * Top-level kitchen environment component.
+ * Composes room enclosure, PBR grime decals, GLB furniture, and all lighting.
+ * Fluorescent tubes randomly flicker using per-frame sine wave intensity.
+ *
+ * @param props.fridgeDoorOpen - Controls fridge door animation in FurnitureLoader
+ * @param props.grinderCranking - Controls grinder crank animation in FurnitureLoader
+ * @param props.bowlPosition - Dynamic position for the mixing bowl (null = hidden)
+ * @param props.bowlReceiving - Whether the bowl accepts dropped ingredients
+ */
 export const KitchenEnvironment = ({
   fridgeDoorOpen = false,
   grinderCranking = false,
+  bowlPosition,
+  bowlReceiving = false,
 }: {
   fridgeDoorOpen?: boolean;
   grinderCranking?: boolean;
+  /** Override position for the mixing bowl (dynamic — follows bowlPosition state). */
+  bowlPosition?: [number, number, number] | null;
+  /** Whether the bowl should accept dropped ingredients. */
+  bowlReceiving?: boolean;
 }) => {
   // Load PBR textures for room enclosure
   const textures = useRoomTextures();
@@ -341,6 +386,12 @@ export const KitchenEnvironment = ({
           ======================================================= */}
       <RoomEnclosure textures={textures} />
 
+      {/* Trap door — brushed steel ceiling panel (easter egg if player looks up) */}
+      <mesh position={[0, ROOM_H - 0.01, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[1.8, 1.8]} />
+        <meshStandardMaterial color="#6a6e73" metalness={0.85} roughness={0.35} />
+      </mesh>
+
       {/* =======================================================
           GRIME DECALS — PBR textured transparent planes
           ======================================================= */}
@@ -358,7 +409,12 @@ export const KitchenEnvironment = ({
       {/* =======================================================
           FURNITURE — GLB segments positioned via FurnitureLayout targets
           ======================================================= */}
-      <FurnitureLoader fridgeDoorOpen={fridgeDoorOpen} grinderCranking={grinderCranking} />
+      <FurnitureLoader
+        fridgeDoorOpen={fridgeDoorOpen}
+        grinderCranking={grinderCranking}
+        bowlPosition={bowlPosition}
+        bowlReceiving={bowlReceiving}
+      />
 
       {/* =======================================================
           LIGHTING — harsh fluorescent overhead
@@ -376,6 +432,22 @@ export const KitchenEnvironment = ({
       {TUBE_POSITIONS.map((pos, i) => (
         <FluorescentTube key={`tube_${i}`} position={pos} lightRef={tubeLightRefs[i]} />
       ))}
+
+      {/* =======================================================
+          HORROR ATMOSPHERE LIGHTING
+          ======================================================= */}
+
+      {/* Red emergency light near the ceiling trap door — pulsing ominous glow */}
+      <pointLight
+        position={[1.5, ROOM_H - 0.3, 1.5]}
+        color="#ff1a1a"
+        intensity={0.4}
+        distance={8}
+        decay={2}
+      />
+
+      {/* Dim under-counter light casting creepy shadows from below */}
+      <pointLight position={[0, 0.15, 0]} color="#443322" intensity={0.3} distance={5} decay={2} />
     </group>
   );
 };

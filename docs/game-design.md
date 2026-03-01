@@ -1,3 +1,14 @@
+<!--
+title: Game Design
+domain: core
+status: current
+engine: r3f
+last-verified: 2026-03-01
+depends-on: [state-management, 3d-rendering, audio]
+agent-context: challenge-dev, scene-architect
+summary: Gameplay mechanics, scoring, challenges, Mr. Sausage
+-->
+
 # Game Design
 
 ## Premise

@@ -1,7 +1,21 @@
+/**
+ * @module ChallengeHeader
+ * Top-of-screen HUD showing the current challenge number and name.
+ *
+ * Reads `currentChallenge` from the Zustand store and looks up the
+ * challenge config from `ChallengeRegistry`. Renders as a centered
+ * absolute-positioned overlay at zIndex 70 (below hints/strikes at 80,
+ * below dialogue at 90).
+ *
+ * Returns null if the challenge index is out of range (e.g., during
+ * transitions or before the first challenge starts).
+ */
+
 import {StyleSheet, Text, View} from 'react-native';
 import {CHALLENGE_ORDER, getChallengeConfig} from '../../engine/ChallengeRegistry';
 import {useGameStore} from '../../store/gameStore';
 
+/** Displays "CHALLENGE N/5" label and the challenge name at the top of the screen. */
 export function ChallengeHeader() {
   const {currentChallenge} = useGameStore();
 

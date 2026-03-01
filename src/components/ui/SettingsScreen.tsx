@@ -86,6 +86,19 @@ interface SettingsScreenProps {
   onBack: () => void;
 }
 
+/**
+ * Settings panel with music/SFX volume controls and mute toggles.
+ *
+ * Reads `musicVolume`, `sfxVolume`, `musicMuted`, and `sfxMuted` from
+ * the Zustand store, and writes back via the corresponding setters.
+ * Each audio channel gets a `VolumeSlider` (5-step discrete bar + mute
+ * icon toggle). Displays the app version from package.json at the bottom.
+ *
+ * Styled to match the butcher-shop aesthetic (dark panel, saddlebrown
+ * border, Bangers font, gold dividers).
+ *
+ * @param props.onBack - Called when the BACK button is pressed to return to the title screen
+ */
 export function SettingsScreen({onBack}: SettingsScreenProps) {
   const {musicVolume, sfxVolume, musicMuted, sfxMuted} = useGameStore();
   const {setMusicVolume, setSfxVolume, setMusicMuted, setSfxMuted} = useGameStore();

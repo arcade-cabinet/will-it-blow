@@ -1,3 +1,28 @@
+/**
+ * @module IngredientChallenge
+ * Challenge 1 of 5: Ingredient selection from the 3D fridge.
+ *
+ * This is the UI overlay for the ingredient-picking challenge. The player
+ * must select ingredients from the fridge that match Mr. Sausage's criteria
+ * (e.g., "spicy meats"). Uses the "fridge bridge" pattern for 3D-to-2D
+ * communication:
+ *
+ * **Scoring flow:**
+ * 1. On mount, picks a variant (criteria + requiredCount) and generates a
+ *    random pool of 10 ingredients, guaranteeing enough matching ones.
+ * 2. Pool and matching indices are written to the Zustand store via
+ *    `setFridgePool()` so FridgeStation (3D) can render them.
+ * 3. When the player clicks a 3D ingredient, FridgeStation calls
+ *    `triggerFridgeClick(index)` on the store. This overlay watches
+ *    `pendingFridgeClick` in a useEffect and processes the pick.
+ * 4. Alternatively, ingredients can be grabbed and dropped into the bowl
+ *    (physics path), tracked via `bowlContents` changes.
+ * 5. Correct picks advance progress; wrong picks add strikes. Score =
+ *    100 - (strikes * 15).
+ *
+ * **Phases:** dialogue -> selecting -> success/failure -> complete
+ */
+
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import type {IngredientVariant} from '../../data/challenges/variants';
@@ -16,6 +41,10 @@ import type {Reaction} from '../characters/reactions';
 import {DialogueOverlay} from '../ui/DialogueOverlay';
 import {ProgressGauge} from '../ui/ProgressGauge';
 
+/**
+ * @param props.onComplete - Called with the final score (0-100) when the challenge ends
+ * @param props.onReaction - Triggers Mr. Sausage reactions on the CRT TV
+ */
 interface IngredientChallengeProps {
   onComplete: (score: number) => void;
   onReaction?: (reaction: Reaction) => void;
@@ -50,6 +79,7 @@ export function IngredientChallenge({onComplete, onReaction}: IngredientChalleng
     fridgeSelectedIndices,
     fridgeHoveredIndex,
     setFridgePool,
+    bowlContents,
   } = useGameStore();
 
   // Refs for values read in the click handler to avoid stale closures
@@ -99,6 +129,78 @@ export function IngredientChallenge({onComplete, onReaction}: IngredientChalleng
     setFridgePool(pool, matching);
   }, [variantSeed, setFridgePool]);
 
+  // Shared scoring logic for ingredient picks (click or physics drop)
+  const processIngredientPick = useCallback(
+    (poolIndex: number) => {
+      if (!variant) return;
+
+      // Already selected — ignore
+      if (fridgeSelectedIndices.includes(poolIndex)) return;
+
+      // Mark as selected in the shared store (3D reads this for visual state)
+      addFridgeSelected(poolIndex);
+
+      const matchingSet = new Set(fridgeMatchingIndices);
+      if (matchingSet.has(poolIndex)) {
+        const newCount = correctCountRef.current + 1;
+        setCorrectCount(newCount);
+        setLastResult('correct');
+        onReaction?.('excitement');
+        audioEngine.playCorrectPick();
+        setChallengeProgress((newCount / variant.requiredCount) * 100);
+
+        if (newCount >= variant.requiredCount) {
+          setPhase('success');
+        }
+      } else {
+        setLastResult('wrong');
+        const ing = fridgePool[poolIndex];
+        const isClose =
+          ing && variant.criteria.tags.some(tag => matchesCriteria(ing, {tags: [tag]}));
+        if (isClose) {
+          onReaction?.('nervous');
+        } else {
+          onReaction?.('disgust');
+        }
+        addStrike();
+        audioEngine.playWrongPick();
+      }
+
+      setTimeout(() => {
+        setLastResult(null);
+        onReaction?.('idle');
+      }, REACTION_RESET_MS);
+    },
+    [
+      variant,
+      fridgePool,
+      fridgeMatchingIndices,
+      fridgeSelectedIndices,
+      addFridgeSelected,
+      addStrike,
+      setChallengeProgress,
+      onReaction,
+    ],
+  );
+
+  // Track bowl contents to score ingredients dropped via physics
+  const prevBowlLenRef = useRef(0);
+  useEffect(() => {
+    if (phaseRef.current !== 'selecting' || !variant) return;
+    if (bowlContents.length <= prevBowlLenRef.current) {
+      prevBowlLenRef.current = bowlContents.length;
+      return;
+    }
+
+    const newIngredientId = bowlContents[bowlContents.length - 1];
+    prevBowlLenRef.current = bowlContents.length;
+
+    const poolIndex = fridgePool.findIndex(ing => ing.name === newIngredientId);
+    if (poolIndex === -1) return;
+
+    processIngredientPick(poolIndex);
+  }, [bowlContents, variant, fridgePool, processIngredientPick]);
+
   // Watch for defeat (3 strikes) to trigger failure dialogue
   useEffect(() => {
     if (gameStatus === 'defeat' && phase === 'selecting') {
@@ -113,60 +215,8 @@ export function IngredientChallenge({onComplete, onReaction}: IngredientChalleng
     const index = pendingFridgeClick;
     clearFridgeClick();
 
-    // Already selected — ignore
-    if (fridgeSelectedIndices.includes(index)) return;
-
-    // Mark as selected in the shared store (3D reads this for visual state)
-    addFridgeSelected(index);
-
-    const matchingSet = new Set(fridgeMatchingIndices);
-    if (matchingSet.has(index)) {
-      // Correct ingredient
-      const newCount = correctCountRef.current + 1;
-      setCorrectCount(newCount);
-      setLastResult('correct');
-      onReaction?.('excitement');
-      audioEngine.playCorrectPick();
-      setChallengeProgress((newCount / variant.requiredCount) * 100);
-
-      if (newCount >= variant.requiredCount) {
-        setPhase('success');
-      }
-    } else {
-      // Wrong ingredient — strike
-      setLastResult('wrong');
-
-      // Check if ingredient is "close" (shares at least one tag)
-      const ing = fridgePool[index];
-      const isClose = ing && variant.criteria.tags.some(tag => matchesCriteria(ing, {tags: [tag]}));
-
-      if (isClose) {
-        onReaction?.('nervous');
-      } else {
-        onReaction?.('disgust');
-      }
-
-      addStrike();
-      audioEngine.playWrongPick();
-    }
-
-    // Reset result indicator after delay
-    setTimeout(() => {
-      setLastResult(null);
-      onReaction?.('idle');
-    }, REACTION_RESET_MS);
-  }, [
-    pendingFridgeClick,
-    variant,
-    fridgePool,
-    fridgeMatchingIndices,
-    fridgeSelectedIndices,
-    clearFridgeClick,
-    addFridgeSelected,
-    addStrike,
-    setChallengeProgress,
-    onReaction,
-  ]);
+    processIngredientPick(index);
+  }, [pendingFridgeClick, variant, clearFridgeClick, processIngredientPick]);
 
   // Handle hint activation
   const handleHint = useCallback(() => {
@@ -277,7 +327,9 @@ export function IngredientChallenge({onComplete, onReaction}: IngredientChalleng
 
           {/* Instruction hint at bottom */}
           <View style={styles.instructionContainer}>
-            <Text style={styles.instructionText}>Choose from the fridge...</Text>
+            <Text style={styles.instructionText}>
+              Click ingredients in the fridge, or grab and drop them in the bowl
+            </Text>
           </View>
 
           {/* Hint button at bottom */}

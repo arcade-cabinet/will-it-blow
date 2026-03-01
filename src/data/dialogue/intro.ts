@@ -1,5 +1,13 @@
+/**
+ * @module dialogue/intro
+ * Mr. Sausage's opening monologue played when the game starts.
+ * Sets the horror tone: the player is trapped in a kitchen and must
+ * make the perfect sausage to survive. Includes three-way branching
+ * dialogue with stall, neutral, and anger effects.
+ */
 import type {DialogueLine} from '../../engine/DialogueEngine';
 
+/** Full intro sequence. Played once after the loading screen before the first challenge. */
 export const INTRO_DIALOGUE: DialogueLine[] = [
   {
     speaker: 'sausage',

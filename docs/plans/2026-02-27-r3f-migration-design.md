@@ -1,3 +1,14 @@
+<!--
+title: React Three Fiber Migration — Design Document
+domain: plan
+status: completed
+engine: r3f
+last-verified: 2026-03-01
+depends-on: ["2026-02-27-first-person-horror-kitchen-design.md"]
+agent-context: scene-architect
+summary: Design for replacing reactylon + Babylon.js with React Three Fiber + Three.js — declarative JSX scene graph, Jest-testable 3D components, unified platform file, and pattern translation guide.
+-->
+
 # R3F Migration Design — Will It Blow?
 
 ## Goal

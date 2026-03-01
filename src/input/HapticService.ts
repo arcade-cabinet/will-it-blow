@@ -1,7 +1,22 @@
+/**
+ * @module HapticService
+ * Maps game events to device haptic feedback patterns via `expo-haptics`.
+ *
+ * Game code fires semantic events (e.g., `'strike'`, `'victory'`) without
+ * knowing which haptic pattern they produce. This module translates each
+ * event to an impact, notification, or selection haptic through {@link HAPTIC_MAP}.
+ *
+ * Haptic categories:
+ * - **impact** (light/medium/heavy) -- taps, pulses, collisions
+ * - **notification** (success/warning/error) -- game-state transitions
+ * - **selection** -- subtle tick for continuous feedback (e.g., temperature dial)
+ */
 import * as Haptics from 'expo-haptics';
 
-// --- Haptic event types ---
-
+/**
+ * Semantic haptic events that game code can fire.
+ * Each maps to a physical haptic pattern in {@link HAPTIC_MAP}.
+ */
 export type HapticEvent =
   | 'ingredient_tap'
   | 'grinding_pulse'
@@ -15,15 +30,13 @@ export type HapticEvent =
   | 'temperature_change'
   | 'cooking_complete';
 
-// --- Pattern types ---
-
+/** Physical haptic feedback descriptor sent to expo-haptics. */
 export type HapticPattern =
   | {type: 'impact'; style: 'light' | 'medium' | 'heavy'}
   | {type: 'notification'; style: 'success' | 'warning' | 'error'}
   | {type: 'selection'};
 
-// --- Event -> pattern mapping ---
-
+/** Lookup table from semantic game events to physical haptic patterns. */
 const HAPTIC_MAP: Record<HapticEvent, HapticPattern> = {
   ingredient_tap: {type: 'impact', style: 'light'},
   grinding_pulse: {type: 'impact', style: 'medium'},
@@ -38,10 +51,12 @@ const HAPTIC_MAP: Record<HapticEvent, HapticPattern> = {
   cooking_complete: {type: 'notification', style: 'success'},
 };
 
+/** Look up the haptic pattern for a game event without firing it. */
 export function getHapticPattern(event: HapticEvent): HapticPattern | undefined {
   return HAPTIC_MAP[event];
 }
 
+/** Fire the haptic feedback for a game event. No-op if the event has no mapped pattern. */
 export async function fireHaptic(event: HapticEvent): Promise<void> {
   const pattern = HAPTIC_MAP[event];
   if (!pattern) return;

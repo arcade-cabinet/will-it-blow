@@ -164,6 +164,19 @@ class AudioEngine {
     // No persistent sounds to stop in simplified native engine
   }
 
+  playSample(_category: string, _volume?: number) {}
+  startSampleLoop(_category: string, _volume?: number) {}
+  stopSampleLoop() {}
+  playGrab() {}
+  playDrop() {}
+  playPour() {}
+  playMix() {}
+  playChop() {}
+  startCookingSizzle() {}
+  stopCookingSizzle() {}
+  playSizzleHit() {}
+  playBoiling() {}
+
   stopEngine() {
     // Nothing persistent to clean up
   }

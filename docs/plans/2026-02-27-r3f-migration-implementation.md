@@ -1,3 +1,14 @@
+<!--
+title: React Three Fiber Migration — Implementation Plan
+domain: plan
+status: completed
+engine: r3f
+last-verified: 2026-03-01
+depends-on: ["2026-02-27-r3f-migration-design.md"]
+agent-context: scene-architect
+summary: Task-by-task migration from Babylon.js to R3F — install deps, rewrite all 3D components (MrSausage3D, CRT, kitchen stations, GameWorld), add test-renderer tests, remove Babylon.
+-->
+
 # R3F Migration Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.

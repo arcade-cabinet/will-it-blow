@@ -1,3 +1,14 @@
+<!--
+title: Horror Kitchen Redesign — Implementation Plan
+domain: plan
+status: historical
+engine: babylon→r3f
+last-verified: 2026-03-01
+depends-on: ["2026-02-27-first-person-horror-kitchen-design.md"]
+agent-context: scene-architect, challenge-dev
+summary: Task-by-task implementation of the horror kitchen pivot — Zustand store, challenge registry, dialogue engine, waypoint navigation, CRT TV, kitchen stations, and 5 challenge overlays.
+-->
+
 # Horror Kitchen Redesign — Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.

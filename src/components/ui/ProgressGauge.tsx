@@ -1,3 +1,22 @@
+/**
+ * @module ProgressGauge
+ * Horizontal progress bar used across challenge overlays for fill level,
+ * pressure, temperature, and other 0-100 metrics.
+ *
+ * Features:
+ * - Labeled bar with percentage readout
+ * - Configurable fill color (default green #4CAF50)
+ * - Optional danger threshold marker: a red vertical line at the
+ *   threshold position; bar fill turns red (#FF1744) when value exceeds it
+ * - Glow shadow on the fill when value > 5% for visual feedback
+ * - Value is clamped to [0, 100] before rendering
+ *
+ * @param props.value - Current value (0-100, clamped)
+ * @param props.label - Uppercase label shown left of the bar
+ * @param props.color - Fill color below danger threshold (default '#4CAF50')
+ * @param props.dangerThreshold - Value above which fill turns red; renders a marker line
+ */
+
 import {StyleSheet, Text, View} from 'react-native';
 
 interface ProgressGaugeProps {

@@ -7,22 +7,42 @@
 // Types
 // ---------------------------------------------------------------------------
 
+/** Physical dimensions of the kitchen room in world units. */
 export interface RoomDimensions {
+  /** Width (x-axis extent) */
   w: number;
+  /** Depth (z-axis extent) */
   d: number;
+  /** Height (y-axis extent, floor to ceiling) */
   h: number;
 }
 
+/**
+ * A named placement target — the single source of truth for where
+ * an object lives in the kitchen. Stations, furniture, and decorative
+ * props all reference targets by name; nothing uses hardcoded coordinates.
+ */
 export interface Target {
+  /** World-space [x, y, z] position, relative to room center (0,0,0) */
   position: [number, number, number];
+  /** Y-axis rotation in radians (0 = facing +z) */
   rotationY: number;
+  /** Proximity trigger radius for player interaction. 0 = non-interactive (decorative). */
   triggerRadius: number;
+  /** Y position for the floating waypoint marker above the station. Only set for interactive targets. */
   markerY?: number;
 }
 
+/**
+ * Maps a GLB model filename to a named target.
+ * FurnitureLoader iterates FURNITURE_RULES to load and position each piece.
+ */
 export interface FurnitureRule {
+  /** GLB filename (resolved at runtime via getAssetUrl) */
   glb: string;
+  /** Name of the target from resolveTargets() to position this GLB at */
   target: string;
+  /** If true, the GLB contains animations that FurnitureLoader should play */
   animated?: boolean;
 }
 
@@ -30,8 +50,13 @@ export interface FurnitureRule {
 // Constants
 // ---------------------------------------------------------------------------
 
+/** Default kitchen dimensions: 13x13 floor, 5.5 ceiling height. */
 export const DEFAULT_ROOM: RoomDimensions = {w: 13, d: 13, h: 5.5};
 
+/**
+ * Target names for the 5 challenge stations, indexed by challenge number (0-4).
+ * Used by getStationTarget() to map currentChallenge to a physical location.
+ */
 export const STATION_TARGET_NAMES = ['fridge', 'grinder', 'stuffer', 'stove', 'crt-tv'] as const;
 
 // ---------------------------------------------------------------------------
@@ -48,6 +73,10 @@ export const STATION_TARGET_NAMES = ['fridge', 'grinder', 'stuffer', 'stove', 'c
  *   Stuffer: [ 2.28, 2.68,  2.25]
  *   Stove:   [-4.98, 2.13, -2.23]
  *   CRT TV:  [ 0,    2.50, -5.50] (1 unit inside back wall)
+ *
+ * @param room - The kitchen room dimensions (all targets scale with these)
+ * @returns A map of target name to Target. Includes station targets (interactive),
+ *          decorative targets, and atmospheric prop targets.
  */
 export function resolveTargets(room: RoomDimensions): Record<string, Target> {
   const halfW = room.w / 2;
@@ -96,6 +125,14 @@ export function resolveTargets(room: RoomDimensions): Record<string, Target> {
       rotationY: 0,
       triggerRadius: 2.0,
       markerY: 3.5,
+    },
+
+    // ---- Interactive objects ----
+
+    'mixing-bowl': {
+      position: [-halfW + 1.34 + 1.5, 1.0, -halfD + 1.48],
+      rotationY: 0,
+      triggerRadius: 0,
     },
 
     // ---- Decorative targets ----
@@ -166,6 +203,137 @@ export function resolveTargets(room: RoomDimensions): Record<string, Target> {
       rotationY: 0,
       triggerRadius: 0,
     },
+
+    // Grinder output: slightly in front of grinder (toward +Z), on counter surface
+    'grinder-output': {
+      position: [grinderPos[0] + 0.6, grinderPos[1] - 0.2, grinderPos[2] + 0.5],
+      rotationY: 0,
+      triggerRadius: 0,
+    },
+
+    // Grinder receiver: invisible mesh at hopper opening for bowl drop detection
+    'grinder-receiver': {
+      position: [grinderPos[0], grinderPos[1] + 0.7 + 0.5 + 0.05, grinderPos[2]],
+      rotationY: 0,
+      triggerRadius: 0,
+    },
+
+    // Stuffer output: slightly in front of stuffer, on the table
+    'stuffer-output': {
+      position: [halfW - 4.22 + 0.5, room.h * 0.487 - 0.3, halfD - 4.25 + 0.5],
+      rotationY: 0,
+      triggerRadius: 0,
+    },
+
+    // ---- Atmospheric props ----
+
+    // Frying pan resting near the stove
+    'frying-pan': {
+      position: [-halfW + 2.0, 1.05, -halfD + 4.8],
+      rotationY: 0.3,
+      triggerRadius: 0,
+    },
+
+    // Cutting board on the island
+    'cutting-board': {
+      position: [0.4, 1.05, -0.3],
+      rotationY: -0.2,
+      triggerRadius: 0,
+    },
+
+    // Pot on the counter near stove
+    pot: {
+      position: [-halfW + 2.5, 1.05, -halfD + 3.5],
+      rotationY: 0,
+      triggerRadius: 0,
+    },
+
+    // Pot lid next to the pot
+    'pot-lid': {
+      position: [-halfW + 3.0, 1.05, -halfD + 3.3],
+      rotationY: 0.5,
+      triggerRadius: 0,
+    },
+
+    // Bottle on the island (ominous unlabeled bottle)
+    bottle: {
+      position: [-0.5, 1.05, 0.5],
+      rotationY: 0,
+      triggerRadius: 0,
+    },
+
+    // Glass on the table
+    glass: {
+      position: [halfW - 2.8, 0.95, halfD - 2.2],
+      rotationY: 0,
+      triggerRadius: 0,
+    },
+
+    // Plate on the table
+    plate: {
+      position: [halfW - 2.2, 0.95, halfD - 2.8],
+      rotationY: 0,
+      triggerRadius: 0,
+    },
+
+    // Knife holder on counter
+    'knife-holder': {
+      position: [-halfW + 1.2, 1.05, -halfD + 5.5],
+      rotationY: 0,
+      triggerRadius: 0,
+    },
+
+    // Toaster on counter
+    toaster: {
+      position: [-halfW + 1.8, 1.05, -halfD + 6.8],
+      rotationY: 0.1,
+      triggerRadius: 0,
+    },
+
+    // Rolling pin on island
+    roller: {
+      position: [0.8, 1.08, 0.1],
+      rotationY: 0.7,
+      triggerRadius: 0,
+    },
+
+    // Cutlery scattered on island for horror atmosphere
+    'cutlery-knife': {
+      position: [0.2, 1.06, -0.6],
+      rotationY: 1.2,
+      triggerRadius: 0,
+    },
+
+    'cutlery-cleaver': {
+      position: [-0.3, 1.06, 0.2],
+      rotationY: -0.8,
+      triggerRadius: 0,
+    },
+
+    'cutlery-ladle': {
+      position: [-halfW + 1.5, 1.06, -halfD + 4.0],
+      rotationY: 0.4,
+      triggerRadius: 0,
+    },
+
+    'cutlery-fork': {
+      position: [halfW - 2.5, 0.96, halfD - 2.5],
+      rotationY: 0.3,
+      triggerRadius: 0,
+    },
+
+    'cutlery-spoon': {
+      position: [halfW - 2.0, 0.96, halfD - 3.0],
+      rotationY: -0.2,
+      triggerRadius: 0,
+    },
+
+    // Extra chair pushed aside (someone left in a hurry)
+    'chair-extra': {
+      position: [halfW - 4.0, 0, halfD - 1.5],
+      rotationY: -0.6,
+      triggerRadius: 0,
+    },
   };
 }
 
@@ -173,7 +341,13 @@ export function resolveTargets(room: RoomDimensions): Record<string, Target> {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Returns the target for the given challenge index (0-4), or undefined if invalid. */
+/**
+ * Returns the target for the given challenge index (0-4), or undefined if invalid.
+ *
+ * @param targets - The full targets map from resolveTargets()
+ * @param challengeIndex - Challenge number (0=fridge, 1=grinder, 2=stuffer, 3=stove, 4=crt-tv)
+ * @returns The station Target, or `undefined` if the index is out of range
+ */
 export function getStationTarget(
   targets: Record<string, Target>,
   challengeIndex: number,
@@ -187,7 +361,13 @@ export function getStationTarget(
 // Furniture rules — maps GLB filenames to target names
 // ---------------------------------------------------------------------------
 
+/**
+ * Complete list of furniture GLB models and their target placements.
+ * FurnitureLoader iterates this array to load, position, and optionally
+ * animate each piece of kitchen furniture and atmospheric props.
+ */
 export const FURNITURE_RULES: FurnitureRule[] = [
+  // Core kitchen furniture
   {glb: 'l_counter.glb', target: 'l-counter'},
   {glb: 'upper_cabinets.glb', target: 'upper-cabinets'},
   {glb: 'island.glb', target: 'island'},
@@ -197,7 +377,26 @@ export const FURNITURE_RULES: FurnitureRule[] = [
   {glb: 'oven_range.glb', target: 'oven'},
   {glb: 'dishwasher.glb', target: 'dishwasher'},
   {glb: 'meat_grinder.glb', target: 'meat_grinder', animated: true},
+  {glb: 'mixing_bowl.glb', target: 'mixing-bowl'},
   {glb: 'spice_rack.glb', target: 'spice-rack'},
   {glb: 'utensil_hooks.glb', target: 'utensil-hooks'},
-  {glb: 'trap_door.glb', target: 'trap-door'},
+  // trap_door is room structure (ceiling panel), rendered in KitchenEnvironment — not furniture
+
+  // Atmospheric props — scattered around to set the horror mood
+  {glb: 'frying_pan.glb', target: 'frying-pan'},
+  {glb: 'cutting_board.glb', target: 'cutting-board'},
+  {glb: 'pot.glb', target: 'pot'},
+  {glb: 'pot_lid.glb', target: 'pot-lid'},
+  {glb: 'bottle.glb', target: 'bottle'},
+  {glb: 'glass_big.glb', target: 'glass'},
+  {glb: 'plate_big.glb', target: 'plate'},
+  {glb: 'knife_holder.glb', target: 'knife-holder'},
+  {glb: 'toaster.glb', target: 'toaster'},
+  {glb: 'roller.glb', target: 'roller'},
+  {glb: 'cutlery_knife.glb', target: 'cutlery-knife'},
+  {glb: 'cutlery_cleaver.glb', target: 'cutlery-cleaver'},
+  {glb: 'cutlery_ladle.glb', target: 'cutlery-ladle'},
+  {glb: 'cutlery_fork.glb', target: 'cutlery-fork'},
+  {glb: 'cutlery_spoon.glb', target: 'cutlery-spoon'},
+  {glb: 'chair.glb', target: 'chair-extra'},
 ];

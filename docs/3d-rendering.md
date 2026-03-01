@@ -1,3 +1,14 @@
+<!--
+title: 3D Rendering & Scene System
+domain: core
+status: current
+engine: r3f
+last-verified: 2026-03-01
+depends-on: [architecture, state-management]
+agent-context: scene-architect
+summary: R3F setup, materials, lighting, cameras, stations
+-->
+
 # 3D Rendering & Scene System
 
 ## Engine Setup

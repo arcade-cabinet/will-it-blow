@@ -1,3 +1,14 @@
+<!--
+title: Mobile-First + XR/AR Implementation Plan
+domain: plan
+status: historical
+engine: babylon
+last-verified: 2026-03-01
+depends-on: ["2026-02-27-mobile-xr-design.md"]
+agent-context: scene-architect
+summary: Task-by-task implementation of input abstraction adapters, haptic service, Havok physics migration, GLB fridge loading, and gyroscope camera for multi-platform support.
+-->
+
 # Mobile-First + XR/AR Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.

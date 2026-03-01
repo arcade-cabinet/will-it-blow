@@ -1,3 +1,14 @@
+<!--
+title: Free-Roam Kitchen Navigation Design
+domain: plan
+status: completed
+engine: r3f
+last-verified: 2026-03-01
+depends-on: ["2026-02-27-r3f-migration-implementation.md"]
+agent-context: scene-architect
+summary: Replace fixed waypoint camera with FPS pointer-lock + WASD navigation, mobile virtual joystick, station proximity triggers, and fridge GLB loading fix.
+-->
+
 # Free-Roam Kitchen Navigation
 
 ## Problem
