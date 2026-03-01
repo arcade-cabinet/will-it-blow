@@ -41,7 +41,7 @@ export function GrabbableSausage({position}: GrabbableSausageProps) {
   if (!isWeb) return sausageMesh;
 
   return (
-    <RigidBody type="fixed" position={position} colliders={false}>
+    <RigidBody type="dynamic" position={position} colliders={false} gravityScale={0}>
       <CapsuleCollider
         args={[SAUSAGE_HALF_LENGTH, SAUSAGE_RADIUS]}
         rotation={[0, 0, Math.PI / 2]}

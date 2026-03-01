@@ -100,6 +100,60 @@ export function IngredientChallenge({onComplete, onReaction}: IngredientChalleng
     setFridgePool(pool, matching);
   }, [variantSeed, setFridgePool]);
 
+  // Shared scoring logic for ingredient picks (click or physics drop)
+  const processIngredientPick = useCallback(
+    (poolIndex: number) => {
+      if (!variant) return;
+
+      // Already selected — ignore
+      if (fridgeSelectedIndices.includes(poolIndex)) return;
+
+      // Mark as selected in the shared store (3D reads this for visual state)
+      addFridgeSelected(poolIndex);
+
+      const matchingSet = new Set(fridgeMatchingIndices);
+      if (matchingSet.has(poolIndex)) {
+        const newCount = correctCountRef.current + 1;
+        setCorrectCount(newCount);
+        setLastResult('correct');
+        onReaction?.('excitement');
+        audioEngine.playCorrectPick();
+        setChallengeProgress((newCount / variant.requiredCount) * 100);
+
+        if (newCount >= variant.requiredCount) {
+          setPhase('success');
+        }
+      } else {
+        setLastResult('wrong');
+        const ing = fridgePool[poolIndex];
+        const isClose =
+          ing && variant.criteria.tags.some(tag => matchesCriteria(ing, {tags: [tag]}));
+        if (isClose) {
+          onReaction?.('nervous');
+        } else {
+          onReaction?.('disgust');
+        }
+        addStrike();
+        audioEngine.playWrongPick();
+      }
+
+      setTimeout(() => {
+        setLastResult(null);
+        onReaction?.('idle');
+      }, REACTION_RESET_MS);
+    },
+    [
+      variant,
+      fridgePool,
+      fridgeMatchingIndices,
+      fridgeSelectedIndices,
+      addFridgeSelected,
+      addStrike,
+      setChallengeProgress,
+      onReaction,
+    ],
+  );
+
   // Track bowl contents to score ingredients dropped via physics
   const prevBowlLenRef = useRef(0);
   useEffect(() => {
@@ -109,60 +163,14 @@ export function IngredientChallenge({onComplete, onReaction}: IngredientChalleng
       return;
     }
 
-    // A new ingredient was dropped in the bowl via GrabSystem
     const newIngredientId = bowlContents[bowlContents.length - 1];
     prevBowlLenRef.current = bowlContents.length;
 
-    // Find the ingredient in the fridge pool
     const poolIndex = fridgePool.findIndex(ing => ing.name === newIngredientId);
     if (poolIndex === -1) return;
 
-    // Check if already counted via click
-    if (fridgeSelectedIndices.includes(poolIndex)) return;
-
-    // Mark as selected
-    addFridgeSelected(poolIndex);
-
-    const matchingSet = new Set(fridgeMatchingIndices);
-    if (matchingSet.has(poolIndex)) {
-      const newCount = correctCountRef.current + 1;
-      setCorrectCount(newCount);
-      setLastResult('correct');
-      onReaction?.('excitement');
-      audioEngine.playCorrectPick();
-      setChallengeProgress((newCount / variant.requiredCount) * 100);
-
-      if (newCount >= variant.requiredCount) {
-        setPhase('success');
-      }
-    } else {
-      setLastResult('wrong');
-      const ing = fridgePool[poolIndex];
-      const isClose = ing && variant.criteria.tags.some(tag => matchesCriteria(ing, {tags: [tag]}));
-      if (isClose) {
-        onReaction?.('nervous');
-      } else {
-        onReaction?.('disgust');
-      }
-      addStrike();
-      audioEngine.playWrongPick();
-    }
-
-    setTimeout(() => {
-      setLastResult(null);
-      onReaction?.('idle');
-    }, REACTION_RESET_MS);
-  }, [
-    bowlContents,
-    variant,
-    fridgePool,
-    fridgeMatchingIndices,
-    fridgeSelectedIndices,
-    addFridgeSelected,
-    addStrike,
-    setChallengeProgress,
-    onReaction,
-  ]);
+    processIngredientPick(poolIndex);
+  }, [bowlContents, variant, fridgePool, processIngredientPick]);
 
   // Watch for defeat (3 strikes) to trigger failure dialogue
   useEffect(() => {
@@ -178,60 +186,8 @@ export function IngredientChallenge({onComplete, onReaction}: IngredientChalleng
     const index = pendingFridgeClick;
     clearFridgeClick();
 
-    // Already selected — ignore
-    if (fridgeSelectedIndices.includes(index)) return;
-
-    // Mark as selected in the shared store (3D reads this for visual state)
-    addFridgeSelected(index);
-
-    const matchingSet = new Set(fridgeMatchingIndices);
-    if (matchingSet.has(index)) {
-      // Correct ingredient
-      const newCount = correctCountRef.current + 1;
-      setCorrectCount(newCount);
-      setLastResult('correct');
-      onReaction?.('excitement');
-      audioEngine.playCorrectPick();
-      setChallengeProgress((newCount / variant.requiredCount) * 100);
-
-      if (newCount >= variant.requiredCount) {
-        setPhase('success');
-      }
-    } else {
-      // Wrong ingredient — strike
-      setLastResult('wrong');
-
-      // Check if ingredient is "close" (shares at least one tag)
-      const ing = fridgePool[index];
-      const isClose = ing && variant.criteria.tags.some(tag => matchesCriteria(ing, {tags: [tag]}));
-
-      if (isClose) {
-        onReaction?.('nervous');
-      } else {
-        onReaction?.('disgust');
-      }
-
-      addStrike();
-      audioEngine.playWrongPick();
-    }
-
-    // Reset result indicator after delay
-    setTimeout(() => {
-      setLastResult(null);
-      onReaction?.('idle');
-    }, REACTION_RESET_MS);
-  }, [
-    pendingFridgeClick,
-    variant,
-    fridgePool,
-    fridgeMatchingIndices,
-    fridgeSelectedIndices,
-    clearFridgeClick,
-    addFridgeSelected,
-    addStrike,
-    setChallengeProgress,
-    onReaction,
-  ]);
+    processIngredientPick(index);
+  }, [pendingFridgeClick, variant, clearFridgeClick, processIngredientPick]);
 
   // Handle hint activation
   const handleHint = useCallback(() => {

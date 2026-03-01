@@ -34,6 +34,8 @@ export const MixingBowl = ({position, receivingIngredients = true}: MixingBowlPr
   const fillRef = useRef<THREE.Mesh>(null);
   const bowlContents = useGameStore(s => s.bowlContents);
   const blendColor = useGameStore(s => s.blendColor);
+  const blendRoughness = useGameStore(s => s.blendRoughness);
+  const blendChunkiness = useGameStore(s => s.blendChunkiness);
   const addToBowl = useGameStore(s => s.addToBowl);
 
   const fillHeight = useMemo(
@@ -85,7 +87,12 @@ export const MixingBowl = ({position, receivingIngredients = true}: MixingBowlPr
       {bowlContents.length > 0 && (
         <mesh ref={fillRef} position={[0, 0.01, 0]}>
           <cylinderGeometry args={[BOWL_RADIUS * 0.75, BOWL_RADIUS * 0.55, MAX_FILL_HEIGHT, 16]} />
-          <meshStandardMaterial color={blendColor} roughness={0.7} metalness={0.1} />
+          <meshStandardMaterial
+            color={blendColor}
+            roughness={blendRoughness}
+            metalness={0.1}
+            emissiveIntensity={blendChunkiness * 0.15}
+          />
         </mesh>
       )}
     </group>

@@ -2,7 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {create} from 'zustand';
 import {createJSONStorage, persist} from 'zustand/middleware';
 import type {Reaction} from '../components/characters/reactions';
-import {INGREDIENTS, type Ingredient} from '../engine/Ingredients';
+import {computeBlendProperties as computeBlend} from '../engine/BlendCalculator';
+import type {Ingredient} from '../engine/Ingredients';
 
 export type AppPhase = 'menu' | 'loading' | 'playing';
 export type GrabbedObjectType = 'ingredient' | 'bowl' | 'sausage' | 'pan' | null;
@@ -114,23 +115,7 @@ const TOTAL_CHALLENGES = 5;
 const INITIAL_HINTS = 3;
 const MAX_STRIKES = 3;
 
-/** Parse a hex color string (#RRGGBB) into [r, g, b] (0-255). */
-function hexToRgb(hex: string): [number, number, number] {
-  const h = hex.replace('#', '');
-  return [
-    Number.parseInt(h.substring(0, 2), 16),
-    Number.parseInt(h.substring(2, 4), 16),
-    Number.parseInt(h.substring(4, 6), 16),
-  ];
-}
-
-/** Convert [r, g, b] (0-255) back to #RRGGBB hex string. */
-function rgbToHex(r: number, g: number, b: number): string {
-  const clamp = (v: number) => Math.max(0, Math.min(255, Math.round(v)));
-  return `#${clamp(r).toString(16).padStart(2, '0')}${clamp(g).toString(16).padStart(2, '0')}${clamp(b).toString(16).padStart(2, '0')}`.toUpperCase();
-}
-
-/** Compute blend properties from bowl contents using ingredient data. */
+/** Delegate to BlendCalculator for blend properties, adapting to store shape. */
 function computeBlendProperties(bowlContents: string[]): {
   blendColor: string;
   blendRoughness: number;
@@ -139,39 +124,12 @@ function computeBlendProperties(bowlContents: string[]): {
   if (bowlContents.length === 0) {
     return {blendColor: '#888888', blendRoughness: 0.5, blendChunkiness: 0.5};
   }
-
-  const ingredients = bowlContents
-    .map(id => INGREDIENTS.find(ing => ing.name === id))
-    .filter((ing): ing is Ingredient => ing != null);
-
-  if (ingredients.length === 0) {
-    return {blendColor: '#888888', blendRoughness: 0.5, blendChunkiness: 0.5};
-  }
-
-  // Average color
-  let totalR = 0;
-  let totalG = 0;
-  let totalB = 0;
-  for (const ing of ingredients) {
-    const [r, g, b] = hexToRgb(ing.color);
-    totalR += r;
-    totalG += g;
-    totalB += b;
-  }
-  const n = ingredients.length;
-  const blendColor = rgbToHex(totalR / n, totalG / n, totalB / n);
-
-  // Roughness: 1 - (avgTextureMod / 5)
-  const avgTextureMod = ingredients.reduce((sum, ing) => sum + ing.textureMod, 0) / n;
-  const blendRoughness = 1 - avgTextureMod / 5;
-
-  // Chunkiness: based on variance of textureMod values
-  const variance =
-    ingredients.reduce((sum, ing) => sum + (ing.textureMod - avgTextureMod) ** 2, 0) / n;
-  // Normalize variance to 0-1 range (max possible variance with textureMod 0-5 is 6.25)
-  const blendChunkiness = Math.min(1, variance / 6.25);
-
-  return {blendColor, blendRoughness, blendChunkiness};
+  const props = computeBlend(bowlContents);
+  return {
+    blendColor: props.color,
+    blendRoughness: props.roughness,
+    blendChunkiness: props.chunkiness,
+  };
 }
 
 export const INITIAL_GAME_STATE = {

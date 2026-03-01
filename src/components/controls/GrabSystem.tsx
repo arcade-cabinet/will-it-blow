@@ -60,6 +60,7 @@ function GrabSystemInner() {
   const raycaster = useRef(new THREE.Raycaster());
   const grabbedRef = useRef<GrabbedState | null>(null);
   const hoveredReceiverRef = useRef<THREE.Mesh | null>(null);
+  const originalEmissiveRef = useRef<{color: THREE.Color; intensity: number} | null>(null);
   const clockRef = useRef(0);
 
   const setGrabbedObject = useGameStore(s => s.setGrabbedObject);
@@ -87,15 +88,17 @@ function GrabSystemInner() {
     return raycaster.current.intersectObjects(scene.children, true);
   }, [camera, scene]);
 
-  // Clear receiver highlight helper
+  // Clear receiver highlight helper — restore original emissive state
   const clearReceiverHighlight = useCallback(() => {
     const prev = hoveredReceiverRef.current;
     if (prev) {
       const mat = prev.material as THREE.MeshStandardMaterial;
-      if (mat) {
-        mat.emissiveIntensity = 0;
+      if (mat && originalEmissiveRef.current) {
+        mat.emissive.copy(originalEmissiveRef.current.color);
+        mat.emissiveIntensity = originalEmissiveRef.current.intensity;
       }
       hoveredReceiverRef.current = null;
+      originalEmissiveRef.current = null;
     }
   }, []);
 
@@ -150,7 +153,7 @@ function GrabSystemInner() {
           if (grabbed.rigidBody) {
             grabbed.rigidBody.setBodyType(BODY_TYPE_DYNAMIC, true);
             // Give a small forward toss
-            const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+            const forward = _carryTarget.set(0, 0, -1).applyQuaternion(camera.quaternion);
             grabbed.rigidBody.setLinvel({x: forward.x * 1.5, y: 0.5, z: forward.z * 1.5}, true);
           }
         }
@@ -255,6 +258,16 @@ function GrabSystemInner() {
     if (foundReceiver !== hoveredReceiverRef.current) {
       clearReceiverHighlight();
       hoveredReceiverRef.current = foundReceiver;
+      // Store original emissive state for restoration
+      if (foundReceiver) {
+        const mat = foundReceiver.material as THREE.MeshStandardMaterial;
+        if (mat) {
+          originalEmissiveRef.current = {
+            color: mat.emissive.clone(),
+            intensity: mat.emissiveIntensity,
+          };
+        }
+      }
     }
 
     // Pulse the hovered receiver's emissive
@@ -262,11 +275,8 @@ function GrabSystemInner() {
       const mat = hoveredReceiverRef.current.material as THREE.MeshStandardMaterial;
       if (mat) {
         const pulse = 0.3 + 0.7 * Math.abs(Math.sin(clockRef.current * RECEIVER_PULSE_SPEED));
+        mat.emissive.set('#44ff44');
         mat.emissiveIntensity = pulse * 0.5;
-        mat.emissive = mat.emissive || new THREE.Color('#44ff44');
-        if (mat.emissive.r === 0 && mat.emissive.g === 0 && mat.emissive.b === 0) {
-          mat.emissive.set('#44ff44');
-        }
       }
     }
   });

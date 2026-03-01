@@ -312,8 +312,12 @@ class AudioEngine {
     const file = variants[Math.floor(Math.random() * variants.length)];
     const player = this.samples.get(file);
     if (player?.loaded) {
+      // Reset loop flag in case this player was previously used by startSampleLoop
+      player.loop = false;
       player.volume.value = volume;
-      player.start();
+      if (player.state !== 'started') {
+        player.start();
+      }
     }
   }
 
@@ -328,7 +332,9 @@ class AudioEngine {
     if (player?.loaded) {
       player.loop = true;
       player.volume.value = volume;
-      player.start();
+      if (player.state !== 'started') {
+        player.start();
+      }
       this.loopingSample = player;
     }
   }
