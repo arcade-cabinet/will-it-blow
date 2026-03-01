@@ -3,7 +3,7 @@
 // replaced with this no-op stub in tests.
 
 const noopEngine = {
-  initTone: async () => {},
+  initTone: () => Promise.resolve(),
   startGrinder: () => {},
   stopGrinder: () => {},
   playStuffingSquelch: () => {},

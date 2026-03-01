@@ -297,7 +297,10 @@ class AudioEngine {
     for (const files of Object.values(SAMPLE_VARIANTS)) {
       for (const file of files) {
         const url = getAssetUrl('audio', file);
-        const player = new Tone.Player(url).toDestination();
+        const player = new Tone.Player({
+          url,
+          onerror: err => console.warn(`Failed to load sample ${file}:`, err),
+        }).toDestination();
         player.volume.value = -8;
         this.samples.set(file, player);
       }
@@ -404,6 +407,10 @@ class AudioEngine {
     this.synths = [];
     this.stopAmbientDrone();
     this.stopSampleLoop();
+    for (const player of this.samples.values()) {
+      player.dispose();
+    }
+    this.samples.clear();
     if (this.isInitialized) {
       try {
         this.stopGrinder();

@@ -22,7 +22,18 @@ import {useCallback, useEffect, useRef} from 'react';
 import {Platform} from 'react-native';
 import type * as THREE from 'three/webgpu';
 import {audioEngine} from '../../engine/AudioEngine';
+import {DEFAULT_ROOM, resolveTargets} from '../../engine/FurnitureLayout';
 import {useGameStore} from '../../store/gameStore';
+
+// Pre-resolve receiver position as a local offset from the grinder station
+const _targets = resolveTargets(DEFAULT_ROOM);
+const _grinderPos = _targets.grinder.position;
+const _receiverPos = _targets['grinder-receiver'].position;
+const RECEIVER_LOCAL_POS: [number, number, number] = [
+  _receiverPos[0] - _grinderPos[0],
+  _receiverPos[1] - _grinderPos[1],
+  _receiverPos[2] - _grinderPos[2],
+];
 
 /**
  * Props for the GrinderStation 3D component.
@@ -449,10 +460,7 @@ export const GrinderStation = ({
       </mesh>
 
       {/* --- Invisible receiver at hopper opening for bowl drop --- */}
-      <mesh
-        position={[0, GRINDER_BASE_Y + BODY_HEIGHT + HOPPER_HEIGHT + 0.05, 0]}
-        userData={{receiver: true, onReceive: handleReceive}}
-      >
+      <mesh position={RECEIVER_LOCAL_POS} userData={{receiver: true, onReceive: handleReceive}}>
         <cylinderGeometry args={[0.35, 0.35, 0.1, 12]} />
         <meshBasicMaterial visible={false} />
       </mesh>

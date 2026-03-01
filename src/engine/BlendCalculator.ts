@@ -2,9 +2,13 @@ import {INGREDIENTS, type Ingredient} from './Ingredients';
 
 /**
  * Parse a hex color string (#RRGGBB) into [r, g, b] (0-255).
+ * Returns neutral gray [128, 128, 128] for invalid input.
  */
 function parseHex(hex: string): [number, number, number] {
   const h = hex.replace('#', '');
+  if (!/^[0-9A-Fa-f]{6}$/.test(h)) {
+    return [128, 128, 128];
+  }
   return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
 }
 

@@ -226,21 +226,18 @@ const INITIAL_HINTS = 3;
 const MAX_STRIKES = 3;
 
 /**
- * Delegates to BlendCalculator for blend properties, adapting its output
- * to the flat store shape (blendColor, blendRoughness, blendChunkiness).
- * Returns defaults for an empty bowl.
+ * Adapts BlendCalculator output to the flat store shape.
+ * Always delegates to the canonical computeBlendProperties from BlendCalculator —
+ * no local defaults or divergent logic.
  *
  * @param bowlContents - Array of ingredient IDs currently in the bowl
  * @returns Object with blendColor (hex), blendRoughness (0-1), blendChunkiness (0-1)
  */
-function computeBlendProperties(bowlContents: string[]): {
+function mapBlendToStore(bowlContents: string[]): {
   blendColor: string;
   blendRoughness: number;
   blendChunkiness: number;
 } {
-  if (bowlContents.length === 0) {
-    return {blendColor: '#888888', blendRoughness: 0.5, blendChunkiness: 0.5};
-  }
   const props = computeBlend(bowlContents);
   return {
     blendColor: props.color,
@@ -273,9 +270,9 @@ export const INITIAL_GAME_STATE = {
   grabbedObjectType: null as GrabbedObjectType,
   bowlContents: [] as string[],
   bowlPosition: 'fridge' as BowlPosition,
-  blendColor: '#888888',
-  blendRoughness: 0.5,
-  blendChunkiness: 0.5,
+  blendColor: '#808080',
+  blendRoughness: 0.7,
+  blendChunkiness: 0,
   sausagePlaced: false,
   fridgePool: [] as Ingredient[],
   fridgeMatchingIndices: [] as number[],
@@ -474,7 +471,7 @@ export const useGameStore = create<GameState>()(
 
       setSausagePlaced: () => set({sausagePlaced: true}),
 
-      updateBlendProperties: () => set(state => computeBlendProperties(state.bowlContents)),
+      updateBlendProperties: () => set(state => mapBlendToStore(state.bowlContents)),
 
       setPlayerPosition: (pos: [number, number, number]) => set({playerPosition: pos}),
       triggerChallenge: () => set({challengeTriggered: true}),

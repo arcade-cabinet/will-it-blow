@@ -63,19 +63,9 @@ const STATIONS = STATION_TARGET_NAMES.map(name => {
   };
 });
 
-// Output positions for carried objects between stations
-// Grinder output: slightly in front of grinder (toward +Z), on the counter surface
-const GRINDER_OUTPUT_POS: [number, number, number] = [
-  STATIONS[1].position[0] + 0.6,
-  STATIONS[1].position[1] - 0.2,
-  STATIONS[1].position[2] + 0.5,
-];
-// Stuffer output: slightly in front of stuffer, on the table
-const STUFFER_OUTPUT_POS: [number, number, number] = [
-  STATIONS[2].position[0] + 0.5,
-  STATIONS[2].position[1] - 0.3,
-  STATIONS[2].position[2] + 0.5,
-];
+// Output positions for carried objects between stations — from named targets
+const GRINDER_OUTPUT_POS = RESOLVED_TARGETS['grinder-output'].position;
+const STUFFER_OUTPUT_POS = RESOLVED_TARGETS['stuffer-output'].position;
 
 // -----------------------------------------------------------------
 // PlayerBody — kinematic rigid body that follows the camera

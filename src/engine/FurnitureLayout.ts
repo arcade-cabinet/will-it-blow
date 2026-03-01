@@ -204,6 +204,27 @@ export function resolveTargets(room: RoomDimensions): Record<string, Target> {
       triggerRadius: 0,
     },
 
+    // Grinder output: slightly in front of grinder (toward +Z), on counter surface
+    'grinder-output': {
+      position: [grinderPos[0] + 0.6, grinderPos[1] - 0.2, grinderPos[2] + 0.5],
+      rotationY: 0,
+      triggerRadius: 0,
+    },
+
+    // Grinder receiver: invisible mesh at hopper opening for bowl drop detection
+    'grinder-receiver': {
+      position: [grinderPos[0], grinderPos[1] + 0.7 + 0.5 + 0.05, grinderPos[2]],
+      rotationY: 0,
+      triggerRadius: 0,
+    },
+
+    // Stuffer output: slightly in front of stuffer, on the table
+    'stuffer-output': {
+      position: [halfW - 4.22 + 0.5, room.h * 0.487 - 0.3, halfD - 4.25 + 0.5],
+      rotationY: 0,
+      triggerRadius: 0,
+    },
+
     // ---- Atmospheric props ----
 
     // Frying pan resting near the stove

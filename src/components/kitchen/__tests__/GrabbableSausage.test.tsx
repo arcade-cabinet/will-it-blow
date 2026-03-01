@@ -39,18 +39,22 @@ describe('GrabbableSausage', () => {
   describe('web platform (Rapier physics)', () => {
     const originalOS = Platform.OS;
 
-    beforeEach(() => {
-      (Platform as any).OS = 'web';
-    });
-
     afterEach(() => {
       (Platform as any).OS = originalOS;
     });
 
     it('renders with Rapier rigid body on web', async () => {
-      const renderer = await ReactThreeTestRenderer.create(
-        <GrabbableSausage position={[1, 2, 3]} />,
-      );
+      (Platform as any).OS = 'web';
+
+      // GrabbableSausage captures Platform.OS at module scope, so we must
+      // re-require it after setting Platform.OS = 'web'. Use isolateModules
+      // to get a fresh copy without breaking shared modules (React, etc.).
+      let WebComponent: any;
+      jest.isolateModules(() => {
+        WebComponent = require('../GrabbableSausage').GrabbableSausage;
+      });
+
+      const renderer = await ReactThreeTestRenderer.create(<WebComponent position={[1, 2, 3]} />);
       expect(renderer.scene.children.length).toBeGreaterThan(0);
     });
   });
