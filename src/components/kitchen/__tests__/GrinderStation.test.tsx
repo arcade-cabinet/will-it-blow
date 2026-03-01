@@ -1,27 +1,57 @@
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import {DEFAULT_ROOM, resolveTargets} from '../../../engine/FurnitureLayout';
 import {GrinderStation} from '../GrinderStation';
+
+const targets = resolveTargets(DEFAULT_ROOM);
 
 describe('GrinderStation', () => {
   it('renders without crashing', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <GrinderStation grindProgress={0} crankAngle={0} isSplattering={false} />,
+      <GrinderStation
+        position={targets.grinder.position}
+        grindProgress={0}
+        crankAngle={0}
+        isSplattering={false}
+      />,
     );
     expect(renderer.scene.children.length).toBeGreaterThan(0);
   });
 
-  it('renders the root group at the grinder position', async () => {
+  it('renders the root group at the resolved grinder target', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <GrinderStation grindProgress={0} crankAngle={0} isSplattering={false} />,
+      <GrinderStation
+        position={targets.grinder.position}
+        grindProgress={0}
+        crankAngle={0}
+        isSplattering={false}
+      />,
     );
     const root = renderer.scene.children[0];
-    expect(root.instance.position.x).toBe(-4.75);
-    expect(root.instance.position.y).toBe(2.06);
-    expect(root.instance.position.z).toBe(-0.64);
+    const [ex, ey, ez] = targets.grinder.position;
+    expect(root.instance.position.x).toBeCloseTo(ex, 1);
+    expect(root.instance.position.y).toBeCloseTo(ey, 1);
+    expect(root.instance.position.z).toBeCloseTo(ez, 1);
+  });
+
+  it('uses custom position when provided', async () => {
+    const custom: [number, number, number] = [1, 2, 3];
+    const renderer = await ReactThreeTestRenderer.create(
+      <GrinderStation position={custom} grindProgress={0} crankAngle={0} isSplattering={false} />,
+    );
+    const root = renderer.scene.children[0];
+    expect(root.instance.position.x).toBe(1);
+    expect(root.instance.position.y).toBe(2);
+    expect(root.instance.position.z).toBe(3);
   });
 
   it('renders counter, body, hopper, spout, crank arm, and knob meshes', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <GrinderStation grindProgress={0} crankAngle={0} isSplattering={false} />,
+      <GrinderStation
+        position={targets.grinder.position}
+        grindProgress={0}
+        crankAngle={0}
+        isSplattering={false}
+      />,
     );
     const root = renderer.scene.children[0];
     // Grinder body + hopper + spout + crank arm + knob = 5+ minimum
@@ -30,21 +60,36 @@ describe('GrinderStation', () => {
 
   it('renders at mid-progress without error', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <GrinderStation grindProgress={50} crankAngle={Math.PI * 4} isSplattering={false} />,
+      <GrinderStation
+        position={targets.grinder.position}
+        grindProgress={50}
+        crankAngle={Math.PI * 4}
+        isSplattering={false}
+      />,
     );
     expect(renderer.scene.children.length).toBeGreaterThan(0);
   });
 
   it('renders during splatter without error', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <GrinderStation grindProgress={30} crankAngle={Math.PI * 2} isSplattering={true} />,
+      <GrinderStation
+        position={targets.grinder.position}
+        grindProgress={30}
+        crankAngle={Math.PI * 2}
+        isSplattering={true}
+      />,
     );
     expect(renderer.scene.children.length).toBeGreaterThan(0);
   });
 
   it('renders at full progress without error', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <GrinderStation grindProgress={100} crankAngle={Math.PI * 8} isSplattering={false} />,
+      <GrinderStation
+        position={targets.grinder.position}
+        grindProgress={100}
+        crankAngle={Math.PI * 8}
+        isSplattering={false}
+      />,
     );
     expect(renderer.scene.children.length).toBeGreaterThan(0);
   });

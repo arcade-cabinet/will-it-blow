@@ -83,8 +83,12 @@ async function waitForChallenge(page: Page, index: number, timeoutMs = 15_000) {
   await page.waitForFunction(
     idx => {
       const gov = (window as any).__gov;
+      const state = gov?.getState();
       return (
-        gov && gov.getState().currentChallenge === idx && gov.getState().gameStatus === 'playing'
+        state &&
+        state.currentChallenge === idx &&
+        state.gameStatus === 'playing' &&
+        state.challengeTriggered === true
       );
     },
     index,
@@ -138,6 +142,8 @@ async function startAndWaitForScene(page: Page) {
   await waitForPhase(page, 'playing', 90_000);
   await waitForCanvas(page);
   await waitForSceneReady(page); // Wait for GLB parse + mesh/material creation
+  // Auto-trigger the first challenge (simulates player walking to fridge station)
+  await page.evaluate(() => (window as any).__gov.triggerCurrentChallenge());
 }
 
 // ---------------------------------------------------------------------------

@@ -37,7 +37,7 @@ describe('KitchenEnvironment', () => {
 
   it('creates room geometry (floor, ceiling, walls)', async () => {
     const renderer = await ReactThreeTestRenderer.create(<KitchenEnvironment />);
-    // Root group should have many children: room meshes + lights + GLB + grime decals
+    // Root group should have many children: room meshes + lights + FurnitureLoader + grime decals
     const root = renderer.scene.children[0];
     expect(root.children.length).toBeGreaterThan(3);
   });

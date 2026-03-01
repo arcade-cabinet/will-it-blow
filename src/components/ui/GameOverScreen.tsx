@@ -91,7 +91,7 @@ export function GameOverScreen() {
                     <Text style={styles.challengeScoreLabel}>
                       {CHALLENGE_NAMES[i] ?? `Challenge ${i + 1}`}
                     </Text>
-                    <Text style={styles.challengeScoreValue}>{score}</Text>
+                    <Text style={styles.challengeScoreValue}>{Math.round(score)}</Text>
                   </View>
                 ))}
               </View>

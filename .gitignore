@@ -1,5 +1,7 @@
 # Raw 3D source assets (production GLBs live in public/models/)
 *.fbx
+*.blend
+*.blend1
 *.zip
 /meat_grinder.glb
 

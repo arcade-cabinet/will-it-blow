@@ -79,8 +79,10 @@ Single `GameWorld.tsx` uses `@react-three/fiber` Canvas with `WebGPURenderer` â€
 | `src/engine/ChallengeRegistry.ts` | Challenge configs, variant selection, final verdict |
 | `src/engine/SausagePhysics.ts` | 5 pure scoring functions |
 | `src/engine/Ingredients.ts` | 25 ingredients with stats |
-| `src/components/GameWorld.tsx` | R3F Canvas, CameraWalker, station visibility, scene orchestrator |
-| `src/components/kitchen/KitchenEnvironment.tsx` | Room enclosure, GLB loading (useGLTF), lighting |
+| `src/engine/FurnitureLayout.ts` | Target-based placement system â€” resolveTargets(), FURNITURE_RULES |
+| `src/components/GameWorld.tsx` | R3F Canvas, FPS controller, target-derived station triggers, scene orchestrator |
+| `src/components/kitchen/KitchenEnvironment.tsx` | Room enclosure (walls/floor/ceiling PBR), lighting, FurnitureLoader |
+| `src/components/kitchen/FurnitureLoader.tsx` | Loads GLB furniture segments, positions at targets, handles animations |
 | `src/components/kitchen/FridgeStation.tsx` | 3D fridge with ingredient meshes (onClick picking) |
 | `src/components/kitchen/GrinderStation.tsx` | 3D grinder with crank animation |
 | `src/components/kitchen/StufferStation.tsx` | 3D stuffer with pressure visualization |
@@ -102,12 +104,16 @@ Single `GameWorld.tsx` uses `@react-three/fiber` Canvas with `WebGPURenderer` â€
 - Refs for mutable state read in `useFrame`: `const ref = useRef<THREE.Mesh>(null)`
 - Self-lit materials: `<meshBasicMaterial color="..." />` (unlit, always visible)
 - PBR materials: `<meshStandardMaterial map={...} normalMap={...} roughnessMap={...} />`
-- GLB loading: `useGLTF('/models/kitchen.glb')` from `@react-three/drei`
+- GLB loading: `useGLTF('/models/<segment>.glb')` from `@react-three/drei` â€” discrete furniture GLBs, not one monolith
 - Mesh picking: `onClick` prop directly on `<mesh>` elements
 
-### CameraWalker Component
+### Target-Based Placement
 
-Located in `GameWorld.tsx`. Smoothly interpolates camera between station positions using `easeInOutQuad`. Updates `camera.position` and `camera.lookAt` target in `useFrame`.
+`FurnitureLayout.ts` defines named targets computed from room dimensions. All furniture, stations, triggers, and waypoint markers reference targets by name â€” no hardcoded coordinates in any consumer. `resolveTargets(room)` is the single source of truth. If room dimensions change, everything follows.
+
+### FPS Controller
+
+`FPSController.tsx` in `src/components/controls/`. WASD/arrow keys + pointer-lock mouse look for free-roam navigation. `MobileJoystick.tsx` for touch controls. `ProximityTrigger` in GameWorld checks player distance to station targets.
 
 ### Challenge Component Pattern
 

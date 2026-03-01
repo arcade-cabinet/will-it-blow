@@ -3,12 +3,11 @@ import {useMemo, useRef} from 'react';
 import * as THREE from 'three/webgpu';
 
 interface StoveStationProps {
+  position: [number, number, number];
   temperature: number; // Current temp (room temp ~70 to max ~250)
   heatLevel: number; // 0-1 (burner intensity)
 }
 
-// Stove sits on the oven/range (GLB Cube.002), surface at y=2.13
-const STOVE_POS: [number, number, number] = [-4.98, 2.13, -2.23];
 const FLOOR_Y = 0;
 
 // Stove geometry constants (body provided by GLB Cube.002)
@@ -69,7 +68,7 @@ export function sausageColor(temp: number): [number, number, number] {
   return COLOR_BLACK;
 }
 
-export const StoveStation = ({temperature, heatLevel}: StoveStationProps) => {
+export const StoveStation = ({position, temperature, heatLevel}: StoveStationProps) => {
   const timeRef = useRef(0);
 
   // Refs for animated meshes/materials
@@ -320,7 +319,7 @@ export const StoveStation = ({temperature, heatLevel}: StoveStationProps) => {
   const sausageBaseY = PAN_Y + PAN_HEIGHT / 2 + 0.07;
 
   return (
-    <group position={STOVE_POS}>
+    <group position={position}>
       {/* Stove body provided by GLB Cube.002 — no procedural body needed */}
 
       {/* --- Burner Ring (torus) --- */}

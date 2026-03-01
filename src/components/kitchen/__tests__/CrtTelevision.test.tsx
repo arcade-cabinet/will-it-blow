@@ -1,25 +1,35 @@
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import {DEFAULT_ROOM, resolveTargets} from '../../../engine/FurnitureLayout';
 import {CrtTelevision} from '../CrtTelevision';
+
+const targets = resolveTargets(DEFAULT_ROOM);
 
 describe('CrtTelevision', () => {
   it('renders without crashing', async () => {
-    const renderer = await ReactThreeTestRenderer.create(<CrtTelevision reaction="idle" />);
+    const renderer = await ReactThreeTestRenderer.create(
+      <CrtTelevision reaction="idle" position={targets['crt-tv'].position} />,
+    );
     expect(renderer.scene.children.length).toBeGreaterThan(0);
   });
 
   it('renders at the expected wall position', async () => {
-    const renderer = await ReactThreeTestRenderer.create(<CrtTelevision reaction="idle" />);
+    const renderer = await ReactThreeTestRenderer.create(
+      <CrtTelevision reaction="idle" position={targets['crt-tv'].position} />,
+    );
     const root = renderer.scene.children[0];
     // TV should be mounted high on the back wall
     expect(root.instance.position.y).toBeGreaterThan(2);
   });
 
-  it('uses the default position when none is provided', async () => {
-    const renderer = await ReactThreeTestRenderer.create(<CrtTelevision reaction="idle" />);
+  it('renders the root group at the resolved crt-tv target', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <CrtTelevision reaction="idle" position={targets['crt-tv'].position} />,
+    );
     const root = renderer.scene.children[0];
-    expect(root.instance.position.x).toBe(0);
-    expect(root.instance.position.y).toBe(2.5);
-    expect(root.instance.position.z).toBe(-5.5);
+    const [ex, ey, ez] = targets['crt-tv'].position;
+    expect(root.instance.position.x).toBeCloseTo(ex, 1);
+    expect(root.instance.position.y).toBeCloseTo(ey, 1);
+    expect(root.instance.position.z).toBeCloseTo(ez, 1);
   });
 
   it('accepts a custom position', async () => {
@@ -44,7 +54,9 @@ describe('CrtTelevision', () => {
       'talk',
     ] as const;
     for (const reaction of reactions) {
-      const renderer = await ReactThreeTestRenderer.create(<CrtTelevision reaction={reaction} />);
+      const renderer = await ReactThreeTestRenderer.create(
+        <CrtTelevision reaction={reaction} position={targets['crt-tv'].position} />,
+      );
       expect(renderer.scene.children.length).toBeGreaterThan(0);
       await renderer.unmount();
     }
