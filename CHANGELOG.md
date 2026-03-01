@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.0](https://github.com/arcade-cabinet/will-it-blow/compare/v1.3.0...v1.4.0) (2026-03-01)
+
+
+### Features
+
+* add Rapier physics engine with dynamic rigid bodies for all stations ([#22](https://github.com/arcade-cabinet/will-it-blow/issues/22)) ([1e0c1f3](https://github.com/arcade-cabinet/will-it-blow/commit/1e0c1f3665c753f94d4b0e18b505bb36d0a2d22a))
+* physics gameplay, documentation overhaul, and CodeRabbit fixes ([bf7394d](https://github.com/arcade-cabinet/will-it-blow/commit/bf7394d9a3a54c0a2854cea0643bf2f44ca54dce))
+
 ## [1.3.0](https://github.com/arcade-cabinet/will-it-blow/compare/v1.2.0...v1.3.0) (2026-03-01)
 
 
