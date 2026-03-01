@@ -25,7 +25,7 @@ const SHELF_COUNT = 3;
 // Shelf Y offsets from fridge center (spread across the 2.92-unit height)
 const SHELF_Y_POSITIONS = [-0.8, 0.0, 0.8];
 const ITEMS_PER_SHELF = 4;
-const INGREDIENT_DIAMETER = 0.22;
+const INGREDIENT_DIAMETER = 0.28;
 
 // Door spring animation
 const DOOR_OPEN_ANGLE = 1.7; // ~97 degrees
@@ -178,11 +178,13 @@ function IngredientMesh({
       const pulse = 0.4 + 0.6 * Math.sin(t * 6);
       mat.emissiveIntensity = pulse * 0.6;
       mat.emissive.copy(baseColor.current);
+    } else if (hovered && !isSelected) {
+      mat.emissiveIntensity = 0.35;
+      mat.emissive.set('#ffffff');
     } else {
-      mat.emissiveIntensity = hovered && !isSelected ? 0.25 : 0;
-      if (hovered && !isSelected) {
-        mat.emissive.set('#ffffff');
-      }
+      // Resting glow — keeps ingredients visible in dim fridge
+      mat.emissiveIntensity = 0.15;
+      mat.emissive.copy(baseColor.current);
     }
 
     mat.color.copy(baseColor.current);
@@ -261,8 +263,8 @@ function IngredientMesh({
         color={ingredient.color}
         roughness={0.55}
         metalness={0.08}
-        emissive="#000000"
-        emissiveIntensity={0}
+        emissive={ingredient.color}
+        emissiveIntensity={0.15}
       />
     </mesh>
   );
@@ -285,16 +287,16 @@ export const FridgeStation = ({
       {/* Interior fridge lighting — cool white glow from top and middle shelf */}
       <pointLight
         position={[0.1, 1.0, 0.3]}
-        intensity={1.8}
+        intensity={3.0}
         color="#e0f0ff"
-        distance={2.5}
+        distance={3.5}
         decay={2}
       />
       <pointLight
         position={[0.1, -0.3, 0.3]}
-        intensity={0.8}
+        intensity={1.5}
         color="#e0f0ff"
-        distance={2.0}
+        distance={3.0}
         decay={2}
       />
 
@@ -318,7 +320,7 @@ export const FridgeStation = ({
         const slotIndex = i % ITEMS_PER_SHELF;
 
         // Spread items across the fridge width (~1.0 unit wide)
-        const xOffset = (slotIndex - (ITEMS_PER_SHELF - 1) / 2) * 0.22;
+        const xOffset = (slotIndex - (ITEMS_PER_SHELF - 1) / 2) * 0.24;
         // Place on shelf + half diameter clearance above shelf surface
         const shelfY = SHELF_Y_POSITIONS[shelfIndex] + INGREDIENT_DIAMETER / 2 + 0.012;
         // Push forward toward fridge opening so they're visible

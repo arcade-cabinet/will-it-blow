@@ -1,4 +1,4 @@
-import {useGLTF, useTexture} from '@react-three/drei';
+import {useAnimations, useGLTF, useTexture} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
 import type React from 'react';
 import {useEffect, useMemo, useRef} from 'react';
@@ -238,9 +238,13 @@ function PbrGrimeDecal({size, position, rotY, textures}: PbrGrimeDecalProps) {
 // KitchenModel — loads the kitchen.glb and applies material fixes
 // -------------------------------------------------------
 
-function KitchenModel() {
+function KitchenModel({fridgeDoorOpen}: {fridgeDoorOpen: boolean}) {
   const modelUrl = `${getAssetRootUrl('models')}kitchen.glb`;
-  const {scene} = useGLTF(modelUrl);
+  const {scene, animations} = useGLTF(modelUrl);
+  const sceneRef = useRef<THREE.Group>(null);
+
+  // Set up animation mixer for the fridge door
+  const {actions} = useAnimations(animations, sceneRef);
 
   useEffect(() => {
     // Per-material overrides to tame direct light on bright surfaces.
@@ -288,7 +292,30 @@ function KitchenModel() {
     }
   }, [scene]);
 
-  return <primitive object={scene} />;
+  // Play/stop fridge door animation based on prop
+  useEffect(() => {
+    // Find the door animation clip (name may vary from export)
+    const doorAction = Object.values(actions)[0];
+    if (!doorAction) return;
+
+    doorAction.clampWhenFinished = true;
+    doorAction.setLoop(THREE.LoopOnce, 1);
+
+    if (fridgeDoorOpen) {
+      doorAction.timeScale = 1;
+      doorAction.reset().play();
+    } else {
+      // Reverse to close
+      doorAction.timeScale = -1;
+      doorAction.paused = false;
+    }
+  }, [fridgeDoorOpen, actions]);
+
+  return (
+    <group ref={sceneRef}>
+      <primitive object={scene} />
+    </group>
+  );
 }
 
 // -------------------------------------------------------
@@ -332,7 +359,7 @@ function FluorescentTube({position, lightRef}: FluorescentTubeProps) {
 // KitchenEnvironment — room enclosure, GLB, lighting, grime
 // -------------------------------------------------------
 
-export const KitchenEnvironment = () => {
+export const KitchenEnvironment = ({fridgeDoorOpen = false}: {fridgeDoorOpen?: boolean}) => {
   // Load PBR textures for room enclosure
   const textures = useRoomTextures();
 
@@ -408,7 +435,7 @@ export const KitchenEnvironment = () => {
       {/* =======================================================
           KITCHEN GLB MODEL
           ======================================================= */}
-      <KitchenModel />
+      <KitchenModel fridgeDoorOpen={fridgeDoorOpen} />
 
       {/* =======================================================
           LIGHTING — harsh fluorescent overhead

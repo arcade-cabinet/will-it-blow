@@ -13,7 +13,5 @@
     "android": {
       "package": "com.jbcom.willitblow"
     }
-  },
-  "name": "WillItBlow",
-  "displayName": "WillItBlow"
+  }
 }

@@ -31,8 +31,8 @@ pnpm test:ci                  # CI mode (--ci --forceExit)
 pnpm lint                     # Check lint + format errors
 pnpm format                   # Auto-fix lint + format errors
 
-# Type checking
-npx tsc --noEmit
+# Type checking (needs increased stack for Three.js recursive types)
+pnpm typecheck
 ```
 
 ## Architecture
@@ -141,3 +141,5 @@ Each challenge = overlay (`challenges/`) + 3D station (`kitchen/`) + dialogue (`
 - **Three.js transform allowlist**: `jest.config.js` must include `three` and `@react-three` in `transformIgnorePatterns` or tests fail with ESM syntax errors.
 - **TSL vs GLSL**: WebGPU renderer does not support raw GLSL `ShaderMaterial`. Use TSL (Three Shading Language) `NodeMaterial` instead — it compiles to WGSL for WebGPU or GLSL for WebGL2 fallback. Import node functions from `'three/tsl'`.
 - **Metro WebGPU resolver**: On native, bare `'three'` imports are remapped to `'three/webgpu'` by `metro.config.js`. On web, the browser build already uses WebGPU. Direct `'three/webgpu'` imports work on all platforms.
+- **TypeScript stack overflow**: `npx tsc --noEmit` crashes with Three.js recursive types. Use `pnpm typecheck` which runs with `node --stack-size=8192`. `skipLibCheck: true` is set in tsconfig but doesn't prevent the overflow alone (the recursion happens in our source code referencing Three.js types, not in `.d.ts` files).
+- **`let` + closure = `never` type**: TypeScript can't track mutations inside callbacks (e.g., `scene.traverse()`). If a `let` variable is assigned inside a callback then narrowed after, TS may infer `never`. Fix by assigning to a `const` after the null guard.

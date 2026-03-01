@@ -4,6 +4,27 @@ import {audioEngine} from '../../engine/AudioEngine';
 import {getAssetUrl} from '../../engine/assetUrl';
 import {useGameStore} from '../../store/gameStore';
 
+const TEXTURE_FILES = [
+  'tile_wall_color.jpg',
+  'tile_wall_normal.jpg',
+  'tile_wall_roughness.jpg',
+  'tile_wall_ao.jpg',
+  'concrete_color.jpg',
+  'concrete_normal.jpg',
+  'concrete_roughness.jpg',
+  'tile_floor_color.jpg',
+  'tile_floor_normal.jpg',
+  'tile_floor_roughness.jpg',
+  'grime_drip_color.jpg',
+  'grime_drip_normal.jpg',
+  'grime_drip_roughness.jpg',
+  'grime_drip_opacity.jpg',
+  'grime_base_color.jpg',
+  'grime_base_normal.jpg',
+  'grime_base_roughness.jpg',
+  'grime_base_opacity.jpg',
+];
+
 const LOADING_QUOTES = [
   'Selecting the finest meats...',
   'Grinding it down...',
@@ -44,47 +65,88 @@ export function LoadingScreen() {
     audioEngine.initTone();
   }, []);
 
-  // Pre-fetch kitchen.glb to warm the browser cache
+  // Pre-fetch kitchen.glb + all textures to warm the browser cache
   // biome-ignore lint/correctness/useExhaustiveDependencies: retryCount is an intentional trigger to re-run the preload
   useEffect(() => {
     const controller = new AbortController();
 
     async function preload() {
       try {
-        const url = getAssetUrl('models', 'kitchen.glb');
-        const response = await fetch(url, {signal: controller.signal});
+        // Build full asset list: GLB model + all texture files
+        const assets = [
+          {url: getAssetUrl('models', 'kitchen.glb'), critical: true},
+          ...TEXTURE_FILES.map(f => ({url: getAssetUrl('textures', f), critical: false})),
+        ];
 
-        if (!response.ok) {
-          console.warn('Failed to preload kitchen.glb:', response.status);
-          if (!controller.signal.aborted) {
-            setLoadError(`Failed to load assets (HTTP ${response.status})`);
+        // Issue HEAD requests to get total byte count for progress bar
+        const sizes = await Promise.all(
+          assets.map(async a => {
+            try {
+              const head = await fetch(a.url, {method: 'HEAD', signal: controller.signal});
+              return Number(head.headers.get('content-length')) || 0;
+            } catch {
+              return 0;
+            }
+          }),
+        );
+        const totalBytes = sizes.reduce((sum, s) => sum + s, 0);
+
+        if (controller.signal.aborted) return;
+
+        // Download all in parallel, tracking streamed bytes
+        let receivedBytes = 0;
+
+        const downloadOne = async (asset: {url: string; critical: boolean}) => {
+          const response = await fetch(asset.url, {signal: controller.signal});
+          if (!response.ok) {
+            if (asset.critical) {
+              throw new Error(`Failed to load assets (HTTP ${response.status})`);
+            }
+            console.warn(`Failed to preload ${asset.url}: ${response.status}`);
+            return;
           }
+
+          const reader = response.body?.getReader();
+          if (!reader) {
+            await response.arrayBuffer();
+            return;
+          }
+
+          while (true) {
+            const {done, value} = await reader.read();
+            if (done || controller.signal.aborted) break;
+            receivedBytes += value.byteLength;
+            if (totalBytes > 0) {
+              const pct = Math.min(Math.round((receivedBytes / totalBytes) * 100), 99);
+              setProgress(pct);
+            }
+          }
+        };
+
+        const results = await Promise.allSettled(assets.map(downloadOne));
+
+        if (controller.signal.aborted) return;
+
+        // Check if any critical asset failed
+        const criticalFailed = results.find(
+          (r, i) => r.status === 'rejected' && assets[i].critical,
+        );
+        if (criticalFailed && criticalFailed.status === 'rejected') {
+          setLoadError(criticalFailed.reason?.message ?? 'Failed to load assets.');
           return;
         }
 
-        const reader = response.body?.getReader();
-        const contentLength = Number(response.headers.get('content-length')) || 0;
+        // Log non-critical failures
+        results.forEach((r, i) => {
+          if (r.status === 'rejected' && !assets[i].critical) {
+            console.warn(`Texture preload failed (non-fatal): ${assets[i].url}`);
+          }
+        });
 
-        if (!reader || contentLength === 0) {
-          // No streaming support or unknown size — just consume the response
-          await response.arrayBuffer();
-          if (!controller.signal.aborted) setProgress(100);
-          return;
-        }
-
-        let received = 0;
-        while (true) {
-          const {done, value} = await reader.read();
-          if (done || controller.signal.aborted) break;
-          received += value.byteLength;
-          const pct = Math.min(Math.round((received / contentLength) * 100), 99);
-          setProgress(pct);
-        }
-
-        if (!controller.signal.aborted) setProgress(100);
+        setProgress(100);
       } catch (error) {
         if (error instanceof DOMException && error.name === 'AbortError') return;
-        console.warn('Error preloading kitchen.glb:', error);
+        console.warn('Error preloading assets:', error);
         if (!controller.signal.aborted)
           setLoadError('Failed to load assets. Check your connection.');
       }

@@ -20,23 +20,24 @@ const MENU_CAMERA = {
 
 /**
  * Camera positions for each challenge station.
- * Mapped to the kitchen.glb layout (Blender coords, Y-up):
- * - Fridge: back-left corner (~x=-5, z=-5)
- * - Counter/sink: right side (~x=2-4, z=0-2)
- * - Stove burners: right side (~x=2.4, z=1.2)
- * - Table: center-back (~x=0, z=-3)
+ * Aligned to GLB furniture (Three.js Y-up coords from Blender MCP):
+ * - Fridge (Cube001_2): center [-5.16, 1.79, -5.02]
+ * - Grinder on left counter (Cube.008): surface y=2.06, center [-4.75, _, -0.64]
+ * - Stuffer on right counter (Cube): surface y=2.68, center [2.28, _, 2.25]
+ * - Stove on oven/range (Cube.002): surface y=2.13, center [-4.98, _, -2.23]
+ * - CRT TV: [0, 2.5, -5.5] (back wall)
  */
 const STATION_CAMERAS: {position: [number, number, number]; lookAt: [number, number, number]}[] = [
-  // 0: Fridge — stand close, looking into the open fridge at [-5.16, 1.79, -5.02]
-  {position: [-3.5, 1.6, -3.5], lookAt: [-5.16, 1.6, -5.02]},
-  // 1: Grinder — step to left side, face the counter/shelf on left wall
-  {position: [-1, 1.6, 0], lookAt: [-4, 1.4, 0]},
-  // 2: Stuffer — stand back from counter, look toward the island on right side
-  {position: [-1, 1.6, 0], lookAt: [3, 1.3, 1.5]},
-  // 3: Stove — step back from burners, look down at counter height
-  {position: [-0.5, 1.6, -0.5], lookAt: [2.5, 1.2, 1.5]},
-  // 4: Tasting — walk to table, face the CRT TV on back wall
-  {position: [-1, 1.6, -1], lookAt: [0, 2.5, -5.5]},
+  // 0: Fridge — approach from room center toward back-left corner
+  {position: [-2.5, 1.6, -2.5], lookAt: [-5.16, 1.6, -5.02]},
+  // 1: Grinder — face left-wall counter (Cube.008)
+  {position: [-2, 1.6, -0.5], lookAt: [-4.75, 2.1, -0.64]},
+  // 2: Stuffer — face right counter/island (Cube), look at stuffer body center (base 2.68 + half body 0.5)
+  {position: [0, 1.6, 0], lookAt: [2.28, 3.2, 2.25]},
+  // 3: Stove — face oven/range (Cube.002)
+  {position: [-2.5, 1.6, -2.0], lookAt: [-4.98, 2.1, -2.23]},
+  // 4: Tasting — face CRT TV on back wall
+  {position: [-1, 1.6, 0], lookAt: [0, 2.5, -5.5]},
 ];
 
 /** Quadratic ease-in-out for smooth camera transitions */
@@ -193,6 +194,93 @@ function CameraWalker({target}: CameraWalkerProps) {
 }
 
 // -----------------------------------------------------------------
+// SceneIntrospector — exposes Three.js scene data for E2E tests
+// -----------------------------------------------------------------
+
+function SceneIntrospector() {
+  const {scene, camera} = useThree();
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !(window as any).__gov) return;
+    const gov = (window as any).__gov;
+
+    /** Query camera position and direction */
+    gov.getCamera = () => ({
+      position: [camera.position.x, camera.position.y, camera.position.z],
+      fov: (camera as any).fov ?? 0,
+    });
+
+    /** List all top-level group names and their positions in the scene */
+    gov.getSceneChildren = () => {
+      const result: {name: string; type: string; position: number[]; childCount: number}[] = [];
+      scene.children.forEach(child => {
+        result.push({
+          name: child.name || child.type,
+          type: child.type,
+          position: [child.position.x, child.position.y, child.position.z],
+          childCount: child.children.length,
+        });
+      });
+      return result;
+    };
+
+    /** Find a mesh/group by name (searches recursively) and return its world position */
+    gov.findObject = (name: string) => {
+      let found: THREE.Object3D | null = null;
+      scene.traverse(obj => {
+        if (obj.name === name && !found) found = obj;
+      });
+      if (!found) return null;
+      const target: THREE.Object3D = found;
+      const wp = new THREE.Vector3();
+      target.getWorldPosition(wp);
+      return {
+        name: target.name,
+        type: target.type,
+        worldPosition: [wp.x, wp.y, wp.z],
+        visible: target.visible,
+        childCount: target.children.length,
+      };
+    };
+
+    /** Count all Mesh objects in the scene (useful for verifying always-render) */
+    gov.getMeshCount = () => {
+      let count = 0;
+      scene.traverse(obj => {
+        if (obj.type === 'Mesh') count++;
+      });
+      return count;
+    };
+
+    /** Get positions of all groups whose names match a pattern */
+    gov.findGroups = (pattern: string) => {
+      const re = new RegExp(pattern, 'i');
+      const results: {
+        name: string;
+        worldPosition: number[];
+        visible: boolean;
+        childCount: number;
+      }[] = [];
+      scene.traverse(obj => {
+        if (obj.type === 'Group' && re.test(obj.name)) {
+          const wp = new THREE.Vector3();
+          obj.getWorldPosition(wp);
+          results.push({
+            name: obj.name,
+            worldPosition: [wp.x, wp.y, wp.z],
+            visible: obj.visible,
+            childCount: obj.children.length,
+          });
+        }
+      });
+      return results;
+    };
+  }, [scene, camera]);
+
+  return null;
+}
+
+// -----------------------------------------------------------------
 // SceneContent — all 3D content inside the Canvas
 // -----------------------------------------------------------------
 
@@ -216,10 +304,11 @@ const SceneContent = () => {
     setFridgeHovered,
   } = useGameStore();
 
-  const showFridge = gameStatus === 'playing' && currentChallenge === 0;
-  const showGrinder = gameStatus === 'playing' && currentChallenge === 1;
-  const showStuffer = gameStatus === 'playing' && currentChallenge === 2;
-  const showStove = gameStatus === 'playing' && currentChallenge === 3;
+  // Which station is currently the active challenge?
+  const isFridgeActive = gameStatus === 'playing' && currentChallenge === 0;
+  const isGrinderActive = gameStatus === 'playing' && currentChallenge === 1;
+  const isStufferActive = gameStatus === 'playing' && currentChallenge === 2;
+  const isStoveActive = gameStatus === 'playing' && currentChallenge === 3;
 
   // Grinder station state derived from store
   const grinderCrankAngle = useRef(0);
@@ -227,35 +316,35 @@ const SceneContent = () => {
 
   // Animate crank angle based on challenge progress changes
   useEffect(() => {
-    if (showGrinder) {
+    if (isGrinderActive) {
       grinderCrankAngle.current = (challengeProgress / 100) * Math.PI * 8;
     }
-  }, [showGrinder, challengeProgress]);
+  }, [isGrinderActive, challengeProgress]);
 
   // Detect new strikes to trigger splatter visual
   const [grinderSplattering, setGrinderSplattering] = useState(false);
   useEffect(() => {
-    if (showGrinder && strikes > prevStrikesRef.current) {
+    if (isGrinderActive && strikes > prevStrikesRef.current) {
       setGrinderSplattering(true);
       const timeout = setTimeout(() => setGrinderSplattering(false), 800);
       prevStrikesRef.current = strikes;
       return () => clearTimeout(timeout);
     }
     prevStrikesRef.current = strikes;
-  }, [showGrinder, strikes]);
+  }, [isGrinderActive, strikes]);
 
   // Stuffer station state: detect burst from strike changes
   const [stufferBurst, setStufferBurst] = useState(false);
   const prevStufferStrikesRef = useRef(strikes);
   useEffect(() => {
-    if (showStuffer && strikes > prevStufferStrikesRef.current) {
+    if (isStufferActive && strikes > prevStufferStrikesRef.current) {
       setStufferBurst(true);
       const timeout = setTimeout(() => setStufferBurst(false), 1000);
       prevStufferStrikesRef.current = strikes;
       return () => clearTimeout(timeout);
     }
     prevStufferStrikesRef.current = strikes;
-  }, [showStuffer, strikes]);
+  }, [isStufferActive, strikes]);
 
   // Convert store arrays to Sets for FridgeStation props
   const fridgeSelectedSet = new Set(fridgeSelectedIndices);
@@ -269,10 +358,13 @@ const SceneContent = () => {
     <>
       {/* Dim ambient fill (KitchenEnvironment provides the strong fluorescent + fill lights) */}
       <ambientLight intensity={0.15} />
+      <SceneIntrospector />
       <CameraWalker target={cameraTarget} />
-      <KitchenEnvironment />
+      <KitchenEnvironment fridgeDoorOpen={isFridgeActive} />
       <CrtTelevision reaction={gameStatus === 'defeat' ? 'laugh' : mrSausageReaction} />
-      {showFridge && fridgePool.length > 0 && (
+
+      {/* All stations always rendered — rest-state props when not active challenge */}
+      {isFridgeActive && fridgePool.length > 0 && (
         <FridgeStation
           ingredients={fridgePool}
           selectedIds={fridgeSelectedSet}
@@ -282,24 +374,21 @@ const SceneContent = () => {
           onHover={setFridgeHovered}
         />
       )}
-      {showGrinder && (
-        <GrinderStation
-          grindProgress={challengeProgress}
-          crankAngle={grinderCrankAngle.current}
-          isSplattering={grinderSplattering}
-        />
-      )}
-      {showStuffer && (
-        <StufferStation
-          fillLevel={challengeProgress}
-          pressureLevel={challengePressure}
-          isPressing={challengeIsPressing}
-          hasBurst={stufferBurst}
-        />
-      )}
-      {showStove && (
-        <StoveStation temperature={challengeTemperature} heatLevel={challengeHeatLevel} />
-      )}
+      <GrinderStation
+        grindProgress={isGrinderActive ? challengeProgress : 0}
+        crankAngle={isGrinderActive ? grinderCrankAngle.current : 0}
+        isSplattering={isGrinderActive && grinderSplattering}
+      />
+      <StufferStation
+        fillLevel={isStufferActive ? challengeProgress : 0}
+        pressureLevel={isStufferActive ? challengePressure : 0}
+        isPressing={isStufferActive && challengeIsPressing}
+        hasBurst={isStufferActive && stufferBurst}
+      />
+      <StoveStation
+        temperature={isStoveActive ? challengeTemperature : 70}
+        heatLevel={isStoveActive ? challengeHeatLevel : 0}
+      />
     </>
   );
 };
