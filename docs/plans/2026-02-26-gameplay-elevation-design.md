@@ -1,3 +1,14 @@
+<!--
+title: Gameplay Elevation Design — Physics Mini-Games & 3D Mr. Sausage
+domain: plan
+status: historical
+engine: babylon
+last-verified: 2026-03-01
+depends-on: []
+agent-context: scene-architect, challenge-dev
+summary: Design for transforming 5 tap-button phases into physics-driven mini-games with a full 3D Mr. Sausage character using Babylon.js primitives.
+-->
+
 # Will It Blow? — Gameplay Elevation Design
 
 **Date:** 2026-02-26

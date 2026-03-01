@@ -1,3 +1,14 @@
+<!--
+title: Camera Rail & Fluorescent Lighting Implementation Plan
+domain: plan
+status: historical
+engine: babylon→r3f
+last-verified: 2026-03-01
+depends-on: ["2026-02-27-horror-kitchen-implementation.md"]
+agent-context: scene-architect
+summary: Replace waypoint navigation with auto-rail camera system and swap single bulb for 3 fluorescent tube fixtures with flicker, plus fix CRT shader to be procedural.
+-->
+
 # Camera Rail & Fluorescent Lighting Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.

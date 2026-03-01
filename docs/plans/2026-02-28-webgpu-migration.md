@@ -1,3 +1,14 @@
+<!--
+title: WebGPU Migration Implementation Plan
+domain: plan
+status: completed
+engine: r3f
+last-verified: 2026-03-01
+depends-on: ["2026-02-27-r3f-migration-implementation.md"]
+agent-context: scene-architect
+summary: Migrate from WebGL to WebGPU via react-native-wgpu — update Metro resolver, convert CRT shader from GLSL ShaderMaterial to TSL NodeMaterial, add @react-three/xr support.
+-->
+
 # WebGPU Migration Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.

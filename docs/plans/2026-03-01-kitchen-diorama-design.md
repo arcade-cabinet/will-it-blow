@@ -1,3 +1,14 @@
+<!--
+title: Kitchen Diorama Redesign — Design Document
+domain: plan
+status: completed
+engine: r3f
+last-verified: 2026-03-01
+depends-on: ["2026-03-01-free-roam-navigation-design.md"]
+agent-context: scene-architect
+summary: Design for target-based placement system — explode monolithic kitchen.glb into discrete GLB segments, compute named targets from room geometry, PBR texture upgrades, and three-layer architecture.
+-->
+
 # Kitchen Diorama Redesign — Design Document
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:writing-plans to create the implementation plan from this design.

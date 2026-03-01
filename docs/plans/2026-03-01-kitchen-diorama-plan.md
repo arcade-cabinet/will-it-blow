@@ -1,3 +1,14 @@
+<!--
+title: Kitchen Diorama Redesign — Implementation Plan
+domain: plan
+status: completed
+engine: r3f
+last-verified: 2026-03-01
+depends-on: ["2026-03-01-kitchen-diorama-design.md"]
+agent-context: scene-architect
+summary: Task-by-task implementation of FurnitureLayout target system, FurnitureLoader GLB component, PBR room textures, grime decals, and wiring all stations to named targets.
+-->
+
 # Kitchen Diorama Redesign — Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.

@@ -1,3 +1,14 @@
+<!--
+title: Will It Blow? — Original Game Design Document
+domain: plan
+status: historical
+engine: babylon
+last-verified: 2026-03-01
+depends-on: []
+agent-context: challenge-dev
+summary: Original game design document covering the Ordinary Sausage cooking game with React Native + BabylonJS, 8 game phases, ingredient system, and audio engine.
+-->
+
 # Will It Blow? — Game Design Document
 
 ## Overview

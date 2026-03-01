@@ -1,3 +1,14 @@
+<!--
+title: Mobile-First + XR/AR Input Abstraction Design
+domain: plan
+status: historical
+engine: babylon
+last-verified: 2026-03-01
+depends-on: ["2026-02-27-first-person-horror-kitchen-design.md"]
+agent-context: scene-architect
+summary: Design for input abstraction layer (touch, gyro, XR, pointer adapters), haptic feedback service, Havok physics, GLB fridge, gyroscope camera, and XR/AR integration.
+-->
+
 # Mobile-First + XR/AR Design
 
 ## Goal
