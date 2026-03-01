@@ -4,6 +4,7 @@ import * as THREE from 'three/webgpu';
 import type {Ingredient} from '../../engine/Ingredients';
 
 interface FridgeStationProps {
+  position?: [number, number, number];
   ingredients: Ingredient[];
   selectedIds: Set<number>;
   hintActive: boolean;
@@ -14,11 +15,10 @@ interface FridgeStationProps {
 
 // Position aligned with GLB fridge (Cube001_2): center [-5.16, 1.79, -5.02], size [1.01, 2.92, 1.42]
 // The group origin sits at the fridge center; ingredients sit on shelves inside the volume.
-const FRIDGE_POS: [number, number, number] = [-5.16, 1.79, -5.02];
+const DEFAULT_FRIDGE_POS: [number, number, number] = [-5.16, 1.79, -5.02];
 const FRIDGE_W = 1.01; // x
 const FRIDGE_H = 2.92; // y
 const FRIDGE_D = 1.42; // z
-const HALF_W = FRIDGE_W / 2;
 const HALF_D = FRIDGE_D / 2;
 
 const SHELF_COUNT = 3;
@@ -27,69 +27,9 @@ const SHELF_Y_POSITIONS = [-0.8, 0.0, 0.8];
 const ITEMS_PER_SHELF = 4;
 const INGREDIENT_DIAMETER = 0.28;
 
-// Door spring animation
-const DOOR_OPEN_ANGLE = 1.7; // ~97 degrees
-const DOOR_OPEN_DELAY = 0.4; // seconds after mount before opening starts
-const DOOR_SPRING_STIFFNESS = 3.0;
-const DOOR_SPRING_DAMPING = 0.88;
-
 /** Converts a hex color string to a THREE.Color. */
 function hexToThreeColor(hex: string): THREE.Color {
   return new THREE.Color(hex);
-}
-
-// -------------------------------------------------------
-// FridgeDoor — spring-damped animated door that swings open
-// -------------------------------------------------------
-
-function FridgeDoor() {
-  const hingeRef = useRef<THREE.Group>(null);
-  const timeRef = useRef(0);
-  const angleRef = useRef(0);
-  const velocityRef = useRef(0);
-
-  useFrame((_, delta) => {
-    const dt = Math.min(delta, 0.05);
-    timeRef.current += dt;
-    if (!hingeRef.current) return;
-
-    // Wait for delay before opening
-    if (timeRef.current < DOOR_OPEN_DELAY) return;
-
-    // Spring toward target angle
-    const target = DOOR_OPEN_ANGLE;
-    const diff = target - angleRef.current;
-    velocityRef.current += diff * DOOR_SPRING_STIFFNESS * dt;
-    velocityRef.current *= DOOR_SPRING_DAMPING;
-    angleRef.current += velocityRef.current;
-
-    // Clamp to reasonable range
-    angleRef.current = Math.max(0, Math.min(DOOR_OPEN_ANGLE + 0.2, angleRef.current));
-    hingeRef.current.rotation.y = -angleRef.current;
-  });
-
-  return (
-    // Hinge at +x edge, +z face of fridge (handle side, front face)
-    <group ref={hingeRef} position={[HALF_W, 0, HALF_D]}>
-      {/* Door panel */}
-      <mesh position={[-HALF_W, 0, 0.015]}>
-        <boxGeometry args={[FRIDGE_W - 0.02, FRIDGE_H - 0.04, 0.03]} />
-        <meshStandardMaterial color="#f0ede5" roughness={0.35} metalness={0.05} />
-      </mesh>
-
-      {/* Rubber gasket rim (dark border around the door interior) */}
-      <mesh position={[-HALF_W, 0, 0.0]}>
-        <boxGeometry args={[FRIDGE_W + 0.01, FRIDGE_H + 0.01, 0.008]} />
-        <meshStandardMaterial color="#333333" roughness={0.9} metalness={0.0} />
-      </mesh>
-
-      {/* Handle — metallic bar near the free edge */}
-      <mesh position={[-FRIDGE_W + 0.12, 0.15, 0.04]}>
-        <boxGeometry args={[0.02, 0.22, 0.035]} />
-        <meshStandardMaterial color="#c0c0c0" roughness={0.15} metalness={0.8} />
-      </mesh>
-    </group>
-  );
 }
 
 // -------------------------------------------------------
@@ -275,6 +215,7 @@ function IngredientMesh({
 // -------------------------------------------------------
 
 export const FridgeStation = ({
+  position = DEFAULT_FRIDGE_POS,
   ingredients,
   selectedIds,
   hintActive,
@@ -283,7 +224,7 @@ export const FridgeStation = ({
   onHover,
 }: FridgeStationProps) => {
   return (
-    <group position={FRIDGE_POS}>
+    <group position={position}>
       {/* Interior fridge lighting — cool white glow from top and middle shelf */}
       <pointLight
         position={[0.1, 1.0, 0.3]}
@@ -300,10 +241,7 @@ export const FridgeStation = ({
         decay={2}
       />
 
-      {/* Animated door that swings open on mount */}
-      <FridgeDoor />
-
-      {/* Glass shelves */}
+      {/* Glass shelves (door is part of fridge.glb, animated via FurnitureLoader) */}
       {SHELF_Y_POSITIONS.map((y, i) => (
         <FridgeShelf key={i} y={y} />
       ))}

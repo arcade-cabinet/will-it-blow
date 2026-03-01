@@ -33,6 +33,11 @@ export interface GameState {
   // Variant seed
   variantSeed: number;
 
+  // Player position for FPS movement + proximity triggers
+  playerPosition: [number, number, number];
+  // Whether the player has reached the current challenge's station
+  challengeTriggered: boolean;
+
   // Fridge challenge — shared state between 3D scene and 2D overlay
   fridgePool: Ingredient[];
   fridgeMatchingIndices: number[];
@@ -65,6 +70,8 @@ export interface GameState {
   clearFridgeClick: () => void;
   addFridgeSelected: (index: number) => void;
   setFridgeHovered: (index: number | null) => void;
+  setPlayerPosition: (pos: [number, number, number]) => void;
+  triggerChallenge: () => void;
   setMusicVolume: (volume: number) => void;
   setSfxVolume: (volume: number) => void;
   setMusicMuted: (muted: boolean) => void;
@@ -97,6 +104,8 @@ export const INITIAL_GAME_STATE = {
   fridgeSelectedIndices: [] as number[],
   pendingFridgeClick: null as number | null,
   fridgeHoveredIndex: null as number | null,
+  playerPosition: [0, 1.6, 0] as [number, number, number],
+  challengeTriggered: false,
   musicVolume: 0.7,
   sfxVolume: 0.8,
   musicMuted: false,
@@ -131,6 +140,7 @@ export const useGameStore = create<GameState>()(
           fridgeSelectedIndices: [],
           pendingFridgeClick: null,
           fridgeHoveredIndex: null,
+          challengeTriggered: false,
         })),
 
       continueGame: () =>
@@ -148,6 +158,7 @@ export const useGameStore = create<GameState>()(
           fridgeSelectedIndices: [],
           pendingFridgeClick: null,
           fridgeHoveredIndex: null,
+          challengeTriggered: false,
         }),
 
       completeChallenge: (score: number) =>
@@ -166,6 +177,7 @@ export const useGameStore = create<GameState>()(
             challengeTemperature: 70,
             challengeHeatLevel: 0,
             hintActive: false,
+            challengeTriggered: false,
             gameStatus: isLastChallenge ? 'victory' : state.gameStatus,
           };
         }),
@@ -219,6 +231,9 @@ export const useGameStore = create<GameState>()(
         set(state => ({fridgeSelectedIndices: [...state.fridgeSelectedIndices, index]})),
 
       setFridgeHovered: (index: number | null) => set({fridgeHoveredIndex: index}),
+
+      setPlayerPosition: (pos: [number, number, number]) => set({playerPosition: pos}),
+      triggerChallenge: () => set({challengeTriggered: true}),
 
       setMusicVolume: (volume: number) => set({musicVolume: Math.max(0, Math.min(1, volume))}),
       setSfxVolume: (volume: number) => set({sfxVolume: Math.max(0, Math.min(1, volume))}),

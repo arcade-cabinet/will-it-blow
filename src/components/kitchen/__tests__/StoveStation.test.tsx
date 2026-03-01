@@ -1,5 +1,8 @@
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import {DEFAULT_ROOM, resolveTargets} from '../../../engine/FurnitureLayout';
 import {StoveStation, sausageColor} from '../StoveStation';
+
+const targets = resolveTargets(DEFAULT_ROOM);
 
 describe('StoveStation', () => {
   it('renders without crashing', async () => {
@@ -9,14 +12,26 @@ describe('StoveStation', () => {
     expect(renderer.scene.children.length).toBeGreaterThan(0);
   });
 
-  it('renders the root group at the stove position', async () => {
+  it('renders the root group at the resolved stove target', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <StoveStation temperature={70} heatLevel={0} />,
     );
     const root = renderer.scene.children[0];
-    expect(root.instance.position.x).toBe(-4.98);
-    expect(root.instance.position.y).toBe(2.13);
-    expect(root.instance.position.z).toBe(-2.23);
+    const [ex, ey, ez] = targets.stove.position;
+    expect(root.instance.position.x).toBeCloseTo(ex, 1);
+    expect(root.instance.position.y).toBeCloseTo(ey, 1);
+    expect(root.instance.position.z).toBeCloseTo(ez, 1);
+  });
+
+  it('uses custom position when provided', async () => {
+    const custom: [number, number, number] = [5, 6, 7];
+    const renderer = await ReactThreeTestRenderer.create(
+      <StoveStation position={custom} temperature={70} heatLevel={0} />,
+    );
+    const root = renderer.scene.children[0];
+    expect(root.instance.position.x).toBe(5);
+    expect(root.instance.position.y).toBe(6);
+    expect(root.instance.position.z).toBe(7);
   });
 
   it('renders stove body, top, burner, pan, sausage, and thermometer meshes', async () => {

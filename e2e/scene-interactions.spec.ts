@@ -1,6 +1,6 @@
 /**
  * Scene Interactions E2E — Station Placement, Always-Render Verification,
- * Camera Positioning, Challenge Advancement, and Interactive State.
+ * Player Proximity Triggers, Challenge Advancement, and Interactive State.
  *
  * Uses GameGovernor (window.__gov) + SceneIntrospector for programmatic
  * game control AND Three.js scene graph queries.
@@ -10,21 +10,6 @@
  */
 
 import {expect, type Page, test} from '@playwright/test';
-
-// ---------------------------------------------------------------------------
-// Expected positions (from GameWorld.tsx STATION_CAMERAS)
-// ---------------------------------------------------------------------------
-
-/** Camera positions from STATION_CAMERAS in GameWorld.tsx */
-const CAMERA_POSITIONS = [
-  {name: 'fridge', position: [-2.5, 1.6, -2.5]},
-  {name: 'grinder', position: [-2, 1.6, -0.5]},
-  {name: 'stuffer', position: [0, 1.6, 0]},
-  {name: 'stove', position: [-2.5, 1.6, -2.0]},
-  {name: 'tasting', position: [-1, 1.6, 0]},
-] as const;
-
-const MENU_CAMERA_POSITION = [0, 1.6, 2];
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -55,8 +40,12 @@ async function waitForChallenge(page: Page, index: number, timeoutMs = 15_000) {
   await page.waitForFunction(
     idx => {
       const gov = (window as any).__gov;
+      const state = gov?.getState();
       return (
-        gov && gov.getState().currentChallenge === idx && gov.getState().gameStatus === 'playing'
+        state &&
+        state.currentChallenge === idx &&
+        state.gameStatus === 'playing' &&
+        state.challengeTriggered === true
       );
     },
     index,
@@ -87,41 +76,13 @@ async function startAndWaitForScene(page: Page) {
   await waitForCanvas(page);
   await waitForSceneReady(page);
   await waitForIntrospector(page);
-}
-
-/** Wait for camera to settle near a target position (animation complete) */
-async function waitForCameraAt(
-  page: Page,
-  expected: readonly number[],
-  tolerance = 0.5,
-  timeoutMs = 10_000,
-) {
-  await page.waitForFunction(
-    ({pos, tol}) => {
-      const gov = (window as any).__gov;
-      if (!gov?.getCamera) return false;
-      const cam = gov.getCamera();
-      return (
-        Math.abs(cam.position[0] - pos[0]) < tol &&
-        Math.abs(cam.position[1] - pos[1]) < tol &&
-        Math.abs(cam.position[2] - pos[2]) < tol
-      );
-    },
-    {pos: [...expected], tol: tolerance},
-    {timeout: timeoutMs},
-  );
+  // Auto-trigger the first challenge (simulates player walking to fridge station)
+  await page.evaluate(() => (window as any).__gov.triggerCurrentChallenge());
 }
 
 /** Brief pause for animations/transitions */
 async function settle(ms = 500) {
   return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-function assertNear(actual: number, expected: number, tolerance: number, label: string) {
-  expect(
-    Math.abs(actual - expected),
-    `${label}: expected ~${expected}, got ${actual.toFixed(2)}`,
-  ).toBeLessThan(tolerance);
 }
 
 // =========================================================================
@@ -226,87 +187,72 @@ test.describe('Station Placement', () => {
 });
 
 // =========================================================================
-// 3. CAMERA POSITIONING — Camera moves to correct station per challenge
+// 3. PLAYER PROXIMITY & CHALLENGE TRIGGERING
 // =========================================================================
 
-test.describe('Camera Positioning', () => {
+test.describe('Player Proximity & Challenge Triggering', () => {
   test.beforeEach(async ({page}) => {
     await page.goto('/');
     await waitForGovernor(page);
     await startAndWaitForScene(page);
   });
 
-  test('camera starts near fridge position at challenge 0', async ({page}) => {
-    await waitForChallenge(page, 0);
-    // Wait for camera walk animation to complete (transition speed = 0.4/frame)
-    await waitForCameraAt(page, CAMERA_POSITIONS[0].position, 0.5, 15_000);
-
-    const cam = await page.evaluate(() => (window as any).__gov.getCamera());
-    assertNear(cam.position[0], CAMERA_POSITIONS[0].position[0], 0.5, 'cam.x');
-    assertNear(cam.position[1], CAMERA_POSITIONS[0].position[1], 0.6, 'cam.y');
-    assertNear(cam.position[2], CAMERA_POSITIONS[0].position[2], 0.5, 'cam.z');
+  test('challengeTriggered is true after startAndWaitForScene', async ({page}) => {
+    const state = await getState(page);
+    expect(state.challengeTriggered).toBe(true);
+    expect(state.currentChallenge).toBe(0);
+    expect(state.gameStatus).toBe('playing');
   });
 
-  test('camera moves to grinder position at challenge 1', async ({page}) => {
-    await page.evaluate(() => (window as any).__gov.completeCurrentChallenge(75));
-    await waitForChallenge(page, 1);
-    await waitForCameraAt(page, CAMERA_POSITIONS[1].position, 0.5, 15_000);
-
-    const cam = await page.evaluate(() => (window as any).__gov.getCamera());
-    assertNear(cam.position[0], CAMERA_POSITIONS[1].position[0], 0.5, 'cam.x');
-    assertNear(cam.position[1], CAMERA_POSITIONS[1].position[1], 0.6, 'cam.y');
-    assertNear(cam.position[2], CAMERA_POSITIONS[1].position[2], 0.5, 'cam.z');
-  });
-
-  test('camera moves to stuffer position at challenge 2', async ({page}) => {
+  test('challengeTriggered is set after skipToChallenge', async ({page}) => {
     await page.evaluate(() => (window as any).__gov.skipToChallenge(2));
     await waitForChallenge(page, 2);
-    await waitForCameraAt(page, CAMERA_POSITIONS[2].position, 0.5, 15_000);
 
-    const cam = await page.evaluate(() => (window as any).__gov.getCamera());
-    assertNear(cam.position[0], CAMERA_POSITIONS[2].position[0], 0.5, 'cam.x');
-    assertNear(cam.position[1], CAMERA_POSITIONS[2].position[1], 0.6, 'cam.y');
-    assertNear(cam.position[2], CAMERA_POSITIONS[2].position[2], 0.5, 'cam.z');
+    const state = await getState(page);
+    expect(state.challengeTriggered).toBe(true);
+    expect(state.currentChallenge).toBe(2);
   });
 
-  test('camera moves to stove position at challenge 3', async ({page}) => {
-    await page.evaluate(() => (window as any).__gov.skipToChallenge(3));
-    await waitForChallenge(page, 3);
-    await waitForCameraAt(page, CAMERA_POSITIONS[3].position, 0.5, 15_000);
+  test('challengeTriggered resets after completeCurrentChallenge and re-triggers', async ({
+    page,
+  }) => {
+    await page.evaluate(() => (window as any).__gov.completeCurrentChallenge(80));
+    await waitForChallenge(page, 1);
 
-    const cam = await page.evaluate(() => (window as any).__gov.getCamera());
-    assertNear(cam.position[0], CAMERA_POSITIONS[3].position[0], 0.5, 'cam.x');
-    assertNear(cam.position[1], CAMERA_POSITIONS[3].position[1], 0.6, 'cam.y');
-    assertNear(cam.position[2], CAMERA_POSITIONS[3].position[2], 0.5, 'cam.z');
+    const state = await getState(page);
+    expect(state.challengeTriggered).toBe(true);
+    expect(state.currentChallenge).toBe(1);
   });
 
-  test('camera moves to tasting position at challenge 4', async ({page}) => {
-    await page.evaluate(() => (window as any).__gov.skipToChallenge(4));
-    await waitForChallenge(page, 4);
-    await waitForCameraAt(page, CAMERA_POSITIONS[4].position, 0.5, 15_000);
-
-    const cam = await page.evaluate(() => (window as any).__gov.getCamera());
-    assertNear(cam.position[0], CAMERA_POSITIONS[4].position[0], 0.5, 'cam.x');
-    assertNear(cam.position[1], CAMERA_POSITIONS[4].position[1], 0.6, 'cam.y');
-    assertNear(cam.position[2], CAMERA_POSITIONS[4].position[2], 0.5, 'cam.z');
+  test('movePlayerTo updates playerPosition in state', async ({page}) => {
+    await page.evaluate(() => (window as any).__gov.movePlayerTo(3, 1.6, -2));
+    const state = await getState(page);
+    expect(state.playerPosition).toEqual([3, 1.6, -2]);
   });
 
-  test('camera returns to menu position when game ends', async ({page}) => {
+  test('playerPosition resets on new game', async ({page}) => {
+    await page.evaluate(() => (window as any).__gov.movePlayerTo(5, 1.6, 5));
+    let state = await getState(page);
+    expect(state.playerPosition).toEqual([5, 1.6, 5]);
+
     await page.evaluate(() => (window as any).__gov.returnToMenu());
     await waitForPhase(page, 'menu');
-    // Start a new game and return to menu to trigger camera walk
-    await settle(3000);
 
-    const cam = await page.evaluate(() => (window as any).__gov.getCamera());
-    // Menu camera should be near [0, 1.6, 2]
-    assertNear(cam.position[0], MENU_CAMERA_POSITION[0], 0.5, 'cam.x');
-    assertNear(cam.position[1], MENU_CAMERA_POSITION[1], 0.6, 'cam.y');
-    assertNear(cam.position[2], MENU_CAMERA_POSITION[2], 0.5, 'cam.z');
+    await page.evaluate(() => (window as any).__gov.startGameDirect());
+    state = await getState(page);
+    expect(state.playerPosition).toEqual([0, 1.6, 0]);
+    expect(state.challengeTriggered).toBe(true);
   });
 
   test('camera FOV is 70 degrees', async ({page}) => {
     const cam = await page.evaluate(() => (window as any).__gov.getCamera());
     expect(cam.fov).toBe(70);
+  });
+
+  test('camera starts at origin eye height', async ({page}) => {
+    // FPS camera starts at [0, 1.6, 0] — the spawn point
+    const cam = await page.evaluate(() => (window as any).__gov.getCamera());
+    expect(cam.position[1]).toBeCloseTo(1.6, 0);
   });
 });
 
@@ -321,7 +267,7 @@ test.describe('Challenge Advancement — State Integrity', () => {
     await startAndWaitForScene(page);
   });
 
-  test('advancing 0→1 resets ephemeral state and moves camera', async ({page}) => {
+  test('advancing 0→1 resets ephemeral state and triggers next challenge', async ({page}) => {
     // Set some state at challenge 0
     await page.evaluate(() => {
       (window as any).__gov.setChallengeProgress(60);
@@ -338,15 +284,13 @@ test.describe('Challenge Advancement — State Integrity', () => {
 
     state = await getState(page);
     expect(state.currentChallenge).toBe(1);
+    expect(state.challengeTriggered).toBe(true);
     expect(state.challengeProgress).toBe(0);
     expect(state.strikes).toBe(0);
     expect(state.challengeScores).toEqual([80]);
-
-    // Camera should move toward grinder
-    await waitForCameraAt(page, CAMERA_POSITIONS[1].position, 0.5, 15_000);
   });
 
-  test('advancing 1→2 resets grinder state and moves camera', async ({page}) => {
+  test('advancing 1→2 resets grinder state and triggers next challenge', async ({page}) => {
     await page.evaluate(() => (window as any).__gov.skipToChallenge(1));
     await waitForChallenge(page, 1);
 
@@ -359,13 +303,12 @@ test.describe('Challenge Advancement — State Integrity', () => {
 
     state = await getState(page);
     expect(state.currentChallenge).toBe(2);
+    expect(state.challengeTriggered).toBe(true);
     expect(state.challengeProgress).toBe(0);
     expect(state.challengePressure).toBe(0);
-
-    await waitForCameraAt(page, CAMERA_POSITIONS[2].position, 0.5, 15_000);
   });
 
-  test('advancing 2→3 resets stuffer state and moves camera', async ({page}) => {
+  test('advancing 2→3 resets stuffer state and triggers next challenge', async ({page}) => {
     await page.evaluate(() => (window as any).__gov.skipToChallenge(2));
     await waitForChallenge(page, 2);
 
@@ -379,13 +322,12 @@ test.describe('Challenge Advancement — State Integrity', () => {
 
     const state = await getState(page);
     expect(state.currentChallenge).toBe(3);
+    expect(state.challengeTriggered).toBe(true);
     expect(state.challengeProgress).toBe(0);
     expect(state.challengePressure).toBe(0);
-
-    await waitForCameraAt(page, CAMERA_POSITIONS[3].position, 0.5, 15_000);
   });
 
-  test('advancing 3→4 resets stove state and moves camera', async ({page}) => {
+  test('advancing 3→4 resets stove state and triggers next challenge', async ({page}) => {
     await page.evaluate(() => (window as any).__gov.skipToChallenge(3));
     await waitForChallenge(page, 3);
 
@@ -399,10 +341,9 @@ test.describe('Challenge Advancement — State Integrity', () => {
 
     const state = await getState(page);
     expect(state.currentChallenge).toBe(4);
+    expect(state.challengeTriggered).toBe(true);
     expect(state.challengeTemperature).toBe(70); // Reset to room temp
     expect(state.challengeHeatLevel).toBe(0);
-
-    await waitForCameraAt(page, CAMERA_POSITIONS[4].position, 0.5, 15_000);
   });
 
   test('completing challenge 4 triggers victory', async ({page}) => {
@@ -633,10 +574,8 @@ test.describe('Full Sequential Playthrough with Interactions', () => {
 
     let state = await getState(page);
     expect(state.currentChallenge).toBe(0);
+    expect(state.challengeTriggered).toBe(true);
     expect(state.challengeScores).toEqual([]);
-
-    // Verify camera at fridge
-    await waitForCameraAt(page, CAMERA_POSITIONS[0].position, 0.5, 15_000);
 
     // Complete
     await page.evaluate(() => (window as any).__gov.completeCurrentChallenge(85));
@@ -645,6 +584,7 @@ test.describe('Full Sequential Playthrough with Interactions', () => {
     // --- Challenge 1: Grinding ---
     state = await getState(page);
     expect(state.currentChallenge).toBe(1);
+    expect(state.challengeTriggered).toBe(true);
     expect(state.challengeScores).toEqual([85]);
     expect(state.challengeProgress).toBe(0);
     expect(state.strikes).toBe(0);
@@ -655,9 +595,6 @@ test.describe('Full Sequential Playthrough with Interactions', () => {
     }
     state = await getState(page);
     expect(state.challengeProgress).toBe(100);
-
-    // Verify camera at grinder
-    await waitForCameraAt(page, CAMERA_POSITIONS[1].position, 0.5, 15_000);
 
     // Simulate a strike during grinding (doesn't kill — still 1 of 3)
     await page.evaluate(() => (window as any).__gov.addStrike());
@@ -672,6 +609,7 @@ test.describe('Full Sequential Playthrough with Interactions', () => {
     // --- Challenge 2: Stuffing ---
     state = await getState(page);
     expect(state.currentChallenge).toBe(2);
+    expect(state.challengeTriggered).toBe(true);
     expect(state.challengeScores).toEqual([85, 70]);
     expect(state.strikes).toBe(0); // Reset
     expect(state.challengeProgress).toBe(0);
@@ -686,9 +624,6 @@ test.describe('Full Sequential Playthrough with Interactions', () => {
     expect(state.challengeProgress).toBe(50);
     expect(state.challengePressure).toBe(45);
 
-    // Verify camera at stuffer
-    await waitForCameraAt(page, CAMERA_POSITIONS[2].position, 0.5, 15_000);
-
     // Complete
     await page.evaluate(() => (window as any).__gov.completeCurrentChallenge(90));
     await waitForChallenge(page, 3);
@@ -696,6 +631,7 @@ test.describe('Full Sequential Playthrough with Interactions', () => {
     // --- Challenge 3: Cooking ---
     state = await getState(page);
     expect(state.currentChallenge).toBe(3);
+    expect(state.challengeTriggered).toBe(true);
     expect(state.challengeScores).toEqual([85, 70, 90]);
     expect(state.challengeTemperature).toBe(70); // Room temp
     expect(state.challengeHeatLevel).toBe(0);
@@ -708,9 +644,6 @@ test.describe('Full Sequential Playthrough with Interactions', () => {
     state = await getState(page);
     expect(state.challengeTemperature).toBe(160);
 
-    // Verify camera at stove
-    await waitForCameraAt(page, CAMERA_POSITIONS[3].position, 0.5, 15_000);
-
     // Complete
     await page.evaluate(() => (window as any).__gov.completeCurrentChallenge(80));
     await waitForChallenge(page, 4);
@@ -718,10 +651,8 @@ test.describe('Full Sequential Playthrough with Interactions', () => {
     // --- Challenge 4: Tasting ---
     state = await getState(page);
     expect(state.currentChallenge).toBe(4);
+    expect(state.challengeTriggered).toBe(true);
     expect(state.challengeScores).toEqual([85, 70, 90, 80]);
-
-    // Verify camera at tasting/CRT
-    await waitForCameraAt(page, CAMERA_POSITIONS[4].position, 0.5, 15_000);
 
     // Complete → Victory
     await page.evaluate(() => (window as any).__gov.completeCurrentChallenge(75));
@@ -922,28 +853,31 @@ test.describe('Multi-Game Scene Integrity', () => {
     expect(ratio).toBeLessThan(1.2);
   });
 
-  test('camera works correctly after game restart', async ({page}) => {
+  test('player state resets correctly after game restart', async ({page}) => {
     await page.goto('/');
     await waitForGovernor(page);
     await startAndWaitForScene(page);
 
-    // Game 1: go to challenge 3
+    // Game 1: go to challenge 3, move player
     await page.evaluate(() => (window as any).__gov.skipToChallenge(3));
     await waitForChallenge(page, 3);
-    await waitForCameraAt(page, CAMERA_POSITIONS[3].position, 0.5, 15_000);
+    await page.evaluate(() => (window as any).__gov.movePlayerTo(-5, 1.6, -2));
+
+    let state = await getState(page);
+    expect(state.currentChallenge).toBe(3);
+    expect(state.playerPosition).toEqual([-5, 1.6, -2]);
 
     // Return to menu
     await page.evaluate(() => (window as any).__gov.returnToMenu());
     await waitForPhase(page, 'menu');
 
-    // Game 2: start fresh
+    // Game 2: start fresh — player position and challenge should reset
     await page.evaluate(() => (window as any).__gov.startGameDirect());
     await waitForChallenge(page, 0);
 
-    // Camera should be at fridge position (challenge 0)
-    await waitForCameraAt(page, CAMERA_POSITIONS[0].position, 0.8, 15_000);
-
-    const cam = await page.evaluate(() => (window as any).__gov.getCamera());
-    assertNear(cam.position[0], CAMERA_POSITIONS[0].position[0], 0.8, 'cam.x after restart');
+    state = await getState(page);
+    expect(state.currentChallenge).toBe(0);
+    expect(state.challengeTriggered).toBe(true);
+    expect(state.playerPosition).toEqual([0, 1.6, 0]);
   });
 });

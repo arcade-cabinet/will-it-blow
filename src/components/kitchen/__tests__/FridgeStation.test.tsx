@@ -1,5 +1,8 @@
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import {DEFAULT_ROOM, resolveTargets} from '../../../engine/FurnitureLayout';
 import {FridgeStation} from '../FridgeStation';
+
+const targets = resolveTargets(DEFAULT_ROOM);
 
 const mockIngredients = [
   {
@@ -68,7 +71,7 @@ describe('FridgeStation', () => {
     expect(root.children.length).toBeGreaterThanOrEqual(8);
   });
 
-  it('positions the fridge group at GLB fridge center', async () => {
+  it('positions the fridge group at the resolved fridge target', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <FridgeStation
         ingredients={mockIngredients}
@@ -80,9 +83,29 @@ describe('FridgeStation', () => {
       />,
     );
     const root = renderer.scene.children[0];
-    expect(root.instance.position.x).toBeCloseTo(-5.16, 1);
-    expect(root.instance.position.y).toBeCloseTo(1.79, 1);
-    expect(root.instance.position.z).toBeCloseTo(-5.02, 1);
+    const [ex, ey, ez] = targets.fridge.position;
+    expect(root.instance.position.x).toBeCloseTo(ex, 1);
+    expect(root.instance.position.y).toBeCloseTo(ey, 1);
+    expect(root.instance.position.z).toBeCloseTo(ez, 1);
+  });
+
+  it('uses custom position when provided', async () => {
+    const custom: [number, number, number] = [-1, -2, -3];
+    const renderer = await ReactThreeTestRenderer.create(
+      <FridgeStation
+        position={custom}
+        ingredients={mockIngredients}
+        selectedIds={new Set()}
+        hintActive={false}
+        matchingIndices={new Set()}
+        onSelect={jest.fn()}
+        onHover={jest.fn()}
+      />,
+    );
+    const root = renderer.scene.children[0];
+    expect(root.instance.position.x).toBe(-1);
+    expect(root.instance.position.y).toBe(-2);
+    expect(root.instance.position.z).toBe(-3);
   });
 
   it('includes a point light for interior fridge glow', async () => {

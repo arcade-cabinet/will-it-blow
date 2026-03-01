@@ -1,5 +1,5 @@
 import {lazy, Suspense, useCallback, useEffect, useRef, useState} from 'react';
-import {SafeAreaView, StyleSheet, View} from 'react-native';
+import {Platform, SafeAreaView, StyleSheet, View} from 'react-native';
 import {ChallengeHeader} from './src/components/ui/ChallengeHeader';
 import {ChallengeTransition} from './src/components/ui/ChallengeTransition';
 import {LoadingScreen} from './src/components/ui/LoadingScreen';
@@ -54,23 +54,33 @@ installGovernor();
 const ChunkFallback = () => <View style={styles.chunkFallback} />;
 
 const GameUI = () => {
-  const {gameStatus, currentChallenge, completeChallenge, setMrSausageReaction} = useGameStore();
+  const {
+    gameStatus,
+    currentChallenge,
+    challengeTriggered,
+    completeChallenge,
+    setMrSausageReaction,
+  } = useGameStore();
 
   // Transition state: show title card between challenges
   const [transitioning, setTransitioning] = useState(false);
   const prevChallengeRef = useRef(currentChallenge);
 
   useEffect(() => {
-    // Show transition card when advancing to a new challenge (not on first mount)
+    // Show transition card when arriving at a new station (challenge > 0)
+    // Triggers when challengeTriggered becomes true after advancing to a new challenge
     if (
       gameStatus === 'playing' &&
-      currentChallenge > prevChallengeRef.current &&
-      currentChallenge > 0
+      challengeTriggered &&
+      currentChallenge > 0 &&
+      currentChallenge > prevChallengeRef.current
     ) {
       setTransitioning(true);
     }
-    prevChallengeRef.current = currentChallenge;
-  }, [currentChallenge, gameStatus]);
+    if (challengeTriggered) {
+      prevChallengeRef.current = currentChallenge;
+    }
+  }, [currentChallenge, gameStatus, challengeTriggered]);
 
   // Reset transition state when returning to menu or starting new game
   useEffect(() => {
@@ -91,7 +101,7 @@ const GameUI = () => {
     [setMrSausageReaction],
   );
 
-  const showChallenge = gameStatus === 'playing' && !transitioning;
+  const showChallenge = gameStatus === 'playing' && !transitioning && challengeTriggered;
   const isIngredientChallenge = showChallenge && currentChallenge === 0;
   const isGrindingChallenge = showChallenge && currentChallenge === 1;
   const isStuffingChallenge = showChallenge && currentChallenge === 2;
@@ -101,14 +111,14 @@ const GameUI = () => {
   return (
     <View style={styles.overlay} pointerEvents="box-none" testID="game-overlay">
       {/* Challenge transition title card */}
-      {gameStatus === 'playing' && transitioning && (
+      {gameStatus === 'playing' && challengeTriggered && transitioning && (
         <ChallengeTransition
           challengeIndex={currentChallenge}
           onComplete={handleTransitionComplete}
         />
       )}
 
-      {gameStatus === 'playing' && !transitioning && (
+      {showChallenge && (
         <Suspense fallback={<ChunkFallback />}>
           <ChallengeHeader />
           <StrikeCounter />
@@ -140,8 +150,17 @@ const GameUI = () => {
   );
 };
 
+const MobileJoystick = lazy(() =>
+  import('./src/components/controls/MobileJoystick').then(m => ({default: m.MobileJoystick})),
+);
+
 export default function App() {
   const appPhase = useGameStore(s => s.appPhase);
+
+  // Shared refs for mobile FPS controls (joystick writes, FPSController reads)
+  const joystickRef = useRef({x: 0, y: 0});
+  const lookDeltaRef = useRef({dx: 0, dy: 0});
+  const isMobile = Platform.OS !== 'web';
 
   // Start/stop ambient horror drone based on game phase
   useEffect(() => {
@@ -171,8 +190,20 @@ export default function App() {
       {appPhase === 'loading' && <LoadingScreen />}
       {appPhase === 'playing' && (
         <Suspense fallback={<ChunkFallback />}>
-          <GameWorld />
+          <GameWorld
+            joystickRef={isMobile ? joystickRef : undefined}
+            lookDeltaRef={isMobile ? lookDeltaRef : undefined}
+          />
           <GameUI />
+          {isMobile && (
+            <MobileJoystick
+              joystickRef={joystickRef}
+              onLookDrag={(dx, dy) => {
+                lookDeltaRef.current.dx += dx;
+                lookDeltaRef.current.dy += dy;
+              }}
+            />
+          )}
         </Suspense>
       )}
     </SafeAreaView>

@@ -1,5 +1,8 @@
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import {DEFAULT_ROOM, resolveTargets} from '../../../engine/FurnitureLayout';
 import {GrinderStation} from '../GrinderStation';
+
+const targets = resolveTargets(DEFAULT_ROOM);
 
 describe('GrinderStation', () => {
   it('renders without crashing', async () => {
@@ -9,14 +12,26 @@ describe('GrinderStation', () => {
     expect(renderer.scene.children.length).toBeGreaterThan(0);
   });
 
-  it('renders the root group at the grinder position', async () => {
+  it('renders the root group at the resolved grinder target', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <GrinderStation grindProgress={0} crankAngle={0} isSplattering={false} />,
     );
     const root = renderer.scene.children[0];
-    expect(root.instance.position.x).toBe(-4.75);
-    expect(root.instance.position.y).toBe(2.06);
-    expect(root.instance.position.z).toBe(-0.64);
+    const [ex, ey, ez] = targets.grinder.position;
+    expect(root.instance.position.x).toBeCloseTo(ex, 1);
+    expect(root.instance.position.y).toBeCloseTo(ey, 1);
+    expect(root.instance.position.z).toBeCloseTo(ez, 1);
+  });
+
+  it('uses custom position when provided', async () => {
+    const custom: [number, number, number] = [1, 2, 3];
+    const renderer = await ReactThreeTestRenderer.create(
+      <GrinderStation position={custom} grindProgress={0} crankAngle={0} isSplattering={false} />,
+    );
+    const root = renderer.scene.children[0];
+    expect(root.instance.position.x).toBe(1);
+    expect(root.instance.position.y).toBe(2);
+    expect(root.instance.position.z).toBe(3);
   });
 
   it('renders counter, body, hopper, spout, crank arm, and knob meshes', async () => {

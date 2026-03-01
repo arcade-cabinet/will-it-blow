@@ -1,9 +1,10 @@
-import {useAnimations, useGLTF, useTexture} from '@react-three/drei';
+import {useTexture} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
 import type React from 'react';
-import {useEffect, useMemo, useRef} from 'react';
+import {useMemo, useRef} from 'react';
 import * as THREE from 'three/webgpu';
 import {getAssetUrl} from '../../engine/assetUrl';
+import {FurnitureLoader} from './FurnitureLoader';
 
 // --- Room dimensions (slightly larger than 12x12 kitchen GLB to avoid z-fighting) ---
 const ROOM_W = 13; // x-axis
@@ -235,90 +236,6 @@ function PbrGrimeDecal({size, position, rotY, textures}: PbrGrimeDecalProps) {
 }
 
 // -------------------------------------------------------
-// KitchenModel — loads the kitchen.glb and applies material fixes
-// -------------------------------------------------------
-
-function KitchenModel({fridgeDoorOpen}: {fridgeDoorOpen: boolean}) {
-  const modelUrl = `${getAssetRootUrl('models')}kitchen.glb`;
-  const {scene, animations} = useGLTF(modelUrl);
-  const sceneRef = useRef<THREE.Group>(null);
-
-  // Set up animation mixer for the fridge door
-  const {actions} = useAnimations(animations, sceneRef);
-
-  useEffect(() => {
-    // Per-material overrides to tame direct light on bright surfaces.
-    const brightMaterialOverrides: Record<
-      string,
-      {
-        albedo: [number, number, number];
-        envMapIntensity: number;
-        killEmissive?: boolean;
-      }
-    > = {
-      blancblanc: {albedo: [0.28, 0.27, 0.24], envMapIntensity: 0.05},
-      blanccarreaux: {albedo: [0.3, 0.28, 0.24], envMapIntensity: 0.05},
-      blancemission: {
-        albedo: [0.25, 0.24, 0.2],
-        envMapIntensity: 0.05,
-        killEmissive: true,
-      },
-    };
-
-    scene.traverse((child: any) => {
-      if (child.isMesh) {
-        // Enable backface culling on all loaded meshes
-        child.material.side = THREE.FrontSide;
-
-        if (child.material.isMeshStandardMaterial) {
-          child.material.envMapIntensity = 0.05;
-
-          const override = brightMaterialOverrides[child.material.name];
-          if (override) {
-            child.material.color.setRGB(...override.albedo);
-            child.material.envMapIntensity = override.envMapIntensity;
-            if (override.killEmissive) {
-              child.material.emissive.setRGB(0, 0, 0);
-              child.material.emissiveIntensity = 0;
-            }
-          }
-        }
-      }
-    });
-
-    // Signal to e2e tests that the scene is fully loaded
-    if (typeof window !== 'undefined' && (window as any).__gov) {
-      (window as any).__gov.sceneReady = true;
-    }
-  }, [scene]);
-
-  // Play/stop fridge door animation based on prop
-  useEffect(() => {
-    // Find the door animation clip (name may vary from export)
-    const doorAction = Object.values(actions)[0];
-    if (!doorAction) return;
-
-    doorAction.clampWhenFinished = true;
-    doorAction.setLoop(THREE.LoopOnce, 1);
-
-    if (fridgeDoorOpen) {
-      doorAction.timeScale = 1;
-      doorAction.reset().play();
-    } else {
-      // Reverse to close
-      doorAction.timeScale = -1;
-      doorAction.paused = false;
-    }
-  }, [fridgeDoorOpen, actions]);
-
-  return (
-    <group ref={sceneRef}>
-      <primitive object={scene} />
-    </group>
-  );
-}
-
-// -------------------------------------------------------
 // FluorescentTube — single tube fixture mesh + point light
 // -------------------------------------------------------
 
@@ -356,10 +273,16 @@ function FluorescentTube({position, lightRef}: FluorescentTubeProps) {
 }
 
 // -------------------------------------------------------
-// KitchenEnvironment — room enclosure, GLB, lighting, grime
+// KitchenEnvironment — room enclosure, furniture, lighting, grime
 // -------------------------------------------------------
 
-export const KitchenEnvironment = ({fridgeDoorOpen = false}: {fridgeDoorOpen?: boolean}) => {
+export const KitchenEnvironment = ({
+  fridgeDoorOpen = false,
+  grinderCranking = false,
+}: {
+  fridgeDoorOpen?: boolean;
+  grinderCranking?: boolean;
+}) => {
   // Load PBR textures for room enclosure
   const textures = useRoomTextures();
 
@@ -433,9 +356,9 @@ export const KitchenEnvironment = ({fridgeDoorOpen = false}: {fridgeDoorOpen?: b
       ))}
 
       {/* =======================================================
-          KITCHEN GLB MODEL
+          FURNITURE — GLB segments positioned via FurnitureLayout targets
           ======================================================= */}
-      <KitchenModel fridgeDoorOpen={fridgeDoorOpen} />
+      <FurnitureLoader fridgeDoorOpen={fridgeDoorOpen} grinderCranking={grinderCranking} />
 
       {/* =======================================================
           LIGHTING — harsh fluorescent overhead

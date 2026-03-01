@@ -3,6 +3,7 @@ import {useRef} from 'react';
 import * as THREE from 'three/webgpu';
 
 interface StufferStationProps {
+  position?: [number, number, number];
   fillLevel: number; // 0-100
   pressureLevel: number; // 0-100
   isPressing: boolean; // Whether player is pressing
@@ -10,7 +11,7 @@ interface StufferStationProps {
 }
 
 // Stuffer sits on the right counter/island (GLB Cube), surface at y=2.68
-const STUFFER_POS: [number, number, number] = [2.28, 2.68, 2.25];
+const DEFAULT_STUFFER_POS: [number, number, number] = [2.28, 2.68, 2.25];
 const STUFFER_BASE_Y = 0;
 
 // Geometry constants
@@ -52,6 +53,7 @@ export function pressureToColor(pressure: number): [number, number, number] {
 }
 
 export const StufferStation = ({
+  position = DEFAULT_STUFFER_POS,
   fillLevel,
   pressureLevel,
   isPressing,
@@ -249,7 +251,7 @@ export const StufferStation = ({
   });
 
   return (
-    <group position={STUFFER_POS}>
+    <group position={position}>
       {/* Counter surface provided by GLB Cube (right island) — no procedural counter needed */}
 
       {/* --- Stuffer Body (vertical cylinder - main tube) --- */}

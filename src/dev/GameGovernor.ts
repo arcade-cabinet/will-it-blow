@@ -78,6 +78,12 @@ export interface GameGov {
   setMusicMuted: (v: boolean) => void;
   setSfxMuted: (v: boolean) => void;
 
+  /** Teleport the player to an arbitrary world position */
+  movePlayerTo: (x: number, y: number, z: number) => void;
+
+  /** Manually trigger the current challenge (simulates player arriving at station) */
+  triggerCurrentChallenge: () => void;
+
   // --- Scene introspection (injected by SceneIntrospector in GameWorld) ---
 
   /** Query camera position and fov */
@@ -119,6 +125,7 @@ function createGovernor(): GameGov {
         appPhase: s.appPhase,
         gameStatus: s.gameStatus,
         currentChallenge: s.currentChallenge,
+        challengeTriggered: s.challengeTriggered,
         challengeScores: s.challengeScores,
         strikes: s.strikes,
         hintsRemaining: s.hintsRemaining,
@@ -129,6 +136,7 @@ function createGovernor(): GameGov {
         challengeTemperature: s.challengeTemperature,
         challengeHeatLevel: s.challengeHeatLevel,
         mrSausageReaction: s.mrSausageReaction,
+        playerPosition: s.playerPosition,
         totalGamesPlayed: s.totalGamesPlayed,
         variantSeed: s.variantSeed,
         musicVolume: s.musicVolume,
@@ -144,10 +152,15 @@ function createGovernor(): GameGov {
 
     startGameDirect() {
       store.getState().startNewGame();
+      store.getState().triggerChallenge();
     },
 
     completeCurrentChallenge(score: number) {
       store.getState().completeChallenge(score);
+      // Auto-trigger the next challenge (simulates player walking to next station)
+      if (store.getState().gameStatus === 'playing') {
+        store.getState().triggerChallenge();
+      }
     },
 
     skipToChallenge(index: number) {
@@ -158,6 +171,7 @@ function createGovernor(): GameGov {
       while (store.getState().currentChallenge < index) {
         store.getState().completeChallenge(75);
       }
+      store.getState().triggerChallenge();
     },
 
     skipToChallengeWithScores(index: number, scores: number[]) {
@@ -168,6 +182,7 @@ function createGovernor(): GameGov {
       for (let i = 0; i < index; i++) {
         store.getState().completeChallenge(scores[i] ?? 75);
       }
+      store.getState().triggerChallenge();
     },
 
     setPhase(phase) {
@@ -193,7 +208,8 @@ function createGovernor(): GameGov {
       for (let i = 0; i < challengeIndex; i++) {
         store.getState().completeChallenge(precedingScores[i] ?? 75);
       }
-      // Trigger 3 strikes at the target challenge
+      // Trigger the target challenge, then add 3 strikes for defeat
+      store.getState().triggerChallenge();
       store.getState().addStrike();
       store.getState().addStrike();
       store.getState().addStrike();
@@ -262,6 +278,14 @@ function createGovernor(): GameGov {
         pendingFridgeClick: s.pendingFridgeClick,
         fridgeHoveredIndex: s.fridgeHoveredIndex,
       };
+    },
+
+    movePlayerTo(x: number, y: number, z: number) {
+      store.getState().setPlayerPosition([x, y, z]);
+    },
+
+    triggerCurrentChallenge() {
+      store.getState().triggerChallenge();
     },
 
     setMusicVolume(v) {

@@ -33,11 +33,16 @@ describe('GameWorld', () => {
     expect(source).toContain('@react-three/fiber');
   });
 
-  it('contains CameraWalker inner component', () => {
+  it('uses FPSController for camera movement', () => {
     const fs = require('node:fs');
     const path = require('node:path');
     const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
-    expect(source).toContain('CameraWalker');
+    expect(source).toContain('FPSController');
+    // Old waypoint system should be removed
+    expect(source).not.toContain('CameraWalker');
+    expect(source).not.toContain('STATION_CAMERAS');
+    expect(source).not.toContain('MENU_CAMERA');
+    expect(source).not.toContain('easeInOutQuad');
   });
 
   it('contains SceneContent inner component', () => {
@@ -47,17 +52,40 @@ describe('GameWorld', () => {
     expect(source).toContain('SceneContent');
   });
 
-  it('defines camera positions for all 5 stations', () => {
+  it('defines proximity trigger zones for all 5 stations', () => {
     const fs = require('node:fs');
     const path = require('node:path');
     const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
-    expect(source).toContain('STATION_CAMERAS');
-    expect(source).toContain('MENU_CAMERA');
+    expect(source).toContain('STATION_TRIGGERS');
+    expect(source).toContain('ProximityTrigger');
     // Should have comments for all 5 stations
     expect(source).toContain('Fridge');
     expect(source).toContain('Grinder');
     expect(source).toContain('Stuffer');
     expect(source).toContain('Stove');
-    expect(source).toContain('Tasting');
+    expect(source).toContain('CRT TV');
+  });
+
+  it('derives station triggers from FurnitureLayout targets (not hardcoded)', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
+    // Should import from FurnitureLayout
+    expect(source).toContain('FurnitureLayout');
+    expect(source).toContain('resolveTargets');
+    expect(source).toContain('STATION_TARGET_NAMES');
+    // Should NOT have raw coordinate arrays for triggers
+    expect(source).not.toMatch(/center:\s*\[\s*-?\d+\.\d+\s*,\s*-?\d+\.\d+\s*\]/);
+  });
+
+  it('passes position props to station components', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
+    // All stations should receive position from triggers
+    expect(source).toContain('position={STATION_TRIGGERS[0].position}');
+    expect(source).toContain('position={STATION_TRIGGERS[1].position}');
+    expect(source).toContain('position={STATION_TRIGGERS[2].position}');
+    expect(source).toContain('position={STATION_TRIGGERS[3].position}');
   });
 });
