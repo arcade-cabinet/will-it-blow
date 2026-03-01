@@ -1,6 +1,14 @@
-import {Canvas, useFrame} from '@react-three/fiber';
+import {Canvas, useFrame, useThree} from '@react-three/fiber';
+import type {RapierRigidBody} from '@react-three/rapier';
+import {
+  BallCollider,
+  CuboidCollider,
+  CylinderCollider,
+  Physics,
+  RigidBody,
+} from '@react-three/rapier';
 import {createXRStore, XR} from '@react-three/xr';
-import {useEffect, useRef, useState} from 'react';
+import {Suspense, useCallback, useEffect, useRef, useState} from 'react';
 import {Platform, Pressable, Text, View} from 'react-native';
 import {WebGPURenderer} from 'three/webgpu';
 import {DEFAULT_ROOM, resolveTargets, STATION_TARGET_NAMES} from '../engine/FurnitureLayout';
@@ -16,49 +24,129 @@ import {StufferStation} from './kitchen/StufferStation';
 import {SceneIntrospector} from './SceneIntrospector';
 
 // -----------------------------------------------------------------
-// Derive station triggers from the target system
+// Resolve station targets from the layout system
 // -----------------------------------------------------------------
 
 const RESOLVED_TARGETS = resolveTargets(DEFAULT_ROOM);
 
-/**
- * STATION_TRIGGERS — derived from FurnitureLayout targets.
- * Each entry provides the xz-center, proximity radius, and marker height
- * for the corresponding challenge station:
- *   0: Fridge (ingredient selection)
- *   1: Grinder (meat grinding)
- *   2: Stuffer (casing stuffing)
- *   3: Stove (cooking)
- *   4: CRT TV (tasting / Mr. Sausage verdict)
- */
-const STATION_TRIGGERS = STATION_TARGET_NAMES.map(name => {
+// Pre-compute station data from resolved targets for rendering
+const STATIONS = STATION_TARGET_NAMES.map(name => {
   const t = RESOLVED_TARGETS[name];
   return {
-    center: [t.position[0], t.position[2]] as [number, number],
-    radius: t.triggerRadius,
-    markerY: t.markerY ?? t.position[1],
     position: t.position,
+    triggerRadius: t.triggerRadius,
+    markerY: t.markerY ?? t.position[1],
   };
 });
 
 // -----------------------------------------------------------------
-// ProximityTrigger — checks player distance to current station
+// PlayerBody — kinematic rigid body that follows the camera
 // -----------------------------------------------------------------
 
-function ProximityTrigger() {
+function PlayerBody() {
+  const rigidBodyRef = useRef<RapierRigidBody>(null);
+  const {camera} = useThree();
+
+  useFrame(() => {
+    if (rigidBodyRef.current) {
+      const p = camera.position;
+      rigidBodyRef.current.setNextKinematicTranslation({x: p.x, y: p.y, z: p.z});
+    }
+  });
+
+  return (
+    <RigidBody ref={rigidBodyRef} type="kinematicPosition" colliders={false}>
+      <BallCollider args={[0.3]} />
+    </RigidBody>
+  );
+}
+
+// -----------------------------------------------------------------
+// StationSensor — sensor collider at a station target position
+// -----------------------------------------------------------------
+
+function StationSensor({
+  position,
+  radius,
+  challengeIndex,
+}: {
+  position: [number, number, number];
+  radius: number;
+  challengeIndex: number;
+}) {
+  const handleIntersection = useCallback(() => {
+    const state = useGameStore.getState();
+    if (state.gameStatus !== 'playing') return;
+    if (state.challengeTriggered) return;
+    if (state.currentChallenge !== challengeIndex) return;
+    state.triggerChallenge();
+  }, [challengeIndex]);
+
+  return (
+    <RigidBody type="fixed" position={position} colliders={false}>
+      <CylinderCollider args={[2, radius]} sensor onIntersectionEnter={handleIntersection} />
+    </RigidBody>
+  );
+}
+
+// -----------------------------------------------------------------
+// RoomColliders — static wall and floor colliders for physics objects
+// -----------------------------------------------------------------
+
+const HALF_W = DEFAULT_ROOM.w / 2;
+const HALF_D = DEFAULT_ROOM.d / 2;
+const ROOM_H = DEFAULT_ROOM.h;
+const WALL_THICKNESS = 0.1;
+
+function RoomColliders() {
+  return (
+    <>
+      {/* Floor */}
+      <RigidBody type="fixed" position={[0, 0, 0]}>
+        <CuboidCollider args={[HALF_W, WALL_THICKNESS, HALF_D]} />
+      </RigidBody>
+      {/* Ceiling */}
+      <RigidBody type="fixed" position={[0, ROOM_H, 0]}>
+        <CuboidCollider args={[HALF_W, WALL_THICKNESS, HALF_D]} />
+      </RigidBody>
+      {/* Left wall (-X) */}
+      <RigidBody type="fixed" position={[-HALF_W, ROOM_H / 2, 0]}>
+        <CuboidCollider args={[WALL_THICKNESS, ROOM_H / 2, HALF_D]} />
+      </RigidBody>
+      {/* Right wall (+X) */}
+      <RigidBody type="fixed" position={[HALF_W, ROOM_H / 2, 0]}>
+        <CuboidCollider args={[WALL_THICKNESS, ROOM_H / 2, HALF_D]} />
+      </RigidBody>
+      {/* Back wall (-Z) */}
+      <RigidBody type="fixed" position={[0, ROOM_H / 2, -HALF_D]}>
+        <CuboidCollider args={[HALF_W, ROOM_H / 2, WALL_THICKNESS]} />
+      </RigidBody>
+      {/* Front wall (+Z) */}
+      <RigidBody type="fixed" position={[0, ROOM_H / 2, HALF_D]}>
+        <CuboidCollider args={[HALF_W, ROOM_H / 2, WALL_THICKNESS]} />
+      </RigidBody>
+    </>
+  );
+}
+
+// -----------------------------------------------------------------
+// ManualProximityTrigger — fallback for native (no Rapier WASM)
+// -----------------------------------------------------------------
+
+function ManualProximityTrigger() {
   useFrame(() => {
     const state = useGameStore.getState();
     if (state.gameStatus !== 'playing' || state.challengeTriggered) return;
 
-    const trigger = STATION_TRIGGERS[state.currentChallenge];
-    if (!trigger) return;
+    const station = STATIONS[state.currentChallenge];
+    if (!station) return;
 
     const [px, , pz] = state.playerPosition;
-    const dx = px - trigger.center[0];
-    const dz = pz - trigger.center[1];
+    const dx = px - station.position[0];
+    const dz = pz - station.position[2];
     const dist = Math.sqrt(dx * dx + dz * dz);
 
-    if (dist < trigger.radius) {
+    if (dist < station.triggerRadius) {
       state.triggerChallenge();
     }
   });
@@ -145,24 +233,44 @@ const SceneContent = ({
   // Show waypoint marker for the next station when player hasn't reached it yet
   const showMarker = gameStatus === 'playing' && !challengeTriggered;
 
+  const isWeb = Platform.OS === 'web';
+
   return (
     <>
       {/* Dim ambient fill (KitchenEnvironment provides the strong fluorescent + fill lights) */}
       <ambientLight intensity={0.15} />
       <SceneIntrospector />
       <FPSController joystickRef={joystickRef} lookDeltaRef={lookDeltaRef} />
-      <ProximityTrigger />
+
+      {/* Rapier physics sensors (web) or manual proximity check (native fallback) */}
+      {isWeb ? (
+        <>
+          <PlayerBody />
+          <RoomColliders />
+          {STATIONS.map((station, i) => (
+            <StationSensor
+              key={STATION_TARGET_NAMES[i]}
+              position={station.position}
+              radius={station.triggerRadius}
+              challengeIndex={i}
+            />
+          ))}
+        </>
+      ) : (
+        <ManualProximityTrigger />
+      )}
+
       <KitchenEnvironment fridgeDoorOpen={isFridgeActive} grinderCranking={isGrinderActive} />
       <CrtTelevision
-        position={STATION_TRIGGERS[4].position}
+        position={STATIONS[4].position}
         reaction={gameStatus === 'defeat' ? 'laugh' : mrSausageReaction}
       />
 
       {/* Station waypoint markers — pulse at the next station to guide the player */}
-      {STATION_TRIGGERS.map((trigger, i) => (
+      {STATIONS.map((station, i) => (
         <StationMarker
-          key={i}
-          position={[trigger.center[0], trigger.markerY, trigger.center[1]]}
+          key={STATION_TARGET_NAMES[i]}
+          position={[station.position[0], station.markerY, station.position[2]]}
           visible={showMarker && currentChallenge === i}
         />
       ))}
@@ -170,7 +278,7 @@ const SceneContent = ({
       {/* All stations always rendered — positions from target system */}
       {isFridgeActive && fridgePool.length > 0 && (
         <FridgeStation
-          position={STATION_TRIGGERS[0].position}
+          position={STATIONS[0].position}
           ingredients={fridgePool}
           selectedIds={fridgeSelectedSet}
           hintActive={hintActive}
@@ -180,26 +288,41 @@ const SceneContent = ({
         />
       )}
       <GrinderStation
-        position={STATION_TRIGGERS[1].position}
+        position={STATIONS[1].position}
         grindProgress={isGrinderActive ? challengeProgress : 0}
         crankAngle={isGrinderActive ? grinderCrankAngle.current : 0}
         isSplattering={isGrinderActive && grinderSplattering}
       />
       <StufferStation
-        position={STATION_TRIGGERS[2].position}
+        position={STATIONS[2].position}
         fillLevel={isStufferActive ? challengeProgress : 0}
         pressureLevel={isStufferActive ? challengePressure : 0}
         isPressing={isStufferActive && challengeIsPressing}
         hasBurst={isStufferActive && stufferBurst}
       />
       <StoveStation
-        position={STATION_TRIGGERS[3].position}
+        position={STATIONS[3].position}
         temperature={isStoveActive ? challengeTemperature : 70}
         heatLevel={isStoveActive ? challengeHeatLevel : 0}
       />
     </>
   );
 };
+
+// -----------------------------------------------------------------
+// PhysicsWrapper — wraps children in Rapier Physics on web only
+// -----------------------------------------------------------------
+
+function PhysicsWrapper({children}: {children: React.ReactNode}) {
+  if (Platform.OS !== 'web') {
+    return <>{children}</>;
+  }
+  return (
+    <Suspense fallback={null}>
+      <Physics gravity={[0, 0, 0]}>{children}</Physics>
+    </Suspense>
+  );
+}
 
 // -----------------------------------------------------------------
 // GameWorld — top-level 3D scene container
@@ -234,7 +357,9 @@ export const GameWorld = ({
         }}
       >
         <XR store={xrStore}>
-          <SceneContent joystickRef={joystickRef} lookDeltaRef={lookDeltaRef} />
+          <PhysicsWrapper>
+            <SceneContent joystickRef={joystickRef} lookDeltaRef={lookDeltaRef} />
+          </PhysicsWrapper>
         </XR>
       </Canvas>
       {Platform.OS === 'web' && (

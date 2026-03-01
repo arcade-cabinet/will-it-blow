@@ -26,11 +26,12 @@ describe('GameWorld', () => {
     expect(fs.existsSync(path.resolve(__dirname, '../GameWorld.native.tsx'))).toBe(false);
   });
 
-  it('imports from @react-three/fiber', () => {
+  it('imports from @react-three/fiber and @react-three/rapier', () => {
     const fs = require('node:fs');
     const path = require('node:path');
     const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
     expect(source).toContain('@react-three/fiber');
+    expect(source).toContain('@react-three/rapier');
   });
 
   it('uses FPSController for camera movement', () => {
@@ -52,21 +53,27 @@ describe('GameWorld', () => {
     expect(source).toContain('SceneContent');
   });
 
-  it('defines proximity trigger zones for all 5 stations', () => {
+  it('uses Rapier sensor colliders for station proximity detection', () => {
     const fs = require('node:fs');
     const path = require('node:path');
     const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
-    expect(source).toContain('STATION_TRIGGERS');
-    expect(source).toContain('ProximityTrigger');
-    // Should have comments for all 5 stations
-    expect(source).toContain('Fridge');
-    expect(source).toContain('Grinder');
-    expect(source).toContain('Stuffer');
-    expect(source).toContain('Stove');
-    expect(source).toContain('CRT TV');
+    // Rapier physics components
+    expect(source).toContain('PlayerBody');
+    expect(source).toContain('StationSensor');
+    expect(source).toContain('RoomColliders');
+    expect(source).toContain('PhysicsWrapper');
+    // Manual ProximityTrigger replaced (native fallback renamed)
+    expect(source).not.toContain('function ProximityTrigger');
+    expect(source).not.toContain('STATION_TRIGGERS');
+    // Should reference all 5 station components
+    expect(source).toContain('FridgeStation');
+    expect(source).toContain('GrinderStation');
+    expect(source).toContain('StufferStation');
+    expect(source).toContain('StoveStation');
+    expect(source).toContain('CrtTelevision');
   });
 
-  it('derives station triggers from FurnitureLayout targets (not hardcoded)', () => {
+  it('derives station positions from FurnitureLayout targets (not hardcoded)', () => {
     const fs = require('node:fs');
     const path = require('node:path');
     const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
@@ -74,18 +81,30 @@ describe('GameWorld', () => {
     expect(source).toContain('FurnitureLayout');
     expect(source).toContain('resolveTargets');
     expect(source).toContain('STATION_TARGET_NAMES');
+    // Uses RESOLVED_TARGETS / STATIONS instead of old STATION_TRIGGERS
+    expect(source).toContain('RESOLVED_TARGETS');
     // Should NOT have raw coordinate arrays for triggers
     expect(source).not.toMatch(/center:\s*\[\s*-?\d+\.\d+\s*,\s*-?\d+\.\d+\s*\]/);
   });
 
-  it('passes position props to station components', () => {
+  it('passes position props to station components from STATIONS array', () => {
     const fs = require('node:fs');
     const path = require('node:path');
     const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
-    // All stations should receive position from triggers
-    expect(source).toContain('position={STATION_TRIGGERS[0].position}');
-    expect(source).toContain('position={STATION_TRIGGERS[1].position}');
-    expect(source).toContain('position={STATION_TRIGGERS[2].position}');
-    expect(source).toContain('position={STATION_TRIGGERS[3].position}');
+    // All stations should receive position from STATIONS (resolved targets)
+    expect(source).toContain('position={STATIONS[0].position}');
+    expect(source).toContain('position={STATIONS[1].position}');
+    expect(source).toContain('position={STATIONS[2].position}');
+    expect(source).toContain('position={STATIONS[3].position}');
+    expect(source).toContain('position={STATIONS[4].position}');
+  });
+
+  it('keeps a ManualProximityTrigger fallback for native platforms', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
+    expect(source).toContain('ManualProximityTrigger');
+    // Native fallback should be gated on Platform.OS
+    expect(source).toContain('Platform.OS');
   });
 });

@@ -71,6 +71,23 @@ describe('StoveStation', () => {
     expect(source).not.toContain('@babylonjs/core');
     expect(source).not.toContain('reactylon');
   });
+
+  it('imports from @react-three/rapier and gates on Platform.OS', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../StoveStation.tsx'), 'utf8');
+    expect(source).toContain('@react-three/rapier');
+    expect(source).toContain('Platform.OS');
+  });
+
+  it('uses RigidBody for the sausage (web path)', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../StoveStation.tsx'), 'utf8');
+    expect(source).toContain('RigidBody');
+    expect(source).toContain('CapsuleCollider');
+    expect(source).toContain('type="dynamic"');
+  });
 });
 
 describe('sausageColor', () => {

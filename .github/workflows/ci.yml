@@ -32,7 +32,7 @@ jobs:
         run: pnpm lint
 
       - name: Type check
-        run: npx tsc --noEmit
+        run: pnpm typecheck
 
       - name: Run tests
         run: pnpm test:ci

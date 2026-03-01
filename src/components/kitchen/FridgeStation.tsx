@@ -1,5 +1,8 @@
 import {useFrame} from '@react-three/fiber';
+import type {RapierRigidBody} from '@react-three/rapier';
+import {BallCollider, CuboidCollider, RigidBody} from '@react-three/rapier';
 import {useRef} from 'react';
+import {Platform} from 'react-native';
 import * as THREE from 'three/webgpu';
 import type {Ingredient} from '../../engine/Ingredients';
 
@@ -33,10 +36,16 @@ function hexToThreeColor(hex: string): THREE.Color {
 // FridgeShelf — glass/wire shelf with blue tint
 // -------------------------------------------------------
 
+const isWeb = Platform.OS === 'web';
+
 function FridgeShelf({y}: {y: number}) {
-  return (
-    <mesh position={[0, y, 0]}>
-      <boxGeometry args={[FRIDGE_W - 0.08, 0.012, FRIDGE_D - 0.08]} />
+  const shelfW = FRIDGE_W - 0.08;
+  const shelfH = 0.012;
+  const shelfD = FRIDGE_D - 0.08;
+
+  const shelfMesh = (
+    <mesh position={isWeb ? undefined : [0, y, 0]}>
+      <boxGeometry args={[shelfW, shelfH, shelfD]} />
       <meshStandardMaterial
         color="#b8d8e8"
         transparent
@@ -46,6 +55,15 @@ function FridgeShelf({y}: {y: number}) {
         side={THREE.DoubleSide}
       />
     </mesh>
+  );
+
+  if (!isWeb) return shelfMesh;
+
+  return (
+    <RigidBody type="fixed" position={[0, y, 0]} colliders={false}>
+      <CuboidCollider args={[shelfW / 2, shelfH / 2, shelfD / 2]} />
+      {shelfMesh}
+    </RigidBody>
   );
 }
 
@@ -63,6 +81,9 @@ interface IngredientMeshProps {
   onHover: (index: number | null) => void;
 }
 
+/** Radius for the BallCollider wrapping each ingredient (slightly larger than visual). */
+const INGREDIENT_COLLIDER_RADIUS = INGREDIENT_DIAMETER / 2 + 0.02;
+
 function IngredientMesh({
   index,
   ingredient,
@@ -74,9 +95,11 @@ function IngredientMesh({
 }: IngredientMeshProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const matRef = useRef<THREE.MeshStandardMaterial>(null);
+  const rigidBodyRef = useRef<RapierRigidBody>(null);
   const hoveredRef = useRef(false);
   const baseColor = useRef(hexToThreeColor(ingredient.color));
   const scaleVec = useRef(new THREE.Vector3(1, 1, 1));
+  const impulseApplied = useRef(false);
 
   // Stagger the bob animation per ingredient so they don't all bob in sync
   const bobPhase = useRef(index * 0.7);
@@ -88,21 +111,32 @@ function IngredientMesh({
 
     const t = state.clock.getElapsedTime();
 
-    // Subtle idle bob animation
-    const bobY = Math.sin(t * 1.5 + bobPhase.current) * 0.008;
+    // On web, physics handles position when selected (impulse applied).
+    // Only do manual position animation on native or when not selected.
+    if (!isWeb) {
+      // Subtle idle bob animation
+      const bobY = Math.sin(t * 1.5 + bobPhase.current) * 0.008;
 
-    // Selected: slide forward and fade out
-    if (isSelected) {
-      const targetZ = position[2] + 0.5;
-      mesh.position.z += (targetZ - mesh.position.z) * 0.1;
-      mat.opacity = 0.3;
-      mat.transparent = true;
+      if (isSelected) {
+        const targetZ = position[2] + 0.5;
+        mesh.position.z += (targetZ - mesh.position.z) * 0.1;
+        mat.opacity = 0.3;
+        mat.transparent = true;
+      } else {
+        mesh.position.z += (position[2] - mesh.position.z) * 0.1;
+        mesh.position.y += (position[1] + bobY - mesh.position.y) * 0.15;
+        mat.opacity = 1.0;
+        mat.transparent = false;
+      }
     } else {
-      // Ease back to rest position with bob
-      mesh.position.z += (position[2] - mesh.position.z) * 0.1;
-      mesh.position.y += (position[1] + bobY - mesh.position.y) * 0.15;
-      mat.opacity = 1.0;
-      mat.transparent = false;
+      // Web: fade selected ingredients
+      if (isSelected) {
+        mat.opacity = 0.3;
+        mat.transparent = true;
+      } else {
+        mat.opacity = 1.0;
+        mat.transparent = false;
+      }
     }
 
     // Hover scale-up (smooth lerp)
@@ -126,6 +160,18 @@ function IngredientMesh({
 
     mat.color.copy(baseColor.current);
   });
+
+  const handleClick = (e: any) => {
+    e.stopPropagation();
+    if (!isSelected) {
+      // On web, pop the ingredient out with an upward impulse
+      if (isWeb && rigidBodyRef.current && !impulseApplied.current) {
+        rigidBodyRef.current.applyImpulse({x: 0, y: 0.4, z: 0.3}, true);
+        impulseApplied.current = true;
+      }
+      onSelect(index);
+    }
+  };
 
   // Choose geometry based on ingredient shape
   const renderGeometry = () => {
@@ -168,16 +214,11 @@ function IngredientMesh({
     }
   };
 
-  return (
+  const ingredientMesh = (
     <mesh
       ref={meshRef}
-      position={position}
-      onClick={e => {
-        e.stopPropagation();
-        if (!isSelected) {
-          onSelect(index);
-        }
-      }}
+      position={isWeb ? undefined : position}
+      onClick={handleClick}
       onPointerOver={e => {
         e.stopPropagation();
         hoveredRef.current = true;
@@ -204,6 +245,22 @@ function IngredientMesh({
         emissiveIntensity={0.15}
       />
     </mesh>
+  );
+
+  if (!isWeb) return ingredientMesh;
+
+  return (
+    <RigidBody
+      ref={rigidBodyRef}
+      type="dynamic"
+      position={position}
+      colliders={false}
+      linearDamping={1.5}
+      angularDamping={1.0}
+    >
+      <BallCollider args={[INGREDIENT_COLLIDER_RADIUS]} />
+      {ingredientMesh}
+    </RigidBody>
   );
 }
 
