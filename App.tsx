@@ -54,13 +54,11 @@ installGovernor();
 const ChunkFallback = () => <View style={styles.chunkFallback} />;
 
 const GameUI = () => {
-  const {
-    gameStatus,
-    currentChallenge,
-    challengeTriggered,
-    completeChallenge,
-    setMrSausageReaction,
-  } = useGameStore();
+  const gameStatus = useGameStore(s => s.gameStatus);
+  const currentChallenge = useGameStore(s => s.currentChallenge);
+  const challengeTriggered = useGameStore(s => s.challengeTriggered);
+  const completeChallenge = useGameStore(s => s.completeChallenge);
+  const setMrSausageReaction = useGameStore(s => s.setMrSausageReaction);
 
   // Transition state: show title card between challenges
   const [transitioning, setTransitioning] = useState(false);

@@ -77,25 +77,23 @@ const SceneContent = ({
   joystickRef?: React.RefObject<{x: number; y: number}>;
   lookDeltaRef?: React.RefObject<{dx: number; dy: number}>;
 }) => {
-  const {
-    gameStatus,
-    currentChallenge,
-    challengeTriggered,
-    challengeProgress,
-    challengePressure,
-    challengeIsPressing,
-    challengeTemperature,
-    challengeHeatLevel,
-    strikes,
-    mrSausageReaction,
-    hintActive,
-    // Shared fridge state from store (IngredientChallenge writes, 3D reads)
-    fridgePool,
-    fridgeMatchingIndices,
-    fridgeSelectedIndices,
-    triggerFridgeClick,
-    setFridgeHovered,
-  } = useGameStore();
+  const gameStatus = useGameStore(s => s.gameStatus);
+  const currentChallenge = useGameStore(s => s.currentChallenge);
+  const challengeTriggered = useGameStore(s => s.challengeTriggered);
+  const challengeProgress = useGameStore(s => s.challengeProgress);
+  const challengePressure = useGameStore(s => s.challengePressure);
+  const challengeIsPressing = useGameStore(s => s.challengeIsPressing);
+  const challengeTemperature = useGameStore(s => s.challengeTemperature);
+  const challengeHeatLevel = useGameStore(s => s.challengeHeatLevel);
+  const strikes = useGameStore(s => s.strikes);
+  const mrSausageReaction = useGameStore(s => s.mrSausageReaction);
+  const hintActive = useGameStore(s => s.hintActive);
+  // Shared fridge state from store (IngredientChallenge writes, 3D reads)
+  const fridgePool = useGameStore(s => s.fridgePool);
+  const fridgeMatchingIndices = useGameStore(s => s.fridgeMatchingIndices);
+  const fridgeSelectedIndices = useGameStore(s => s.fridgeSelectedIndices);
+  const triggerFridgeClick = useGameStore(s => s.triggerFridgeClick);
+  const setFridgeHovered = useGameStore(s => s.setFridgeHovered);
 
   // Station is active only when playing + correct challenge + player has arrived
   const isPlaying = gameStatus === 'playing' && challengeTriggered;

@@ -1,5 +1,5 @@
 import {useFrame} from '@react-three/fiber';
-import {useRef, useState} from 'react';
+import {useRef} from 'react';
 import * as THREE from 'three/webgpu';
 import type {Ingredient} from '../../engine/Ingredients';
 
@@ -74,7 +74,7 @@ function IngredientMesh({
 }: IngredientMeshProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const matRef = useRef<THREE.MeshStandardMaterial>(null);
-  const [hovered, setHovered] = useState(false);
+  const hoveredRef = useRef(false);
   const baseColor = useRef(hexToThreeColor(ingredient.color));
   const scaleVec = useRef(new THREE.Vector3(1, 1, 1));
 
@@ -106,7 +106,7 @@ function IngredientMesh({
     }
 
     // Hover scale-up (smooth lerp)
-    const targetScale = hovered && !isSelected ? 1.2 : 1.0;
+    const targetScale = hoveredRef.current && !isSelected ? 1.2 : 1.0;
     scaleVec.current.set(targetScale, targetScale, targetScale);
     mesh.scale.lerp(scaleVec.current, 0.15);
 
@@ -115,7 +115,7 @@ function IngredientMesh({
       const pulse = 0.4 + 0.6 * Math.sin(t * 6);
       mat.emissiveIntensity = pulse * 0.6;
       mat.emissive.copy(baseColor.current);
-    } else if (hovered && !isSelected) {
+    } else if (hoveredRef.current && !isSelected) {
       mat.emissiveIntensity = 0.35;
       mat.emissive.set('#ffffff');
     } else {
@@ -180,14 +180,14 @@ function IngredientMesh({
       }}
       onPointerOver={e => {
         e.stopPropagation();
-        setHovered(true);
+        hoveredRef.current = true;
         onHover(index);
         if (typeof document !== 'undefined') {
           document.body.style.cursor = isSelected ? 'default' : 'pointer';
         }
       }}
       onPointerOut={() => {
-        setHovered(false);
+        hoveredRef.current = false;
         onHover(null);
         if (typeof document !== 'undefined') {
           document.body.style.cursor = 'default';

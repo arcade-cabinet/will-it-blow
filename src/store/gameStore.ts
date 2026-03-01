@@ -140,6 +140,7 @@ export const useGameStore = create<GameState>()(
           fridgeSelectedIndices: [],
           pendingFridgeClick: null,
           fridgeHoveredIndex: null,
+          playerPosition: [0, 1.6, 0] as [number, number, number],
           challengeTriggered: false,
         })),
 
@@ -158,6 +159,7 @@ export const useGameStore = create<GameState>()(
           fridgeSelectedIndices: [],
           pendingFridgeClick: null,
           fridgeHoveredIndex: null,
+          playerPosition: [0, 1.6, 0] as [number, number, number],
           challengeTriggered: false,
         }),
 
@@ -260,6 +262,8 @@ export const useGameStore = create<GameState>()(
           fridgeSelectedIndices: [],
           pendingFridgeClick: null,
           fridgeHoveredIndex: null,
+          playerPosition: [0, 1.6, 0] as [number, number, number],
+          challengeTriggered: false,
         }),
     }),
     {

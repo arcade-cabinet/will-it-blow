@@ -53,6 +53,8 @@ export function resolveTargets(room: RoomDimensions): Record<string, Target> {
   const halfW = room.w / 2;
   const halfD = room.d / 2;
 
+  const grinderPos: [number, number, number] = [-halfW + 1.75, room.h * 0.375, -halfD + 5.86];
+
   return {
     // ---- Station targets (challenge order 0-4) ----
 
@@ -66,7 +68,7 @@ export function resolveTargets(room: RoomDimensions): Record<string, Target> {
 
     // 1 — Grinder: left wall, mid-depth
     grinder: {
-      position: [-halfW + 1.75, room.h * 0.375, -halfD + 5.86],
+      position: grinderPos,
       rotationY: 0,
       triggerRadius: 1.5,
       markerY: 2.8,
@@ -160,7 +162,7 @@ export function resolveTargets(room: RoomDimensions): Record<string, Target> {
 
     // meat_grinder GLB sits at the grinder station position
     meat_grinder: {
-      position: [-halfW + 1.75, room.h * 0.375, -halfD + 5.86],
+      position: grinderPos,
       rotationY: 0,
       triggerRadius: 0,
     },

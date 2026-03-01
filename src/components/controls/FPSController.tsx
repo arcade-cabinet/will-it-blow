@@ -2,6 +2,7 @@ import {useFrame, useThree} from '@react-three/fiber';
 import {useEffect, useRef} from 'react';
 import {Platform} from 'react-native';
 import * as THREE from 'three/webgpu';
+import {DEFAULT_ROOM} from '../../engine/FurnitureLayout';
 import {useGameStore} from '../../store/gameStore';
 
 /** Movement speed in units/sec */
@@ -14,11 +15,9 @@ const TOUCH_SENSITIVITY = 0.004;
 const PITCH_LIMIT = (80 * Math.PI) / 180;
 /** Camera eye height */
 const EYE_HEIGHT = 1.6;
-/** Room AABB bounds for collision clamping (slightly inside 13×13 room) */
-const ROOM_MIN_X = -6.0;
-const ROOM_MAX_X = 6.0;
-const ROOM_MIN_Z = -6.0;
-const ROOM_MAX_Z = 6.0;
+/** Room AABB bounds for collision clamping (0.5 unit margin from walls) */
+const ROOM_HALF_W = DEFAULT_ROOM.w / 2 - 0.5;
+const ROOM_HALF_D = DEFAULT_ROOM.d / 2 - 0.5;
 
 /**
  * FPSController — first-person camera controls.
@@ -90,6 +89,7 @@ export function FPSController({
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('keydown', onKeyDown);
       document.removeEventListener('keyup', onKeyUp);
+      keysRef.current.clear();
     };
   }, [gl]);
 
@@ -148,8 +148,8 @@ export function FPSController({
     }
 
     // --- Clamp to room bounds ---
-    posRef.current.x = Math.max(ROOM_MIN_X, Math.min(ROOM_MAX_X, posRef.current.x));
-    posRef.current.z = Math.max(ROOM_MIN_Z, Math.min(ROOM_MAX_Z, posRef.current.z));
+    posRef.current.x = Math.max(-ROOM_HALF_W, Math.min(ROOM_HALF_W, posRef.current.x));
+    posRef.current.z = Math.max(-ROOM_HALF_D, Math.min(ROOM_HALF_D, posRef.current.z));
     posRef.current.y = EYE_HEIGHT;
 
     // --- Apply to camera ---
