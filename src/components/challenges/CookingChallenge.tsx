@@ -1,3 +1,28 @@
+/**
+ * @module CookingChallenge
+ * Challenge 4 of 5: Temperature control via a vertical heat slider.
+ *
+ * The player drags a vertical slider to control heat level (0-1). Temperature
+ * responds with physics: heat adds degrees, natural cooling removes degrees.
+ * The goal is to reach the target temperature zone and hold it for
+ * `variant.holdSeconds`.
+ *
+ * **Temperature model:**
+ * `tempChange = (heatLevel * heatRate - COOLING_RATE) * dt`
+ * Clamped to [ROOM_TEMP, 280].
+ *
+ * **Overheat:** If temp exceeds targetTemp + tolerance*2, a strike is added.
+ * Overheat flag resets when temp drops back below threshold.
+ *
+ * **Store sync:** Temperature and heatLevel are written to the Zustand store
+ * (`setChallengeTemperature`, `setChallengeHeatLevel`) so the 3D StoveStation
+ * can visualize burner glow, sausage color, sizzle/smoke particles.
+ *
+ * **Scoring:** 100 - (overheats * 15) - (overtime * 3) + (noOverheat bonus 10).
+ *
+ * **Phases:** dialogue -> cooking -> success -> complete
+ */
+
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {PanResponder, StyleSheet, Text, View} from 'react-native';
 import type {CookingVariant} from '../../data/challenges/variants';
@@ -9,6 +34,10 @@ import type {Reaction} from '../characters/reactions';
 import {DialogueOverlay} from '../ui/DialogueOverlay';
 import {ProgressGauge} from '../ui/ProgressGauge';
 
+/**
+ * @param props.onComplete - Called with the final score (0-100) when the challenge ends
+ * @param props.onReaction - Triggers Mr. Sausage reactions on the CRT TV
+ */
 interface CookingChallengeProps {
   onComplete: (score: number) => void;
   onReaction?: (reaction: Reaction) => void;

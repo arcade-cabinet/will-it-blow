@@ -1,3 +1,22 @@
+/**
+ * @module ChallengeTransition
+ * Full-screen cinematic overlay shown between challenges.
+ *
+ * Displays the challenge number, name (slide-up with fade), an animated
+ * underline, and a Mr. Sausage quip with attribution. The 3-phase
+ * animation sequence runs for TRANSITION_DURATION_MS (3 seconds):
+ *
+ * 1. **Fade in** (0-400ms): Overlay opacity + title slide-up
+ * 2. **Details** (500-1000ms): Underline expands + quip fades in
+ * 3. **Fade out** (2400-3000ms): Overlay fades to transparent, then calls onComplete
+ *
+ * Uses `pointerEvents="none"` so the 3D scene remains interactive
+ * during the transition (camera can still be moved).
+ *
+ * @param props.challengeIndex - Zero-based index into CHALLENGE_ORDER
+ * @param props.onComplete - Called when the fade-out animation finishes
+ */
+
 import {useEffect, useRef} from 'react';
 import {Animated, StyleSheet, Text, View} from 'react-native';
 import {CHALLENGE_ORDER, getChallengeConfig} from '../../engine/ChallengeRegistry';

@@ -1,3 +1,25 @@
+/**
+ * @module GameWorld
+ * Main R3F Canvas scene orchestrator for the "Will It Blow?" kitchen.
+ *
+ * Renders the full 3D scene: kitchen environment, all five station components
+ * (fridge, grinder, stuffer, stove, CRT television), FPS camera controller,
+ * physics world, grab system, and station waypoint markers.
+ *
+ * Architecture:
+ * - `GameWorld` is the top-level export, providing the R3F `<Canvas>` with
+ *   WebGPU renderer initialization, XR support, and Rapier physics wrapper.
+ * - `SceneContent` lives inside the Canvas and wires Zustand store state to
+ *   child 3D components. It is the bridge between the 2D overlay layer
+ *   (challenge UIs) and the 3D scene (station visuals).
+ * - `PlayerBody` / `StationSensor` / `RoomColliders` provide Rapier physics
+ *   for proximity detection (web only). `ManualProximityTrigger` is the
+ *   native fallback using per-frame distance checks.
+ *
+ * All station positions come from {@link resolveTargets} — no hardcoded
+ * coordinates in this file. If room dimensions change, everything follows.
+ */
+
 import {Canvas, useFrame, useThree} from '@react-three/fiber';
 import type {RapierRigidBody} from '@react-three/rapier';
 import {
@@ -59,6 +81,11 @@ const STUFFER_OUTPUT_POS: [number, number, number] = [
 // PlayerBody — kinematic rigid body that follows the camera
 // -----------------------------------------------------------------
 
+/**
+ * Kinematic rigid body that tracks the camera position each frame.
+ * Used as the player's physics proxy for Rapier sensor intersection
+ * checks (detecting proximity to station triggers). Web only.
+ */
 function PlayerBody() {
   const rigidBodyRef = useRef<RapierRigidBody>(null);
   const {camera} = useThree();
@@ -81,6 +108,17 @@ function PlayerBody() {
 // StationSensor — sensor collider at a station target position
 // -----------------------------------------------------------------
 
+/**
+ * Rapier cylinder sensor placed at a station's target position.
+ * When the PlayerBody intersects this sensor, it triggers the
+ * corresponding challenge via the Zustand store — but only if
+ * the game is playing, no challenge is already triggered, and
+ * the current challenge index matches this sensor's index.
+ *
+ * @param props.position - World position from resolveTargets()
+ * @param props.radius - Trigger radius from the target definition
+ * @param props.challengeIndex - Which challenge (0-4) this sensor gates
+ */
 function StationSensor({
   position,
   radius,
@@ -108,6 +146,10 @@ function StationSensor({
 // -----------------------------------------------------------------
 // RoomColliders — static wall and floor colliders for physics objects
 // -----------------------------------------------------------------
+
+/** Static cuboid colliders forming the room's floor, ceiling, and four walls.
+ *  Prevents dynamic physics objects (ingredients, sausage) from falling
+ *  through the floor or flying out of bounds. Web only (Rapier). */
 
 const HALF_W = DEFAULT_ROOM.w / 2;
 const HALF_D = DEFAULT_ROOM.d / 2;
@@ -149,6 +191,13 @@ function RoomColliders() {
 // ManualProximityTrigger — fallback for native (no Rapier WASM)
 // -----------------------------------------------------------------
 
+/**
+ * Native-platform fallback for station proximity detection.
+ * On native, Rapier WASM is unavailable, so this component runs a
+ * per-frame distance check between the player's position (from the store)
+ * and the current station's target position. Triggers the challenge
+ * when the player is within the station's triggerRadius.
+ */
 function ManualProximityTrigger() {
   useFrame(() => {
     const state = useGameStore.getState();
@@ -174,6 +223,24 @@ function ManualProximityTrigger() {
 // SceneContent — all 3D content inside the Canvas
 // -----------------------------------------------------------------
 
+/**
+ * All 3D content rendered inside the R3F Canvas.
+ *
+ * Reads game state from Zustand and distributes it as props to child
+ * components (stations, environment, markers). Manages derived state
+ * such as grinder crank angle, splatter timing, and bowl/sausage visibility.
+ *
+ * Key responsibilities:
+ * - Determines which station is "active" based on gameStatus, currentChallenge,
+ *   and challengeTriggered
+ * - Converts store arrays to Sets for FridgeStation props (performance)
+ * - Tracks strike count changes to trigger splatter/burst visuals with timeouts
+ * - Computes bowl render position from the bowlPosition state machine
+ *   (fridge -> grinder-output -> stuffer -> done)
+ *
+ * @param props.joystickRef - Shared ref from MobileJoystick for movement input
+ * @param props.lookDeltaRef - Shared ref from MobileJoystick for look-drag input
+ */
 const SceneContent = ({
   joystickRef,
   lookDeltaRef,
@@ -360,6 +427,13 @@ const SceneContent = ({
 // PhysicsWrapper — wraps children in Rapier Physics on web only
 // -----------------------------------------------------------------
 
+/**
+ * Conditionally wraps children in Rapier `<Physics>` on web.
+ * On native platforms, simply passes children through without physics.
+ * Gravity is set to zero because station sensors use intersection
+ * detection (not gravity-driven collisions), and per-body gravity
+ * is applied manually to dynamic objects that need it.
+ */
 function PhysicsWrapper({children}: {children: React.ReactNode}) {
   if (Platform.OS !== 'web') {
     return <>{children}</>;
@@ -377,6 +451,18 @@ function PhysicsWrapper({children}: {children: React.ReactNode}) {
 
 const xrStore = createXRStore();
 
+/**
+ * Top-level 3D scene container exported for use by App.tsx (lazy-loaded).
+ *
+ * Creates the R3F `<Canvas>` with a WebGPU renderer (Dawn-based on native,
+ * browser WebGPU on web). Wraps the scene in `<XR>` for optional VR entry
+ * and `<PhysicsWrapper>` for Rapier physics on web.
+ *
+ * An "Enter VR" button is rendered as a React Native overlay on web.
+ *
+ * @param props.joystickRef - Forwarded to SceneContent for mobile movement
+ * @param props.lookDeltaRef - Forwarded to SceneContent for mobile look
+ */
 export const GameWorld = ({
   joystickRef,
   lookDeltaRef,

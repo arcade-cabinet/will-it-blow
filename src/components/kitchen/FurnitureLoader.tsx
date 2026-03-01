@@ -1,3 +1,20 @@
+/**
+ * @module FurnitureLoader
+ * Loads discrete GLB furniture segments and positions them at targets
+ * computed by FurnitureLayout.ts.
+ *
+ * Each piece of furniture is a separate GLB file (fridge.glb, meat_grinder.glb,
+ * mixing_bowl.glb, etc.) loaded via drei's `useGLTF` and `useAnimations`.
+ * Positions and rotations come from `resolveTargets()` — no hardcoded
+ * coordinates in this file.
+ *
+ * Handles furniture-specific animations:
+ * - Fridge door open/close (plays GLB animation forward/backward)
+ * - Grinder crank loop (plays GLB animation on repeat when active)
+ * - Mixing bowl: dynamic position override + BowlFill interior with
+ *   receiver pattern for ingredient drops
+ */
+
 import {useAnimations, useGLTF} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
 import {useCallback, useEffect, useMemo, useRef} from 'react';
@@ -35,6 +52,13 @@ const MAX_FILL_HEIGHT = BOWL_HEIGHT * 0.6;
 // BowlFill — fill cylinder + receiver overlay for the mixing bowl
 // ---------------------------------------------------------------------------
 
+/**
+ * Interior fill visualization for the mixing bowl.
+ * Renders a cylinder that grows as ingredients are added (bowlContents).
+ * Color, roughness, and chunkiness come from the Zustand blend state.
+ * When `receiving` is true, an invisible receiver mesh accepts ingredient
+ * drops from the GrabSystem.
+ */
 function BowlFill({receiving}: {receiving: boolean}) {
   const fillRef = useRef<THREE.Mesh>(null);
   const bowlContents = useGameStore(s => s.bowlContents);
@@ -98,6 +122,12 @@ function BowlFill({receiving}: {receiving: boolean}) {
 // FurniturePiece — loads a single GLB and places it at the resolved target
 // ---------------------------------------------------------------------------
 
+/**
+ * Loads a single GLB furniture model and places it at its resolved target.
+ * Applies material fixes (frontside culling, tamed envMap), handles
+ * fridge door and grinder crank animations, and marks the bowl as grabbable
+ * via userData.
+ */
 function FurniturePiece({
   rule,
   target,
@@ -187,6 +217,12 @@ function FurniturePiece({
 // FurnitureLoader — loads all GLB segments and positions them
 // ---------------------------------------------------------------------------
 
+/**
+ * Iterates over FURNITURE_RULES and renders a FurniturePiece for each.
+ * The mixing bowl is conditionally shown based on the bowlPosition prop
+ * (null = hidden). Bowl key includes position so React remounts it
+ * when the bowl moves between stations.
+ */
 export function FurnitureLoader({
   room = DEFAULT_ROOM,
   fridgeDoorOpen = false,

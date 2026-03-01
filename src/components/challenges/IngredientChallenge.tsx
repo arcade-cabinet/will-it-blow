@@ -1,3 +1,28 @@
+/**
+ * @module IngredientChallenge
+ * Challenge 1 of 5: Ingredient selection from the 3D fridge.
+ *
+ * This is the UI overlay for the ingredient-picking challenge. The player
+ * must select ingredients from the fridge that match Mr. Sausage's criteria
+ * (e.g., "spicy meats"). Uses the "fridge bridge" pattern for 3D-to-2D
+ * communication:
+ *
+ * **Scoring flow:**
+ * 1. On mount, picks a variant (criteria + requiredCount) and generates a
+ *    random pool of 10 ingredients, guaranteeing enough matching ones.
+ * 2. Pool and matching indices are written to the Zustand store via
+ *    `setFridgePool()` so FridgeStation (3D) can render them.
+ * 3. When the player clicks a 3D ingredient, FridgeStation calls
+ *    `triggerFridgeClick(index)` on the store. This overlay watches
+ *    `pendingFridgeClick` in a useEffect and processes the pick.
+ * 4. Alternatively, ingredients can be grabbed and dropped into the bowl
+ *    (physics path), tracked via `bowlContents` changes.
+ * 5. Correct picks advance progress; wrong picks add strikes. Score =
+ *    100 - (strikes * 15).
+ *
+ * **Phases:** dialogue -> selecting -> success/failure -> complete
+ */
+
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import type {IngredientVariant} from '../../data/challenges/variants';
@@ -16,6 +41,10 @@ import type {Reaction} from '../characters/reactions';
 import {DialogueOverlay} from '../ui/DialogueOverlay';
 import {ProgressGauge} from '../ui/ProgressGauge';
 
+/**
+ * @param props.onComplete - Called with the final score (0-100) when the challenge ends
+ * @param props.onReaction - Triggers Mr. Sausage reactions on the CRT TV
+ */
 interface IngredientChallengeProps {
   onComplete: (score: number) => void;
   onReaction?: (reaction: Reaction) => void;

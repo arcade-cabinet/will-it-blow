@@ -1,3 +1,21 @@
+/**
+ * @module DialogueOverlay
+ * Bottom-of-screen dialogue box with typewriter text, branching choices,
+ * and speaker labels.
+ *
+ * Wraps the pure-logic DialogueEngine to handle rendering and user input.
+ * Text is revealed character by character (30ms per char). Tapping during
+ * typing skips to the full line; tapping after finishes advances to the next
+ * line. If the current line has choices, tapping is blocked until a choice
+ * is selected.
+ *
+ * Used by all challenge components for intro dialogue, success/failure
+ * messages, and the verdict sequence.
+ *
+ * @param props.lines - Array of DialogueLine objects to play through
+ * @param props.onComplete - Called with accumulated effects when all lines finish
+ */
+
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {type DialogueChoice, DialogueEngine, type DialogueLine} from '../../engine/DialogueEngine';

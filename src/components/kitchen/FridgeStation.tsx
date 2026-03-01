@@ -1,3 +1,23 @@
+/**
+ * @module FridgeStation
+ * 3D fridge interior with interactive ingredient meshes on glass shelves.
+ *
+ * Part of the "fridge bridge" pattern: this 3D component renders the
+ * ingredients that the player clicks to select. Clicks are forwarded to
+ * the Zustand store via `onSelect(index)`, which the IngredientChallenge
+ * overlay then processes for scoring.
+ *
+ * Features:
+ * - 3 glass shelves with per-shelf ingredient layout
+ * - PBR ingredient meshes with shape-based geometry (8 shape types)
+ * - Hover scale-up + emissive glow with cursor change
+ * - Hint mode: matching ingredients pulse with emissive glow
+ * - Selected ingredients fade to 30% opacity (web: physics pop; native: slide)
+ * - Interior cold-white point lights for fridge ambiance
+ * - Web: Rapier rigid bodies for each ingredient (click pops with impulse)
+ * - Native: Manual position animation in useFrame
+ */
+
 import {useFrame} from '@react-three/fiber';
 import type {RapierRigidBody} from '@react-three/rapier';
 import {BallCollider, CuboidCollider, RigidBody} from '@react-three/rapier';
@@ -6,6 +26,15 @@ import {Platform} from 'react-native';
 import * as THREE from 'three/webgpu';
 import type {Ingredient} from '../../engine/Ingredients';
 
+/**
+ * @param props.position - Fridge world position from resolveTargets()
+ * @param props.ingredients - Pool of 10 ingredients to display
+ * @param props.selectedIds - Set of already-selected pool indices (faded out)
+ * @param props.hintActive - Whether hint glow is active on matching ingredients
+ * @param props.matchingIndices - Set of pool indices that match the criteria
+ * @param props.onSelect - Called with pool index when player clicks an ingredient
+ * @param props.onHover - Called with pool index on hover, null on hover-out
+ */
 interface FridgeStationProps {
   position: [number, number, number];
   ingredients: Ingredient[];

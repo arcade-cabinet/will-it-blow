@@ -1,3 +1,19 @@
+/**
+ * @module HintButton
+ * Floating hint button (top-right corner) that reveals matching
+ * ingredients during the IngredientChallenge.
+ *
+ * Displays a lightbulb emoji with a remaining-hints counter. When pressed,
+ * decrements `hintsRemaining` in the Zustand store and calls `onHint()`
+ * so the challenge overlay can activate hint glow on matching ingredients.
+ * Visually disabled (40% opacity) and non-interactive when no hints remain.
+ *
+ * Positioned at zIndex 80, above the ChallengeHeader (70) but below
+ * dialogue (90) and game-over (100).
+ *
+ * @param props.onHint - Called after the hint is consumed to trigger hint glow
+ */
+
 import {StyleSheet, Text, TouchableOpacity} from 'react-native';
 import {useGameStore} from '../../store/gameStore';
 
@@ -5,6 +21,7 @@ interface HintButtonProps {
   onHint: () => void;
 }
 
+/** Floating hint button with remaining-hints counter. Disables when hints are exhausted. */
 export function HintButton({onHint}: HintButtonProps) {
   const {hintsRemaining} = useGameStore();
   const isDisabled = hintsRemaining <= 0;

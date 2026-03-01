@@ -1,3 +1,24 @@
+/**
+ * @module LoadingScreen
+ * Asset preloader with a sausage-shaped progress bar.
+ *
+ * Preloads the kitchen.glb model and all PBR texture files using streaming
+ * fetch with byte-level progress tracking. The progress bar fills as data
+ * arrives; a rotating Mr. Sausage quote cycles every 2 seconds.
+ *
+ * **Preload strategy:**
+ * 1. HEAD requests to get total byte count for accurate progress.
+ * 2. Parallel streaming downloads with ReadableStream byte counting.
+ * 3. Critical vs non-critical: kitchen.glb failure = error screen with retry;
+ *    texture failure = warning only (textures can lazy-load later).
+ *
+ * Also initializes the Tone.js audio engine (requires user gesture — this
+ * screen appears after a menu tap, satisfying the browser autoplay policy).
+ *
+ * When loading hits 100%, transitions to `startNewGame()` or restores
+ * saved state via `continueGame()` depending on the prior flow.
+ */
+
 import {useEffect, useRef, useState} from 'react';
 import {Animated, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {audioEngine} from '../../engine/AudioEngine';

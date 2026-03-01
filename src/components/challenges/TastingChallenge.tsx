@@ -1,3 +1,28 @@
+/**
+ * @module TastingChallenge
+ * Challenge 5 of 5: Final scoring and verdict reveal.
+ *
+ * Unlike the other challenges, this is a non-interactive cinematic sequence.
+ * It calculates the final verdict from all four challenge scores and presents
+ * it through a dramatic multi-phase animation:
+ *
+ * **Phases:**
+ * 1. `title` — "THE TASTING" fades in with dark overlay
+ * 2. `eating` — Mr. Sausage "eats" (talk reaction, 2s)
+ * 3. `judging` — Dramatic pause (nervous reaction, 2s)
+ * 4. `scores` — Individual challenge scores reveal one by one with animations
+ * 5. `rank` — Rank badge (S/A/B/F) appears with spring animation
+ * 6. `dialogue` — Verdict dialogue plays (rank-specific lines)
+ * 7. `complete` — Records score and sets game outcome
+ *
+ * **Verdict system:**
+ * - S-rank (>= 92): THE SAUSAGE KING — only true victory
+ * - A/B/F: Various degrees of defeat with different dialogue
+ *
+ * Only S-rank results in `gameStatus: 'victory'`. All other ranks
+ * override to `gameStatus: 'defeat'` after completeChallenge() is called.
+ */
+
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {Animated, StyleSheet, Text, View} from 'react-native';
 import {VERDICT_A, VERDICT_B, VERDICT_F, VERDICT_S} from '../../data/dialogue/verdict';
@@ -6,6 +31,10 @@ import {useGameStore} from '../../store/gameStore';
 import type {Reaction} from '../characters/reactions';
 import {DialogueOverlay} from '../ui/DialogueOverlay';
 
+/**
+ * @param props.onComplete - Unused (tasting completes via completeChallenge store action)
+ * @param props.onReaction - Triggers Mr. Sausage reactions on the CRT TV
+ */
 interface TastingChallengeProps {
   onComplete: (score: number) => void;
   onReaction?: (reaction: Reaction) => void;

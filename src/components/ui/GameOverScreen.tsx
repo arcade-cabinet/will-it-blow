@@ -1,3 +1,19 @@
+/**
+ * @module GameOverScreen
+ * Full-screen results overlay shown after the game ends (victory or defeat).
+ *
+ * **Victory path (S-rank only):** Displays the rank badge with a spring-in
+ * animation, verdict title/message, average score card, and per-challenge
+ * score breakdown.
+ *
+ * **Defeat path (A/B/F or early defeat):** Shows "GAME OVER" with the
+ * defeat verdict. If the player was eliminated before completing all
+ * challenges, shows "You are the sausage now." with no scores.
+ *
+ * Plays a rating-based audio jingle via `audioEngine.playRatingSong()`.
+ * Provides "NEW GAME" and "MENU" buttons for replay.
+ */
+
 import {useEffect, useRef} from 'react';
 import {Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {audioEngine} from '../../engine/AudioEngine';

@@ -1,3 +1,24 @@
+/**
+ * @module StuffingChallenge
+ * Challenge 3 of 5: Pressure gauge balancing mini-game.
+ *
+ * The player presses and holds a large push button to fill the sausage casing.
+ * While pressing, fill level and pressure both increase. Releasing lets
+ * pressure decay. If pressure exceeds the variant's burstThreshold, the
+ * casing bursts: a strike is added, fill drops by 20, and a burst animation
+ * plays on the 3D StufferStation.
+ *
+ * **Store sync:** Fill and pressure values are written to the Zustand store
+ * (`setChallengeProgress`, `setChallengePressure`, `setChallengeIsPressing`)
+ * so the 3D StufferStation can visualize them (casing inflation, color shift,
+ * plunger movement).
+ *
+ * **Scoring:** 100 - (bursts * 20) - (overtime_seconds * 5).
+ * Fill reaching 100 = success. Timer expiry = partial score from fill level.
+ *
+ * **Phases:** dialogue -> stuffing -> success -> complete
+ */
+
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {StyleSheet, Text, TouchableWithoutFeedback, View} from 'react-native';
 import type {StuffingVariant} from '../../data/challenges/variants';
@@ -9,6 +30,10 @@ import type {Reaction} from '../characters/reactions';
 import {DialogueOverlay} from '../ui/DialogueOverlay';
 import {ProgressGauge} from '../ui/ProgressGauge';
 
+/**
+ * @param props.onComplete - Called with the final score (0-100) when the challenge ends
+ * @param props.onReaction - Triggers Mr. Sausage reactions on the CRT TV
+ */
 interface StuffingChallengeProps {
   onComplete: (score: number) => void;
   onReaction?: (reaction: Reaction) => void;

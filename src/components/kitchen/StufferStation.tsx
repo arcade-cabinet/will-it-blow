@@ -1,3 +1,28 @@
+/**
+ * @module StufferStation
+ * 3D sausage stuffer with plunger, casing inflation, and burst particles.
+ *
+ * Procedural geometry builds a vertical stuffer body with a push-down
+ * plunger, a horizontal spout, and an inflating casing tube. The plunger
+ * descends as `fillLevel` increases, and the casing's XZ scale grows to
+ * visualize the filling. Casing color shifts green -> yellow -> red based
+ * on `pressureLevel` via `pressureToColor()`.
+ *
+ * Rendering paths:
+ * - **Web (Rapier):** Stuffer body and plunger are RigidBody colliders;
+ *   plunger is kinematicPosition driven via `setNextKinematicTranslation`.
+ *   Burst particles are individual BallCollider RigidBodies with impulse.
+ * - **Native (manual):** All meshes positioned directly in `useFrame`;
+ *   burst particles animated with manual velocity + gravity integration.
+ *
+ * Includes a GrabSystem receiver mesh at the top opening that accepts
+ * the mixing bowl drop (objectType === 'bowl'), triggering the stuffer
+ * fill animation and pour sound.
+ *
+ * @see StuffingChallenge — the 2D overlay that drives fillLevel, pressureLevel,
+ *   isPressing, and hasBurst via props passed through GameWorld.
+ */
+
 import {useFrame} from '@react-three/fiber';
 import type {RapierRigidBody} from '@react-three/rapier';
 import {BallCollider, CylinderCollider, RigidBody} from '@react-three/rapier';
@@ -7,6 +32,13 @@ import * as THREE from 'three/webgpu';
 import {audioEngine} from '../../engine/AudioEngine';
 import {useGameStore} from '../../store/gameStore';
 
+/**
+ * @param props.position - World position from resolveTargets()
+ * @param props.fillLevel - 0-100 fill percentage (drives plunger descent and casing inflation)
+ * @param props.pressureLevel - 0-100 pressure (drives casing color green->yellow->red)
+ * @param props.isPressing - Whether the player is actively pressing (triggers plunger jiggle)
+ * @param props.hasBurst - Rising edge triggers the burst particle explosion
+ */
 interface StufferStationProps {
   position: [number, number, number];
   fillLevel: number; // 0-100
@@ -68,6 +100,13 @@ export function pressureToColor(pressure: number): [number, number, number] {
 // BurstParticlePhysics — Rapier dynamic rigid body burst particle (web only)
 // ---------------------------------------------------------------------------
 
+/**
+ * A single Rapier-physics burst particle (web only).
+ * When `active` transitions to true, the rigid body is teleported to the
+ * burst origin and given an initial velocity impulse. The mesh fades out
+ * via `fadeScale` over ~1 second. When inactive, the body is parked at
+ * y=-100 off-screen.
+ */
 interface BurstParticlePhysicsProps {
   index: number;
   size: number;
@@ -150,6 +189,15 @@ function BurstParticlePhysics({
 // StufferStation
 // ---------------------------------------------------------------------------
 
+/**
+ * 3D sausage stuffer with animated plunger, inflating casing, and burst
+ * particle effects. Reads fill/pressure state from props and animates
+ * all meshes in a single `useFrame` callback.
+ *
+ * The `useFrame` loop handles: plunger descent + jiggle, meat fill
+ * scale-down, casing inflation + pressure color + high-pressure pulsing,
+ * burst particle launch (web Rapier or native manual), and body vibration.
+ */
 export const StufferStation = ({
   position,
   fillLevel,
