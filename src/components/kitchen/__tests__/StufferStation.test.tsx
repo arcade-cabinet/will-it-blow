@@ -7,14 +7,26 @@ const targets = resolveTargets(DEFAULT_ROOM);
 describe('StufferStation', () => {
   it('renders without crashing', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <StufferStation fillLevel={0} pressureLevel={0} isPressing={false} hasBurst={false} />,
+      <StufferStation
+        position={targets.stuffer.position}
+        fillLevel={0}
+        pressureLevel={0}
+        isPressing={false}
+        hasBurst={false}
+      />,
     );
     expect(renderer.scene.children.length).toBeGreaterThan(0);
   });
 
   it('renders the root group at the resolved stuffer target', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <StufferStation fillLevel={0} pressureLevel={0} isPressing={false} hasBurst={false} />,
+      <StufferStation
+        position={targets.stuffer.position}
+        fillLevel={0}
+        pressureLevel={0}
+        isPressing={false}
+        hasBurst={false}
+      />,
     );
     const root = renderer.scene.children[0];
     const [ex, ey, ez] = targets.stuffer.position;
@@ -42,7 +54,13 @@ describe('StufferStation', () => {
 
   it('renders counter, body, plunger, handle, spout, and casing meshes', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <StufferStation fillLevel={0} pressureLevel={0} isPressing={false} hasBurst={false} />,
+      <StufferStation
+        position={targets.stuffer.position}
+        fillLevel={0}
+        pressureLevel={0}
+        isPressing={false}
+        hasBurst={false}
+      />,
     );
     const root = renderer.scene.children[0];
     // Body + plunger + handle + knob + spout + casing + casingEnd + meatFill = 8+ minimum
@@ -51,21 +69,39 @@ describe('StufferStation', () => {
 
   it('renders at mid-fill without error', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <StufferStation fillLevel={50} pressureLevel={60} isPressing={true} hasBurst={false} />,
+      <StufferStation
+        position={targets.stuffer.position}
+        fillLevel={50}
+        pressureLevel={60}
+        isPressing={true}
+        hasBurst={false}
+      />,
     );
     expect(renderer.scene.children.length).toBeGreaterThan(0);
   });
 
   it('renders during burst without error', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <StufferStation fillLevel={80} pressureLevel={95} isPressing={false} hasBurst={true} />,
+      <StufferStation
+        position={targets.stuffer.position}
+        fillLevel={80}
+        pressureLevel={95}
+        isPressing={false}
+        hasBurst={true}
+      />,
     );
     expect(renderer.scene.children.length).toBeGreaterThan(0);
   });
 
   it('renders at full fill without error', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <StufferStation fillLevel={100} pressureLevel={100} isPressing={false} hasBurst={false} />,
+      <StufferStation
+        position={targets.stuffer.position}
+        fillLevel={100}
+        pressureLevel={100}
+        isPressing={false}
+        hasBurst={false}
+      />,
     );
     expect(renderer.scene.children.length).toBeGreaterThan(0);
   });

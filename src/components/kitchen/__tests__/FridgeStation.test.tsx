@@ -44,6 +44,7 @@ describe('FridgeStation', () => {
   it('renders without crashing', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <FridgeStation
+        position={targets.fridge.position}
         ingredients={mockIngredients}
         selectedIds={new Set()}
         hintActive={false}
@@ -58,6 +59,7 @@ describe('FridgeStation', () => {
   it('renders lights, door, shelves, and ingredient meshes', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <FridgeStation
+        position={targets.fridge.position}
         ingredients={mockIngredients}
         selectedIds={new Set()}
         hintActive={false}
@@ -74,6 +76,7 @@ describe('FridgeStation', () => {
   it('positions the fridge group at the resolved fridge target', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <FridgeStation
+        position={targets.fridge.position}
         ingredients={mockIngredients}
         selectedIds={new Set()}
         hintActive={false}
@@ -111,6 +114,7 @@ describe('FridgeStation', () => {
   it('includes a point light for interior fridge glow', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <FridgeStation
+        position={targets.fridge.position}
         ingredients={mockIngredients}
         selectedIds={new Set()}
         hintActive={false}
@@ -137,6 +141,7 @@ describe('FridgeStation', () => {
   it('renders with selected ingredients without crashing', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <FridgeStation
+        position={targets.fridge.position}
         ingredients={mockIngredients}
         selectedIds={new Set([0, 2])}
         hintActive={false}
@@ -151,6 +156,7 @@ describe('FridgeStation', () => {
   it('renders with hint active without crashing', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <FridgeStation
+        position={targets.fridge.position}
         ingredients={mockIngredients}
         selectedIds={new Set()}
         hintActive={true}

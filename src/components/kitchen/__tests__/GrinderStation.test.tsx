@@ -7,14 +7,24 @@ const targets = resolveTargets(DEFAULT_ROOM);
 describe('GrinderStation', () => {
   it('renders without crashing', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <GrinderStation grindProgress={0} crankAngle={0} isSplattering={false} />,
+      <GrinderStation
+        position={targets.grinder.position}
+        grindProgress={0}
+        crankAngle={0}
+        isSplattering={false}
+      />,
     );
     expect(renderer.scene.children.length).toBeGreaterThan(0);
   });
 
   it('renders the root group at the resolved grinder target', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <GrinderStation grindProgress={0} crankAngle={0} isSplattering={false} />,
+      <GrinderStation
+        position={targets.grinder.position}
+        grindProgress={0}
+        crankAngle={0}
+        isSplattering={false}
+      />,
     );
     const root = renderer.scene.children[0];
     const [ex, ey, ez] = targets.grinder.position;
@@ -36,7 +46,12 @@ describe('GrinderStation', () => {
 
   it('renders counter, body, hopper, spout, crank arm, and knob meshes', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <GrinderStation grindProgress={0} crankAngle={0} isSplattering={false} />,
+      <GrinderStation
+        position={targets.grinder.position}
+        grindProgress={0}
+        crankAngle={0}
+        isSplattering={false}
+      />,
     );
     const root = renderer.scene.children[0];
     // Grinder body + hopper + spout + crank arm + knob = 5+ minimum
@@ -45,21 +60,36 @@ describe('GrinderStation', () => {
 
   it('renders at mid-progress without error', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <GrinderStation grindProgress={50} crankAngle={Math.PI * 4} isSplattering={false} />,
+      <GrinderStation
+        position={targets.grinder.position}
+        grindProgress={50}
+        crankAngle={Math.PI * 4}
+        isSplattering={false}
+      />,
     );
     expect(renderer.scene.children.length).toBeGreaterThan(0);
   });
 
   it('renders during splatter without error', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <GrinderStation grindProgress={30} crankAngle={Math.PI * 2} isSplattering={true} />,
+      <GrinderStation
+        position={targets.grinder.position}
+        grindProgress={30}
+        crankAngle={Math.PI * 2}
+        isSplattering={true}
+      />,
     );
     expect(renderer.scene.children.length).toBeGreaterThan(0);
   });
 
   it('renders at full progress without error', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <GrinderStation grindProgress={100} crankAngle={Math.PI * 8} isSplattering={false} />,
+      <GrinderStation
+        position={targets.grinder.position}
+        grindProgress={100}
+        crankAngle={Math.PI * 8}
+        isSplattering={false}
+      />,
     );
     expect(renderer.scene.children.length).toBeGreaterThan(0);
   });

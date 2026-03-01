@@ -3,14 +3,12 @@ import {useRef} from 'react';
 import type * as THREE from 'three/webgpu';
 
 interface GrinderStationProps {
-  position?: [number, number, number];
+  position: [number, number, number];
   grindProgress: number; // 0-100
   crankAngle: number; // Current rotation angle in radians
   isSplattering: boolean; // Trigger splatter visual
 }
 
-// Grinder sits on the left-wall counter (GLB Cube.008), surface at y=2.06
-const DEFAULT_GRINDER_POS: [number, number, number] = [-4.75, 2.06, -0.64];
 const GRINDER_BASE_Y = 0;
 
 // Geometry constants
@@ -51,7 +49,7 @@ const OUTPUT_PARTICLE_LAYOUT = Array.from({length: OUTPUT_PARTICLE_MAX}, (_, i) 
 const SPLATTER_SIZES = Array.from({length: SPLATTER_PARTICLE_COUNT}, (_, i) => 0.05 + i * 0.008);
 
 export const GrinderStation = ({
-  position = DEFAULT_GRINDER_POS,
+  position,
   grindProgress,
   crankAngle,
   isSplattering,

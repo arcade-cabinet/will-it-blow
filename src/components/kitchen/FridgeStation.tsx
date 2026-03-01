@@ -4,7 +4,7 @@ import * as THREE from 'three/webgpu';
 import type {Ingredient} from '../../engine/Ingredients';
 
 interface FridgeStationProps {
-  position?: [number, number, number];
+  position: [number, number, number];
   ingredients: Ingredient[];
   selectedIds: Set<number>;
   hintActive: boolean;
@@ -13,9 +13,6 @@ interface FridgeStationProps {
   onHover: (index: number | null) => void;
 }
 
-// Position aligned with GLB fridge (Cube001_2): center [-5.16, 1.79, -5.02], size [1.01, 2.92, 1.42]
-// The group origin sits at the fridge center; ingredients sit on shelves inside the volume.
-const DEFAULT_FRIDGE_POS: [number, number, number] = [-5.16, 1.79, -5.02];
 const FRIDGE_W = 1.01; // x
 const FRIDGE_H = 2.92; // y
 const FRIDGE_D = 1.42; // z
@@ -215,7 +212,7 @@ function IngredientMesh({
 // -------------------------------------------------------
 
 export const FridgeStation = ({
-  position = DEFAULT_FRIDGE_POS,
+  position,
   ingredients,
   selectedIds,
   hintActive,

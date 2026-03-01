@@ -40,13 +40,10 @@ const TV = {
 
 interface CrtTelevisionProps {
   reaction?: Reaction;
-  position?: [number, number, number];
+  position: [number, number, number];
 }
 
-export const CrtTelevision = ({
-  reaction = 'idle',
-  position = [0, 2.5, -5.5],
-}: CrtTelevisionProps) => {
+export const CrtTelevision = ({reaction = 'idle', position}: CrtTelevisionProps) => {
   // --- Refs for animated materials ---
   const housingMatRef = useRef<THREE.MeshStandardMaterial>(null);
   const glassMatRef = useRef<THREE.MeshBasicMaterial>(null);
