@@ -1,3 +1,14 @@
+<!--
+title: State Management
+domain: core
+status: current
+engine: r3f
+last-verified: 2026-03-01
+depends-on: [architecture, game-design]
+agent-context: store-warden, challenge-dev
+summary: Zustand store schema, actions, state flow
+-->
+
 # State Management
 
 ## Overview

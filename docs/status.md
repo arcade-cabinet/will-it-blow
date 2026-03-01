@@ -1,3 +1,14 @@
+<!--
+title: Project Status & Remaining Work
+domain: core
+status: stale
+engine: r3f
+last-verified: 2026-03-01
+depends-on: [architecture, game-design, testing, deployment]
+agent-context: doc-keeper
+summary: Current completion status — needs update for physics/Rapier work
+-->
+
 # Project Status & Remaining Work
 
 **Last updated:** 2026-02-28

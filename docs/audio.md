@@ -1,3 +1,14 @@
+<!--
+title: Audio System
+domain: core
+status: current
+engine: r3f
+last-verified: 2026-03-01
+depends-on: [game-design, development-guide]
+agent-context: scene-architect, challenge-dev
+summary: Tone.js synthesis, sound design, integration points
+-->
+
 # Audio System
 
 ## Overview

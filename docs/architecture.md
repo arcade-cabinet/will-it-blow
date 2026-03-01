@@ -1,3 +1,14 @@
+<!--
+title: Architecture Overview
+domain: core
+status: current
+engine: r3f
+last-verified: 2026-03-01
+depends-on: [state-management, 3d-rendering, game-design]
+agent-context: scene-architect, challenge-dev
+summary: System design, directory structure, data flow for R3F/WebGPU game
+-->
+
 # Architecture Overview
 
 ## System Design

@@ -1,3 +1,14 @@
+<!--
+title: Testing Strategy
+domain: core
+status: current
+engine: r3f
+last-verified: 2026-03-01
+depends-on: [3d-rendering, state-management, development-guide]
+agent-context: doc-keeper, challenge-dev
+summary: Jest testing strategy, R3F test-renderer, coverage
+-->
+
 # Testing Strategy
 
 ## Overview
