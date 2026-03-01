@@ -4,9 +4,7 @@ import {GrabbableSausage} from '../GrabbableSausage';
 
 describe('GrabbableSausage', () => {
   it('renders without crashing', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <GrabbableSausage position={[0, 1, 0]} />,
-    );
+    const renderer = await ReactThreeTestRenderer.create(<GrabbableSausage position={[0, 1, 0]} />);
     expect(renderer.scene.children.length).toBeGreaterThan(0);
   });
 
@@ -20,9 +18,7 @@ describe('GrabbableSausage', () => {
   });
 
   it('has grabbable userData with sausage type', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <GrabbableSausage position={[0, 1, 0]} />,
-    );
+    const renderer = await ReactThreeTestRenderer.create(<GrabbableSausage position={[0, 1, 0]} />);
     const findGrabbable = (node: any): any => {
       if (node.instance?.userData?.grabbable) return node;
       for (const child of node.children ?? []) {
