@@ -80,7 +80,7 @@ export function GameOverScreen() {
               <View style={styles.scoreCard}>
                 <Text style={styles.scoreLabel}>AVERAGE SCORE</Text>
                 <Text style={[styles.scoreValue, {color: rankColor}]}>
-                  {Math.round(verdict.averageScore)}
+                  {Math.round(verdict.averageScore || 0)}
                 </Text>
               </View>
 
@@ -91,7 +91,7 @@ export function GameOverScreen() {
                     <Text style={styles.challengeScoreLabel}>
                       {CHALLENGE_NAMES[i] ?? `Challenge ${i + 1}`}
                     </Text>
-                    <Text style={styles.challengeScoreValue}>{score}</Text>
+                    <Text style={styles.challengeScoreValue}>{Math.round(score || 0)}</Text>
                   </View>
                 ))}
               </View>

@@ -255,7 +255,7 @@ export function TastingChallenge({onComplete: _onComplete, onReaction}: TastingC
             <View style={styles.averageDivider} />
             <View style={styles.scoreRow}>
               <Text style={styles.averageLabel}>Average</Text>
-              <Text style={styles.averageValue}>{verdict.averageScore.toFixed(1)}</Text>
+              <Text style={styles.averageValue}>{(verdict.averageScore || 0).toFixed(1)}</Text>
             </View>
           </Animated.View>
         </View>

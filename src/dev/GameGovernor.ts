@@ -155,7 +155,7 @@ function createGovernor(): GameGov {
       store.getState().triggerChallenge();
     },
 
-    completeCurrentChallenge(score: number) {
+    completeCurrentChallenge(score = 0) {
       store.getState().completeChallenge(score);
       // Auto-trigger the next challenge (simulates player walking to next station)
       if (store.getState().gameStatus === 'playing') {

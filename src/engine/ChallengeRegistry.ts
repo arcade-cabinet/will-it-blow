@@ -111,10 +111,11 @@ export interface Verdict {
 
 /** Averages challenge scores and returns a final verdict. */
 export function calculateFinalVerdict(challengeScores: number[]): Verdict {
-  if (challengeScores.length === 0) {
+  const validScores = challengeScores.filter(s => Number.isFinite(s));
+  if (validScores.length === 0) {
     return {rank: 'F', averageScore: 0, title: 'FAILED', message: 'No challenges completed.'};
   }
-  const averageScore = challengeScores.reduce((sum, s) => sum + s, 0) / challengeScores.length;
+  const averageScore = validScores.reduce((sum, s) => sum + s, 0) / validScores.length;
 
   if (averageScore >= 92) {
     return {
