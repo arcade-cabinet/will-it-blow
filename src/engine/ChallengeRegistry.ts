@@ -1,3 +1,13 @@
+/**
+ * @module ChallengeRegistry
+ * Central registry for challenge configurations, variant selection, and
+ * final verdict calculation. Orchestrates the 5-challenge game flow:
+ * ingredients -> grinding -> stuffing -> cooking -> tasting.
+ *
+ * Variant selection is deterministic per seed — the same variantSeed
+ * always produces the same challenge parameters, ensuring fair replays.
+ */
+
 import type {
   CookingVariant,
   GrindingVariant,
@@ -11,8 +21,10 @@ import {
   STUFFING_VARIANTS,
 } from '../data/challenges/variants';
 
+/** Identifier for each of the 5 sequential challenge phases. */
 export type ChallengeId = 'ingredients' | 'grinding' | 'stuffing' | 'cooking' | 'tasting';
 
+/** The fixed sequence of challenges. Index matches `currentChallenge` in the store. */
 export const CHALLENGE_ORDER: ChallengeId[] = [
   'ingredients',
   'grinding',
@@ -21,11 +33,17 @@ export const CHALLENGE_ORDER: ChallengeId[] = [
   'tasting',
 ];
 
+/** Static configuration for a single challenge (metadata, not gameplay params). */
 export interface ChallengeConfig {
+  /** Unique challenge identifier */
   id: ChallengeId;
+  /** Human-readable name for UI display */
   name: string;
+  /** Target name in FurnitureLayout where this challenge takes place */
   station: string;
+  /** Camera position offset from the station target when the challenge is active */
   cameraOffset: [number, number, number];
+  /** Player-facing description of the challenge objective */
   description: string;
 }
 
@@ -67,7 +85,13 @@ const CHALLENGE_CONFIGS: Record<ChallengeId, ChallengeConfig> = {
   },
 };
 
-/** Returns the challenge config for the given id, or throws if invalid. */
+/**
+ * Returns the challenge config for the given id, or throws if invalid.
+ *
+ * @param id - The challenge identifier to look up
+ * @returns The static config for that challenge
+ * @throws {Error} If the id does not match any known challenge
+ */
 export function getChallengeConfig(id: ChallengeId): ChallengeConfig {
   const config = CHALLENGE_CONFIGS[id];
   if (!config) {
@@ -76,12 +100,28 @@ export function getChallengeConfig(id: ChallengeId): ChallengeConfig {
   return config;
 }
 
-/** Seeded hash function for deterministic variant selection. */
+/**
+ * Seeded hash function for deterministic variant selection.
+ * Uses the Knuth multiplicative hash (golden ratio prime 2654435761)
+ * to distribute seeds evenly across the array range.
+ *
+ * @param seed - The game session seed (typically Date.now() at game start)
+ * @param arrayLength - Number of variants to choose from
+ * @returns An index in [0, arrayLength) that is deterministic for the given seed
+ */
 function seededIndex(seed: number, arrayLength: number): number {
   return Math.abs(((seed * 2654435761) >>> 0) % arrayLength);
 }
 
-/** Picks a deterministic variant for the given challenge and seed. */
+/**
+ * Picks a deterministic variant for the given challenge and seed.
+ * Each challenge type offsets the seed by its index (0-3) so the same
+ * base seed produces different variants for different challenges.
+ *
+ * @param challengeId - Which challenge to pick a variant for
+ * @param seed - The game session's variant seed
+ * @returns The selected variant config, or `null` for tasting (which has no variants)
+ */
 export function pickVariant(
   challengeId: ChallengeId,
   seed: number,
@@ -102,14 +142,34 @@ export function pickVariant(
   }
 }
 
+/**
+ * The final game verdict displayed on the results screen.
+ * Only S-rank (>= 92) is a true victory — all others are degrees of failure.
+ */
 export interface Verdict {
+  /** Letter grade: S (victory), A/B/F (defeat) */
   rank: 'S' | 'A' | 'B' | 'F';
+  /** Title displayed to the player (e.g., "THE SAUSAGE KING") */
   title: string;
+  /** Mean of all challenge scores (0-100) */
   averageScore: number;
+  /** Mr. Sausage's verdict dialogue */
   message: string;
 }
 
-/** Averages challenge scores and returns a final verdict. */
+/**
+ * Averages challenge scores and returns a final verdict.
+ *
+ * Rank thresholds:
+ * - S (>= 92): "THE SAUSAGE KING" — the only true victory
+ * - A (>= 75): "Almost Worthy" — defeat, but close
+ * - B (>= 50): "Mediocre" — defeat
+ * - F (< 50):  "Unacceptable" — "You are the sausage now"
+ *
+ * @param challengeScores - Array of scores (0-100) from each completed challenge
+ * @returns Verdict with rank, title, average score, and Mr. Sausage's message
+ * @throws {Error} If any score is non-finite (NaN, Infinity)
+ */
 export function calculateFinalVerdict(challengeScores: number[]): Verdict {
   if (challengeScores.length === 0) {
     return {rank: 'F', averageScore: 0, title: 'FAILED', message: 'No challenges completed.'};

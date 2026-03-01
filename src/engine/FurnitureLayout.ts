@@ -7,22 +7,42 @@
 // Types
 // ---------------------------------------------------------------------------
 
+/** Physical dimensions of the kitchen room in world units. */
 export interface RoomDimensions {
+  /** Width (x-axis extent) */
   w: number;
+  /** Depth (z-axis extent) */
   d: number;
+  /** Height (y-axis extent, floor to ceiling) */
   h: number;
 }
 
+/**
+ * A named placement target — the single source of truth for where
+ * an object lives in the kitchen. Stations, furniture, and decorative
+ * props all reference targets by name; nothing uses hardcoded coordinates.
+ */
 export interface Target {
+  /** World-space [x, y, z] position, relative to room center (0,0,0) */
   position: [number, number, number];
+  /** Y-axis rotation in radians (0 = facing +z) */
   rotationY: number;
+  /** Proximity trigger radius for player interaction. 0 = non-interactive (decorative). */
   triggerRadius: number;
+  /** Y position for the floating waypoint marker above the station. Only set for interactive targets. */
   markerY?: number;
 }
 
+/**
+ * Maps a GLB model filename to a named target.
+ * FurnitureLoader iterates FURNITURE_RULES to load and position each piece.
+ */
 export interface FurnitureRule {
+  /** GLB filename (resolved at runtime via getAssetUrl) */
   glb: string;
+  /** Name of the target from resolveTargets() to position this GLB at */
   target: string;
+  /** If true, the GLB contains animations that FurnitureLoader should play */
   animated?: boolean;
 }
 
@@ -30,8 +50,13 @@ export interface FurnitureRule {
 // Constants
 // ---------------------------------------------------------------------------
 
+/** Default kitchen dimensions: 13x13 floor, 5.5 ceiling height. */
 export const DEFAULT_ROOM: RoomDimensions = {w: 13, d: 13, h: 5.5};
 
+/**
+ * Target names for the 5 challenge stations, indexed by challenge number (0-4).
+ * Used by getStationTarget() to map currentChallenge to a physical location.
+ */
 export const STATION_TARGET_NAMES = ['fridge', 'grinder', 'stuffer', 'stove', 'crt-tv'] as const;
 
 // ---------------------------------------------------------------------------
@@ -48,6 +73,10 @@ export const STATION_TARGET_NAMES = ['fridge', 'grinder', 'stuffer', 'stove', 'c
  *   Stuffer: [ 2.28, 2.68,  2.25]
  *   Stove:   [-4.98, 2.13, -2.23]
  *   CRT TV:  [ 0,    2.50, -5.50] (1 unit inside back wall)
+ *
+ * @param room - The kitchen room dimensions (all targets scale with these)
+ * @returns A map of target name to Target. Includes station targets (interactive),
+ *          decorative targets, and atmospheric prop targets.
  */
 export function resolveTargets(room: RoomDimensions): Record<string, Target> {
   const halfW = room.w / 2;
@@ -291,7 +320,13 @@ export function resolveTargets(room: RoomDimensions): Record<string, Target> {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Returns the target for the given challenge index (0-4), or undefined if invalid. */
+/**
+ * Returns the target for the given challenge index (0-4), or undefined if invalid.
+ *
+ * @param targets - The full targets map from resolveTargets()
+ * @param challengeIndex - Challenge number (0=fridge, 1=grinder, 2=stuffer, 3=stove, 4=crt-tv)
+ * @returns The station Target, or `undefined` if the index is out of range
+ */
 export function getStationTarget(
   targets: Record<string, Target>,
   challengeIndex: number,
@@ -305,6 +340,11 @@ export function getStationTarget(
 // Furniture rules — maps GLB filenames to target names
 // ---------------------------------------------------------------------------
 
+/**
+ * Complete list of furniture GLB models and their target placements.
+ * FurnitureLoader iterates this array to load, position, and optionally
+ * animate each piece of kitchen furniture and atmospheric props.
+ */
 export const FURNITURE_RULES: FurnitureRule[] = [
   // Core kitchen furniture
   {glb: 'l_counter.glb', target: 'l-counter'},
