@@ -218,6 +218,11 @@ function IngredientMesh({
     <mesh
       ref={meshRef}
       position={isWeb ? undefined : position}
+      userData={{
+        grabbable: true,
+        objectType: 'ingredient',
+        objectId: ingredient.name,
+      }}
       onClick={handleClick}
       onPointerOver={e => {
         e.stopPropagation();

@@ -19,6 +19,7 @@ import {CrtTelevision} from './kitchen/CrtTelevision';
 import {FridgeStation} from './kitchen/FridgeStation';
 import {GrinderStation} from './kitchen/GrinderStation';
 import {KitchenEnvironment} from './kitchen/KitchenEnvironment';
+import {MixingBowl} from './kitchen/MixingBowl';
 import {StationMarker} from './kitchen/StationMarker';
 import {StoveStation} from './kitchen/StoveStation';
 import {StufferStation} from './kitchen/StufferStation';
@@ -276,6 +277,9 @@ const SceneContent = ({
           visible={showMarker && currentChallenge === i}
         />
       ))}
+
+      {/* Mixing bowl — near fridge, receives dropped ingredients */}
+      <MixingBowl position={RESOLVED_TARGETS['mixing-bowl'].position} />
 
       {/* All stations always rendered — positions from target system */}
       {isFridgeActive && fridgePool.length > 0 && (

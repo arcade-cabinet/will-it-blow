@@ -4,6 +4,19 @@ import {DEFAULT_ROOM, resolveTargets} from '../../../engine/FurnitureLayout';
 import {useGameStore} from '../../../store/gameStore';
 import {MixingBowl} from '../MixingBowl';
 
+// Mock drei — useGLTF returns a stub scene with clone support
+jest.mock('@react-three/drei', () => ({
+  useGLTF: jest.fn(() => ({
+    scene: {
+      clone: jest.fn(() => ({
+        traverse: jest.fn(),
+      })),
+      traverse: jest.fn(),
+    },
+    animations: [],
+  })),
+}));
+
 const targets = resolveTargets(DEFAULT_ROOM);
 
 describe('MixingBowl', () => {
