@@ -9,6 +9,7 @@
       "!!**/public",
       "!!**/android",
       "!!**/ios",
+      "!!**/docs/api",
       "!!**/coverage",
       "!!**/test-results",
       "!!**/playwright-report",
