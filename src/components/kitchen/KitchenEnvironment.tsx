@@ -279,9 +279,15 @@ function FluorescentTube({position, lightRef}: FluorescentTubeProps) {
 export const KitchenEnvironment = ({
   fridgeDoorOpen = false,
   grinderCranking = false,
+  bowlPosition,
+  bowlReceiving = false,
 }: {
   fridgeDoorOpen?: boolean;
   grinderCranking?: boolean;
+  /** Override position for the mixing bowl (dynamic — follows bowlPosition state). */
+  bowlPosition?: [number, number, number] | null;
+  /** Whether the bowl should accept dropped ingredients. */
+  bowlReceiving?: boolean;
 }) => {
   // Load PBR textures for room enclosure
   const textures = useRoomTextures();
@@ -341,6 +347,12 @@ export const KitchenEnvironment = ({
           ======================================================= */}
       <RoomEnclosure textures={textures} />
 
+      {/* Trap door — brushed steel ceiling panel (easter egg if player looks up) */}
+      <mesh position={[0, ROOM_H - 0.01, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[1.8, 1.8]} />
+        <meshStandardMaterial color="#6a6e73" metalness={0.85} roughness={0.35} />
+      </mesh>
+
       {/* =======================================================
           GRIME DECALS — PBR textured transparent planes
           ======================================================= */}
@@ -358,7 +370,12 @@ export const KitchenEnvironment = ({
       {/* =======================================================
           FURNITURE — GLB segments positioned via FurnitureLayout targets
           ======================================================= */}
-      <FurnitureLoader fridgeDoorOpen={fridgeDoorOpen} grinderCranking={grinderCranking} />
+      <FurnitureLoader
+        fridgeDoorOpen={fridgeDoorOpen}
+        grinderCranking={grinderCranking}
+        bowlPosition={bowlPosition}
+        bowlReceiving={bowlReceiving}
+      />
 
       {/* =======================================================
           LIGHTING — harsh fluorescent overhead

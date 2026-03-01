@@ -316,9 +316,10 @@ export const FURNITURE_RULES: FurnitureRule[] = [
   {glb: 'oven_range.glb', target: 'oven'},
   {glb: 'dishwasher.glb', target: 'dishwasher'},
   {glb: 'meat_grinder.glb', target: 'meat_grinder', animated: true},
+  {glb: 'mixing_bowl.glb', target: 'mixing-bowl'},
   {glb: 'spice_rack.glb', target: 'spice-rack'},
   {glb: 'utensil_hooks.glb', target: 'utensil-hooks'},
-  {glb: 'trap_door.glb', target: 'trap-door'},
+  // trap_door is room structure (ceiling panel), rendered in KitchenEnvironment — not furniture
 
   // Atmospheric props — scattered around to set the horror mood
   {glb: 'frying_pan.glb', target: 'frying-pan'},

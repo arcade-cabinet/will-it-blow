@@ -37,17 +37,20 @@ beforeEach(() => {
   mockActions = {};
 });
 
+// Rules that render without bowlPosition (bowl is conditionally excluded)
+const RENDERED_RULES = FURNITURE_RULES.filter(r => r.glb !== 'mixing_bowl.glb');
+
 describe('FurnitureLoader', () => {
   it('renders without crashing', async () => {
     const renderer = await ReactThreeTestRenderer.create(<FurnitureLoader />);
     expect(renderer.scene.children.length).toBeGreaterThan(0);
   });
 
-  it('renders one group per furniture rule', async () => {
+  it('renders one group per furniture rule (bowl excluded without bowlPosition)', async () => {
     const renderer = await ReactThreeTestRenderer.create(<FurnitureLoader />);
-    // Root group contains one child group per FURNITURE_RULES entry
+    // Root group — bowl skipped when bowlPosition is null
     const root = renderer.scene.children[0];
-    expect(root.children.length).toBe(FURNITURE_RULES.length);
+    expect(root.children.length).toBe(RENDERED_RULES.length);
   });
 
   it('positions each piece at its resolved target', async () => {
@@ -55,8 +58,8 @@ describe('FurnitureLoader', () => {
     const renderer = await ReactThreeTestRenderer.create(<FurnitureLoader />);
     const root = renderer.scene.children[0];
 
-    for (let i = 0; i < FURNITURE_RULES.length; i++) {
-      const rule = FURNITURE_RULES[i];
+    for (let i = 0; i < RENDERED_RULES.length; i++) {
+      const rule = RENDERED_RULES[i];
       const target = targets[rule.target];
       const group = root.children[i];
       const pos = group.instance.position;
@@ -72,8 +75,8 @@ describe('FurnitureLoader', () => {
     const renderer = await ReactThreeTestRenderer.create(<FurnitureLoader />);
     const root = renderer.scene.children[0];
 
-    for (let i = 0; i < FURNITURE_RULES.length; i++) {
-      const rule = FURNITURE_RULES[i];
+    for (let i = 0; i < RENDERED_RULES.length; i++) {
+      const rule = RENDERED_RULES[i];
       const target = targets[rule.target];
       const group = root.children[i];
       expect(group.instance.rotation.y).toBeCloseTo(target.rotationY, 4);

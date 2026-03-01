@@ -20,7 +20,6 @@ import {FridgeStation} from './kitchen/FridgeStation';
 import {GrabbableSausage} from './kitchen/GrabbableSausage';
 import {GrinderStation} from './kitchen/GrinderStation';
 import {KitchenEnvironment} from './kitchen/KitchenEnvironment';
-import {MixingBowl} from './kitchen/MixingBowl';
 import {StationMarker} from './kitchen/StationMarker';
 import {StoveStation} from './kitchen/StoveStation';
 import {StufferStation} from './kitchen/StufferStation';
@@ -299,7 +298,12 @@ const SceneContent = ({
         <ManualProximityTrigger />
       )}
 
-      <KitchenEnvironment fridgeDoorOpen={isFridgeActive} grinderCranking={isGrinderActive} />
+      <KitchenEnvironment
+        fridgeDoorOpen={isFridgeActive}
+        grinderCranking={isGrinderActive}
+        bowlPosition={showBowl ? bowlRenderPos : null}
+        bowlReceiving={bowlPosition === 'fridge'}
+      />
       <CrtTelevision
         position={STATIONS[4].position}
         reaction={gameStatus === 'defeat' ? 'laugh' : mrSausageReaction}
@@ -313,16 +317,6 @@ const SceneContent = ({
           visible={showMarker && currentChallenge === i}
         />
       ))}
-
-      {/* Mixing bowl — position tracked by bowlPosition store state.
-          Key changes on position change to force remount (fresh visible mesh). */}
-      {showBowl && (
-        <MixingBowl
-          key={`bowl-${bowlPosition}`}
-          position={bowlRenderPos}
-          receivingIngredients={bowlPosition === 'fridge'}
-        />
-      )}
 
       {/* Grabbable sausage — spawns at stuffer output after Challenge 2 */}
       {showSausage && <GrabbableSausage position={STUFFER_OUTPUT_POS} />}

@@ -112,9 +112,8 @@ describe('GameWorld', () => {
     const fs = require('node:fs');
     const path = require('node:path');
     const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
-    // Dynamic bowl positioning from store state
+    // Dynamic bowl positioning from store state (bowl loaded via FurnitureLoader)
     expect(source).toContain('bowlPosition');
-    expect(source).toContain('MixingBowl');
     // Sausage spawning after stuffer challenge
     expect(source).toContain('GrabbableSausage');
     expect(source).toContain('sausagePlaced');
