@@ -2,6 +2,7 @@ import {useFrame, useThree} from '@react-three/fiber';
 import {useCallback, useEffect, useRef} from 'react';
 import {Platform} from 'react-native';
 import * as THREE from 'three/webgpu';
+import {audioEngine} from '../../engine/AudioEngine';
 import {useGameStore} from '../../store/gameStore';
 
 /** Rapier RigidBodyType numeric values (avoids importing the enum directly) */
@@ -138,6 +139,7 @@ function GrabSystemInner() {
             onReceive(grabbed.objectType, grabbed.objectId);
           }
           // Hide the dropped object (it has been "consumed" by the receiver)
+          audioEngine.playDrop();
           grabbed.mesh.visible = false;
           if (grabbed.rigidBody) {
             grabbed.rigidBody.setBodyType(BODY_TYPE_DYNAMIC, true);
@@ -192,6 +194,7 @@ function GrabSystemInner() {
             };
 
             setGrabbedObject(obj.userData.objectId ?? obj.name ?? 'object');
+            audioEngine.playGrab();
             break;
           }
         }

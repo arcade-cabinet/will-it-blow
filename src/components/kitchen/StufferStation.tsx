@@ -1,9 +1,11 @@
 import {useFrame} from '@react-three/fiber';
 import type {RapierRigidBody} from '@react-three/rapier';
 import {BallCollider, CylinderCollider, RigidBody} from '@react-three/rapier';
-import {useEffect, useRef} from 'react';
+import {useCallback, useEffect, useRef} from 'react';
 import {Platform} from 'react-native';
 import * as THREE from 'three/webgpu';
+import {audioEngine} from '../../engine/AudioEngine';
+import {useGameStore} from '../../store/gameStore';
 
 interface StufferStationProps {
   position: [number, number, number];
@@ -156,6 +158,18 @@ export const StufferStation = ({
   hasBurst,
 }: StufferStationProps) => {
   const timeRef = useRef(0);
+  const setBowlPosition = useGameStore(s => s.setBowlPosition);
+
+  // Receiver callback: accepts the bowl of ground meat poured into the stuffer
+  const handleReceive = useCallback(
+    (objectType: string, _objectId: string) => {
+      if (objectType === 'bowl') {
+        setBowlPosition('stuffer');
+        audioEngine.playPour();
+      }
+    },
+    [setBowlPosition],
+  );
 
   // Refs for animated meshes
   const bodyRef = useRef<THREE.Mesh>(null);
@@ -455,6 +469,15 @@ export const StufferStation = ({
       ) : (
         plungerMesh
       )}
+
+      {/* --- Invisible receiver at top opening for bowl drop --- */}
+      <mesh
+        position={[0, STUFFER_BASE_Y + BODY_HEIGHT + 0.05, 0]}
+        userData={{receiver: true, onReceive: handleReceive}}
+      >
+        <cylinderGeometry args={[BODY_DIAMETER / 2 + 0.05, BODY_DIAMETER / 2 + 0.05, 0.1, 12]} />
+        <meshBasicMaterial visible={false} />
+      </mesh>
 
       {/* --- Plunger Handle (thin cylinder on top of plunger) --- */}
       <mesh ref={handleRef} position={[0, STUFFER_BASE_Y + BODY_HEIGHT + HANDLE_HEIGHT / 2, 0]}>

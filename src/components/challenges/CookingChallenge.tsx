@@ -108,6 +108,18 @@ export function CookingChallenge({onComplete, onReaction}: CookingChallengeProps
     }),
   ).current;
 
+  // Start/stop sizzle loop when cooking phase changes
+  useEffect(() => {
+    if (phase === 'cooking') {
+      audioEngine.startCookingSizzle();
+    } else {
+      audioEngine.stopCookingSizzle();
+    }
+    return () => {
+      audioEngine.stopCookingSizzle();
+    };
+  }, [phase]);
+
   // Main gameplay tick
   useEffect(() => {
     if (phase !== 'cooking' || !variant) return;
@@ -174,11 +186,11 @@ export function CookingChallenge({onComplete, onReaction}: CookingChallengeProps
       const holdProgress = (newHoldTimer / v.holdSeconds) * 100;
       setChallengeProgress(holdProgress);
 
-      // Sizzle audio when heat is on (every ~1 second)
+      // Sizzle audio when heat is on (one-shot hits + loop running)
       if (heat > 0.1) {
         const now = Date.now();
-        if (now - lastSizzleTimeRef.current > 1000) {
-          audioEngine.playSizzle();
+        if (now - lastSizzleTimeRef.current > 1200) {
+          audioEngine.playSizzleHit();
           lastSizzleTimeRef.current = now;
         }
       }

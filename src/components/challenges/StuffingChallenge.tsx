@@ -103,6 +103,13 @@ export function StuffingChallenge({onComplete, onReaction}: StuffingChallengePro
     };
   }, [phase, pressureLevel]);
 
+  // Play pour sound when stuffing phase starts
+  useEffect(() => {
+    if (phase === 'stuffing') {
+      audioEngine.playPour();
+    }
+  }, [phase]);
+
   // Main gameplay tick
   useEffect(() => {
     if (phase !== 'stuffing' || !variant) return;

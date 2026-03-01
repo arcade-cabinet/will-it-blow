@@ -1,14 +1,16 @@
 import {useFrame} from '@react-three/fiber';
 import type {RapierRigidBody} from '@react-three/rapier';
 import {CapsuleCollider, CuboidCollider, CylinderCollider, RigidBody} from '@react-three/rapier';
-import {useMemo, useRef} from 'react';
+import {useCallback, useMemo, useRef} from 'react';
 import {Platform} from 'react-native';
 import * as THREE from 'three/webgpu';
+import {audioEngine} from '../../engine/AudioEngine';
 
 interface StoveStationProps {
   position: [number, number, number];
   temperature: number; // Current temp (room temp ~70 to max ~250)
   heatLevel: number; // 0-1 (burner intensity)
+  onSausagePlaced?: () => void; // Called when sausage is dropped on the pan
 }
 
 const isWeb = Platform.OS === 'web';
@@ -81,8 +83,24 @@ export function sausageColor(temp: number): [number, number, number] {
   return COLOR_BLACK;
 }
 
-export const StoveStation = ({position, temperature, heatLevel}: StoveStationProps) => {
+export const StoveStation = ({
+  position,
+  temperature,
+  heatLevel,
+  onSausagePlaced,
+}: StoveStationProps) => {
   const timeRef = useRef(0);
+
+  // Receiver callback: accepts sausage being placed on the frying pan
+  const handleReceive = useCallback(
+    (objectType: string, _objectId: string) => {
+      if (objectType === 'sausage') {
+        audioEngine.playDrop();
+        onSausagePlaced?.();
+      }
+    },
+    [onSausagePlaced],
+  );
 
   // Refs for animated meshes/materials
   const burnerMatRef = useRef<THREE.MeshBasicMaterial>(null);
@@ -400,6 +418,15 @@ export const StoveStation = ({position, temperature, heatLevel}: StoveStationPro
       ) : (
         <group position={[0, PAN_Y, 0]}>{panMesh}</group>
       )}
+
+      {/* --- Invisible receiver on pan surface for sausage drop --- */}
+      <mesh
+        position={[0, PAN_Y + PAN_HEIGHT / 2 + 0.02, 0]}
+        userData={{receiver: true, onReceive: handleReceive}}
+      >
+        <cylinderGeometry args={[PAN_RADIUS * 0.85, PAN_RADIUS * 0.85, 0.04, 16]} />
+        <meshBasicMaterial visible={false} />
+      </mesh>
 
       {/* --- Pan Handle --- */}
       {isWeb ? (

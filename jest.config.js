@@ -8,5 +8,6 @@ module.exports = {
   moduleNameMapper: {
     '^three/webgpu$': '<rootDir>/__mocks__/three_webgpu.js',
     '^three/tsl$': '<rootDir>/__mocks__/three_tsl.js',
+    '../../engine/AudioEngine': '<rootDir>/__mocks__/AudioEngine.js',
   },
 };

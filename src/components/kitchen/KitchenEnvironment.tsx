@@ -376,6 +376,22 @@ export const KitchenEnvironment = ({
       {TUBE_POSITIONS.map((pos, i) => (
         <FluorescentTube key={`tube_${i}`} position={pos} lightRef={tubeLightRefs[i]} />
       ))}
+
+      {/* =======================================================
+          HORROR ATMOSPHERE LIGHTING
+          ======================================================= */}
+
+      {/* Red emergency light near the ceiling trap door — pulsing ominous glow */}
+      <pointLight
+        position={[1.5, ROOM_H - 0.3, 1.5]}
+        color="#ff1a1a"
+        intensity={0.4}
+        distance={8}
+        decay={2}
+      />
+
+      {/* Dim under-counter light casting creepy shadows from below */}
+      <pointLight position={[0, 0.15, 0]} color="#443322" intensity={0.3} distance={5} decay={2} />
     </group>
   );
 };

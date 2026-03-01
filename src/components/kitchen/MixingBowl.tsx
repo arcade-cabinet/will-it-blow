@@ -4,6 +4,7 @@ import {CuboidCollider, RigidBody} from '@react-three/rapier';
 import {useCallback, useMemo, useRef} from 'react';
 import {Platform} from 'react-native';
 import type * as THREE from 'three/webgpu';
+import {audioEngine} from '../../engine/AudioEngine';
 import {getAssetUrl} from '../../engine/assetUrl';
 import {useGameStore} from '../../store/gameStore';
 
@@ -53,6 +54,7 @@ export const MixingBowl = ({position}: MixingBowlProps) => {
     (objectType: string, objectId: string) => {
       if (objectType === 'ingredient') {
         addToBowl(objectId);
+        audioEngine.playMix();
       }
     },
     [addToBowl],

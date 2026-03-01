@@ -1,9 +1,11 @@
 import {useFrame} from '@react-three/fiber';
 import type {RapierRigidBody} from '@react-three/rapier';
 import {BallCollider, CylinderCollider, RigidBody} from '@react-three/rapier';
-import {useEffect, useRef} from 'react';
+import {useCallback, useEffect, useRef} from 'react';
 import {Platform} from 'react-native';
 import type * as THREE from 'three/webgpu';
+import {audioEngine} from '../../engine/AudioEngine';
+import {useGameStore} from '../../store/gameStore';
 
 interface GrinderStationProps {
   position: [number, number, number];
@@ -314,6 +316,18 @@ export const GrinderStation = ({
   const crankArmRef = useRef<THREE.Mesh>(null);
   const knobRef = useRef<THREE.Mesh>(null);
   const timeRef = useRef(0);
+  const setBowlPosition = useGameStore(s => s.setBowlPosition);
+
+  // Receiver callback: accepts the mixing bowl being placed on the hopper
+  const handleReceive = useCallback(
+    (objectType: string, _objectId: string) => {
+      if (objectType === 'bowl') {
+        setBowlPosition('grinder');
+        audioEngine.playPour();
+      }
+    },
+    [setBowlPosition],
+  );
 
   // Crank pivot point (right side of grinder body)
   const crankPivotX = 0.3;
@@ -380,6 +394,15 @@ export const GrinderStation = ({
       <mesh position={[0, GRINDER_BASE_Y + BODY_HEIGHT + HOPPER_HEIGHT / 2, 0]}>
         <cylinderGeometry args={[0.35, 0.15, HOPPER_HEIGHT, 12]} />
         <meshBasicMaterial color={[0.55, 0.55, 0.6]} transparent opacity={0.85} />
+      </mesh>
+
+      {/* --- Invisible receiver at hopper opening for bowl drop --- */}
+      <mesh
+        position={[0, GRINDER_BASE_Y + BODY_HEIGHT + HOPPER_HEIGHT + 0.05, 0]}
+        userData={{receiver: true, onReceive: handleReceive}}
+      >
+        <cylinderGeometry args={[0.35, 0.35, 0.1, 12]} />
+        <meshBasicMaterial visible={false} />
       </mesh>
 
       {/* --- Spout (horizontal cylinder for meat output) --- */}

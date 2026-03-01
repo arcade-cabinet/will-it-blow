@@ -238,6 +238,7 @@ export function GrindingChallenge({onComplete, onReaction}: GrindingChallengePro
   useEffect(() => {
     if (phase === 'grinding') {
       audioEngine.startGrinder();
+      audioEngine.playPour(); // Pour ingredients into grinder
     } else {
       audioEngine.stopGrinder();
     }

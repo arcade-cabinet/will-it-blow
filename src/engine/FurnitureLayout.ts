@@ -174,6 +174,116 @@ export function resolveTargets(room: RoomDimensions): Record<string, Target> {
       rotationY: 0,
       triggerRadius: 0,
     },
+
+    // ---- Atmospheric props ----
+
+    // Frying pan resting near the stove
+    'frying-pan': {
+      position: [-halfW + 2.0, 1.05, -halfD + 4.8],
+      rotationY: 0.3,
+      triggerRadius: 0,
+    },
+
+    // Cutting board on the island
+    'cutting-board': {
+      position: [0.4, 1.05, -0.3],
+      rotationY: -0.2,
+      triggerRadius: 0,
+    },
+
+    // Pot on the counter near stove
+    pot: {
+      position: [-halfW + 2.5, 1.05, -halfD + 3.5],
+      rotationY: 0,
+      triggerRadius: 0,
+    },
+
+    // Pot lid next to the pot
+    'pot-lid': {
+      position: [-halfW + 3.0, 1.05, -halfD + 3.3],
+      rotationY: 0.5,
+      triggerRadius: 0,
+    },
+
+    // Bottle on the island (ominous unlabeled bottle)
+    bottle: {
+      position: [-0.5, 1.05, 0.5],
+      rotationY: 0,
+      triggerRadius: 0,
+    },
+
+    // Glass on the table
+    glass: {
+      position: [halfW - 2.8, 0.95, halfD - 2.2],
+      rotationY: 0,
+      triggerRadius: 0,
+    },
+
+    // Plate on the table
+    plate: {
+      position: [halfW - 2.2, 0.95, halfD - 2.8],
+      rotationY: 0,
+      triggerRadius: 0,
+    },
+
+    // Knife holder on counter
+    'knife-holder': {
+      position: [-halfW + 1.2, 1.05, -halfD + 5.5],
+      rotationY: 0,
+      triggerRadius: 0,
+    },
+
+    // Toaster on counter
+    toaster: {
+      position: [-halfW + 1.8, 1.05, -halfD + 6.8],
+      rotationY: 0.1,
+      triggerRadius: 0,
+    },
+
+    // Rolling pin on island
+    roller: {
+      position: [0.8, 1.08, 0.1],
+      rotationY: 0.7,
+      triggerRadius: 0,
+    },
+
+    // Cutlery scattered on island for horror atmosphere
+    'cutlery-knife': {
+      position: [0.2, 1.06, -0.6],
+      rotationY: 1.2,
+      triggerRadius: 0,
+    },
+
+    'cutlery-cleaver': {
+      position: [-0.3, 1.06, 0.2],
+      rotationY: -0.8,
+      triggerRadius: 0,
+    },
+
+    'cutlery-ladle': {
+      position: [-halfW + 1.5, 1.06, -halfD + 4.0],
+      rotationY: 0.4,
+      triggerRadius: 0,
+    },
+
+    'cutlery-fork': {
+      position: [halfW - 2.5, 0.96, halfD - 2.5],
+      rotationY: 0.3,
+      triggerRadius: 0,
+    },
+
+    'cutlery-spoon': {
+      position: [halfW - 2.0, 0.96, halfD - 3.0],
+      rotationY: -0.2,
+      triggerRadius: 0,
+    },
+
+    // Extra chair pushed aside (someone left in a hurry)
+    'chair-extra': {
+      position: [halfW - 4.0, 0, halfD - 1.5],
+      rotationY: -0.6,
+      triggerRadius: 0,
+    },
   };
 }
 
@@ -196,6 +306,7 @@ export function getStationTarget(
 // ---------------------------------------------------------------------------
 
 export const FURNITURE_RULES: FurnitureRule[] = [
+  // Core kitchen furniture
   {glb: 'l_counter.glb', target: 'l-counter'},
   {glb: 'upper_cabinets.glb', target: 'upper-cabinets'},
   {glb: 'island.glb', target: 'island'},
@@ -208,4 +319,22 @@ export const FURNITURE_RULES: FurnitureRule[] = [
   {glb: 'spice_rack.glb', target: 'spice-rack'},
   {glb: 'utensil_hooks.glb', target: 'utensil-hooks'},
   {glb: 'trap_door.glb', target: 'trap-door'},
+
+  // Atmospheric props — scattered around to set the horror mood
+  {glb: 'frying_pan.glb', target: 'frying-pan'},
+  {glb: 'cutting_board.glb', target: 'cutting-board'},
+  {glb: 'pot.glb', target: 'pot'},
+  {glb: 'pot_lid.glb', target: 'pot-lid'},
+  {glb: 'bottle.glb', target: 'bottle'},
+  {glb: 'glass_big.glb', target: 'glass'},
+  {glb: 'plate_big.glb', target: 'plate'},
+  {glb: 'knife_holder.glb', target: 'knife-holder'},
+  {glb: 'toaster.glb', target: 'toaster'},
+  {glb: 'roller.glb', target: 'roller'},
+  {glb: 'cutlery_knife.glb', target: 'cutlery-knife'},
+  {glb: 'cutlery_cleaver.glb', target: 'cutlery-cleaver'},
+  {glb: 'cutlery_ladle.glb', target: 'cutlery-ladle'},
+  {glb: 'cutlery_fork.glb', target: 'cutlery-fork'},
+  {glb: 'cutlery_spoon.glb', target: 'cutlery-spoon'},
+  {glb: 'chair.glb', target: 'chair-extra'},
 ];
