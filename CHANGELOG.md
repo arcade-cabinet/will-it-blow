@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.0](https://github.com/arcade-cabinet/will-it-blow/compare/v1.2.0...v1.3.0) (2026-03-01)
+
+
+### Features
+
+* kitchen diorama target system + FPS free-roam ([#21](https://github.com/arcade-cabinet/will-it-blow/issues/21)) ([59bc65f](https://github.com/arcade-cabinet/will-it-blow/commit/59bc65fc96044ae359b4ba9d3d2e45b2022fe5f5))
+* upgrade deps, add station models, fix TS stack overflow ([#19](https://github.com/arcade-cabinet/will-it-blow/issues/19)) ([cf0fe41](https://github.com/arcade-cabinet/will-it-blow/commit/cf0fe41fa5b397b36332305766cf0341c0a6500b))
+
 ## [1.2.0](https://github.com/arcade-cabinet/will-it-blow/compare/v1.1.4...v1.2.0) (2026-02-28)
 
 
