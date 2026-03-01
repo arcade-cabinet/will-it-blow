@@ -7,6 +7,7 @@ const noopRigidBody = {
   addForce: () => {},
   applyImpulse: () => {},
   applyTorqueImpulse: () => {},
+  setBodyType: () => {},
   setTranslation: () => {},
   setLinvel: () => {},
   setAngvel: () => {},

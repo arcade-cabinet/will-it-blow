@@ -2,11 +2,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {create} from 'zustand';
 import {createJSONStorage, persist} from 'zustand/middleware';
 import type {Reaction} from '../components/characters/reactions';
-import type {Ingredient} from '../engine/Ingredients';
+import {INGREDIENTS, type Ingredient} from '../engine/Ingredients';
 
 export type AppPhase = 'menu' | 'loading' | 'playing';
+export type GrabbedObjectType = 'ingredient' | 'bowl' | 'sausage' | 'pan' | null;
+export type BowlPosition = 'fridge' | 'grinder' | 'stuffer' | 'carried';
+
 export interface GameState {
-  // App lifecycle (menu → loading → playing)
+  // App lifecycle (menu -> loading -> playing)
   appPhase: AppPhase;
 
   // Progression
@@ -37,6 +40,19 @@ export interface GameState {
   playerPosition: [number, number, number];
   // Whether the player has reached the current challenge's station
   challengeTriggered: boolean;
+
+  // Grab system state (physics grab/carry/drop)
+  grabbedObject: string | null;
+  grabbedObjectType: GrabbedObjectType;
+
+  // Mixing bowl
+  bowlContents: string[]; // ingredient IDs that have been dropped in the bowl
+  bowlPosition: BowlPosition;
+
+  // Blend properties (computed from bowl contents, used for procedural texture)
+  blendColor: string;
+  blendRoughness: number;
+  blendChunkiness: number;
 
   // Fridge challenge — shared state between 3D scene and 2D overlay
   fridgePool: Ingredient[];
@@ -70,6 +86,11 @@ export interface GameState {
   clearFridgeClick: () => void;
   addFridgeSelected: (index: number) => void;
   setFridgeHovered: (index: number | null) => void;
+  setGrabbedObject: (id: string | null, type?: GrabbedObjectType) => void;
+  addToBowl: (ingredientId: string) => void;
+  clearBowl: () => void;
+  setBowlPosition: (pos: BowlPosition) => void;
+  updateBlendProperties: () => void;
   setPlayerPosition: (pos: [number, number, number]) => void;
   triggerChallenge: () => void;
   setMusicVolume: (volume: number) => void;
@@ -82,6 +103,66 @@ export interface GameState {
 const TOTAL_CHALLENGES = 5;
 const INITIAL_HINTS = 3;
 const MAX_STRIKES = 3;
+
+/** Parse a hex color string (#RRGGBB) into [r, g, b] (0-255). */
+function hexToRgb(hex: string): [number, number, number] {
+  const h = hex.replace('#', '');
+  return [
+    Number.parseInt(h.substring(0, 2), 16),
+    Number.parseInt(h.substring(2, 4), 16),
+    Number.parseInt(h.substring(4, 6), 16),
+  ];
+}
+
+/** Convert [r, g, b] (0-255) back to #RRGGBB hex string. */
+function rgbToHex(r: number, g: number, b: number): string {
+  const clamp = (v: number) => Math.max(0, Math.min(255, Math.round(v)));
+  return `#${clamp(r).toString(16).padStart(2, '0')}${clamp(g).toString(16).padStart(2, '0')}${clamp(b).toString(16).padStart(2, '0')}`.toUpperCase();
+}
+
+/** Compute blend properties from bowl contents using ingredient data. */
+function computeBlendProperties(bowlContents: string[]): {
+  blendColor: string;
+  blendRoughness: number;
+  blendChunkiness: number;
+} {
+  if (bowlContents.length === 0) {
+    return {blendColor: '#888888', blendRoughness: 0.5, blendChunkiness: 0.5};
+  }
+
+  const ingredients = bowlContents
+    .map(id => INGREDIENTS.find(ing => ing.name === id))
+    .filter((ing): ing is Ingredient => ing != null);
+
+  if (ingredients.length === 0) {
+    return {blendColor: '#888888', blendRoughness: 0.5, blendChunkiness: 0.5};
+  }
+
+  // Average color
+  let totalR = 0;
+  let totalG = 0;
+  let totalB = 0;
+  for (const ing of ingredients) {
+    const [r, g, b] = hexToRgb(ing.color);
+    totalR += r;
+    totalG += g;
+    totalB += b;
+  }
+  const n = ingredients.length;
+  const blendColor = rgbToHex(totalR / n, totalG / n, totalB / n);
+
+  // Roughness: 1 - (avgTextureMod / 5)
+  const avgTextureMod = ingredients.reduce((sum, ing) => sum + ing.textureMod, 0) / n;
+  const blendRoughness = 1 - avgTextureMod / 5;
+
+  // Chunkiness: based on variance of textureMod values
+  const variance =
+    ingredients.reduce((sum, ing) => sum + (ing.textureMod - avgTextureMod) ** 2, 0) / n;
+  // Normalize variance to 0-1 range (max possible variance with textureMod 0-5 is 6.25)
+  const blendChunkiness = Math.min(1, variance / 6.25);
+
+  return {blendColor, blendRoughness, blendChunkiness};
+}
 
 export const INITIAL_GAME_STATE = {
   appPhase: 'menu' as AppPhase,
@@ -99,6 +180,13 @@ export const INITIAL_GAME_STATE = {
   hintsRemaining: INITIAL_HINTS,
   totalGamesPlayed: 0,
   variantSeed: 0,
+  grabbedObject: null as string | null,
+  grabbedObjectType: null as GrabbedObjectType,
+  bowlContents: [] as string[],
+  bowlPosition: 'fridge' as BowlPosition,
+  blendColor: '#888888',
+  blendRoughness: 0.5,
+  blendChunkiness: 0.5,
   fridgePool: [] as Ingredient[],
   fridgeMatchingIndices: [] as number[],
   fridgeSelectedIndices: [] as number[],
@@ -114,7 +202,7 @@ export const INITIAL_GAME_STATE = {
 
 export const useGameStore = create<GameState>()(
   persist(
-    set => ({
+    (set, get) => ({
       ...INITIAL_GAME_STATE,
 
       setAppPhase: (phase: AppPhase) => set({appPhase: phase}),
@@ -135,6 +223,13 @@ export const useGameStore = create<GameState>()(
           hintsRemaining: INITIAL_HINTS,
           totalGamesPlayed: state.totalGamesPlayed + 1,
           variantSeed: Date.now(),
+          grabbedObject: null,
+          grabbedObjectType: null,
+          bowlContents: [],
+          bowlPosition: 'fridge' as BowlPosition,
+          blendColor: '#888888',
+          blendRoughness: 0.5,
+          blendChunkiness: 0.5,
           fridgePool: [],
           fridgeMatchingIndices: [],
           fridgeSelectedIndices: [],
@@ -154,6 +249,13 @@ export const useGameStore = create<GameState>()(
           challengeIsPressing: false,
           challengeTemperature: 70,
           challengeHeatLevel: 0,
+          grabbedObject: null,
+          grabbedObjectType: null,
+          bowlContents: [],
+          bowlPosition: 'fridge' as BowlPosition,
+          blendColor: '#888888',
+          blendRoughness: 0.5,
+          blendChunkiness: 0.5,
           fridgePool: [],
           fridgeMatchingIndices: [],
           fridgeSelectedIndices: [],
@@ -237,6 +339,29 @@ export const useGameStore = create<GameState>()(
 
       setFridgeHovered: (index: number | null) => set({fridgeHoveredIndex: index}),
 
+      setGrabbedObject: (id: string | null, type?: GrabbedObjectType) =>
+        set({
+          grabbedObject: id,
+          grabbedObjectType: id == null ? null : (type ?? null),
+        }),
+
+      addToBowl: (ingredientId: string) => {
+        set(state => ({bowlContents: [...state.bowlContents, ingredientId]}));
+        get().updateBlendProperties();
+      },
+
+      clearBowl: () =>
+        set({
+          bowlContents: [],
+          blendColor: '#888888',
+          blendRoughness: 0.5,
+          blendChunkiness: 0.5,
+        }),
+
+      setBowlPosition: (pos: BowlPosition) => set({bowlPosition: pos}),
+
+      updateBlendProperties: () => set(state => computeBlendProperties(state.bowlContents)),
+
       setPlayerPosition: (pos: [number, number, number]) => set({playerPosition: pos}),
       triggerChallenge: () => set({challengeTriggered: true}),
 
@@ -257,6 +382,13 @@ export const useGameStore = create<GameState>()(
           challengeHeatLevel: 0,
           mrSausageReaction: 'idle' as Reaction,
           hintActive: false,
+          grabbedObject: null,
+          grabbedObjectType: null,
+          bowlContents: [],
+          bowlPosition: 'fridge' as BowlPosition,
+          blendColor: '#888888',
+          blendRoughness: 0.5,
+          blendChunkiness: 0.5,
           fridgePool: [],
           fridgeMatchingIndices: [],
           fridgeSelectedIndices: [],

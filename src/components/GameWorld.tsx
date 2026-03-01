@@ -14,6 +14,7 @@ import {WebGPURenderer} from 'three/webgpu';
 import {DEFAULT_ROOM, resolveTargets, STATION_TARGET_NAMES} from '../engine/FurnitureLayout';
 import {useGameStore} from '../store/gameStore';
 import {FPSController} from './controls/FPSController';
+import {GrabSystem} from './controls/GrabSystem';
 import {CrtTelevision} from './kitchen/CrtTelevision';
 import {FridgeStation} from './kitchen/FridgeStation';
 import {GrinderStation} from './kitchen/GrinderStation';
@@ -241,6 +242,7 @@ const SceneContent = ({
       <ambientLight intensity={0.15} />
       <SceneIntrospector />
       <FPSController joystickRef={joystickRef} lookDeltaRef={lookDeltaRef} />
+      <GrabSystem />
 
       {/* Rapier physics sensors (web) or manual proximity check (native fallback) */}
       {isWeb ? (

@@ -98,6 +98,14 @@ export function resolveTargets(room: RoomDimensions): Record<string, Target> {
       markerY: 3.5,
     },
 
+    // ---- Interactive objects ----
+
+    'mixing-bowl': {
+      position: [-halfW + 1.34 + 1.5, 1.0, -halfD + 1.48],
+      rotationY: 0,
+      triggerRadius: 0,
+    },
+
     // ---- Decorative targets ----
 
     'l-counter': {
