@@ -94,7 +94,7 @@ export function LoadingScreen() {
         if (controller.signal.aborted) return;
 
         // Download all in parallel, tracking streamed bytes
-        let receivedBytes = 0;
+        const receivedBytesRef = {current: 0};
 
         const downloadOne = async (asset: {url: string; critical: boolean}) => {
           const response = await fetch(asset.url, {signal: controller.signal});
@@ -115,9 +115,9 @@ export function LoadingScreen() {
           while (true) {
             const {done, value} = await reader.read();
             if (done || controller.signal.aborted) break;
-            receivedBytes += value.byteLength;
+            receivedBytesRef.current += value.byteLength;
             if (totalBytes > 0) {
-              const pct = Math.min(Math.round((receivedBytes / totalBytes) * 100), 99);
+              const pct = Math.min(Math.round((receivedBytesRef.current / totalBytes) * 100), 99);
               setProgress(pct);
             }
           }
