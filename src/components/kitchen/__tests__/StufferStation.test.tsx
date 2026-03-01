@@ -14,9 +14,9 @@ describe('StufferStation', () => {
       <StufferStation fillLevel={0} pressureLevel={0} isPressing={false} hasBurst={false} />,
     );
     const root = renderer.scene.children[0];
-    expect(root.instance.position.x).toBe(5);
-    expect(root.instance.position.y).toBe(0);
-    expect(root.instance.position.z).toBe(-4);
+    expect(root.instance.position.x).toBe(2.28);
+    expect(root.instance.position.y).toBe(2.68);
+    expect(root.instance.position.z).toBe(2.25);
   });
 
   it('renders counter, body, plunger, handle, spout, and casing meshes', async () => {
@@ -24,7 +24,7 @@ describe('StufferStation', () => {
       <StufferStation fillLevel={0} pressureLevel={0} isPressing={false} hasBurst={false} />,
     );
     const root = renderer.scene.children[0];
-    // Counter + body + plunger + handle + knob + spout + casing + casingEnd + meatFill + burst particles = 10+
+    // Body + plunger + handle + knob + spout + casing + casingEnd + meatFill = 8+ minimum
     expect(root.children.length).toBeGreaterThanOrEqual(8);
   });
 

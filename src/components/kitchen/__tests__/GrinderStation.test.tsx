@@ -14,9 +14,9 @@ describe('GrinderStation', () => {
       <GrinderStation grindProgress={0} crankAngle={0} isSplattering={false} />,
     );
     const root = renderer.scene.children[0];
-    expect(root.instance.position.x).toBe(0);
-    expect(root.instance.position.y).toBe(0);
-    expect(root.instance.position.z).toBe(-5);
+    expect(root.instance.position.x).toBe(-4.75);
+    expect(root.instance.position.y).toBe(2.06);
+    expect(root.instance.position.z).toBe(-0.64);
   });
 
   it('renders counter, body, hopper, spout, crank arm, and knob meshes', async () => {
@@ -24,7 +24,7 @@ describe('GrinderStation', () => {
       <GrinderStation grindProgress={0} crankAngle={0} isSplattering={false} />,
     );
     const root = renderer.scene.children[0];
-    // Counter (1) + grinder body (1) + hopper (1) + spout (1) + crank group (1) + meat chunks group (1) + output particles group (1) + splatter group (1) = 8+
+    // Grinder body + hopper + spout + crank arm + knob = 5+ minimum
     expect(root.children.length).toBeGreaterThanOrEqual(5);
   });
 

@@ -7,22 +7,20 @@ interface StoveStationProps {
   heatLevel: number; // 0-1 (burner intensity)
 }
 
-// Stove position near back wall
-const STOVE_POS: [number, number, number] = [0, 0, -6.5];
+// Stove sits on the oven/range (GLB Cube.002), surface at y=2.13
+const STOVE_POS: [number, number, number] = [-4.98, 2.13, -2.23];
 const FLOOR_Y = 0;
 
-// Stove geometry constants
-const STOVE_WIDTH = 1.8;
-const STOVE_HEIGHT = 0.9;
-const STOVE_DEPTH = 1.2;
+// Stove geometry constants (body provided by GLB Cube.002)
+const STOVE_HEIGHT = 0; // GLB surface = group origin
 const PAN_RADIUS = 0.4;
 const PAN_HEIGHT = 0.06;
 const PAN_Y = FLOOR_Y + STOVE_HEIGHT + 0.06 + PAN_HEIGHT / 2;
 
 // Thermometer constants
 const THERMO_HEIGHT = 0.8;
-const THERMO_X = STOVE_WIDTH / 2 + 0.3;
-const THERMO_BASE_Y = FLOOR_Y + STOVE_HEIGHT * 0.2;
+const THERMO_X = 0.6; // Offset to the right of the burner
+const THERMO_BASE_Y = FLOOR_Y;
 
 // Temperature color thresholds
 const COLOR_PINK: [number, number, number] = [1.0, 0.714, 0.757];
@@ -323,17 +321,7 @@ export const StoveStation = ({temperature, heatLevel}: StoveStationProps) => {
 
   return (
     <group position={STOVE_POS}>
-      {/* --- Stove Body --- */}
-      <mesh position={[0, FLOOR_Y + STOVE_HEIGHT / 2, 0]}>
-        <boxGeometry args={[STOVE_WIDTH, STOVE_HEIGHT, STOVE_DEPTH]} />
-        <meshBasicMaterial color={[0.15, 0.15, 0.17]} />
-      </mesh>
-
-      {/* --- Stove Top Surface (slightly lighter) --- */}
-      <mesh position={[0, FLOOR_Y + STOVE_HEIGHT + 0.02, 0]}>
-        <boxGeometry args={[STOVE_WIDTH + 0.05, 0.04, STOVE_DEPTH + 0.05]} />
-        <meshBasicMaterial color={[0.2, 0.2, 0.22]} />
-      </mesh>
+      {/* Stove body provided by GLB Cube.002 — no procedural body needed */}
 
       {/* --- Burner Ring (torus) --- */}
       <mesh position={[0, FLOOR_Y + STOVE_HEIGHT + 0.06, 0]}>

@@ -9,10 +9,9 @@ interface StufferStationProps {
   hasBurst: boolean; // Trigger burst animation
 }
 
-// Stuffer sits on a counter near the stuffer waypoint
-const STUFFER_POS: [number, number, number] = [5, 0, -4];
-const COUNTER_HEIGHT = 0.9;
-const STUFFER_BASE_Y = COUNTER_HEIGHT;
+// Stuffer sits on the right counter/island (GLB Cube), surface at y=2.68
+const STUFFER_POS: [number, number, number] = [2.28, 2.68, 2.25];
+const STUFFER_BASE_Y = 0;
 
 // Geometry constants
 const BODY_HEIGHT = 1.0;
@@ -251,11 +250,7 @@ export const StufferStation = ({
 
   return (
     <group position={STUFFER_POS}>
-      {/* --- Counter / Work Surface --- */}
-      <mesh position={[0, COUNTER_HEIGHT / 2, 0]}>
-        <boxGeometry args={[2.5, COUNTER_HEIGHT, 1.4]} />
-        <meshBasicMaterial color={[0.22, 0.16, 0.1]} />
-      </mesh>
+      {/* Counter surface provided by GLB Cube (right island) — no procedural counter needed */}
 
       {/* --- Stuffer Body (vertical cylinder - main tube) --- */}
       <mesh ref={bodyRef} position={[0, STUFFER_BASE_Y + BODY_HEIGHT / 2, 0]}>

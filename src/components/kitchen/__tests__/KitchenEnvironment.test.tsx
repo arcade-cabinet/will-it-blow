@@ -10,6 +10,11 @@ jest.mock('@react-three/drei', () => ({
       })),
       traverse: jest.fn(),
     },
+    animations: [],
+  })),
+  useAnimations: jest.fn(() => ({
+    actions: {},
+    mixer: {stopAllAction: jest.fn()},
   })),
   useTexture: jest.fn(() => {
     // Return a mock texture object for each map key

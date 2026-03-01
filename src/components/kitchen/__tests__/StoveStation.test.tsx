@@ -14,9 +14,9 @@ describe('StoveStation', () => {
       <StoveStation temperature={70} heatLevel={0} />,
     );
     const root = renderer.scene.children[0];
-    expect(root.instance.position.x).toBe(0);
-    expect(root.instance.position.y).toBe(0);
-    expect(root.instance.position.z).toBe(-6.5);
+    expect(root.instance.position.x).toBe(-4.98);
+    expect(root.instance.position.y).toBe(2.13);
+    expect(root.instance.position.z).toBe(-2.23);
   });
 
   it('renders stove body, top, burner, pan, sausage, and thermometer meshes', async () => {
@@ -24,7 +24,7 @@ describe('StoveStation', () => {
       <StoveStation temperature={70} heatLevel={0} />,
     );
     const root = renderer.scene.children[0];
-    // Stove body + top + burner + pan + handle + sausage + 2 caps + thermo tube + fill + bulb + sizzle (12) + smoke (10) = 33+
+    // Burner + pan + handle + sausage + 2 caps + thermo tube + fill + bulb = 10+ minimum
     expect(root.children.length).toBeGreaterThanOrEqual(10);
   });
 

@@ -1,3 +1,8 @@
+# Raw 3D source assets (production GLBs live in public/models/)
+*.fbx
+*.zip
+/meat_grinder.glb
+
 # OSX
 #
 .DS_Store

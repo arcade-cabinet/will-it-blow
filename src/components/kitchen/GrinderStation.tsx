@@ -8,10 +8,9 @@ interface GrinderStationProps {
   isSplattering: boolean; // Trigger splatter visual
 }
 
-// Grinder sits on a counter near the back wall, aligned with the grinder waypoint
-const GRINDER_POS: [number, number, number] = [0, 0, -5];
-const COUNTER_HEIGHT = 0.9;
-const GRINDER_BASE_Y = COUNTER_HEIGHT;
+// Grinder sits on the left-wall counter (GLB Cube.008), surface at y=2.06
+const GRINDER_POS: [number, number, number] = [-4.75, 2.06, -0.64];
+const GRINDER_BASE_Y = 0;
 
 // Geometry constants
 const BODY_HEIGHT = 0.7;
@@ -171,11 +170,7 @@ export const GrinderStation = ({grindProgress, crankAngle, isSplattering}: Grind
 
   return (
     <group position={GRINDER_POS}>
-      {/* --- Counter / Table --- */}
-      <mesh position={[0, COUNTER_HEIGHT / 2, 0]}>
-        <boxGeometry args={[2.5, COUNTER_HEIGHT, 1.2]} />
-        <meshBasicMaterial color={[0.25, 0.18, 0.12]} />
-      </mesh>
+      {/* Counter surface provided by GLB Cube.008 — no procedural counter needed */}
 
       {/* --- Grinder Body (main cylinder) --- */}
       <mesh ref={bodyRef} position={[0, GRINDER_BASE_Y + BODY_HEIGHT / 2, 0]}>

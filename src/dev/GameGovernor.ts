@@ -77,6 +77,34 @@ export interface GameGov {
   setSfxVolume: (v: number) => void;
   setMusicMuted: (v: boolean) => void;
   setSfxMuted: (v: boolean) => void;
+
+  // --- Scene introspection (injected by SceneIntrospector in GameWorld) ---
+
+  /** Query camera position and fov */
+  getCamera?: () => {position: number[]; fov: number};
+
+  /** List top-level scene children with names, positions, child counts */
+  getSceneChildren?: () => {name: string; type: string; position: number[]; childCount: number}[];
+
+  /** Find a named object in the scene graph (recursive), return world position */
+  findObject?: (name: string) => {
+    name: string;
+    type: string;
+    worldPosition: number[];
+    visible: boolean;
+    childCount: number;
+  } | null;
+
+  /** Count total Mesh objects in scene */
+  getMeshCount?: () => number;
+
+  /** Find all groups matching a regex pattern */
+  findGroups?: (pattern: string) => {
+    name: string;
+    worldPosition: number[];
+    visible: boolean;
+    childCount: number;
+  }[];
 }
 
 function createGovernor(): GameGov {
