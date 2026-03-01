@@ -85,9 +85,12 @@ export function SceneIntrospector() {
       return results;
     };
 
+    gov.sceneReady = true;
+
     return () => {
       if (typeof window !== 'undefined' && (window as any).__gov) {
         const g = (window as any).__gov;
+        g.sceneReady = false;
         delete g.getCamera;
         delete g.getSceneChildren;
         delete g.findObject;

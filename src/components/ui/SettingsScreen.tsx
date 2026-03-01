@@ -1,5 +1,6 @@
 import {useCallback} from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {version} from '../../../package.json';
 import {useGameStore} from '../../store/gameStore';
 
 interface VolumeSliderProps {
@@ -124,7 +125,7 @@ export function SettingsScreen({onBack}: SettingsScreenProps) {
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.versionText}>v0.1.0</Text>
+      <Text style={styles.versionText}>v{version}</Text>
     </View>
   );
 }

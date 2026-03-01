@@ -1,5 +1,8 @@
 import {useFrame} from '@react-three/fiber';
+import type {RapierRigidBody} from '@react-three/rapier';
+import {CapsuleCollider, CuboidCollider, CylinderCollider, RigidBody} from '@react-three/rapier';
 import {useMemo, useRef} from 'react';
+import {Platform} from 'react-native';
 import * as THREE from 'three/webgpu';
 
 interface StoveStationProps {
@@ -7,6 +10,8 @@ interface StoveStationProps {
   temperature: number; // Current temp (room temp ~70 to max ~250)
   heatLevel: number; // 0-1 (burner intensity)
 }
+
+const isWeb = Platform.OS === 'web';
 
 const FLOOR_Y = 0;
 
@@ -33,6 +38,14 @@ const NOTIONAL_TOLERANCE = 10;
 // Particle counts
 const SIZZLE_PARTICLE_COUNT = 12;
 const SMOKE_PARTICLE_COUNT = 10;
+
+// Sausage geometry
+const SAUSAGE_RADIUS = 0.07;
+const SAUSAGE_HALF_LENGTH = 0.25;
+
+// Torque impulse scaling — hotter = more wobble
+const TORQUE_BASE = 0.0004;
+const TORQUE_INTERVAL = 0.15; // seconds between random torque nudges
 
 function lerp3(
   a: [number, number, number],
@@ -84,6 +97,10 @@ export const StoveStation = ({position, temperature, heatLevel}: StoveStationPro
   const thermoFillRef = useRef<THREE.Mesh>(null);
   const thermoFillMatRef = useRef<THREE.MeshBasicMaterial>(null);
   const panRef = useRef<THREE.Mesh>(null);
+
+  // Rapier rigid body ref for sausage (web only)
+  const sausageBodyRef = useRef<RapierRigidBody>(null);
+  const torqueTimerRef = useRef(0);
 
   // Sizzle particle refs and state
   const sizzleRefs = useRef<(THREE.Mesh | null)[]>(
@@ -158,14 +175,34 @@ export const StoveStation = ({position, temperature, heatLevel}: StoveStationPro
       sausageCapMat.color.setRGB(r, g, b);
     }
 
-    // --- Sausage wobble when hot ---
-    const sausageBaseY = PAN_Y + PAN_HEIGHT / 2 + 0.07;
-    if (heat > 0.3 && sausageRef.current) {
-      const wobble = Math.sin(timeRef.current * 25) * 0.003 * heat;
-      const y = sausageBaseY + wobble;
-      sausageRef.current.position.y = y;
-      if (sausageCapLRef.current) sausageCapLRef.current.position.y = y;
-      if (sausageCapRRef.current) sausageCapRRef.current.position.y = y;
+    // --- Sausage physics torque (web) or manual wobble (native) ---
+    if (isWeb && sausageBodyRef.current) {
+      // Apply random torque impulses based on heat to make the sausage roll/wobble
+      if (heat > 0.3) {
+        torqueTimerRef.current += dt;
+        if (torqueTimerRef.current >= TORQUE_INTERVAL) {
+          torqueTimerRef.current = 0;
+          const strength = TORQUE_BASE * heat;
+          sausageBodyRef.current.applyTorqueImpulse(
+            {
+              x: (Math.random() - 0.5) * strength,
+              y: (Math.random() - 0.5) * strength * 0.3,
+              z: (Math.random() - 0.5) * strength * 2,
+            },
+            true,
+          );
+        }
+      }
+    } else {
+      // Native fallback: manual wobble
+      const sausageBaseY = PAN_Y + PAN_HEIGHT / 2 + 0.07;
+      if (heat > 0.3 && sausageRef.current) {
+        const wobble = Math.sin(timeRef.current * 25) * 0.003 * heat;
+        const y = sausageBaseY + wobble;
+        sausageRef.current.position.y = y;
+        if (sausageCapLRef.current) sausageCapLRef.current.position.y = y;
+        if (sausageCapRRef.current) sausageCapRRef.current.position.y = y;
+      }
     }
 
     // --- Thermometer fill based on temperature ---
@@ -195,8 +232,8 @@ export const StoveStation = ({position, temperature, heatLevel}: StoveStationPro
       }
     }
 
-    // --- Heat haze shimmer near pan ---
-    if (panRef.current) {
+    // --- Heat haze shimmer near pan (native only — on web the pan is a fixed RigidBody) ---
+    if (!isWeb && panRef.current) {
       if (heat > 0.5) {
         const hazeWobble = Math.sin(timeRef.current * 12) * 0.002 * heat;
         panRef.current.position.x = hazeWobble;
@@ -316,7 +353,33 @@ export const StoveStation = ({position, temperature, heatLevel}: StoveStationPro
     }
   });
 
-  const sausageBaseY = PAN_Y + PAN_HEIGHT / 2 + 0.07;
+  const sausageBaseY = PAN_Y + PAN_HEIGHT / 2 + SAUSAGE_RADIUS;
+
+  // Sausage meshes (shared between physics and static paths)
+  const sausageMeshes = (
+    <>
+      {/* Sausage body (horizontal cylinder) */}
+      <mesh ref={sausageRef} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[SAUSAGE_RADIUS, SAUSAGE_RADIUS, SAUSAGE_HALF_LENGTH * 2, 12]} />
+        <meshBasicMaterial ref={sausageMatRef} color={COLOR_PINK} />
+      </mesh>
+      {/* Sausage end caps */}
+      <mesh ref={sausageCapLRef} position={[-SAUSAGE_HALF_LENGTH, 0, 0]} material={sausageCapMat}>
+        <sphereGeometry args={[SAUSAGE_RADIUS, 8, 8]} />
+      </mesh>
+      <mesh ref={sausageCapRRef} position={[SAUSAGE_HALF_LENGTH, 0, 0]} material={sausageCapMat}>
+        <sphereGeometry args={[SAUSAGE_RADIUS, 8, 8]} />
+      </mesh>
+    </>
+  );
+
+  // Pan mesh
+  const panMesh = (
+    <mesh ref={panRef}>
+      <cylinderGeometry args={[PAN_RADIUS, PAN_RADIUS, PAN_HEIGHT, 24]} />
+      <meshBasicMaterial color={[0.2, 0.2, 0.22]} />
+    </mesh>
+  );
 
   return (
     <group position={position}>
@@ -329,30 +392,50 @@ export const StoveStation = ({position, temperature, heatLevel}: StoveStationPro
       </mesh>
 
       {/* --- Frying Pan --- */}
-      <mesh ref={panRef} position={[0, PAN_Y, 0]}>
-        <cylinderGeometry args={[PAN_RADIUS, PAN_RADIUS, PAN_HEIGHT, 24]} />
-        <meshBasicMaterial color={[0.2, 0.2, 0.22]} />
-      </mesh>
+      {isWeb ? (
+        <RigidBody type="fixed" position={[0, PAN_Y, 0]} colliders={false}>
+          <CylinderCollider args={[PAN_HEIGHT / 2, PAN_RADIUS]} />
+          {panMesh}
+        </RigidBody>
+      ) : (
+        <group position={[0, PAN_Y, 0]}>{panMesh}</group>
+      )}
 
       {/* --- Pan Handle --- */}
-      <mesh position={[0, PAN_Y, PAN_RADIUS + 0.25]}>
-        <boxGeometry args={[0.06, 0.04, 0.5]} />
-        <meshBasicMaterial color={[0.12, 0.12, 0.14]} />
-      </mesh>
+      {isWeb ? (
+        <RigidBody type="fixed" position={[0, PAN_Y, PAN_RADIUS + 0.25]} colliders={false}>
+          <CuboidCollider args={[0.03, 0.02, 0.25]} />
+          <mesh>
+            <boxGeometry args={[0.06, 0.04, 0.5]} />
+            <meshBasicMaterial color={[0.12, 0.12, 0.14]} />
+          </mesh>
+        </RigidBody>
+      ) : (
+        <mesh position={[0, PAN_Y, PAN_RADIUS + 0.25]}>
+          <boxGeometry args={[0.06, 0.04, 0.5]} />
+          <meshBasicMaterial color={[0.12, 0.12, 0.14]} />
+        </mesh>
+      )}
 
-      {/* --- Sausage in Pan (horizontal cylinder) --- */}
-      <mesh ref={sausageRef} position={[0, sausageBaseY, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.07, 0.07, 0.5, 12]} />
-        <meshBasicMaterial ref={sausageMatRef} color={COLOR_PINK} />
-      </mesh>
-
-      {/* --- Sausage End Caps (spheres) --- */}
-      <mesh ref={sausageCapLRef} position={[-0.25, sausageBaseY, 0]} material={sausageCapMat}>
-        <sphereGeometry args={[0.07, 8, 8]} />
-      </mesh>
-      <mesh ref={sausageCapRRef} position={[0.25, sausageBaseY, 0]} material={sausageCapMat}>
-        <sphereGeometry args={[0.07, 8, 8]} />
-      </mesh>
+      {/* --- Sausage in Pan --- */}
+      {isWeb ? (
+        <RigidBody
+          ref={sausageBodyRef}
+          type="dynamic"
+          position={[0, sausageBaseY, 0]}
+          colliders={false}
+          linearDamping={2.0}
+          angularDamping={1.5}
+        >
+          <CapsuleCollider
+            args={[SAUSAGE_HALF_LENGTH - SAUSAGE_RADIUS, SAUSAGE_RADIUS]}
+            rotation={[0, 0, Math.PI / 2]}
+          />
+          {sausageMeshes}
+        </RigidBody>
+      ) : (
+        <group position={[0, sausageBaseY, 0]}>{sausageMeshes}</group>
+      )}
 
       {/* --- Thermometer Tube (outer) --- */}
       <mesh position={[THERMO_X, THERMO_BASE_Y + THERMO_HEIGHT / 2, 0]}>
