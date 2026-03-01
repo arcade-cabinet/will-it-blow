@@ -24,7 +24,7 @@ describe('GrinderStation', () => {
       <GrinderStation grindProgress={0} crankAngle={0} isSplattering={false} />,
     );
     const root = renderer.scene.children[0];
-    // Grinder body (1) + hopper (1) + spout (1) + crank arm (1) + knob (1) + meat chunks + output particles + splatter = 7+
+    // Grinder body + hopper + spout + crank arm + knob = 5+ minimum
     expect(root.children.length).toBeGreaterThanOrEqual(5);
   });
 

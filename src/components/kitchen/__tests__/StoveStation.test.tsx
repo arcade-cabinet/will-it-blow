@@ -24,7 +24,7 @@ describe('StoveStation', () => {
       <StoveStation temperature={70} heatLevel={0} />,
     );
     const root = renderer.scene.children[0];
-    // Burner + pan + handle + sausage + 2 caps + thermo tube + fill + bulb + sizzle (12) + smoke (10) = 31+
+    // Burner + pan + handle + sausage + 2 caps + thermo tube + fill + bulb = 10+ minimum
     expect(root.children.length).toBeGreaterThanOrEqual(10);
   });
 

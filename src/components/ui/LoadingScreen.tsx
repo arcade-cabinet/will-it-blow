@@ -108,7 +108,12 @@ export function LoadingScreen() {
 
           const reader = response.body?.getReader();
           if (!reader) {
-            await response.arrayBuffer();
+            const buf = await response.arrayBuffer();
+            receivedBytesRef.current += buf.byteLength;
+            if (totalBytes > 0) {
+              const pct = Math.min(Math.round((receivedBytesRef.current / totalBytes) * 100), 99);
+              setProgress(pct);
+            }
             return;
           }
 

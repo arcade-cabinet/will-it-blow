@@ -24,7 +24,7 @@ describe('StufferStation', () => {
       <StufferStation fillLevel={0} pressureLevel={0} isPressing={false} hasBurst={false} />,
     );
     const root = renderer.scene.children[0];
-    // Body + plunger + handle + knob + spout + casing + casingEnd + meatFill + burst particles = 9+
+    // Body + plunger + handle + knob + spout + casing + casingEnd + meatFill = 8+ minimum
     expect(root.children.length).toBeGreaterThanOrEqual(8);
   });
 

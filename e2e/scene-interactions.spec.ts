@@ -180,7 +180,7 @@ test.describe('Always-Rendered Stations', () => {
 
     // Fridge challenge may have fewer meshes (ingredients only when pool exists)
     // But grinder/stuffer/stove should always be there
-    // Verify challenges 1-4 have similar mesh counts (within 30% of each other)
+    // Verify challenges 1-4 have similar mesh counts (within 40% of each other)
     const nonFridgeCounts = counts.slice(1);
     const avgCount = nonFridgeCounts.reduce((a, b) => a + b, 0) / nonFridgeCounts.length;
     for (let i = 0; i < nonFridgeCounts.length; i++) {
@@ -299,7 +299,9 @@ test.describe('Camera Positioning', () => {
 
     const cam = await page.evaluate(() => (window as any).__gov.getCamera());
     // Menu camera should be near [0, 1.6, 2]
+    assertNear(cam.position[0], MENU_CAMERA_POSITION[0], 0.5, 'cam.x');
     assertNear(cam.position[1], MENU_CAMERA_POSITION[1], 0.6, 'cam.y');
+    assertNear(cam.position[2], MENU_CAMERA_POSITION[2], 0.5, 'cam.z');
   });
 
   test('camera FOV is 70 degrees', async ({page}) => {

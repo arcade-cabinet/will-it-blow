@@ -275,6 +275,17 @@ function SceneIntrospector() {
       });
       return results;
     };
+
+    return () => {
+      if (typeof window !== 'undefined' && (window as any).__gov) {
+        const g = (window as any).__gov;
+        delete g.getCamera;
+        delete g.getSceneChildren;
+        delete g.findObject;
+        delete g.getMeshCount;
+        delete g.findGroups;
+      }
+    };
   }, [scene, camera]);
 
   return null;
