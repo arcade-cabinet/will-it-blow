@@ -1,3 +1,17 @@
+/**
+ * @module reactions
+ * Procedural animation targets for Mr. Sausage's emotional reactions.
+ *
+ * Each {@link Reaction} maps to a {@link ReactionTargets} record of transform
+ * offsets (body Y, rotations, arm angles, shake intensity) that MrSausage3D
+ * interpolates toward. Dialogue lines reference reactions by name so the
+ * 3D character emotes in sync with the text.
+ */
+
+/**
+ * Named emotional states Mr. Sausage can express.
+ * Set by dialogue lines via the `reaction` field on {@link DialogueLine}.
+ */
 export type Reaction =
   | 'idle'
   | 'flinch'
@@ -8,6 +22,11 @@ export type Reaction =
   | 'nod'
   | 'talk';
 
+/**
+ * Procedural animation target values for a single reaction.
+ * MrSausage3D lerps from current pose to these offsets over `duration` ms.
+ * If `loop` is true the animation cycles continuously (e.g., idle bob, laughing shake).
+ */
 export interface ReactionTargets {
   bodyY?: number;
   bodyRotZ?: number;
@@ -19,6 +38,7 @@ export interface ReactionTargets {
   loop?: boolean;
 }
 
+/** Lookup table from reaction name to procedural animation targets. */
 export const REACTIONS: Record<Reaction, ReactionTargets> = {
   idle: {duration: 2000, loop: true},
   flinch: {bodyRotZ: -0.2, armLRotZ: -0.8, armRRotZ: 0.8, duration: 400},

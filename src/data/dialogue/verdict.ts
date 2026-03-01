@@ -1,5 +1,15 @@
+/**
+ * @module dialogue/verdict
+ * Mr. Sausage's tasting verdict dialogue, played after all challenges complete.
+ * Four tiers keyed to the player's final score:
+ * - S (>=92): THE SAUSAGE KING -- the only true victory, player escapes
+ * - A (>=75): Almost Worthy -- close but still a defeat
+ * - B (>=50): Mediocre -- defeat with ominous freezer reference
+ * - F (<50): Unacceptable -- "You are the sausage now"
+ */
 import type {DialogueLine} from '../../engine/DialogueEngine';
 
+/** S-rank verdict (score >= 92). The sausage is perfect; Mr. Sausage is speechless, then lets the player go. */
 export const VERDICT_S: DialogueLine[] = [
   {
     speaker: 'sausage',
@@ -33,6 +43,7 @@ export const VERDICT_S: DialogueLine[] = [
   },
 ];
 
+/** A-rank verdict (score >= 75). Acceptable but not good enough -- player must try again. */
 export const VERDICT_A: DialogueLine[] = [
   {
     speaker: 'sausage',
@@ -61,6 +72,7 @@ export const VERDICT_A: DialogueLine[] = [
   },
 ];
 
+/** B-rank verdict (score >= 50). Mediocre sausage; Mr. Sausage hints at dark consequences. */
 export const VERDICT_B: DialogueLine[] = [
   {
     speaker: 'sausage',
@@ -94,6 +106,7 @@ export const VERDICT_B: DialogueLine[] = [
   },
 ];
 
+/** F-rank verdict (score < 50). Total failure; Mr. Sausage threatens to turn the player into sausage. */
 export const VERDICT_F: DialogueLine[] = [
   {
     speaker: 'sausage',
