@@ -44,6 +44,8 @@ export interface FurnitureRule {
   target: string;
   /** If true, the GLB contains animations that FurnitureLoader should play */
   animated?: boolean;
+  /** If true, this piece is rendered by an ECS orchestrator — FurnitureLoader skips it. */
+  ecsManaged?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -488,8 +490,8 @@ export const FURNITURE_RULES: FurnitureRule[] = [
 
   // Interactive/animated furniture (kept from original)
   {glb: 'fridge.glb', target: 'fridge', animated: true},
-  {glb: 'meat_grinder.glb', target: 'meat_grinder', animated: true},
-  {glb: 'mixing_bowl.glb', target: 'mixing-bowl'},
+  {glb: 'meat_grinder.glb', target: 'meat_grinder', animated: true, ecsManaged: true},
+  {glb: 'mixing_bowl.glb', target: 'mixing-bowl', ecsManaged: true},
 
   // Atmospheric props (kept from original)
   {glb: 'frying_pan.glb', target: 'frying-pan'},

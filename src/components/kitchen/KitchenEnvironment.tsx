@@ -312,21 +312,13 @@ function FluorescentTube({position, lightRef}: FluorescentTubeProps) {
  *
  * @param props.fridgeDoorOpen - Controls fridge door animation in FurnitureLoader
  * @param props.grinderCranking - Controls grinder crank animation in FurnitureLoader
- * @param props.bowlPosition - Dynamic position for the mixing bowl (null = hidden)
- * @param props.bowlReceiving - Whether the bowl accepts dropped ingredients
  */
 export const KitchenEnvironment = ({
   fridgeDoorOpen = false,
   grinderCranking = false,
-  bowlPosition,
-  bowlReceiving = false,
 }: {
   fridgeDoorOpen?: boolean;
   grinderCranking?: boolean;
-  /** Override position for the mixing bowl (dynamic — follows bowlPosition state). */
-  bowlPosition?: [number, number, number] | null;
-  /** Whether the bowl should accept dropped ingredients. */
-  bowlReceiving?: boolean;
 }) => {
   // Load PBR textures for room enclosure
   const textures = useRoomTextures();
@@ -409,12 +401,7 @@ export const KitchenEnvironment = ({
       {/* =======================================================
           FURNITURE — GLB segments positioned via FurnitureLayout targets
           ======================================================= */}
-      <FurnitureLoader
-        fridgeDoorOpen={fridgeDoorOpen}
-        grinderCranking={grinderCranking}
-        bowlPosition={bowlPosition}
-        bowlReceiving={bowlReceiving}
-      />
+      <FurnitureLoader fridgeDoorOpen={fridgeDoorOpen} grinderCranking={grinderCranking} />
 
       {/* =======================================================
           LIGHTING — harsh fluorescent overhead

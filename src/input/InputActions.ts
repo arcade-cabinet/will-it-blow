@@ -34,19 +34,13 @@ export interface LookAction {
   pitch: number;
 }
 
-/**
- * Analog pressure input, normalized to 0--1.
- * @deprecated Prefer ECS `plunger` component with `displacement` for continuous input.
- */
+/** Analog pressure input, normalized to 0--1. */
 export interface PressAction {
   type: 'press';
   force: number;
 }
 
-/**
- * Directional swipe gesture. `cw`/`ccw` for rotary, cardinal for navigation.
- * @deprecated Prefer ECS `crank` component with `dragDelta`/`angularVelocity` for rotary input.
- */
+/** Directional swipe gesture. `cw`/`ccw` for rotary, cardinal for navigation. */
 export interface SwipeAction {
   type: 'swipe';
   direction: 'cw' | 'ccw' | 'up' | 'down' | 'left' | 'right';

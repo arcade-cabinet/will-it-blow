@@ -338,6 +338,51 @@ describe('recordFlairPoint', () => {
   });
 });
 
+describe('addFridgeSelected', () => {
+  it('populates selectedIngredients from fridgePool', () => {
+    const pool = [
+      {
+        name: 'Lobster',
+        emoji: '🦞',
+        category: 'protein' as const,
+        chunkColor: '#cc3333',
+        chunkScale: 1,
+        fatRatio: 0.2,
+        shape: {base: 'elongated' as const, detail: 'claws' as const},
+      },
+      {
+        name: 'Candy Cane',
+        emoji: '🍬',
+        category: 'wild-card' as const,
+        chunkColor: '#ff6666',
+        chunkScale: 0.6,
+        fatRatio: 0.1,
+        shape: {base: 'cylinder' as const},
+      },
+    ];
+    store().setFridgePool(pool, [0]);
+    store().addFridgeSelected(0);
+    expect(store().playerDecisions.selectedIngredients).toEqual(['Lobster']);
+  });
+
+  it('does not add empty name for out-of-bounds index', () => {
+    const pool = [
+      {
+        name: 'Lobster',
+        emoji: '🦞',
+        category: 'protein' as const,
+        chunkColor: '#cc3333',
+        chunkScale: 1,
+        fatRatio: 0.2,
+        shape: {base: 'elongated' as const, detail: 'claws' as const},
+      },
+    ];
+    store().setFridgePool(pool, [0]);
+    store().addFridgeSelected(99);
+    expect(store().playerDecisions.selectedIngredients).toEqual([]);
+  });
+});
+
 describe('startNewGame demand integration', () => {
   it('resets playerDecisions and generates fresh demands', () => {
     // Dirty the state

@@ -37,8 +37,8 @@ beforeEach(() => {
   mockActions = {};
 });
 
-// Rules that render without bowlPosition (bowl is conditionally excluded)
-const RENDERED_RULES = FURNITURE_RULES.filter(r => r.glb !== 'mixing_bowl.glb');
+// Rules that render: ecsManaged pieces are skipped, bowl is conditionally excluded
+const RENDERED_RULES = FURNITURE_RULES.filter(r => !r.ecsManaged);
 
 describe('FurnitureLoader', () => {
   it('renders without crashing', async () => {
@@ -46,9 +46,9 @@ describe('FurnitureLoader', () => {
     expect(renderer.scene.children.length).toBeGreaterThan(0);
   });
 
-  it('renders one group per furniture rule (bowl excluded without bowlPosition)', async () => {
+  it('renders one group per non-ecsManaged furniture rule', async () => {
     const renderer = await ReactThreeTestRenderer.create(<FurnitureLoader />);
-    // Root group — bowl skipped when bowlPosition is null
+    // Root group — ecsManaged pieces (meat_grinder, mixing_bowl) are skipped
     const root = renderer.scene.children[0];
     expect(root.children.length).toBe(RENDERED_RULES.length);
   });
@@ -99,7 +99,7 @@ describe('FurnitureLoader', () => {
     const root = renderer.scene.children[0];
 
     // Check fridge position matches custom room targets
-    const fridgeIndex = FURNITURE_RULES.findIndex(r => r.glb === 'fridge.glb');
+    const fridgeIndex = RENDERED_RULES.findIndex(r => r.glb === 'fridge.glb');
     const fridgeGroup = root.children[fridgeIndex];
     const fridgeTarget = targets.fridge;
 
@@ -146,33 +146,6 @@ describe('FurnitureLoader', () => {
     });
   });
 
-  describe('grinder crank animation', () => {
-    it('plays crank animation when grinderCranking is true', async () => {
-      const crankAction = {
-        setLoop: mockSetLoop,
-        reset: mockReset,
-        stop: mockStop,
-      };
-      mockActions = {CrankPivotAction: crankAction};
-
-      await ReactThreeTestRenderer.create(<FurnitureLoader grinderCranking />);
-
-      expect(mockSetLoop).toHaveBeenCalled();
-      expect(mockReset).toHaveBeenCalled();
-      expect(mockPlay).toHaveBeenCalled();
-    });
-
-    it('stops crank animation when grinderCranking is false', async () => {
-      const crankAction = {
-        setLoop: mockSetLoop,
-        reset: mockReset,
-        stop: mockStop,
-      };
-      mockActions = {CrankPivotAction: crankAction};
-
-      await ReactThreeTestRenderer.create(<FurnitureLoader grinderCranking={false} />);
-
-      expect(mockStop).toHaveBeenCalled();
-    });
-  });
+  // Grinder crank animation tests removed — meat_grinder.glb is now ecsManaged
+  // and rendered by GrinderOrchestrator, not FurnitureLoader.
 });

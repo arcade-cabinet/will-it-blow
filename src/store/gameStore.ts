@@ -529,7 +529,18 @@ export const useGameStore = create<GameState>()(
       clearFridgeClick: () => set({pendingFridgeClick: null}),
 
       addFridgeSelected: (index: number) =>
-        set(state => ({fridgeSelectedIndices: [...state.fridgeSelectedIndices, index]})),
+        set(state => {
+          const ingredientName = state.fridgePool[index]?.name ?? '';
+          return {
+            fridgeSelectedIndices: [...state.fridgeSelectedIndices, index],
+            playerDecisions: {
+              ...state.playerDecisions,
+              selectedIngredients: ingredientName
+                ? [...state.playerDecisions.selectedIngredients, ingredientName]
+                : state.playerDecisions.selectedIngredients,
+            },
+          };
+        }),
 
       setFridgeHovered: (index: number | null) => set({fridgeHoveredIndex: index}),
 

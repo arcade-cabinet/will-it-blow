@@ -2,13 +2,13 @@
  * @module LoadingScreen
  * Asset preloader with procedural sausage-links progress visualization.
  *
- * Preloads all furniture GLB models (from FURNITURE_RULES) and PBR texture
- * files using parallel fetch with file-count progress tracking. The individual
- * GLBs are tiny (1-170KB each), so byte-level streaming is overkill — we
+ * Preloads all furniture GLB models (from FURNITURE_RULES), PBR texture files,
+ * and OGG audio samples using parallel fetch with file-count progress tracking.
+ * The individual assets are small, so byte-level streaming is overkill — we
  * simply count completed files instead.
  *
  * **Preload strategy:**
- * 1. Build asset list from FURNITURE_RULES GLBs + TEXTURE_FILES.
+ * 1. Build asset list from FURNITURE_RULES GLBs + TEXTURE_FILES + AUDIO_FILES.
  * 2. Parallel fetch all assets via Promise.allSettled.
  * 3. Tolerant: warns on partial failures, only errors if >50% fail.
  *
@@ -47,6 +47,37 @@ const TEXTURE_FILES = [
   'grime_base_opacity.jpg',
 ];
 
+const AUDIO_FILES = [
+  'boiling_1.ogg',
+  'boiling_2.ogg',
+  'boiling_3.ogg',
+  'boiling_4.ogg',
+  'chop_1.ogg',
+  'chop_2.ogg',
+  'chop_3.ogg',
+  'chop_9.ogg',
+  'mix_dry_1.ogg',
+  'mix_dry_2.ogg',
+  'mix_wet_1.ogg',
+  'mix_wet_2.ogg',
+  'peel_1.ogg',
+  'peel_2.ogg',
+  'pots_and_pans_1.ogg',
+  'pots_and_pans_2.ogg',
+  'pots_and_pans_3.ogg',
+  'pots_and_pans_5.ogg',
+  'pour_1.ogg',
+  'pour_2.ogg',
+  'pour_3.ogg',
+  'pour_6.ogg',
+  'sizzle_1.ogg',
+  'sizzle_2.ogg',
+  'sizzle_3.ogg',
+  'sizzle_8.ogg',
+  'sizzle_loop_1.ogg',
+  'sizzle_loop_2.ogg',
+];
+
 const LOADING_QUOTES = [
   'Selecting the finest meats...',
   'Grinding it down...',
@@ -55,8 +86,10 @@ const LOADING_QUOTES = [
   'Almost ready to blow...',
 ];
 
-const LINK_COUNT = 5;
-const LINK_THRESHOLDS = [20, 40, 60, 80, 100];
+const LINK_COUNT = 10;
+const LINK_THRESHOLDS = Array.from({length: LINK_COUNT}, (_, i) =>
+  Math.round(((i + 1) / LINK_COUNT) * 100),
+);
 
 // SausageButton palette
 const SAUSAGE = {
@@ -108,7 +141,7 @@ const eyeStyles = StyleSheet.create({
   },
 });
 
-/** One sausage link pill (active or inactive) */
+/** One sausage link pill — returns null when inactive (chain hasn't grown here yet) */
 function SausageLink({
   active,
   showEyes,
@@ -119,7 +152,7 @@ function SausageLink({
   scaleAnim: Animated.Value;
 }) {
   if (!active) {
-    return <View style={linkStyles.inactive} />;
+    return null;
   }
 
   return (
@@ -159,14 +192,6 @@ const linkStyles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: SAUSAGE.highlight,
     opacity: 0.7,
-  },
-  inactive: {
-    width: LINK_W,
-    height: LINK_H,
-    borderRadius: LINK_RADIUS,
-    borderWidth: 2,
-    borderColor: SAUSAGE.outer,
-    opacity: 0.3,
   },
 });
 
@@ -223,7 +248,7 @@ export function LoadingScreen() {
     audioEngine.initTone();
   }, []);
 
-  // Pre-fetch all furniture GLBs + textures to warm the browser cache
+  // Pre-fetch all furniture GLBs + textures + audio to warm the browser cache
   // biome-ignore lint/correctness/useExhaustiveDependencies: retryCount triggers re-run
   useEffect(() => {
     const controller = new AbortController();
@@ -232,7 +257,8 @@ export function LoadingScreen() {
       try {
         const glbUrls = FURNITURE_RULES.map(r => getAssetUrl('models', r.glb));
         const textureUrls = TEXTURE_FILES.map(f => getAssetUrl('textures', f));
-        const allAssets = [...glbUrls, ...textureUrls];
+        const audioUrls = AUDIO_FILES.map(f => getAssetUrl('audio', f));
+        const allAssets = [...glbUrls, ...textureUrls, ...audioUrls];
 
         let loaded = 0;
         const results = await Promise.allSettled(
@@ -331,10 +357,11 @@ export function LoadingScreen() {
             <View style={styles.linksContainer}>
               {Array.from({length: LINK_COUNT}, (_, i) => {
                 const active = progress >= LINK_THRESHOLDS[i];
-                const isNewest = active && i === activeCount - 1;
+                if (!active) return null;
+                const isNewest = i === activeCount - 1;
                 return (
                   <View key={i} style={styles.linkSlot}>
-                    {i > 0 && <SausageConnector />}
+                    {i > 0 && progress >= LINK_THRESHOLDS[i - 1] && <SausageConnector />}
                     <SausageLink active={active} showEyes={isNewest} scaleAnim={linkScales[i]} />
                   </View>
                 );
@@ -371,7 +398,8 @@ const styles = StyleSheet.create({
   linksContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    paddingHorizontal: 12,
   },
   linkSlot: {
     flexDirection: 'row',

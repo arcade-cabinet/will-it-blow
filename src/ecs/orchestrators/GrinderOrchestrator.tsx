@@ -1,14 +1,14 @@
 /**
  * @module GrinderOrchestrator
- * ECS-driven replacement for GrinderMechanics.
+ * ECS-driven visual driver for the grinder station.
  *
  * Spawns grinder machine entities from GRINDER_ARCHETYPE on mount,
  * despawns on unmount. Uses MachineEntitiesRenderer for all ECS entity
  * rendering with automatic input event wiring (toggle, plunger).
  *
- * Challenge-specific elements (meat chunks, ground-meat particles) remain
- * as R3F JSX since they are unique to the grinder challenge and not part
- * of the machine's compositional ECS model.
+ * This orchestrator is VISUAL ONLY — it reads Zustand state set by the
+ * 2D GrindingChallenge overlay and drives ECS entity animations.
+ * It does NOT manage game phases, scoring, or strike logic.
  *
  * ECS systems handle:
  * - VibrationSystem: housing vibration when powered
@@ -16,20 +16,15 @@
  * - ToggleSystem: switch on/off processing
  * - PlungerSystem: drag-to-displacement conversion + spring-back
  * - InputContractSystem: wiring switch -> vibration/rotation/power
- *
- * The orchestrator only:
- * - Toggles enabled flags on input primitives based on game phase
- * - Reads input primitive outputs (toggle.isOn, plunger.displacement)
- * - Manages challenge-specific elements (chunks, particles)
- * - Fires onGrindComplete callback to Zustand store
  */
 
 import {useFrame} from '@react-three/fiber';
 import {damp3} from 'maath/easing';
-import {useEffect, useMemo, useRef, useState} from 'react';
+import {useEffect, useMemo, useRef} from 'react';
 import * as THREE from 'three/webgpu';
 import {INGREDIENTS} from '../../engine/Ingredients';
 import {createMeatMaterial} from '../../engine/MeatTexture';
+import {fireHaptic} from '../../input/HapticService';
 import {useGameStore} from '../../store/gameStore';
 import {GRINDER_ARCHETYPE} from '../archetypes/grinderArchetype';
 import {despawnMachine, spawnMachine} from '../archetypes/spawnMachine';
@@ -42,16 +37,11 @@ import type {Entity} from '../types';
 
 interface GrinderOrchestratorProps {
   position: [number, number, number];
-  counterY: number;
   visible: boolean;
-  onGrindComplete?: (groundVolume: number) => void;
 }
-
-type ChunkState = 'BOWL' | 'TRAY' | 'CHUTE';
 
 interface ChunkData {
   id: number;
-  state: ChunkState;
   targetPos: THREE.Vector3;
 }
 
@@ -67,11 +57,6 @@ interface ParticleData {
 // ---------------------------------------------------------------------------
 
 const MAX_G_PARTS = 150;
-
-/** Volume gained per unit of plunger displacement */
-const GRIND_VOLUME_PER_PUSH = 0.6;
-/** Probability multiplier for consuming a meat chunk per push unit */
-const CHUNK_CONSUME_RATE = 15;
 
 const CHUNK_BOWL_OFFSETS = Array.from({length: 15}, (_, i) => {
   const angle = (i / 15) * Math.PI * 6;
@@ -91,12 +76,7 @@ function makeParticleGeo() {
 // GrinderOrchestrator
 // ---------------------------------------------------------------------------
 
-export const GrinderOrchestrator = ({
-  position,
-  counterY,
-  visible,
-  onGrindComplete,
-}: GrinderOrchestratorProps) => {
+export const GrinderOrchestrator = ({position, visible}: GrinderOrchestratorProps) => {
   // ---- ECS entity lifecycle ----
   const entitiesRef = useRef<Entity[]>([]);
 
@@ -109,33 +89,28 @@ export const GrinderOrchestrator = ({
     };
   }, []);
 
-  // ---- local phase state ----
-  const [gamePhase, setGamePhase] = useState<'fill' | 'grind' | 'done'>('fill');
+  // ---- Read challenge progress from Zustand (set by 2D overlay) ----
+  const challengeProgress = useGameStore(s => s.challengeProgress);
 
-  // ---- chunk state machine ----
-  const [chunks, setChunks] = useState<ChunkData[]>(() =>
-    Array.from({length: 15}, (_, i) => ({
-      id: i,
-      state: 'BOWL' as ChunkState,
-      targetPos: new THREE.Vector3(
-        CHUNK_BOWL_OFFSETS[i].x,
-        CHUNK_BOWL_OFFSETS[i].yExtra,
-        CHUNK_BOWL_OFFSETS[i].z,
-      ),
-    })),
+  // ---- chunk data (decorative only) ----
+  const chunks = useMemo<ChunkData[]>(
+    () =>
+      Array.from({length: 15}, (_, i) => ({
+        id: i,
+        targetPos: new THREE.Vector3(
+          CHUNK_BOWL_OFFSETS[i].x,
+          CHUNK_BOWL_OFFSETS[i].yExtra,
+          CHUNK_BOWL_OFFSETS[i].z,
+        ),
+      })),
+    [],
   );
-
-  // ---- mutable refs (avoid stale closure in useFrame) ----
-  const groundVolRef = useRef(0);
-  const meatInChuteRef = useRef(0);
-  const gamePhasRef = useRef<'fill' | 'grind' | 'done'>('fill');
-  const prevDisplacementRef = useRef(0);
-
-  gamePhasRef.current = gamePhase;
 
   // ---- mesh refs ----
   const particleMeshRef = useRef<THREE.InstancedMesh>(null);
   const chunkRefs = useRef<(THREE.Mesh | null)[]>(Array.from({length: 15}, () => null));
+  const prevProgressRef = useRef(0);
+  const hapticAccumRef = useRef(0);
 
   // Particle data
   const particleDataRef = useRef<ParticleData[]>(
@@ -175,112 +150,55 @@ export const GrinderOrchestrator = ({
   const chunkGeo = useMemo(() => new THREE.DodecahedronGeometry(0.5, 1), []);
   const particleGeo = useMemo(() => makeParticleGeo(), []);
 
-  const cY = counterY;
-
-  // ---- Enable/disable ECS input primitives based on game phase ----
+  // ---- Enable/disable ECS input primitives + haptic feedback ----
   useEffect(() => {
+    if (visible) fireHaptic('toggle_click');
     for (const entity of entitiesRef.current) {
       if (entity.toggle) {
-        entity.toggle.enabled = gamePhase === 'grind';
+        entity.toggle.enabled = visible;
+        entity.toggle.isOn = visible;
       }
       if (entity.plunger) {
-        entity.plunger.enabled = gamePhase === 'grind';
+        entity.plunger.enabled = visible;
       }
     }
-  }, [gamePhase]);
+  }, [visible]);
 
-  // ---- chunk click handler ----
-  const handleChunkClick = (chunkId: number) => {
-    if (gamePhasRef.current !== 'fill') return;
-
-    setChunks(prev => {
-      const next = prev.map(c => {
-        if (c.id !== chunkId) return c;
-        if (c.state === 'BOWL') {
-          const ang = (chunkId / 15) * Math.PI * 4;
-          const r = (chunkId % 5) * 0.5;
-          return {
-            ...c,
-            state: 'TRAY' as ChunkState,
-            targetPos: new THREE.Vector3(
-              (Math.cos(ang) * r * 3) / 3,
-              cY + 6,
-              0.5 + (Math.sin(ang) * r * 2) / 3,
-            ),
-          };
-        }
-        if (c.state === 'TRAY') {
-          meatInChuteRef.current += 1;
-          return {
-            ...c,
-            state: 'CHUTE' as ChunkState,
-            targetPos: new THREE.Vector3(0, cY + 4.5, 0.5),
-          };
-        }
-        return c;
-      });
-
-      const allInChute = next.every(c => c.state === 'CHUTE' || c.state === 'BOWL');
-      const justFinishedTray =
-        next.every(c => c.state !== 'TRAY') && prev.some(c => c.state === 'TRAY');
-      if (justFinishedTray && allInChute) {
-        setGamePhase('grind');
-      }
-
-      return next;
-    });
-  };
-
-  // ---- useFrame: read ECS state + particle physics + chunk damp ----
+  // ---- useFrame: particle physics + chunk damp + progress-driven visuals ----
   useFrame((_, delta) => {
     if (!visible) return;
 
-    const phase = gamePhasRef.current;
-
-    // --- Read ECS state for game logic ---
+    // --- Read ECS state for switch notch visual ---
     const switchEntity = entitiesRef.current.find(e => e.machineSlot?.slotName === 'switch-body');
     const isGrinderOn = switchEntity?.toggle?.isOn ?? false;
 
-    const plungerEntity = entitiesRef.current.find(
-      e => e.machineSlot?.slotName === 'plunger-hitbox',
-    );
-    const plungerDisplacement = plungerEntity?.plunger?.displacement ?? 0;
+    // --- Progress-driven particle spawning ---
+    const progress = challengeProgress / 100; // 0-1
+    const progressDelta = progress - prevProgressRef.current;
 
-    // --- Grind logic: plunger displacement increasing while grinder on ---
-    if (
-      phase === 'grind' &&
-      isGrinderOn &&
-      meatInChuteRef.current > 0 &&
-      plungerDisplacement > prevDisplacementRef.current
-    ) {
-      const push = plungerDisplacement - prevDisplacementRef.current;
-      groundVolRef.current += push * GRIND_VOLUME_PER_PUSH;
-      if (Math.random() < push * CHUNK_CONSUME_RATE)
-        meatInChuteRef.current = Math.max(0, meatInChuteRef.current - 1);
-
-      // Spawn particles
+    if (progressDelta > 0) {
+      // Haptic feedback throttled to every 5% progress
+      hapticAccumRef.current += progressDelta;
+      if (hapticAccumRef.current >= 5) {
+        hapticAccumRef.current = 0;
+        fireHaptic('rotary_feedback');
+      }
+      // Spawn particles proportional to progress increase
       const pData = particleDataRef.current;
-      for (let i = 0; i < 3; i++) {
+      const numToSpawn = Math.min(3, Math.ceil(progressDelta * 30));
+      for (let i = 0; i < numToSpawn; i++) {
         const p = pData.find(d => !d.active);
         if (p) {
           p.active = true;
           const ang = Math.random() * Math.PI * 2;
           const r = Math.random() * 0.8;
-          p.pos.set(r * Math.cos(ang), cY + 2.5, 2.1);
+          p.pos.set(r * Math.cos(ang), 2.5, 2.1);
           p.vel.set((Math.random() - 0.5) * 1, -2 - Math.random() * 2, 1 + Math.random() * 2);
           p.rot.set(0, 0, 0);
         }
       }
-
-      // Grind complete
-      if (groundVolRef.current >= 0.25) {
-        meatInChuteRef.current = 0;
-        setGamePhase('done');
-        gamePhasRef.current = 'done';
-        onGrindComplete?.(groundVolRef.current);
-      }
     }
-    prevDisplacementRef.current = plungerDisplacement;
+    prevProgressRef.current = progress;
 
     // --- Switch notch visual animation ---
     const notchEntity = entitiesRef.current.find(e => e.machineSlot?.slotName === 'switch-notch');
@@ -290,15 +208,11 @@ export const GrinderOrchestrator = ({
         (targetZ - notchEntity.three.rotation.z) * Math.min(1, delta * 10);
     }
 
-    // --- Chunk position damp ---
+    // --- Chunk position damp (decorative) ---
     for (let i = 0; i < 15; i++) {
       const mesh = chunkRefs.current[i];
       if (!mesh) continue;
       const chunk = chunks[i];
-      if (chunk.state === 'CHUTE') {
-        mesh.visible = false;
-        continue;
-      }
       mesh.visible = true;
       damp3(mesh.position, chunk.targetPos.toArray(), 0.12, delta);
     }
@@ -309,8 +223,8 @@ export const GrinderOrchestrator = ({
     const dummy = dummyRef.current;
     let needsUpdate = false;
 
-    if ((phase === 'grind' || phase === 'done') && pMesh) {
-      const groundY = cY + 0.5 + groundVolRef.current * 1.5;
+    if (pMesh) {
+      const groundY = 0.5 + progress * 1.5;
       for (let i = 0; i < MAX_G_PARTS; i++) {
         const p = pData[i];
         if (p.active) {
@@ -340,8 +254,8 @@ export const GrinderOrchestrator = ({
       {/* ECS machine entities — rendered with automatic input event wiring */}
       <MachineEntitiesRenderer entities={entitiesRef.current} />
 
-      {/* Meat chunks — challenge-specific, not ECS */}
-      <group position={[-5, cY, 2]}>
+      {/* Meat chunks — decorative, no click interaction */}
+      <group position={[-5, 0, 2]}>
         {chunks.map((chunk, i) => (
           <mesh
             key={chunk.id}
@@ -349,9 +263,7 @@ export const GrinderOrchestrator = ({
               chunkRefs.current[i] = el;
             }}
             position={chunk.targetPos.toArray()}
-            visible={chunk.state !== 'CHUTE'}
             castShadow
-            onClick={() => handleChunkClick(chunk.id)}
           >
             <primitive object={chunkGeo} attach="geometry" />
             <primitive object={chunkMats ? chunkMats[i] : meatMat} attach="material" />

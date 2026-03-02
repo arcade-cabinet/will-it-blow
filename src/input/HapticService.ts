@@ -24,7 +24,7 @@ export type HapticEvent =
   | 'button_press'
   | 'rotary_feedback'
   | 'pressure_feedback'
-  // Challenge-specific events (legacy names kept for backwards compat)
+  // Challenge-specific events
   | 'ingredient_tap'
   | 'grinding_pulse'
   | 'stuffing_pressure'

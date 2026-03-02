@@ -20,16 +20,16 @@ import type {BowlPosition} from '../../store/gameStore';
 import {useGameStore} from '../../store/gameStore';
 
 // ---------------------------------------------------------------------------
-// Bowl lathe profile — exact from POC L153 (same as GrinderMechanics)
+// Bowl lathe profile — scaled down from POC to kitchen-realistic dimensions
 // ---------------------------------------------------------------------------
 
 const BOWL_POINTS = [
-  new THREE.Vector2(0.01, 0),
-  new THREE.Vector2(3, 0),
-  new THREE.Vector2(3.5, 1.5),
-  new THREE.Vector2(3.3, 1.6),
-  new THREE.Vector2(2.8, 0.2),
-  new THREE.Vector2(0.01, 0.2),
+  new THREE.Vector2(0.002, 0),
+  new THREE.Vector2(0.6, 0),
+  new THREE.Vector2(0.7, 0.3),
+  new THREE.Vector2(0.66, 0.32),
+  new THREE.Vector2(0.56, 0.04),
+  new THREE.Vector2(0.002, 0.04),
 ];
 
 // ---------------------------------------------------------------------------
@@ -52,6 +52,9 @@ const BOWL_POSITIONS: Partial<Record<BowlPosition, [number, number, number]>> = 
     TARGETS.stuffer.position[2] + 0.5,
   ],
 };
+
+// Scale factor to match the original mixing_bowl.glb visual size
+const BOWL_SCALE = 0.65;
 
 // Off-screen position for 'done' / 'carried' states
 const HIDDEN_POS: [number, number, number] = [0, -50, 0];
@@ -107,15 +110,15 @@ export const TransferBowl = () => {
   const initialPos = BOWL_POSITIONS[bowlPosition] ?? HIDDEN_POS;
 
   return (
-    <group ref={groupRef} position={initialPos} visible={isVisible}>
+    <group ref={groupRef} position={initialPos} visible={isVisible} scale={BOWL_SCALE}>
       <mesh castShadow>
         <primitive object={bowlGeo} attach="geometry" />
         <primitive object={bowlMat} attach="material" />
       </mesh>
 
       {/* Meat mound inside bowl — hemisphere, colored by blendColor */}
-      <mesh ref={meatMoundRef} position={[0, 0.2, 0]} scale={[0.001, 0.001, 0.001]}>
-        <sphereGeometry args={[2.8, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
+      <mesh ref={meatMoundRef} position={[0, 0.04, 0]} scale={[0.001, 0.001, 0.001]}>
+        <sphereGeometry args={[0.56, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
         <meshStandardMaterial color={meatColor} roughness={0.6} />
       </mesh>
     </group>

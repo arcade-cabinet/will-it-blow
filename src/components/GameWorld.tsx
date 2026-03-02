@@ -217,6 +217,20 @@ function ManualProximityTrigger() {
 }
 
 // -----------------------------------------------------------------
+/** Renders postprocessing effects only when the renderer is WebGL (not WebGPU). */
+function WebGLOnlyEffects() {
+  const gl = useThree(s => s.gl);
+  if (!(gl as any).isWebGLRenderer) return null;
+  return (
+    <EffectComposer>
+      <Bloom intensity={0.3} luminanceThreshold={0.9} luminanceSmoothing={0.025} mipmapBlur />
+      <Vignette offset={0.3} darkness={0.7} blendFunction={BlendFunction.NORMAL} />
+      <ChromaticAberration offset={[0.002, 0.002]} blendFunction={BlendFunction.NORMAL} />
+      <Noise opacity={0.05} blendFunction={BlendFunction.OVERLAY} />
+    </EffectComposer>
+  );
+}
+
 // SceneContent — all 3D content inside the Canvas
 // -----------------------------------------------------------------
 
@@ -245,9 +259,6 @@ const SceneContent = ({
   const challengeTriggered = useGameStore(s => s.challengeTriggered);
   const mrSausageReaction = useGameStore(s => s.mrSausageReaction);
   const hintActive = useGameStore(s => s.hintActive);
-  const bowlPosition = useGameStore(s => s.bowlPosition);
-  const setSausagePlaced = useGameStore(s => s.setSausagePlaced);
-  const setBowlPosition = useGameStore(s => s.setBowlPosition);
   // Shared fridge state from store (IngredientChallenge writes, 3D reads)
   const fridgePool = useGameStore(s => s.fridgePool);
   const fridgeMatchingIndices = useGameStore(s => s.fridgeMatchingIndices);
@@ -261,19 +272,6 @@ const SceneContent = ({
   const isGrinderActive = isPlaying && currentChallenge === 1;
   const isStufferActive = isPlaying && currentChallenge === 2;
   const isStoveActive = isPlaying && currentChallenge === 3;
-
-  // Mechanics completion callbacks — drive bowl/sausage pipeline transitions
-  const handleGrindComplete = useCallback(() => {
-    setBowlPosition('grinder-output');
-  }, [setBowlPosition]);
-
-  const handleStuffComplete = useCallback(() => {
-    setBowlPosition('done');
-  }, [setBowlPosition]);
-
-  const handleCookComplete = useCallback(() => {
-    setSausagePlaced();
-  }, [setSausagePlaced]);
 
   // Convert store arrays to Sets for FridgeStation props
   const fridgeSelectedSet = new Set(fridgeSelectedIndices);
@@ -310,12 +308,7 @@ const SceneContent = ({
         <ManualProximityTrigger />
       )}
 
-      <KitchenEnvironment
-        fridgeDoorOpen={isFridgeActive}
-        grinderCranking={isGrinderActive}
-        bowlPosition={null}
-        bowlReceiving={bowlPosition === 'fridge'}
-      />
+      <KitchenEnvironment fridgeDoorOpen={isFridgeActive} grinderCranking={isGrinderActive} />
       <CrtTelevision
         position={STATIONS[4].position}
         reaction={gameStatus === 'defeat' ? 'laugh' : mrSausageReaction}
@@ -330,13 +323,9 @@ const SceneContent = ({
         />
       ))}
 
-      {/* Horror post-processing: subtle bloom, vignette, chromatic aberration, film noise */}
-      <EffectComposer>
-        <Bloom intensity={0.3} luminanceThreshold={0.9} luminanceSmoothing={0.025} mipmapBlur />
-        <Vignette offset={0.3} darkness={0.7} blendFunction={BlendFunction.NORMAL} />
-        <ChromaticAberration offset={[0.002, 0.002]} blendFunction={BlendFunction.NORMAL} />
-        <Noise opacity={0.05} blendFunction={BlendFunction.OVERLAY} />
-      </EffectComposer>
+      {/* Horror post-processing: subtle bloom, vignette, chromatic aberration, film noise.
+         Disabled under WebGPU — postprocessing library requires WebGL's getContextAttributes(). */}
+      <WebGLOnlyEffects />
 
       {/* Fridge station — 3D shelf with ingredient items */}
       {isFridgeActive && fridgePool.length > 0 && (
@@ -351,25 +340,10 @@ const SceneContent = ({
         />
       )}
 
-      {/* Procedural mechanics — interactive station geometry from POC */}
-      <GrinderOrchestrator
-        position={STATIONS[1].position}
-        counterY={STATIONS[1].position[1]}
-        visible={isGrinderActive}
-        onGrindComplete={handleGrindComplete}
-      />
-      <StufferOrchestrator
-        position={STATIONS[2].position}
-        counterY={STATIONS[2].position[1]}
-        visible={isStufferActive}
-        onStuffComplete={handleStuffComplete}
-      />
-      <CookingOrchestrator
-        position={STATIONS[3].position}
-        counterY={STATIONS[3].position[1]}
-        visible={isStoveActive}
-        onCookComplete={handleCookComplete}
-      />
+      {/* Procedural mechanics — visual-only station geometry driven by Zustand */}
+      <GrinderOrchestrator position={STATIONS[1].position} visible={isGrinderActive} />
+      <StufferOrchestrator position={STATIONS[2].position} visible={isStufferActive} />
+      <CookingOrchestrator position={STATIONS[3].position} visible={isStoveActive} />
 
       {/* Procedural transfer bowl — follows bowlPosition through the pipeline */}
       <TransferBowl />

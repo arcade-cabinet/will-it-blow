@@ -108,17 +108,17 @@ describe('GameWorld', () => {
     expect(source).toContain('Platform.OS');
   });
 
-  it('supports inter-station physics flow with dynamic bowl and mechanics callbacks', () => {
+  it('orchestrators are visual-only (no completion callbacks) and GrabSystem is present', () => {
     const fs = require('node:fs');
     const path = require('node:path');
     const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
-    // Dynamic bowl positioning from store state
-    expect(source).toContain('bowlPosition');
-    // Mechanics completion callbacks drive station pipeline
-    expect(source).toContain('handleGrindComplete');
-    expect(source).toContain('handleStuffComplete');
-    expect(source).toContain('handleCookComplete');
+    // Orchestrators should NOT have completion callback props — they are visual-only
+    expect(source).not.toContain('onGrindComplete');
+    expect(source).not.toContain('onStuffComplete');
+    expect(source).not.toContain('onCookComplete');
     // GrabSystem for carry mechanics
     expect(source).toContain('GrabSystem');
+    // TransferBowl reads bowl state from store directly
+    expect(source).toContain('TransferBowl');
   });
 });
