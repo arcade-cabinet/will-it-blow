@@ -47,6 +47,16 @@ class SquigglyCurve extends THREE.Curve<THREE.Vector3> {
   }
 }
 
+/** Mixing bowl lathe profile — exact from POC L153 (same as GrinderMechanics). */
+const BOWL_POINTS = [
+  new THREE.Vector2(0.01, 0),
+  new THREE.Vector2(3, 0),
+  new THREE.Vector2(3.5, 1.5),
+  new THREE.Vector2(3.3, 1.6),
+  new THREE.Vector2(2.8, 0.2),
+  new THREE.Vector2(0.01, 0.2),
+];
+
 /** Build the wrinkled bunched-casing geometry (POC line 201). */
 function buildBunchedGeo(): THREE.CylinderGeometry {
   const geo = new THREE.CylinderGeometry(0.4, 0.4, 2.0, 32, 32, true);
@@ -139,6 +149,7 @@ export function StufferMechanics({
   );
 
   const bunchedGeo = useMemo(() => buildBunchedGeo(), []);
+  const bowlGeo = useMemo(() => new THREE.LatheGeometry(BOWL_POINTS, 32), []);
 
   // ---- Shared materials ----
   const metalMat = useMemo(
@@ -440,10 +451,8 @@ export function StufferMechanics({
         </mesh>
       </group>
 
-      {/* ---- Water bowl (POC line 190): LatheGeometry bowl approximated as sphere, scale 0.7 ---- */}
-      {/* Using a capsule/sphere to approximate the lathe bowl shape */}
-      <mesh position={[5, cY, -1]} scale={[0.7, 0.7, 0.7]}>
-        <sphereGeometry args={[3.3, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
+      {/* ---- Water bowl (POC line 190): LatheGeometry bowl profile ---- */}
+      <mesh position={[5, cY, -1]} geometry={bowlGeo}>
         <primitive object={metalMat} attach="material" />
       </mesh>
 
