@@ -317,6 +317,27 @@ describe('recordStageTiming', () => {
   });
 });
 
+describe('recordFlairPoint', () => {
+  it('appends flair bonus entries', () => {
+    expect(store().playerDecisions.flairPoints).toEqual([]);
+    store().recordFlairPoint('confidence', 5);
+    store().recordFlairPoint('showmanship', 3);
+    expect(store().playerDecisions.flairPoints).toEqual([
+      {reason: 'confidence', points: 5},
+      {reason: 'showmanship', points: 3},
+    ]);
+  });
+
+  it('starts empty and accumulates additively', () => {
+    store().recordFlairPoint('precision', 2);
+    store().recordFlairPoint('precision', 4);
+    const fp = store().playerDecisions.flairPoints;
+    expect(fp).toHaveLength(2);
+    expect(fp[0]).toEqual({reason: 'precision', points: 2});
+    expect(fp[1]).toEqual({reason: 'precision', points: 4});
+  });
+});
+
 describe('startNewGame demand integration', () => {
   it('resets playerDecisions and generates fresh demands', () => {
     // Dirty the state
@@ -324,6 +345,7 @@ describe('startNewGame demand integration', () => {
     store().recordFlairTwist();
     store().recordCookLevel(0.8);
     store().recordHintViewed('hint-1');
+    store().recordFlairPoint('patience', 7);
 
     store().startNewGame();
 
@@ -335,6 +357,7 @@ describe('startNewGame demand integration', () => {
     expect(pd.hintsViewed).toEqual([]);
     expect(pd.chosenForm).toBeNull();
     expect(pd.stageTimings).toEqual({});
+    expect(pd.flairPoints).toEqual([]);
 
     // demands should be generated
     expect(store().mrSausageDemands).not.toBeNull();

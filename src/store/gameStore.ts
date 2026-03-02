@@ -59,6 +59,8 @@ export interface PlayerDecisions {
   flairTwists: number;
   /** Time spent at each stage in seconds */
   stageTimings: Record<string, number>;
+  /** Flair bonuses earned — ALWAYS additive, never negative */
+  flairPoints: {reason: string; points: number}[];
 }
 
 /** The type of object the player is currently carrying, or null if hands are empty. */
@@ -271,6 +273,8 @@ export interface GameState {
   recordHintViewed: (hintId: string) => void;
   /** Record how long the player spent at a given stage. */
   recordStageTiming: (stage: string, duration: number) => void;
+  /** Record a flair bonus (always additive, never negative). */
+  recordFlairPoint: (reason: string, points: number) => void;
   /** Return to the main menu, resetting all ephemeral game state. */
   returnToMenu: () => void;
 }
@@ -347,6 +351,7 @@ export const INITIAL_GAME_STATE = {
     hintsViewed: [],
     flairTwists: 0,
     stageTimings: {},
+    flairPoints: [],
   } as PlayerDecisions,
   musicVolume: 0.7,
   sfxVolume: 0.8,
@@ -406,6 +411,7 @@ export const useGameStore = create<GameState>()(
             hintsViewed: [],
             flairTwists: 0,
             stageTimings: {},
+            flairPoints: [],
           },
         }));
         get().generateDemands(pool.map(i => i.name));
@@ -625,6 +631,14 @@ export const useGameStore = create<GameState>()(
           },
         })),
 
+      recordFlairPoint: (reason: string, points: number) =>
+        set(state => ({
+          playerDecisions: {
+            ...state.playerDecisions,
+            flairPoints: [...state.playerDecisions.flairPoints, {reason, points}],
+          },
+        })),
+
       setMusicVolume: (volume: number) => set({musicVolume: Math.max(0, Math.min(1, volume))}),
       setSfxVolume: (volume: number) => set({sfxVolume: Math.max(0, Math.min(1, volume))}),
       setMusicMuted: (muted: boolean) => set({musicMuted: muted}),
@@ -666,6 +680,7 @@ export const useGameStore = create<GameState>()(
             hintsViewed: [],
             flairTwists: 0,
             stageTimings: {},
+            flairPoints: [],
           },
         }),
     }),
