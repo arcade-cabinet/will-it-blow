@@ -68,6 +68,11 @@ interface ParticleData {
 
 const MAX_G_PARTS = 150;
 
+/** Volume gained per unit of plunger displacement */
+const GRIND_VOLUME_PER_PUSH = 0.6;
+/** Probability multiplier for consuming a meat chunk per push unit */
+const CHUNK_CONSUME_RATE = 15;
+
 const CHUNK_BOWL_OFFSETS = Array.from({length: 15}, (_, i) => {
   const angle = (i / 15) * Math.PI * 6;
   const r = 0.3 + (i % 5) * 0.45;
@@ -249,8 +254,8 @@ export const GrinderOrchestrator = ({
       plungerDisplacement > prevDisplacementRef.current
     ) {
       const push = plungerDisplacement - prevDisplacementRef.current;
-      groundVolRef.current += push * 0.6;
-      if (Math.random() < push * 15)
+      groundVolRef.current += push * GRIND_VOLUME_PER_PUSH;
+      if (Math.random() < push * CHUNK_CONSUME_RATE)
         meatInChuteRef.current = Math.max(0, meatInChuteRef.current - 1);
 
       // Spawn particles

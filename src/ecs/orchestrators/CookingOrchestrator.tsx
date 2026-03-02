@@ -89,6 +89,8 @@ const FLIP_DURATION = 0.5;
 /** Clean flip swipe speed range (pixels per second) */
 const FLIP_SPEED_MIN = 200;
 const FLIP_SPEED_MAX = 1200;
+/** Minimum upward swipe distance (px) to register as a pan flip */
+const MIN_FLIP_DY = 30;
 /** Flair points for consecutive clean flips (diminishing) */
 const FLAIR_POINTS = [3, 2, 1, 1, 1, 1, 1, 1, 1, 1];
 
@@ -271,7 +273,7 @@ export function CookingOrchestrator({
       const dtMs = performance.now() - pointerStartRef.current.time;
       pointerStartRef.current = null;
 
-      if (dy < 30) return;
+      if (dy < MIN_FLIP_DY) return;
 
       const speed = (dy / dtMs) * 1000;
       flipProgressRef.current = 0;
