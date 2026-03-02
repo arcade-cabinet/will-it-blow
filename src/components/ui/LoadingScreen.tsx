@@ -1,6 +1,6 @@
 /**
  * @module LoadingScreen
- * Asset preloader with a sausage-shaped progress bar.
+ * Asset preloader with procedural sausage-links progress visualization.
  *
  * Preloads all furniture GLB models (from FURNITURE_RULES) and PBR texture
  * files using parallel fetch with file-count progress tracking. The individual
@@ -19,7 +19,7 @@
  * saved state via `continueGame()` depending on the prior flow.
  */
 
-import {useEffect, useRef, useState} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import {Animated, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {audioEngine} from '../../engine/AudioEngine';
 import {getAssetUrl} from '../../engine/assetUrl';
@@ -55,6 +55,136 @@ const LOADING_QUOTES = [
   'Almost ready to blow...',
 ];
 
+const LINK_COUNT = 5;
+const LINK_THRESHOLDS = [20, 40, 60, 80, 100];
+
+// SausageButton palette
+const SAUSAGE = {
+  outer: '#dd6868',
+  body: '#e48686',
+  highlight: '#e99b9b',
+};
+
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+
+const LINK_W = 48;
+const LINK_H = 32;
+const LINK_RADIUS = LINK_H / 2;
+const CONNECTOR_W = 8;
+
+/** Googly eyes on the rightmost visible link */
+function GooglyEyes() {
+  return (
+    <>
+      <View style={[eyeStyles.sclera, {top: 3, right: 5}]}>
+        <View style={eyeStyles.pupil} />
+      </View>
+      <View style={[eyeStyles.sclera, {top: 15, right: 5}]}>
+        <View style={eyeStyles.pupil} />
+      </View>
+    </>
+  );
+}
+
+const eyeStyles = StyleSheet.create({
+  sclera: {
+    position: 'absolute',
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: '#000',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pupil: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#000',
+  },
+});
+
+/** One sausage link pill (active or inactive) */
+function SausageLink({
+  active,
+  showEyes,
+  scaleAnim,
+}: {
+  active: boolean;
+  showEyes: boolean;
+  scaleAnim: Animated.Value;
+}) {
+  if (!active) {
+    return <View style={linkStyles.inactive} />;
+  }
+
+  return (
+    <Animated.View style={[linkStyles.outer, {transform: [{scale: scaleAnim}]}]}>
+      <View style={linkStyles.inner}>
+        <View style={linkStyles.highlight} />
+      </View>
+      {showEyes && <GooglyEyes />}
+    </Animated.View>
+  );
+}
+
+const linkStyles = StyleSheet.create({
+  outer: {
+    width: LINK_W,
+    height: LINK_H,
+    borderRadius: LINK_RADIUS,
+    backgroundColor: SAUSAGE.outer,
+    justifyContent: 'center',
+  },
+  inner: {
+    position: 'absolute',
+    left: 3,
+    top: 3,
+    right: 3,
+    bottom: 3,
+    borderRadius: LINK_RADIUS - 2,
+    backgroundColor: SAUSAGE.body,
+    overflow: 'hidden',
+  },
+  highlight: {
+    position: 'absolute',
+    left: 8,
+    top: 3,
+    right: 12,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: SAUSAGE.highlight,
+    opacity: 0.7,
+  },
+  inactive: {
+    width: LINK_W,
+    height: LINK_H,
+    borderRadius: LINK_RADIUS,
+    borderWidth: 2,
+    borderColor: SAUSAGE.outer,
+    opacity: 0.3,
+  },
+});
+
+/** Thin dark connector between adjacent links */
+function SausageConnector() {
+  return <View style={connectorStyles.pinch} />;
+}
+
+const connectorStyles = StyleSheet.create({
+  pinch: {
+    width: CONNECTOR_W,
+    height: 8,
+    backgroundColor: '#8B1A1A',
+    borderRadius: 4,
+    alignSelf: 'center',
+  },
+});
+
 export function LoadingScreen() {
   const startNewGame = useGameStore(s => s.startNewGame);
   const gameStatus = useGameStore(s => s.gameStatus);
@@ -65,6 +195,12 @@ export function LoadingScreen() {
 
   // Fade-in animation
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  // One Animated.Value per sausage link for scale-in animation
+  const linkScales = useMemo(
+    () => Array.from({length: LINK_COUNT}, () => new Animated.Value(0)),
+    [],
+  );
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -154,7 +290,24 @@ export function LoadingScreen() {
     return () => clearTimeout(timeout);
   }, [progress, startNewGame, gameStatus]);
 
-  const fillWidth = `${Math.max(progress, 2)}%` as const;
+  // Animate sausage links as progress crosses thresholds
+  const activatedRef = useRef<boolean[]>(Array(LINK_COUNT).fill(false));
+  useEffect(() => {
+    for (let i = 0; i < LINK_COUNT; i++) {
+      if (progress >= LINK_THRESHOLDS[i] && !activatedRef.current[i]) {
+        activatedRef.current[i] = true;
+        Animated.spring(linkScales[i], {
+          toValue: 1,
+          friction: 5,
+          tension: 120,
+          useNativeDriver: true,
+        }).start();
+      }
+    }
+  }, [progress, linkScales]);
+
+  // Compute which links are active and which is newest (for googly eyes)
+  const activeCount = LINK_THRESHOLDS.filter(t => progress >= t).length;
 
   const handleRetry = () => {
     setLoadError(null);
@@ -173,15 +326,19 @@ export function LoadingScreen() {
         </View>
       ) : (
         <>
-          {/* Sausage progress bar */}
+          {/* Sausage links progress */}
           <View style={styles.progressArea}>
-            <View style={styles.sausageTrack}>
-              <View style={[styles.sausageFill, {width: fillWidth}]}>
-                {/* Left end cap */}
-                <View style={styles.sausageCapLeft} />
-                {/* Right end cap */}
-                <View style={styles.sausageCapRight} />
-              </View>
+            <View style={styles.linksContainer}>
+              {Array.from({length: LINK_COUNT}, (_, i) => {
+                const active = progress >= LINK_THRESHOLDS[i];
+                const isNewest = active && i === activeCount - 1;
+                return (
+                  <View key={i} style={styles.linkSlot}>
+                    {i > 0 && <SausageConnector />}
+                    <SausageLink active={active} showEyes={isNewest} scaleAnim={linkScales[i]} />
+                  </View>
+                );
+              })}
             </View>
 
             {/* Percentage */}
@@ -197,9 +354,6 @@ export function LoadingScreen() {
   );
 }
 
-const SAUSAGE_COLOR = '#C2442D';
-const SAUSAGE_COLOR_DARK = '#8B1A1A';
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -210,48 +364,18 @@ const styles = StyleSheet.create({
   },
   progressArea: {
     width: '100%',
-    maxWidth: 320,
+    maxWidth: 400,
     alignItems: 'center',
     marginBottom: 40,
   },
-  sausageTrack: {
-    width: '100%',
-    height: 32,
-    backgroundColor: '#1a1a1a',
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#333',
-    overflow: 'hidden',
-  },
-  sausageFill: {
-    height: '100%',
-    backgroundColor: SAUSAGE_COLOR,
-    borderRadius: 14,
-    minWidth: 8,
+  linksContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    position: 'relative',
-    overflow: 'hidden',
+    justifyContent: 'center',
   },
-  sausageCapLeft: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 14,
-    borderTopLeftRadius: 14,
-    borderBottomLeftRadius: 14,
-    backgroundColor: SAUSAGE_COLOR_DARK,
-  },
-  sausageCapRight: {
-    position: 'absolute',
-    right: 0,
-    top: 2,
-    bottom: 2,
-    width: 6,
-    borderTopRightRadius: 6,
-    borderBottomRightRadius: 6,
-    backgroundColor: SAUSAGE_COLOR_DARK,
+  linkSlot: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   percentage: {
     fontFamily: 'Bangers',
