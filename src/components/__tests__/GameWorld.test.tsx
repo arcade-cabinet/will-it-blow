@@ -65,12 +65,12 @@ describe('GameWorld', () => {
     // Manual ProximityTrigger replaced (native fallback renamed)
     expect(source).not.toContain('function ProximityTrigger');
     expect(source).not.toContain('STATION_TRIGGERS');
-    // Should reference all 5 station components
+    // Fridge + CRT are station-level components; grinder/stuffer/stove use Mechanics
     expect(source).toContain('FridgeStation');
-    expect(source).toContain('GrinderStation');
-    expect(source).toContain('StufferStation');
-    expect(source).toContain('StoveStation');
     expect(source).toContain('CrtTelevision');
+    expect(source).toContain('GrinderMechanics');
+    expect(source).toContain('StufferMechanics');
+    expect(source).toContain('CookingMechanics');
   });
 
   it('derives station positions from FurnitureLayout targets (not hardcoded)', () => {
@@ -87,11 +87,11 @@ describe('GameWorld', () => {
     expect(source).not.toMatch(/center:\s*\[\s*-?\d+\.\d+\s*,\s*-?\d+\.\d+\s*\]/);
   });
 
-  it('passes position props to station components from STATIONS array', () => {
+  it('passes position props to station/mechanics components from STATIONS array', () => {
     const fs = require('node:fs');
     const path = require('node:path');
     const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
-    // All stations should receive position from STATIONS (resolved targets)
+    // FridgeStation, GrinderMechanics, StufferMechanics, CookingMechanics, CrtTelevision
     expect(source).toContain('position={STATIONS[0].position}');
     expect(source).toContain('position={STATIONS[1].position}');
     expect(source).toContain('position={STATIONS[2].position}');
@@ -108,18 +108,16 @@ describe('GameWorld', () => {
     expect(source).toContain('Platform.OS');
   });
 
-  it('supports inter-station physics flow with dynamic bowl and sausage', () => {
+  it('supports inter-station physics flow with dynamic bowl and mechanics callbacks', () => {
     const fs = require('node:fs');
     const path = require('node:path');
     const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
-    // Dynamic bowl positioning from store state (bowl loaded via FurnitureLoader)
+    // Dynamic bowl positioning from store state
     expect(source).toContain('bowlPosition');
-    // Sausage spawning after stuffer challenge
-    expect(source).toContain('GrabbableSausage');
-    expect(source).toContain('sausagePlaced');
-    // StoveStation receives onSausagePlaced callback
-    expect(source).toContain('onSausagePlaced');
-    expect(source).toContain('handleSausagePlaced');
+    // Mechanics completion callbacks drive station pipeline
+    expect(source).toContain('handleGrindComplete');
+    expect(source).toContain('handleStuffComplete');
+    expect(source).toContain('handleCookComplete');
     // GrabSystem for carry mechanics
     expect(source).toContain('GrabSystem');
   });

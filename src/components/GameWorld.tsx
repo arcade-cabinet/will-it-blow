@@ -2,9 +2,9 @@
  * @module GameWorld
  * Main R3F Canvas scene orchestrator for the "Will It Blow?" kitchen.
  *
- * Renders the full 3D scene: kitchen environment, all five station components
- * (fridge, grinder, stuffer, stove, CRT television), FPS camera controller,
- * physics world, grab system, and station waypoint markers.
+ * Renders the full 3D scene: kitchen environment, procedural Mechanics
+ * components (grinder, stuffer, cooking), the CRT television, fridge station,
+ * FPS camera controller, physics world, grab system, and station waypoint markers.
  *
  * Architecture:
  * - `GameWorld` is the top-level export, providing the R3F `<Canvas>` with
@@ -39,7 +39,7 @@ import {
 import {createXRStore, XR} from '@react-three/xr';
 import {useKeepAwake} from 'expo-keep-awake';
 import {BlendFunction} from 'postprocessing';
-import {Suspense, useCallback, useEffect, useRef, useState} from 'react';
+import {Suspense, useCallback, useRef} from 'react';
 import {Platform, Pressable, Text, View} from 'react-native';
 import {WebGPURenderer} from 'three/webgpu';
 import {DEFAULT_ROOM, resolveTargets, STATION_TARGET_NAMES} from '../engine/FurnitureLayout';
@@ -50,14 +50,10 @@ import {BasementStructure} from './kitchen/BasementStructure';
 import {CookingMechanics} from './kitchen/CookingMechanics';
 import {CrtTelevision} from './kitchen/CrtTelevision';
 import {FridgeStation} from './kitchen/FridgeStation';
-import {GrabbableSausage} from './kitchen/GrabbableSausage';
 import {GrinderMechanics} from './kitchen/GrinderMechanics';
-import {GrinderStation} from './kitchen/GrinderStation';
 import {KitchenEnvironment} from './kitchen/KitchenEnvironment';
 import {StationMarker} from './kitchen/StationMarker';
-import {StoveStation} from './kitchen/StoveStation';
 import {StufferMechanics} from './kitchen/StufferMechanics';
-import {StufferStation} from './kitchen/StufferStation';
 import {SceneIntrospector} from './SceneIntrospector';
 
 // -----------------------------------------------------------------
@@ -78,7 +74,6 @@ const STATIONS = STATION_TARGET_NAMES.map(name => {
 
 // Output positions for carried objects between stations — from named targets
 const GRINDER_OUTPUT_POS = RESOLVED_TARGETS['grinder-output'].position;
-const STUFFER_OUTPUT_POS = RESOLVED_TARGETS['stuffer-output'].position;
 
 // -----------------------------------------------------------------
 // PlayerBody — kinematic rigid body that follows the camera
@@ -255,17 +250,10 @@ const SceneContent = ({
   const gameStatus = useGameStore(s => s.gameStatus);
   const currentChallenge = useGameStore(s => s.currentChallenge);
   const challengeTriggered = useGameStore(s => s.challengeTriggered);
-  const challengeProgress = useGameStore(s => s.challengeProgress);
-  const challengePressure = useGameStore(s => s.challengePressure);
-  const challengeIsPressing = useGameStore(s => s.challengeIsPressing);
-  const challengeTemperature = useGameStore(s => s.challengeTemperature);
-  const challengeHeatLevel = useGameStore(s => s.challengeHeatLevel);
-  const strikes = useGameStore(s => s.strikes);
   const mrSausageReaction = useGameStore(s => s.mrSausageReaction);
   const hintActive = useGameStore(s => s.hintActive);
-  // Bowl & sausage tracking for inter-station physics flow
+  // Bowl tracking for inter-station flow
   const bowlPosition = useGameStore(s => s.bowlPosition);
-  const sausagePlaced = useGameStore(s => s.sausagePlaced);
   const setSausagePlaced = useGameStore(s => s.setSausagePlaced);
   const setBowlPosition = useGameStore(s => s.setBowlPosition);
   // Shared fridge state from store (IngredientChallenge writes, 3D reads)
@@ -281,47 +269,6 @@ const SceneContent = ({
   const isGrinderActive = isPlaying && currentChallenge === 1;
   const isStufferActive = isPlaying && currentChallenge === 2;
   const isStoveActive = isPlaying && currentChallenge === 3;
-
-  // Grinder station state derived from store
-  const grinderCrankAngle = useRef(0);
-  const prevStrikesRef = useRef(strikes);
-
-  // Animate crank angle based on challenge progress changes
-  useEffect(() => {
-    if (isGrinderActive) {
-      grinderCrankAngle.current = (challengeProgress / 100) * Math.PI * 8;
-    }
-  }, [isGrinderActive, challengeProgress]);
-
-  // Detect new strikes to trigger splatter visual
-  const [grinderSplattering, setGrinderSplattering] = useState(false);
-  useEffect(() => {
-    if (isGrinderActive && strikes > prevStrikesRef.current) {
-      setGrinderSplattering(true);
-      const timeout = setTimeout(() => setGrinderSplattering(false), 800);
-      prevStrikesRef.current = strikes;
-      return () => clearTimeout(timeout);
-    }
-    prevStrikesRef.current = strikes;
-  }, [isGrinderActive, strikes]);
-
-  // Stuffer station state: detect burst from strike changes
-  const [stufferBurst, setStufferBurst] = useState(false);
-  const prevStufferStrikesRef = useRef(strikes);
-  useEffect(() => {
-    if (isStufferActive && strikes > prevStufferStrikesRef.current) {
-      setStufferBurst(true);
-      const timeout = setTimeout(() => setStufferBurst(false), 1000);
-      prevStufferStrikesRef.current = strikes;
-      return () => clearTimeout(timeout);
-    }
-    prevStufferStrikesRef.current = strikes;
-  }, [isStufferActive, strikes]);
-
-  // Callback for when sausage is dropped on the stove pan
-  const handleSausagePlaced = useCallback(() => {
-    setSausagePlaced();
-  }, [setSausagePlaced]);
 
   // Mechanics completion callbacks — drive bowl/sausage pipeline transitions
   const handleGrindComplete = useCallback(() => {
@@ -344,9 +291,6 @@ const SceneContent = ({
         ? GRINDER_OUTPUT_POS
         : null;
   const showBowl = bowlRenderPos !== null;
-
-  // Show sausage at stuffer output after Challenge 2, until placed on stove
-  const showSausage = bowlPosition === 'done' && currentChallenge >= 3 && !sausagePlaced;
 
   // Convert store arrays to Sets for FridgeStation props
   const fridgeSelectedSet = new Set(fridgeSelectedIndices);
@@ -403,9 +347,6 @@ const SceneContent = ({
         />
       ))}
 
-      {/* Grabbable sausage — spawns at stuffer output after Challenge 2 */}
-      {showSausage && <GrabbableSausage position={STUFFER_OUTPUT_POS} />}
-
       {/* Horror post-processing: subtle bloom, vignette, chromatic aberration, film noise */}
       <EffectComposer>
         <Bloom intensity={0.3} luminanceThreshold={0.9} luminanceSmoothing={0.025} mipmapBlur />
@@ -414,7 +355,7 @@ const SceneContent = ({
         <Noise opacity={0.05} blendFunction={BlendFunction.OVERLAY} />
       </EffectComposer>
 
-      {/* All stations always rendered — positions from target system */}
+      {/* Fridge station — 3D shelf with ingredient items */}
       {isFridgeActive && fridgePool.length > 0 && (
         <FridgeStation
           position={STATIONS[0].position}
@@ -426,25 +367,6 @@ const SceneContent = ({
           onHover={setFridgeHovered}
         />
       )}
-      <GrinderStation
-        position={STATIONS[1].position}
-        grindProgress={isGrinderActive ? challengeProgress : 0}
-        crankAngle={isGrinderActive ? grinderCrankAngle.current : 0}
-        isSplattering={isGrinderActive && grinderSplattering}
-      />
-      <StufferStation
-        position={STATIONS[2].position}
-        fillLevel={isStufferActive ? challengeProgress : 0}
-        pressureLevel={isStufferActive ? challengePressure : 0}
-        isPressing={isStufferActive && challengeIsPressing}
-        hasBurst={isStufferActive && stufferBurst}
-      />
-      <StoveStation
-        position={STATIONS[3].position}
-        temperature={isStoveActive ? challengeTemperature : 70}
-        heatLevel={isStoveActive ? challengeHeatLevel : 0}
-        onSausagePlaced={handleSausagePlaced}
-      />
 
       {/* Procedural mechanics — interactive station geometry from POC */}
       <GrinderMechanics
