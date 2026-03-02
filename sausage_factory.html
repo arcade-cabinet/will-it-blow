@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Ultimate Sausage Kitchen</title>
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden; background-color: #111; font-family: 'Segoe UI', Tahoma, sans-serif; user-select: none; }
+        #canvas-container { width: 100vw; height: 100vh; }
+        #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 1.5rem; pointer-events: none; text-shadow: 0 2px 4px rgba(0,0,0,0.8); transition: opacity 0.5s; z-index: 10; }
+        #ui-layer { position: absolute; bottom: 30px; width: 100%; text-align: center; pointer-events: none; z-index: 5; }
+        #instructions { display: inline-block; background: rgba(0,0,0,0.7); color: #ffcc00; padding: 10px 20px; border-radius: 8px; font-size: 1.3rem; border: 1px solid #ffcc00; text-shadow: 0 1px 3px rgba(0,0,0,1); }
+        #progress-bar { display: inline-block; width: 300px; height: 10px; background: #333; border-radius: 5px; margin-top: 10px; overflow: hidden; }
+        #progress-fill { height: 100%; background: #ffcc00; width: 0%; transition: width 0.2s; }
+    </style>
+    <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.2/lib/anime.min.js"></script> 
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="loading">Building the Kitchen...</div>
+    <div id="ui-layer">
+        <div id="instructions">Loading...</div><br>
+        <div id="progress-bar"><div id="progress-fill"></div></div>
+    </div>
+    <div id="canvas-container"></div>
+
+    <script type="module">
+        import RAPIER from 'https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.19.3/+esm';
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+
+        await RAPIER.init();
+
+        // --- GLOBAL SETUP ---
+        const container = document.getElementById('canvas-container');
+        const instructionUI = document.getElementById('instructions');
+        const progressFill = document.getElementById('progress-fill');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a1a);
+        
+        const gravity = { x: 0.0, y: -20.0, z: 0.0 };
+        const world = new RAPIER.World(gravity);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 18, 28);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        container.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true; controls.dampingFactor = 0.05; controls.maxPolarAngle = Math.PI / 2 - 0.1;
+        controls.target.set(0, 4, 0);
+
+        // --- LIGHTING ---
+        scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+        const dirLight = new THREE.DirectionalLight(0xffeedd, 1.5);
+        dirLight.position.set(5, 20, 10);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048; dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.camera.left = -20; dirLight.shadow.camera.right = 20; dirLight.shadow.camera.top = 10; dirLight.shadow.camera.bottom = -10;
+        scene.add(dirLight);
+        
+        const glistenLight = new THREE.PointLight(0xffffff, 150, 50);
+        glistenLight.position.set(-5, 10, -5);
+        scene.add(glistenLight);
+
+        // --- MATERIALS ---
+        const metalMat = new THREE.MeshStandardMaterial({ color: 0xe0e0e0, roughness: 0.3, metalness: 0.9 });
+        const darkMetalMat = new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.7, metalness: 0.8 });
+        const plasticMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 });
+        const blackPlasticMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 });
+        
+        // --- KITCHEN ARCHITECTURE ---
+        const counterHeight = 4;
+        
+        // Cabinets
+        const cabGeo = new THREE.BoxGeometry(40, counterHeight, 12);
+        const cabMat = new THREE.MeshStandardMaterial({ color: 0x3d2314, roughness: 0.9 }); // Dark Wood
+        const cabinets = new THREE.Mesh(cabGeo, cabMat);
+        cabinets.position.set(0, counterHeight/2, 0);
+        cabinets.receiveShadow = true; scene.add(cabinets);
+
+        // Countertop
+        const counterGeo = new THREE.BoxGeometry(41, 0.4, 13);
+        const counterMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.2, metalness: 0.1 }); // Marble-ish
+        const countertop = new THREE.Mesh(counterGeo, counterMat);
+        countertop.position.set(0, counterHeight + 0.2, 0);
+        countertop.receiveShadow = true; scene.add(countertop);
+
+        // Physics Floor (Countertop)
+        const groundBody = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0, counterHeight + 0.4, 0));
+        world.createCollider(RAPIER.ColliderDesc.cuboid(20, 0.1, 6), groundBody);
+
+        // Backsplash Tile Generator
+        const tileCanvas = document.createElement('canvas'); tileCanvas.width = 128; tileCanvas.height = 128;
+        const tCtx = tileCanvas.getContext('2d');
+        tCtx.fillStyle = '#f0f0f0'; tCtx.fillRect(0,0,128,128);
+        tCtx.strokeStyle = '#aaaaaa'; tCtx.lineWidth = 4; tCtx.strokeRect(0,0,128,128);
+        const tileTex = new THREE.CanvasTexture(tileCanvas); tileTex.wrapS = tileTex.wrapT = THREE.RepeatWrapping; tileTex.repeat.set(20, 5);
+        
+        const backsplash = new THREE.Mesh(new THREE.PlaneGeometry(40, 10), new THREE.MeshStandardMaterial({ map: tileTex, roughness: 0.3 }));
+        backsplash.position.set(0, counterHeight + 5, -6); backsplash.receiveShadow = true; scene.add(backsplash);
+
+        // --- PROCEDURAL MEAT TEXTURE ---
+        function generateMeatTexture(colorHex, fatRatio) {
+            const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 512; const ctx = canvas.getContext('2d');
+            ctx.fillStyle = colorHex; ctx.fillRect(0, 0, 512, 512);
+            const drawSpecks = (c, sr, cols, a) => { ctx.globalAlpha = a; for(let i=0; i<c; i++){ ctx.fillStyle = cols[Math.floor(Math.random()*cols.length)]; ctx.beginPath(); ctx.arc(Math.random()*512, Math.random()*512, Math.random()*sr.max+sr.min, 0, Math.PI*2); ctx.fill(); } };
+            drawSpecks(1000, {min:1, max:4}, ['#8a2b2b', '#6b1b1b', '#a83c3c'], 0.7);
+            drawSpecks(Math.floor(3000 * fatRatio), {min:1, max:3}, ['#fcf2f2', '#fcebeb', '#e8caca'], 0.9);
+            ctx.globalAlpha = 1.0; ctx.filter = 'blur(1px)'; ctx.drawImage(canvas, 0, 0); ctx.filter = 'none';
+            const tex = new THREE.CanvasTexture(canvas); tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+            const bumpTex = new THREE.CanvasTexture(canvas); bumpTex.wrapS = bumpTex.wrapT = THREE.RepeatWrapping;
+            return { map: tex, bumpMap: bumpTex };
+        }
+        const meatMat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.6, clearcoat: 0.8, clearcoatRoughness: 0.1 });
+
+        // --- 1. GRINDING STATION (Left: X = -10) ---
+        const gX = -10; const cY = counterHeight + 0.4;
+        const grinderGroup = new THREE.Group(); scene.add(grinderGroup);
+        
+        const gMotor = new THREE.Mesh(new THREE.BoxGeometry(4, 4.5, 5), metalMat); gMotor.position.set(gX, cY + 2.25, -2); gMotor.castShadow=true; grinderGroup.add(gMotor);
+        const gExtruder = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.0, 4, 32).rotateX(Math.PI/2), metalMat); gExtruder.position.set(gX, cY + 2.5, 0); gExtruder.castShadow=true; grinderGroup.add(gExtruder);
+        const gChute = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 0.8, 2.5, 32), metalMat); gChute.position.set(gX, cY + 4.5, 0.5); gChute.castShadow=true; grinderGroup.add(gChute);
+        const gTray = new THREE.Mesh(new THREE.BoxGeometry(5, 0.3, 4), metalMat); gTray.position.set(gX, cY + 5.6, 0.5); gTray.castShadow=true; grinderGroup.add(gTray);
+        const gFaceplate = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 1.05, 0.2, 32).rotateX(Math.PI/2), darkMetalMat); gFaceplate.position.set(gX, cY + 2.5, 2.0); grinderGroup.add(gFaceplate);
+        
+        const gSwitchHitbox = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.5, 16).rotateZ(Math.PI/2), metalMat); gSwitchHitbox.position.set(gX+2.1, cY + 3, -2); grinderGroup.add(gSwitchHitbox);
+        const gSwitchNotch = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.0, 0.1), darkMetalMat); gSwitchNotch.position.set(gX+2.35, cY + 3, -2); grinderGroup.add(gSwitchNotch);
+
+        const plungerGroup = new THREE.Group(); plungerGroup.position.set(gX+3, cY + 5.6, 0.5); 
+        const pShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 3), plasticMat); pShaft.position.y = 1.5; plungerGroup.add(pShaft);
+        const pGuard = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 0.2), plasticMat); pGuard.position.y = 3; plungerGroup.add(pGuard);
+        const pHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 1.5), plasticMat); pHandle.position.y = 3.8; plungerGroup.add(pHandle);
+        const plungerHitbox = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 5), new THREE.MeshBasicMaterial({visible: false})); plungerHitbox.position.y = 2.5; plungerGroup.add(plungerHitbox);
+        grinderGroup.add(plungerGroup);
+
+        // The Master Mixing Bowl
+        const bowlPoints = [new THREE.Vector2(0.01, 0), new THREE.Vector2(3, 0), new THREE.Vector2(3.5, 1.5), new THREE.Vector2(3.3, 1.6), new THREE.Vector2(2.8, 0.2), new THREE.Vector2(0.01, 0.2)];
+        const bowlGeo = new THREE.LatheGeometry(bowlPoints, 32); const bowlMat = new THREE.MeshStandardMaterial({color: 0xffffff, roughness: 0.1});
+        const mainBowl = new THREE.Mesh(bowlGeo, bowlMat); mainBowl.position.set(gX-5, cY, 2); mainBowl.castShadow=true; scene.add(mainBowl);
+        const mainBowlHitbox = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 3.5, 2), new THREE.MeshBasicMaterial({visible: false})); mainBowlHitbox.position.set(gX-5, cY+1, 2); scene.add(mainBowlHitbox);
+
+        // Raw Meat & Mound
+        const chunks = []; const chunkGeo = new THREE.DodecahedronGeometry(0.5, 1);
+        for(let i=0; i<15; i++) {
+            const chunk = new THREE.Mesh(chunkGeo, meatMat); chunk.castShadow = true;
+            chunk.userData = { state: 'BOWL' };
+            chunk.position.set(gX-5 + (Math.random()-0.5)*3, cY+0.5 + Math.random()*1, 2 + (Math.random()-0.5)*3);
+            scene.add(chunk); chunks.push(chunk);
+        }
+        const meatMound = new THREE.Mesh(new THREE.SphereGeometry(2.8, 32, 16, 0, Math.PI*2, 0, Math.PI/2), meatMat); 
+        meatMound.position.set(0, 0.2, 0); meatMound.scale.set(0.001, 0.001, 0.001); mainBowl.add(meatMound);
+
+        // Grinder Particles
+        const maxGParts = 150; const gPartMesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.08, 0.08, 0.5, 6).rotateX(Math.PI/2), meatMat, maxGParts);
+        gPartMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(gPartMesh);
+        const gPartData = []; for(let i=0; i<maxGParts; i++) gPartData.push({ active: false, pos: new THREE.Vector3(), vel: new THREE.Vector3(), rot: new THREE.Euler() });
+
+        // --- 2. STUFFING STATION (Center: X = 0) ---
+        const sX = 0;
+        const stufferGroup = new THREE.Group(); scene.add(stufferGroup);
+        const sBase = new THREE.Mesh(new THREE.BoxGeometry(6, 0.5, 6), metalMat); sBase.position.set(sX, cY + 0.25, -2); stufferGroup.add(sBase);
+        const sCanister = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 6, 32), metalMat); sCanister.position.set(sX, cY + 3.5, -2); stufferGroup.add(sCanister);
+        const sTop = new THREE.Mesh(new THREE.BoxGeometry(6, 1.5, 2.5), metalMat); sTop.position.set(sX, cY + 7.25, -2); stufferGroup.add(sTop);
+        const sNozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.7, 2.5, 32).rotateX(Math.PI/2), metalMat); sNozzle.position.set(sX, cY + 1.0, 0); stufferGroup.add(sNozzle);
+        const nozzleTipPos = new THREE.Vector3(sX, cY + 1.0, 1.25);
+        const sTray = new THREE.Mesh(new THREE.BoxGeometry(10, 0.2, 7), metalMat); sTray.position.set(sX, cY + 0.1, 4); stufferGroup.add(sTray);
+        const sTrayHitbox = new THREE.Mesh(new THREE.BoxGeometry(10, 2, 7), new THREE.MeshBasicMaterial({visible:false})); sTrayHitbox.position.set(sX, cY+1, 4); stufferGroup.add(sTrayHitbox);
+
+        const sRod = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 10, 16), darkMetalMat); sRod.position.set(sX, cY + 8, -2); stufferGroup.add(sRod);
+        const crankGroup = new THREE.Group(); crankGroup.position.set(sX + 3, cY + 7.25, -2);
+        const cArm = new THREE.Mesh(new THREE.BoxGeometry(0.3, 3, 0.3), metalMat); cArm.position.set(0, 1.5, 0); crankGroup.add(cArm);
+        const cHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 1.5).rotateX(Math.PI/2), blackPlasticMat); cHandle.position.set(0, 3, 0.75); crankGroup.add(cHandle); stufferGroup.add(crankGroup);
+
+        const waterBowl = new THREE.Mesh(bowlGeo, bowlMat); waterBowl.position.set(sX+5, cY, -1); waterBowl.scale.set(0.7, 0.7, 0.7); stufferGroup.add(waterBowl);
+        const water = new THREE.Mesh(new THREE.CylinderGeometry(2.3, 2.3, 0.1, 32), new THREE.MeshPhysicalMaterial({color: 0xaaccff, transmission: 0.9, opacity: 1})); water.position.set(sX+5, cY+0.8, -1); stufferGroup.add(water);
+        const casingMat = new THREE.MeshPhysicalMaterial({ color: 0xffffee, transmission: 0.8, opacity: 1, roughness: 0.2, thickness: 0.1, side: THREE.DoubleSide });
+        
+        class SquigglyCurve extends THREE.Curve { getPoint(t, target = new THREE.Vector3()) { return target.set(sX+5 + Math.sin(t*20)*1, cY+0.3 + Math.abs(Math.cos(t*15)*0.5), -1 + Math.cos(t*25)*1); } }
+        const unattachedCasing = new THREE.Mesh(new THREE.TubeGeometry(new SquigglyCurve(), 64, 0.3, 12, false), casingMat); stufferGroup.add(unattachedCasing);
+        const waterBowlHitbox = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.5, 1.5), new THREE.MeshBasicMaterial({visible:false})); waterBowlHitbox.position.copy(waterBowl.position); waterBowlHitbox.position.y += 0.5; stufferGroup.add(waterBowlHitbox);
+
+        const draggedCurve = new THREE.QuadraticBezierCurve3(new THREE.Vector3(sX+5, cY+1, -1), new THREE.Vector3(sX+2, cY+3, 0), new THREE.Vector3(sX, cY+1, 1));
+        const draggedCasing = new THREE.Mesh(new THREE.TubeGeometry(draggedCurve, 32, 0.3, 12, false), casingMat); draggedCasing.visible = false; stufferGroup.add(draggedCasing);
+        
+        const bunchedCasingGeo = new THREE.CylinderGeometry(0.4, 0.4, 2.0, 32, 32, true); const pA = bunchedCasingGeo.attributes.position; for(let i=0; i<pA.count; i++) { pA.setX(i, pA.getX(i) * (1 + 0.1*Math.sin(pA.getY(i)*40))); pA.setZ(i, pA.getZ(i) * (1 + 0.1*Math.sin(pA.getY(i)*40))); } bunchedCasingGeo.computeVertexNormals(); bunchedCasingGeo.rotateX(Math.PI/2);
+        const attachedCasing = new THREE.Mesh(bunchedCasingGeo, casingMat); attachedCasing.position.set(sX, cY+1.0, 0); attachedCasing.visible = false; stufferGroup.add(attachedCasing);
+
+        // --- 3. COOKING STATION (Right: X = 11) ---
+        const stoveX = 11;
+        const stoveGroup = new THREE.Group(); scene.add(stoveGroup);
+        const stoveBase = new THREE.Mesh(new THREE.BoxGeometry(12, 1, 11), blackPlasticMat); stoveBase.position.set(stoveX, cY+0.5, 0); stoveGroup.add(stoveBase);
+        const stoveBack = new THREE.Mesh(new THREE.BoxGeometry(12, 3, 1), blackPlasticMat); stoveBack.position.set(stoveX, cY+2, -5); stoveGroup.add(stoveBack);
+        
+        // Burners (BR: x+2.5, z-2 | FL: x-2.5, z+2)
+        const burnerGeo = new THREE.TorusGeometry(1.5, 0.15, 8, 32); burnerGeo.rotateX(Math.PI/2);
+        const burnerBR = new THREE.Mesh(burnerGeo, darkMetalMat.clone()); burnerBR.position.set(stoveX+2.5, cY+1.05, -2); stoveGroup.add(burnerBR);
+        const burnerFL = new THREE.Mesh(burnerGeo, darkMetalMat.clone()); burnerFL.position.set(stoveX-2.5, cY+1.05, 2); stoveGroup.add(burnerFL);
+        
+        // Dials
+        const dialBR = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.3).rotateX(Math.PI/2), metalMat); dialBR.position.set(stoveX+3, cY+2.5, -4.4); stoveGroup.add(dialBR);
+        const dialFL = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.3).rotateX(Math.PI/2), metalMat); dialFL.position.set(stoveX-3, cY+2.5, -4.4); stoveGroup.add(dialFL);
+        const dialFLHitbox = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 1), new THREE.MeshBasicMaterial({visible:false})); dialFLHitbox.position.copy(dialFL.position); stoveGroup.add(dialFLHitbox);
+
+        // Frying Pan
+        const panGeo = new THREE.LatheGeometry([new THREE.Vector2(0.001, 0), new THREE.Vector2(4.5, 0), new THREE.Vector2(5.5, 1.2), new THREE.Vector2(5.2, 1.2), new THREE.Vector2(4.3, 0.2), new THREE.Vector2(0.001, 0.2)], 64);
+        const panMat = new THREE.MeshStandardMaterial({ color: 0x111, roughness: 0.6, metalness: 0.8, side: THREE.DoubleSide });
+        const pan = new THREE.Group();
+        const panBase = new THREE.Mesh(panGeo, panMat); panBase.castShadow=true; pan.add(panBase);
+        const panHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.3, 6).rotateZ(Math.PI/2).translate(8, 0.8, 0), panMat); panHandle.castShadow=true; pan.add(panHandle);
+        pan.position.set(stoveX+2.5, cY+1.05, -2); // Starts on BR
+        scene.add(pan);
+        const panHitbox = new THREE.Mesh(new THREE.CylinderGeometry(5.5, 5.5, 2), new THREE.MeshBasicMaterial({visible:false})); panHitbox.position.y = 1; pan.add(panHitbox);
+
+        // Pan Grease & FBO
+        const greaseGeo = new THREE.PlaneGeometry(8.6, 8.6, 128, 128).rotateX(-Math.PI/2);
+        const pP = greaseGeo.attributes.position; for(let i=0; i<pP.count; i++){ const x=pP.getX(i), z=pP.getZ(i), d=Math.sqrt(x*x+z*z); if(d>4.3){pP.setX(i,(x/d)*4.3); pP.setZ(i,(z/d)*4.3);} } greaseGeo.computeVertexNormals();
+        
+        const fboSize = 256; const fboOpt = { format: THREE.RGBAFormat, type: THREE.HalfFloatType, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, depthBuffer: false };
+        let rtPrev = new THREE.WebGLRenderTarget(fboSize, fboSize, fboOpt), rtCurr = new THREE.WebGLRenderTarget(fboSize, fboSize, fboOpt), rtNext = new THREE.WebGLRenderTarget(fboSize, fboSize, fboOpt), rtNorm = new THREE.WebGLRenderTarget(fboSize, fboSize, fboOpt);
+        const fCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1), fScene = new THREE.Scene(), fQuad = new THREE.Mesh(new THREE.PlaneGeometry(2,2)); fScene.add(fQuad);
+        const simMat = new THREE.ShaderMaterial({ uniforms: { u_curr:{value:null}, u_prev:{value:null}, damp:{value:0.98}, tSz:{value:new THREE.Vector2(1/fboSize, 1/fboSize)} }, vertexShader: `varying vec2 vUv; void main(){vUv=uv; gl_Position=vec4(position,1.0);}`, fragmentShader: `uniform sampler2D u_curr, u_prev; uniform float damp; uniform vec2 tSz; varying vec2 vUv; void main(){ float c=texture2D(u_curr,vUv).r, p=texture2D(u_prev,vUv).r, l=texture2D(u_curr,vUv+vec2(-tSz.x,0)).r, r=texture2D(u_curr,vUv+vec2(tSz.x,0)).r, u=texture2D(u_curr,vUv+vec2(0,-tSz.y)).r, d=texture2D(u_curr,vUv+vec2(0,tSz.y)).r; gl_FragColor=vec4((((l+r+u+d)*0.5)-p)*damp,0,0,1); }`});
+        const normMat = new THREE.ShaderMaterial({ uniforms: { u_h:{value:null}, tSz:{value:new THREE.Vector2(1/fboSize, 1/fboSize)}, sc:{value:2.5} }, vertexShader: `varying vec2 vUv; void main(){vUv=uv; gl_Position=vec4(position,1.0);}`, fragmentShader: `uniform sampler2D u_h; uniform vec2 tSz; uniform float sc; varying vec2 vUv; void main(){ float l=texture2D(u_h,vUv+vec2(-tSz.x,0)).r, r=texture2D(u_h,vUv+vec2(tSz.x,0)).r, d=texture2D(u_h,vUv+vec2(0,-tSz.y)).r, u=texture2D(u_h,vUv+vec2(0,tSz.y)).r; gl_FragColor=vec4(normalize(vec3((l-r)*sc, (d-u)*sc, 1.0))*0.5+0.5, 1.0); }`});
+        
+        const greaseMat = new THREE.MeshPhysicalMaterial({ color: 0xcca600, transparent: true, opacity: 0.0, roughness: 0.05, metalness: 0.1, transmission: 0.2, ior: 1.4, depthWrite: false, displacementMap: rtCurr.texture, displacementScale: 0.8, normalMap: rtNorm.texture });
+        const greasePool = new THREE.Mesh(greaseGeo, greaseMat); greasePool.position.y = 0.25; pan.add(greasePool);
+
+        const splatScene = new THREE.Scene(), splatCamera = new THREE.OrthographicCamera(-4.3, 4.3, 4.3, -4.3, 0, 1);
+        const sCtx = document.createElement('canvas').getContext('2d'); sCtx.canvas.width=32; sCtx.canvas.height=32; const sGrd=sCtx.createRadialGradient(16,16,0,16,16,16); sGrd.addColorStop(0,'rgba(255,255,255,0.05)'); sGrd.addColorStop(1,'rgba(255,255,255,0)'); sCtx.fillStyle=sGrd; sCtx.fillRect(0,0,32,32);
+        const splatMesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(sCtx.canvas), transparent:true, blending:THREE.AdditiveBlending, depthWrite:false, depthTest:false}), 500); splatScene.add(splatMesh);
+
+        // Cooking Particles
+        const sPartGeo = new THREE.BufferGeometry(); const sPartPos = new Float32Array(200*3); const sPartLife = new Float32Array(200); const sPartVel = []; for(let i=0;i<200;i++){sPartPos[i*3]=999; sPartVel.push(new THREE.Vector3());} sPartGeo.setAttribute('position', new THREE.BufferAttribute(sPartPos, 3));
+        const sCtx2 = document.createElement('canvas').getContext('2d'); sCtx2.canvas.width=64; sCtx2.canvas.height=64; const grd2=sCtx2.createRadialGradient(32,32,0,32,32,32); grd2.addColorStop(0,'rgba(255,255,255,1)'); grd2.addColorStop(1,'rgba(255,255,255,0)'); sCtx2.fillStyle=grd2; sCtx2.fillRect(0,0,64,64);
+        const steamMesh = new THREE.Points(sPartGeo, new THREE.PointsMaterial({size: 3, map: new THREE.CanvasTexture(sCtx2.canvas), transparent: true, opacity: 0.4, depthWrite: false, blending: THREE.AdditiveBlending})); scene.add(steamMesh);
+
+        // --- SAUSAGE LOGIC ---
+        let sausageMesh = null, pBones = [], pBodies = [], pAnchors = [];
+        const params = { shape: 'Coil', loops: 4, thick: 0.5 };
+        
+        class SausageCurve extends THREE.Curve {
+            getPoint(t, target = new THREE.Vector3()) {
+                const maxTh = params.loops * Math.PI * 2, th = t * maxTh, r = 0.5 + (th/maxTh)*2.8;
+                return target.set(r*Math.cos(th), 0, r*Math.sin(th));
+            }
+        }
+
+        function buildSausage() {
+            if(sausageMesh) { scene.remove(sausageMesh); pBodies.forEach(b => world.removeRigidBody(b)); }
+            const tex = generateMeatTexture('#c85a5a', 0.5);
+            meatMat.map = tex.map; meatMat.bumpMap = tex.bumpMap; meatMat.bumpScale = 0.05;
+
+            const curve = new SausageCurve(); const numBones = params.loops * 10;
+            pBones = []; pBodies = []; pAnchors = []; const boneRoot = new THREE.Group();
+            
+            for(let i=0; i<numBones; i++) {
+                const t = i/(numBones-1), p = curve.getPointAt(t);
+                const bone = new THREE.Bone(); boneRoot.add(bone); pBones.push(bone);
+                
+                // Hide and position OUT OF BOUNDS to prevent phys explosion
+                bone.position.copy(nozzleTipPos); bone.scale.setScalar(0.001);
+                
+                const body = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(0, 100+i, 0).setLinearDamping(8).setAngularDamping(5));
+                world.createCollider(RAPIER.ColliderDesc.ball(0.15).setMass(1).setRestitution(0), body);
+                pBodies.push(body); pAnchors.push({ t: t, base: p.clone(), tgt: p.clone(), ext: false });
+            }
+
+            const pSeg = 300, rSeg = 32;
+            const verts=[], uvs=[], inds=[], sInds=[], sWts=[];
+            const frames = curve.computeFrenetFrames(pSeg, false);
+            for(let i=0; i<=pSeg; i++) {
+                const t = i/pSeg, p = curve.getPointAt(t), N=frames.normals[i], B=frames.binormals[i];
+                const bF = t*(numBones-1); let b0=Math.floor(bF), b1=Math.ceil(bF), w1=bF-b0, w0=1-w1;
+                if(b0>=numBones)b0=numBones-1; if(b1>=numBones)b1=numBones-1;
+                let cR = params.thick; const dE=Math.min(t, 1-t); if(dE<0.02) cR*=0.01+0.99*Math.sin((dE/0.02)*Math.PI/2);
+                for(let j=0; j<=rSeg; j++){
+                    const th = (j/rSeg)*Math.PI*2;
+                    verts.push(p.x+cR*(Math.cos(th)*N.x+Math.sin(th)*B.x), p.y+cR*(Math.cos(th)*N.y+Math.sin(th)*B.y), p.z+cR*(Math.cos(th)*N.z+Math.sin(th)*B.z));
+                    uvs.push(j/rSeg, t*(pSeg/10)); sInds.push(b0,b1,0,0); sWts.push(w0,w1,0,0);
+                }
+            }
+            for(let i=0; i<pSeg; i++) for(let j=0; j<rSeg; j++) {
+                const a=i*(rSeg+1)+(j+1), b=i*(rSeg+1)+j, c=(i+1)*(rSeg+1)+j, d=(i+1)*(rSeg+1)+(j+1); inds.push(a,d,b,b,d,c);
+            }
+            const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(verts,3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs,2)); geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(sInds,4)); geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sWts,4)); geo.setIndex(inds); geo.computeVertexNormals();
+            
+            sausageMesh = new THREE.SkinnedMesh(geo, meatMat); sausageMesh.add(boneRoot); sausageMesh.bind(new THREE.Skeleton(pBones));
+            sausageMesh.castShadow = true; sausageMesh.receiveShadow = true;
+            sausageMesh.visible = false; // Completely hide initially!
+            scene.add(sausageMesh);
+        }
+
+        // --- STATE MACHINE ---
+        // 0: FILL_GRINDER, 1: GRINDING, 2: MOVE_BOWL, 3: ATTACH_CASING, 4: STUFFING, 5: MOVE_SAUSAGE, 6: MOVE_PAN, 7: COOKING, 8: DONE
+        let gameState = 0; 
+        let meatInChute = 0, groundVol = 0;
+        let isGrinderOn = false, isDraggingPlunger = false;
+        let stufferDrag = false, isCranking = false, stuffLevel = 0;
+        let isDraggingPan = false, isCooking = false, cookLevel = 0;
+
+        function setInstruction(msg, pct) {
+            instructionUI.innerText = msg;
+            if(pct !== undefined) progressFill.style.width = pct + '%';
+        }
+
+        buildSausage();
+        document.getElementById('loading').style.opacity = '0';
+        setInstruction("Phase 1: Click the chunks in the bowl to move them to the grinder tray.", 0);
+
+        // --- INTERACTION ---
+        const raycaster = new THREE.Raycaster(); const mouse = new THREE.Vector2();
+        const planeY = new THREE.Plane(new THREE.Vector3(0,1,0), -cY);
+        const planeZ = new THREE.Plane(new THREE.Vector3(0,0,1), -0.5); // For plunger
+
+        window.addEventListener('pointerdown', (e) => {
+            mouse.x = (e.clientX/window.innerWidth)*2-1; mouse.y = -(e.clientY/window.innerHeight)*2+1;
+            raycaster.setFromCamera(mouse, camera);
+
+            // Phase 0: Fill Grinder
+            if(gameState === 0) {
+                const hits = raycaster.intersectObjects(chunks);
+                if(hits.length > 0) {
+                    const ch = hits[0].object;
+                    if(ch.userData.state === 'BOWL') {
+                        ch.userData.state = 'TRAY';
+                        anime({targets: ch.position, x: gX+(Math.random()-0.5)*3, y: cY+6, z: 0.5+(Math.random()-0.5)*2, duration: 400, easing: 'easeOutQuad'});
+                        if(chunks.filter(c => c.userData.state === 'BOWL').length === 0) setInstruction("Click the chunks on the tray to push them into the chute.", 10);
+                    } else if (ch.userData.state === 'TRAY') {
+                        ch.userData.state = 'CHUTE'; meatInChute++;
+                        anime({targets: ch.position, x: gX, y: cY+4.5, z: 0.5, duration: 200, easing: 'easeInQuad', onComplete: ()=>ch.visible=false});
+                        if(chunks.filter(c => c.userData.state === 'TRAY').length === 0) {
+                            gameState = 1; setInstruction("Phase 2: Click the grinder's side dial to turn it ON.", 20);
+                            anime({targets: mainBowl.position, x: gX, z: 3.5, duration: 800, easing: 'easeInOutQuad'}); // Auto move bowl under
+                            anime({targets: mainBowlHitbox.position, x: gX, z: 3.5, duration: 800, easing: 'easeInOutQuad'});
+                        }
+                    }
+                }
+            }
+            // Phase 1: Grinding
+            else if(gameState === 1) {
+                const h1 = raycaster.intersectObject(gSwitchHitbox);
+                if(h1.length > 0) {
+                    isGrinderOn = !isGrinderOn;
+                    anime({targets: gSwitchNotch.rotation, z: isGrinderOn ? Math.PI/4 : 0, duration: 200});
+                    if(isGrinderOn) setInstruction("Drag the white plunger down the chute to grind the meat!", 25);
+                    else setInstruction("Turn the grinder ON to continue.", 25);
+                }
+                const h2 = raycaster.intersectObject(plungerHitbox);
+                if(h2.length > 0) { isDraggingPlunger = true; controls.enabled = false; anime({targets: plungerGroup.position, x: gX, z: 0.5, duration: 200}); }
+            }
+            // Phase 2: Move Bowl to Stuffer
+            else if (gameState === 2) {
+                if(raycaster.intersectObject(mainBowlHitbox).length > 0) {
+                    gameState = 3; setInstruction("Phase 3: Drag the translucent casing from the water bowl to the metal nozzle.", 45);
+                    anime({targets: mainBowl.position, x: sX, z: 4, duration: 1000, easing: 'easeInOutQuad'});
+                    anime({targets: meatMound.position, y: -0.5, duration: 1000}); // Hide mound, "loaded" into stuffer
+                }
+            }
+            // Phase 3: Attach Casing
+            else if (gameState === 3) {
+                if(raycaster.intersectObject(waterBowlHitbox).length > 0) {
+                    stufferDrag = true; controls.enabled = false; unattachedCasing.visible = false; draggedCasing.visible = true;
+                }
+            }
+            // Phase 4: Stuffing
+            else if (gameState === 4) {
+                if(raycaster.intersectObject(crankGroup, true).length > 0) { isCranking = true; controls.enabled = false; sausageMesh.visible = true; }
+            }
+            // Phase 5: Move Sausage to Pan
+            else if (gameState === 5) {
+                if(raycaster.intersectObject(sTrayHitbox).length > 0) {
+                    gameState = 6; setInstruction("Phase 5: Drag the Frying Pan from the back burner to the front-left burner.", 75);
+                    // Move Sausage to Pan coordinate space!
+                    sausageMesh.position.set(pan.position.x, pan.position.y, pan.position.z);
+                    pAnchors.forEach(a => {
+                        a.base.x += pan.position.x; a.base.y += pan.position.y; a.base.z += pan.position.z;
+                    });
+                }
+            }
+            // Phase 6: Move Pan
+            else if (gameState === 6) {
+                if(raycaster.intersectObject(panHitbox).length > 0) { isDraggingPan = true; controls.enabled = false; }
+            }
+            // Phase 7: Cooking
+            else if (gameState === 7) {
+                if(raycaster.intersectObject(dialFLHitbox).length > 0) {
+                    isCooking = true; controls.enabled = false;
+                    anime({targets: dialFL.rotation, x: Math.PI/2 - Math.PI/4, duration: 300});
+                    setInstruction("Searing... Wait for it to perfectly char.", 85);
+                    burnerFL.material.color.setHex(0xff3300); burnerFL.material.emissive.setHex(0xaa1100);
+                }
+            }
+        });
+
+        window.addEventListener('pointermove', (e) => {
+            mouse.x = (e.clientX/window.innerWidth)*2-1; mouse.y = -(e.clientY/window.innerHeight)*2+1;
+            raycaster.setFromCamera(mouse, camera);
+
+            if(isDraggingPlunger) {
+                raycaster.ray.intersectPlane(planeZ, mouse);
+                let tY = Math.max(cY+3, Math.min(cY+7, mouse.y - 2.5));
+                if(isGrinderOn && meatInChute > 0 && tY < plungerGroup.position.y) {
+                    const push = plungerGroup.position.y - tY;
+                    groundVol += push * 0.015;
+                    if(Math.random() < push*0.5) meatInChute--;
+                    meatMound.scale.setScalar(Math.max(0.001, groundVol * 1.5));
+                    
+                    // Particles
+                    for(let i=0; i<3; i++){
+                        const p = gPartData.find(d=>!d.active);
+                        if(p){ p.active=true; const ang=Math.random()*Math.PI*2, r=Math.random()*0.8;
+                        p.pos.set(gX+r*Math.cos(ang), cY+2.5, 2.1); p.vel.set((Math.random()-0.5)*1, -2-Math.random()*2, 1+Math.random()*2); }
+                    }
+
+                    if(groundVol >= 0.25) { 
+                        isDraggingPlunger = false; controls.enabled = true; gameState = 2; meatInChute=0;
+                        anime({targets: plungerGroup.position, y: cY+7, duration: 400});
+                        setInstruction("Phase 2 Complete! Click the bowl to slide it to the stuffing station.", 40);
+                    }
+                }
+                if(!isGrinderOn && meatInChute>0 && tY < cY+5.5) tY = cY+5.5;
+                plungerGroup.position.y = tY;
+            }
+            else if (stufferDrag) {
+                raycaster.ray.intersectPlane(planeY, mouse); mouse.y = Math.max(cY+0.5, mouse.y);
+                draggedCurve.v2.copy(mouse); draggedCurve.v1.set((sX+5+mouse.x)/2, cY+4, (-1+mouse.z)/2);
+                draggedCasing.geometry.dispose(); draggedCasing.geometry = new THREE.TubeGeometry(draggedCurve, 32, 0.3, 12, false);
+            }
+            else if (isCranking) {
+                crankGroup.rotation.x -= e.movementY * 0.05;
+                sRod.position.y = cY+8 - (stuffLevel * 5.0);
+                stuffLevel = Math.min(1.0, stuffLevel + Math.abs(e.movementY) * 0.002);
+                attachedCasing.scale.z = Math.max(0.01, 1.0 - stuffLevel);
+                attachedCasing.position.z = 0 - (stuffLevel * 1.5);
+                progressFill.style.width = (50 + stuffLevel*20) + '%';
+                
+                if(stuffLevel >= 1.0) {
+                    isCranking = false; controls.enabled = true; gameState = 5;
+                    setInstruction("Phase 4 Complete! Click the sausage to transfer it to the frying pan.", 70);
+                }
+            }
+            else if (isDraggingPan) {
+                raycaster.ray.intersectPlane(planeY, mouse);
+                // Clamp pan to stove area
+                pan.position.x = Math.max(stoveX-3.5, Math.min(stoveX+3.5, mouse.x));
+                pan.position.z = Math.max(-3, Math.min(3, mouse.z));
+                
+                if (pan.position.distanceTo(burnerFL.position) < 1.0) {
+                    pan.position.set(burnerFL.position.x, burnerFL.position.y, burnerFL.position.z);
+                    isDraggingPan = false; controls.enabled = true; gameState = 7;
+                    
+                    // Move Sausage with pan!
+                    sausageMesh.position.copy(pan.position);
+                    pAnchors.forEach(a => { a.base.x = pan.position.x + a.tgt.x; a.base.z = pan.position.z + a.tgt.z; });
+
+                    setInstruction("Phase 6: Turn the Front-Left stove dial to turn on the heat.", 80);
+                }
+            }
+        });
+
+        window.addEventListener('pointerup', () => {
+            if(isDraggingPlunger) { isDraggingPlunger = false; controls.enabled = true; anime({targets: plungerGroup.position, y: cY+7, duration: 400}); }
+            if(stufferDrag) {
+                stufferDrag = false; controls.enabled = true; draggedCasing.visible = false;
+                if(draggedCurve.v2.distanceTo(nozzleTipPos) < 2.0) {
+                    gameState = 4; attachedCasing.visible = true; unattachedCasing.visible = false;
+                    setInstruction("Hold down the crank and drag mouse up/down to stuff the casing!", 50);
+                } else unattachedCasing.visible = true;
+            }
+            if(isCranking) { isCranking = false; controls.enabled = true; }
+            if(isDraggingPan) { isDraggingPan = false; controls.enabled = true; }
+        });
+
+        // --- RENDER LOOP ---
+        const clock = new THREE.Clock(); let splatCount = 0; const sDum = new THREE.Object3D();
+
+        function animate() {
+            requestAnimationFrame(animate); controls.update(); const delta = Math.min(clock.getDelta(), 0.1), time = clock.getElapsedTime();
+
+            // Grinder Vibration & Particles
+            if(gameState === 1 && isGrinderOn) {
+                const v = Math.sin(time*50)*0.02; gMotor.position.x = gX+v; gChute.position.x = gX+v; gExtruder.position.x = gX+v; gFaceplate.rotation.y += delta*5;
+            } else if (gameState === 1) { gMotor.position.x=gX; gChute.position.x=gX; gExtruder.position.x=gX; }
+
+            if(gameState === 1 || gameState === 2) {
+                const gDum = new THREE.Object3D();
+                for(let i=0; i<maxGParts; i++) {
+                    const p = gPartData[i];
+                    if(p.active) {
+                        p.vel.y -= 15*delta; p.pos.addScaledVector(p.vel, delta); p.rot.x+=delta;
+                        if(p.pos.y < cY+0.5+(groundVol*1.5)) p.active=false;
+                        else { gDum.position.copy(p.pos); gDum.rotation.copy(p.rot); gDum.updateMatrix(); gPartMesh.setMatrixAt(i, gDum.matrix); }
+                    } else { gDum.position.set(0,999,0); gDum.updateMatrix(); gPartMesh.setMatrixAt(i, gDum.matrix); }
+                }
+                gPartMesh.instanceMatrix.needsUpdate = true;
+            }
+
+            // Cooking Logic
+            if(isCooking && cookLevel < 1.0) {
+                cookLevel += delta * 0.06;
+                progressFill.style.width = (80 + cookLevel*20) + '%';
+                
+                const tC = new THREE.Color();
+                if(cookLevel<0.7) tC.lerpColors(new THREE.Color(0xffffff), new THREE.Color(0x8B5A2B), cookLevel/0.7);
+                else tC.lerpColors(new THREE.Color(0x8B5A2B), new THREE.Color(0x2a150b), (cookLevel-0.7)/0.3);
+                meatMat.color.copy(tC); meatMat.roughness = Math.min(1.0, 0.4 + cookLevel*0.8); meatMat.bumpScale = 0.05 + cookLevel*0.25; meatMat.clearcoat = 0.8 * Math.max(0, 1 - cookLevel*1.2);
+                sausageMesh.scale.set(1 - cookLevel*0.15, 1, 1 - cookLevel*0.15);
+                
+                greaseMat.opacity = 0.2 + cookLevel*0.6; greasePool.position.y = 0.25 + cookLevel*0.1;
+
+                if(cookLevel >= 1.0) {
+                    setInstruction("Perfection! The sausages are fully cooked and charred.", 100);
+                    isCooking = false;
+                }
+            }
+
+            // Physics & Mesh Updates
+            world.step();
+            if(sausageMesh && pBodies.length > 0) {
+                for(let i=0; i<pBodies.length; i++) {
+                    const a = pAnchors[i], b = pBodies[i];
+                    
+                    if(gameState === 4) { // Stuffing
+                        if(stuffLevel >= a.t && !a.ext) {
+                            a.ext = true; pBones[i].scale.setScalar(1);
+                            b.setTranslation({x: nozzleTipPos.x, y: nozzleTipPos.y, z: nozzleTipPos.z}, true); b.setLinvel({x:0,y:0,z:0}, true);
+                            b.applyImpulse({x: (Math.random()-0.5)*0.1, y: 0.2, z: 1.5}, true);
+                        }
+                        if(!a.ext) continue; // Leaves unextruded bones buried at origin
+                    }
+
+                    const p = a.base.clone();
+                    // If cooking, apply shrinkage and sizzle offset
+                    if(gameState >= 5 && cookLevel > 0) {
+                        const sY = 1 - (cookLevel*0.25), d2 = Math.sqrt((p.x-a.tgt.x)**2 + (p.z-a.tgt.z)**2);
+                        p.y = (p.y * sY) + ((d2*0.12) ** 2 * cookLevel * 0.6);
+                        if(isCooking) { p.x += Math.sin(time*15+i)*0.02; p.z += Math.cos(time*18+i)*0.02; }
+                    }
+
+                    const pos = b.translation(), vel = b.linvel();
+                    b.applyImpulse({x: ((p.x-pos.x)*80 - vel.x*10)*delta, y: ((p.y-pos.y)*80 - vel.y*10)*delta, z: ((p.z-pos.z)*80 - vel.z*10)*delta}, true);
+                    pBones[i].position.set(pos.x, pos.y, pos.z);
+                }
+            }
+
+            // FBO & Steam
+            if(isCooking) {
+                splatCount = 0; 
+                for(let i=0; i<Math.floor(cookLevel*10); i++){ sDum.position.set(Math.random()*4.3*Math.cos(Math.random()*Math.PI*2), Math.random()*4.3*Math.sin(Math.random()*Math.PI*2), 0); sDum.scale.setScalar(0.5+Math.random()); sDum.updateMatrix(); splatMesh.setMatrixAt(splatCount++, sDum.matrix); }
+                pBodies.forEach((b, i) => { if(pBones[i].position.y < cY+1.5 && b.linvel().x > 0.1) { sDum.position.set(pBones[i].position.x - pan.position.x, -(pBones[i].position.z - pan.position.z), 0); sDum.scale.setScalar(1.5); sDum.updateMatrix(); splatMesh.setMatrixAt(splatCount++, sDum.matrix); }});
+                splatMesh.count = splatCount; if(splatCount>0){ splatMesh.instanceMatrix.needsUpdate=true; renderer.setRenderTarget(rtCurr); renderer.autoClear=false; renderer.render(splatScene, splatCamera); renderer.autoClear=true; }
+                fQuad.material=simMat; simMat.uniforms.u_curr.value=rtCurr.texture; simMat.uniforms.u_prev.value=rtPrev.texture; simMat.uniforms.damp.value=0.98-cookLevel*0.05; renderer.setRenderTarget(rtNext); renderer.render(fScene, fCam);
+                fQuad.material=normMat; normMat.uniforms.u_h.value=rtNext.texture; renderer.setRenderTarget(rtNorm); renderer.render(fScene, fCam);
+                const t=rtPrev; rtPrev=rtCurr; rtCurr=rtNext; rtNext=t; renderer.setRenderTarget(null);
+
+                // Steam Particles
+                const sPos = steamMesh.geometry.attributes.position.array; let sAct=0;
+                for(let i=0; i<200; i++) {
+                    if(sPartLife[i]<=0 && Math.random()<cookLevel*0.5) {
+                        const bIdx = Math.floor(Math.random()*pBones.length); const pt = pBones[bIdx].position;
+                        sPos[i*3]=pt.x; sPos[i*3+1]=pt.y; sPos[i*3+2]=pt.z;
+                        sPartVel[i].set((Math.random()-0.5), 1+Math.random()*2, (Math.random()-0.5)); sPartLife[i]=1;
+                    }
+                    if(sPartLife[i]>0) {
+                        sPartLife[i]-=delta*0.5; sPos[i*3]+=sPartVel[i].x*delta; sPos[i*3+1]+=sPartVel[i].y*delta; sPos[i*3+2]+=sPartVel[i].z*delta;
+                        if(sPartLife[i]<=0) sPos[i*3]=999; sAct++;
+                    }
+                }
+                steamMesh.geometry.attributes.position.needsUpdate=true;
+                steamMesh.material.opacity = Math.max(0.1, 0.5 - (sAct/200)*0.2);
+            }
+
+            glistenLight.position.x = pan.position.x - 2 + Math.sin(time*0.5)*2; glistenLight.position.z = pan.position.z - 2 + Math.cos(time*0.3)*2;
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+</html>

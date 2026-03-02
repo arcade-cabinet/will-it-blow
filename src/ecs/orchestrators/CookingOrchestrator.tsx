@@ -1,14 +1,20 @@
 /**
  * @module CookingOrchestrator
- * ECS-driven visual driver for the cooking/stove station.
+ * ECS-driven GAME DRIVER for the cooking/stove station.
  *
  * Spawns stove machine entities from STOVE_ARCHETYPE on mount,
  * despawns on unmount. Uses MachineEntitiesRenderer for all ECS entity
  * rendering with automatic input event wiring (dial).
  *
- * This orchestrator is VISUAL ONLY — it reads Zustand state set by the
- * 2D CookingChallenge overlay and drives ECS entity animations.
- * It does NOT manage game phases, scoring, strikes, or completion logic.
+ * This orchestrator OWNS all game logic for the cooking challenge:
+ * - Phase state machine (idle -> dialogue -> active -> success -> complete)
+ * - Temperature physics driven by ECS dial power level
+ * - Hold timer (maintain target zone to succeed)
+ * - Overheat detection and strike tracking
+ * - Timer countdown with audio cues
+ * - Final scoring and challenge completion
+ * - Mr. Sausage reaction updates
+ * - Cooking audio (sizzle loop + one-shot hits)
  *
  * ECS systems handle:
  * - DialSystem: tap processing for heat setting cycle (off/low/medium/high)
@@ -18,6 +24,9 @@
 import {useFrame} from '@react-three/fiber';
 import {useEffect, useRef} from 'react';
 import type * as THREE from 'three/webgpu';
+import type {CookingVariant} from '../../data/challenges/variants';
+import {audioEngine} from '../../engine/AudioEngine';
+import {pickVariant} from '../../engine/ChallengeRegistry';
 import {fireHaptic} from '../../input/HapticService';
 import {useGameStore} from '../../store/gameStore';
 import {despawnMachine, spawnMachine} from '../archetypes/spawnMachine';
@@ -68,6 +77,23 @@ const SMOKE_COUNT = 8;
 
 /** Flip animation duration in seconds */
 const FLIP_DURATION = 0.5;
+
+/** Temperature physics */
+const COOLING_RATE = 3; // degrees per second of natural cooling
+const ROOM_TEMP = 70;
+
+/** Scoring */
+const SCORE_PENALTY_PER_OVERHEAT = 15;
+const SCORE_BONUS_NO_OVERHEAT = 10;
+
+/** Delay after success before calling completeChallenge */
+const COMPLETE_DELAY_SEC = 1.2;
+
+/** Sizzle hit audio throttle interval (ms) */
+const SIZZLE_THROTTLE_MS = 1200;
+
+/** Orchestrator phase — tracks internal game state progression */
+type OrchestratorPhase = 'idle' | 'dialogue' | 'active' | 'success' | 'complete';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -128,12 +154,37 @@ export function CookingOrchestrator({position, visible}: CookingOrchestratorProp
     };
   }, []);
 
-  // ---- Store (read-only) ----
+  // ---- Store selectors ----
   const challengeProgress = useGameStore(s => s.challengeProgress);
   const challengeHeatLevel = useGameStore(s => s.challengeHeatLevel);
+  const variantSeed = useGameStore(s => s.variantSeed);
+  const challengeTriggered = useGameStore(s => s.challengeTriggered);
+  const gameStatus = useGameStore(s => s.gameStatus);
+
+  // Store actions
+  const setChallengeProgress = useGameStore(s => s.setChallengeProgress);
+  const setChallengeTemperature = useGameStore(s => s.setChallengeTemperature);
+  const setChallengeHeatLevel = useGameStore(s => s.setChallengeHeatLevel);
+  const setChallengeTimeRemaining = useGameStore(s => s.setChallengeTimeRemaining);
+  const setChallengePhase = useGameStore(s => s.setChallengePhase);
+  const addStrike = useGameStore(s => s.addStrike);
+  const completeChallenge = useGameStore(s => s.completeChallenge);
+  const setMrSausageReaction = useGameStore(s => s.setMrSausageReaction);
 
   // Derive cook level from challenge progress (0-100 -> 0-1)
   const cookLevel = challengeProgress / 100;
+
+  // ---- Game logic refs (avoid stale closures in useFrame) ----
+  const phaseRef = useRef<OrchestratorPhase>('idle');
+  const variantRef = useRef<CookingVariant | null>(null);
+  const tempRef = useRef(ROOM_TEMP);
+  const holdTimerRef = useRef(0);
+  const timerRef = useRef(30);
+  const overheatCountRef = useRef(0);
+  const isOverheatedRef = useRef(false);
+  const successDelayRef = useRef(0);
+  const lastSizzleTimeRef = useRef(0);
+  const lastBeepSecondRef = useRef(-1);
 
   // ---- Mutable refs ----
   const timeRef = useRef(0);
@@ -198,6 +249,47 @@ export function CookingOrchestrator({position, visible}: CookingOrchestratorProp
     }
   }, [challengeHeatLevel]);
 
+  // ---- Variant selection on mount ----
+  useEffect(() => {
+    const v = pickVariant('cooking', variantSeed) as CookingVariant;
+    variantRef.current = v;
+    timerRef.current = v.timerSeconds;
+  }, [variantSeed]);
+
+  // ---- Phase: idle -> dialogue when visible + triggered ----
+  useEffect(() => {
+    if (visible && challengeTriggered && phaseRef.current === 'idle') {
+      phaseRef.current = 'dialogue';
+      setChallengePhase('dialogue');
+    }
+  }, [visible, challengeTriggered, setChallengePhase]);
+
+  // ---- Phase: dialogue -> active (the HUD/DialogueOverlay calls setChallengePhase('active')) ----
+  // We watch the store's challengePhase to detect the transition
+  const storeChallengePhase = useGameStore(s => s.challengePhase);
+  useEffect(() => {
+    if (storeChallengePhase === 'active' && phaseRef.current === 'dialogue') {
+      phaseRef.current = 'active';
+      audioEngine.startCookingSizzle();
+    }
+  }, [storeChallengePhase]);
+
+  // ---- Watch for defeat ----
+  useEffect(() => {
+    if (gameStatus === 'defeat' && phaseRef.current === 'active') {
+      phaseRef.current = 'complete';
+      setChallengePhase('complete');
+      audioEngine.stopCookingSizzle();
+    }
+  }, [gameStatus, setChallengePhase]);
+
+  // ---- Cleanup audio on unmount ----
+  useEffect(() => {
+    return () => {
+      audioEngine.stopCookingSizzle();
+    };
+  }, []);
+
   // ------------------------------------------------------------------
   // Frame loop
   // ------------------------------------------------------------------
@@ -212,6 +304,122 @@ export function CookingOrchestrator({position, visible}: CookingOrchestratorProp
     const powerEntity = entitiesRef.current.find(e => e.machineSlot?.slotName === 'power-source');
     const powerLevel = powerEntity?.powerSource?.powerLevel ?? 0;
     const isActive = powerEntity?.powerSource?.active ?? false;
+
+    // ==================================================================
+    // GAME LOGIC — temperature physics, hold timer, scoring
+    // ==================================================================
+
+    const v = variantRef.current;
+    const phase = phaseRef.current;
+
+    if (phase === 'active' && v) {
+      // ---- Write ECS power level to store for HUD ----
+      // powerLevel is 0, 0.33, 0.66, or 1.0 from DialSystem
+      // Store heatLevel is 0-3 scale
+      setChallengeHeatLevel(powerLevel * 3);
+
+      // ---- Temperature physics ----
+      const tempChange = (powerLevel * v.heatRate - COOLING_RATE) * dt;
+      tempRef.current = Math.max(ROOM_TEMP, Math.min(280, tempRef.current + tempChange));
+      setChallengeTemperature(tempRef.current);
+
+      // ---- Hold timer logic ----
+      const inZone = Math.abs(tempRef.current - v.targetTemp) <= v.tempTolerance;
+      if (inZone) {
+        holdTimerRef.current = Math.min(v.holdSeconds, holdTimerRef.current + dt);
+      } else {
+        holdTimerRef.current = Math.max(0, holdTimerRef.current - dt * 0.5);
+      }
+      const holdProgress = (holdTimerRef.current / v.holdSeconds) * 100;
+      setChallengeProgress(holdProgress);
+
+      // ---- Overheat detection ----
+      const overheatThreshold = v.targetTemp + v.tempTolerance * 2;
+      if (tempRef.current > overheatThreshold && !isOverheatedRef.current) {
+        isOverheatedRef.current = true;
+        overheatCountRef.current += 1;
+        addStrike();
+        setMrSausageReaction('flinch');
+      }
+      if (tempRef.current <= overheatThreshold && isOverheatedRef.current) {
+        isOverheatedRef.current = false;
+      }
+
+      // ---- Mr. Sausage reactions ----
+      if (!isOverheatedRef.current) {
+        if (inZone) {
+          setMrSausageReaction('nod');
+        } else if (tempRef.current > v.targetTemp + v.tempTolerance) {
+          setMrSausageReaction('nervous');
+        } else {
+          setMrSausageReaction('idle');
+        }
+      }
+
+      // ---- Sizzle audio one-shot hits (throttled) ----
+      if (powerLevel > 0.1) {
+        const now = Date.now();
+        if (now - lastSizzleTimeRef.current > SIZZLE_THROTTLE_MS) {
+          audioEngine.playSizzleHit();
+          lastSizzleTimeRef.current = now;
+        }
+      }
+
+      // ---- Check hold timer completion ----
+      if (holdTimerRef.current >= v.holdSeconds) {
+        phaseRef.current = 'success';
+        setChallengePhase('success');
+        setMrSausageReaction('excitement');
+        successDelayRef.current = 0;
+        audioEngine.stopCookingSizzle();
+        // Score will be calculated after success delay
+      }
+
+      // ---- Timer countdown ----
+      timerRef.current = Math.max(0, timerRef.current - dt);
+      setChallengeTimeRemaining(timerRef.current);
+
+      // Countdown beep for last 5 seconds
+      const currentSecond = Math.ceil(timerRef.current);
+      if (currentSecond <= 5 && currentSecond > 0 && currentSecond !== lastBeepSecondRef.current) {
+        lastBeepSecondRef.current = currentSecond;
+        audioEngine.playCountdownBeep(currentSecond === 1);
+      }
+
+      // Timer expired — score based on partial hold progress
+      if (timerRef.current <= 0) {
+        phaseRef.current = 'complete';
+        setChallengePhase('complete');
+        audioEngine.stopCookingSizzle();
+        const holdPct = holdTimerRef.current / v.holdSeconds;
+        const score = Math.max(
+          0,
+          Math.round(holdPct * 100 - overheatCountRef.current * SCORE_PENALTY_PER_OVERHEAT),
+        );
+        completeChallenge(score);
+      }
+    }
+
+    // ---- Success phase: wait for delay then score and complete ----
+    if (phase === 'success' && v) {
+      successDelayRef.current += dt;
+      if (successDelayRef.current >= COMPLETE_DELAY_SEC) {
+        phaseRef.current = 'complete';
+        setChallengePhase('complete');
+
+        let score = 100;
+        score -= overheatCountRef.current * SCORE_PENALTY_PER_OVERHEAT;
+        if (overheatCountRef.current === 0) {
+          score += SCORE_BONUS_NO_OVERHEAT;
+        }
+        score = Math.max(0, Math.min(100, Math.round(score)));
+        completeChallenge(score);
+      }
+    }
+
+    // ==================================================================
+    // VISUALS — all existing visual code below, now driven by store
+    // ==================================================================
 
     // ---- Derive heat level for visuals from store ----
     // Map challengeHeatLevel (0-3) to powerLevel-like value (0, 0.33, 0.66, 1.0)
