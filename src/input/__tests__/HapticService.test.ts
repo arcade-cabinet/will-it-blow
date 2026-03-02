@@ -74,6 +74,26 @@ describe('getHapticPattern', () => {
       type: 'selection',
     });
   });
+
+  it('maps dial_click to selection', () => {
+    expect(getHapticPattern('dial_click')).toEqual({type: 'selection'});
+  });
+
+  it('maps toggle_click to light impact', () => {
+    expect(getHapticPattern('toggle_click')).toEqual({type: 'impact', style: 'light'});
+  });
+
+  it('maps rotary_feedback to medium impact', () => {
+    expect(getHapticPattern('rotary_feedback')).toEqual({type: 'impact', style: 'medium'});
+  });
+
+  it('maps pressure_feedback to medium impact', () => {
+    expect(getHapticPattern('pressure_feedback')).toEqual({type: 'impact', style: 'medium'});
+  });
+
+  it('maps button_press to medium impact', () => {
+    expect(getHapticPattern('button_press')).toEqual({type: 'impact', style: 'medium'});
+  });
 });
 
 describe('fireHaptic', () => {

@@ -74,7 +74,7 @@ export function buildInputHandlers(entity: Entity): InputHandlers {
           e.stopPropagation();
           const axis = entity.plunger.axis;
           entity.plunger.dragDelta =
-            axis === 'x' ? e.nativeEvent.movementX : e.nativeEvent.movementY;
+            axis === 'y' ? e.nativeEvent.movementY : e.nativeEvent.movementX;
         }
       }
     : undefined;

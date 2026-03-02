@@ -3,6 +3,9 @@ import type {BindingTransform} from '../inputTypes';
 import type {Entity} from '../types';
 import {contracts, world} from '../world';
 
+/** Property names that must never be traversed to prevent prototype pollution. */
+const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
 /**
  * Read a nested field from an entity using a dot-separated path.
  * e.g. 'toggle.isOn' reads entity.toggle.isOn
@@ -11,6 +14,7 @@ function readField(entity: Entity, path: string): unknown {
   const parts = path.split('.');
   let current: unknown = entity;
   for (const part of parts) {
+    if (UNSAFE_KEYS.has(part)) return undefined;
     if (current == null || typeof current !== 'object') return undefined;
     current = (current as Record<string, unknown>)[part];
   }
@@ -23,6 +27,9 @@ function readField(entity: Entity, path: string): unknown {
  */
 function writeField(entity: Entity, path: string, value: unknown): void {
   const parts = path.split('.');
+  for (const part of parts) {
+    if (UNSAFE_KEYS.has(part)) return;
+  }
   let current: unknown = entity;
   for (let i = 0; i < parts.length - 1; i++) {
     if (current == null || typeof current !== 'object') return;

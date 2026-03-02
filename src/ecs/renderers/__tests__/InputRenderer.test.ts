@@ -249,13 +249,13 @@ describe('buildInputHandlers — plunger', () => {
     expect(entity.plunger!.dragDelta).toBe(12);
   });
 
-  test('onPointerMove uses movementY for z-axis plunger', () => {
+  test('onPointerMove uses movementX for z-axis plunger', () => {
     const entity = makePlunger('z');
     entity.plunger!.isDragging = true;
     const {onPointerMove} = buildInputHandlers(entity);
 
     onPointerMove!(mockPointerEvent(4, 8));
-    expect(entity.plunger!.dragDelta).toBe(8);
+    expect(entity.plunger!.dragDelta).toBe(4);
   });
 
   test('onPointerUp clears isDragging', () => {
