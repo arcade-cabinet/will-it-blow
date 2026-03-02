@@ -2,27 +2,60 @@
  * @module TitleScreen
  * Main menu screen styled as a hanging butcher shop sign.
  *
- * Displays the game title with a swinging sign animation, three menu options
- * (New Game, Continue, Settings), and a footer. The sign subtly sways on a
- * looped Animated timing sequence.
+ * Displays the game title with a swinging sign animation, three PNG sprite
+ * menu buttons (New Game, Load, Quit/Settings), and a footer. The sign subtly
+ * sways on a looped Animated timing sequence.
+ *
+ * Each button shows Mr. Sausage holding a sign; hover/press state swaps to an
+ * excited/alarmed sprite variant.
  *
  * - **New Game**: Transitions to the loading phase (resets all state).
- * - **Continue**: Restores saved progress via `continueGame()` then loads.
- *   Disabled (grayed out) when no save data exists.
- * - **Settings**: Renders SettingsScreen in-place (replaces this component).
+ * - **Load**: Restores saved progress via `continueGame()` then loads.
+ *   Disabled (dimmed) when no save data exists.
+ * - **Quit**: Opens SettingsScreen in-place (replaces this component).
  */
 
 import {useCallback, useEffect, useRef, useState} from 'react';
-import {Animated, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {Animated, Image, Pressable, StyleSheet, Text, View} from 'react-native';
+import {getAssetUrl} from '../../engine/assetUrl';
 import {useGameStore} from '../../store/gameStore';
 import {SettingsScreen} from './SettingsScreen';
 
-const MENU_ITEMS = ['NEW GAME', 'CONTINUE', 'SETTINGS'] as const;
+/** A single PNG sprite button — swaps to hover variant on press/hover. */
+function SausageButton({
+  normalSource,
+  hoverSource,
+  onPress,
+  disabled = false,
+}: {
+  normalSource: {uri: string};
+  hoverSource: {uri: string};
+  onPress: () => void;
+  disabled?: boolean;
+}) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={() => setHovered(true)}
+      onPressOut={() => setHovered(false)}
+      onHoverIn={() => setHovered(true)}
+      onHoverOut={() => setHovered(false)}
+      disabled={disabled}
+      style={{marginVertical: 8, opacity: disabled ? 0.5 : 1}}
+    >
+      <Image
+        source={hovered ? hoverSource : normalSource}
+        style={{width: 280, height: 92}}
+        resizeMode="contain"
+      />
+    </Pressable>
+  );
+}
 
 export function TitleScreen() {
   const {setAppPhase, continueGame, currentChallenge, challengeScores} = useGameStore();
   const hasSaveData = challengeScores.length > 0 && currentChallenge < 5;
-  const [selectedIndex, setSelectedIndex] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
 
   // Fade-in animation
@@ -69,18 +102,15 @@ export function TitleScreen() {
   });
 
   const handleMenuPress = (index: number) => {
-    setSelectedIndex(index);
-    const item = MENU_ITEMS[index];
-    if (item === 'NEW GAME') {
+    if (index === 0) {
       setAppPhase('loading');
-    } else if (item === 'CONTINUE' && hasSaveData) {
+    } else if (index === 1 && hasSaveData) {
       // Restore saved progress before entering loading phase.
       // LoadingScreen only handles asset preloading — it doesn't touch game state.
       continueGame();
       setAppPhase('loading');
-    } else if (item === 'SETTINGS') {
-      setShowSettings(true);
     }
+    // index === 2 (quit/settings) is handled inline via setShowSettings
   };
 
   const handleSettingsBack = useCallback(() => setShowSettings(false), []);
@@ -118,37 +148,24 @@ export function TitleScreen() {
         </View>
       </Animated.View>
 
-      {/* Menu items */}
+      {/* Menu buttons — PNG sprite sausage characters */}
       <View style={styles.menuContainer}>
-        {MENU_ITEMS.map((item, index) => {
-          const isDisabled = item === 'CONTINUE' && !hasSaveData;
-          const isSelected = selectedIndex === index;
-
-          return (
-            <TouchableOpacity
-              key={item}
-              style={styles.menuItem}
-              onPress={() => handleMenuPress(index)}
-              onPressIn={() => {
-                if (!isDisabled) setSelectedIndex(index);
-              }}
-              disabled={isDisabled}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.marker}>{isSelected && !isDisabled ? '\u25B8 ' : '  '}</Text>
-              <Text
-                style={[
-                  styles.menuText,
-                  isDisabled && styles.menuTextDisabled,
-                  isSelected && !isDisabled && styles.menuTextSelected,
-                ]}
-              >
-                {item}
-                {item === 'CONTINUE' && hasSaveData ? ` (${currentChallenge + 1}/5)` : ''}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+        <SausageButton
+          normalSource={{uri: getAssetUrl('ui', 'btn_newgame_normal.png')}}
+          hoverSource={{uri: getAssetUrl('ui', 'btn_newgame_hover.png')}}
+          onPress={() => handleMenuPress(0)}
+        />
+        <SausageButton
+          normalSource={{uri: getAssetUrl('ui', 'btn_load_normal.png')}}
+          hoverSource={{uri: getAssetUrl('ui', 'btn_load_hover.png')}}
+          onPress={() => handleMenuPress(1)}
+          disabled={!hasSaveData}
+        />
+        <SausageButton
+          normalSource={{uri: getAssetUrl('ui', 'btn_quit_normal.png')}}
+          hoverSource={{uri: getAssetUrl('ui', 'btn_quit_hover.png')}}
+          onPress={() => setShowSettings(true)}
+        />
       </View>
 
       {/* Footer */}
@@ -231,36 +248,7 @@ const styles = StyleSheet.create({
     letterSpacing: 3,
   },
   menuContainer: {
-    width: '100%',
-    maxWidth: 280,
-    gap: 8,
-  },
-  menuItem: {
-    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-  },
-  marker: {
-    fontFamily: 'Bangers',
-    fontSize: 22,
-    color: '#FF1744',
-    width: 28,
-  },
-  menuText: {
-    fontFamily: 'Bangers',
-    fontSize: 24,
-    color: '#CCBBAA',
-    letterSpacing: 2,
-  },
-  menuTextDisabled: {
-    color: '#444',
-  },
-  menuTextSelected: {
-    color: '#FFFFFF',
-    textShadowColor: 'rgba(255, 255, 255, 0.15)',
-    textShadowOffset: {width: 0, height: 0},
-    textShadowRadius: 8,
   },
   footer: {
     fontFamily: 'Bangers',
