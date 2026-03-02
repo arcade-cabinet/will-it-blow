@@ -25,6 +25,12 @@ import {getRandomIngredientPool, type Ingredient} from '../engine/Ingredients';
 /** Top-level application phase controlling which screen is rendered. */
 export type AppPhase = 'menu' | 'loading' | 'playing';
 
+/** Speed zone classification for the grinding challenge HUD. */
+export type SpeedZone = 'slow' | 'good' | 'fast';
+
+/** Shared phase for orchestrator-driven challenges (shown by HUD). */
+export type ChallengePhase = 'dialogue' | 'active' | 'success' | 'complete';
+
 /** Mr. Sausage's hidden demands — generated at game start, revealed at tasting */
 export interface MrSausageDemands {
   /** Does he want coil (no twists) or links (twisted)? */
@@ -111,6 +117,12 @@ export interface GameState {
   challengeTemperature: number;
   /** Player's chosen heat level in the cooking challenge (controls temp change rate). */
   challengeHeatLevel: number;
+  /** Countdown timer remaining in the current challenge (seconds). Written by orchestrator, read by HUD. */
+  challengeTimeRemaining: number;
+  /** Speed zone classification for the grinding challenge. Written by GrinderOrchestrator, read by GrindingHUD. */
+  challengeSpeedZone: SpeedZone | null;
+  /** Current phase of the active orchestrator-driven challenge. Written by orchestrator, read by HUD. */
+  challengePhase: ChallengePhase;
 
   // ---- Mr. Sausage ----
 
@@ -221,6 +233,12 @@ export interface GameState {
   setChallengeTemperature: (temperature: number) => void;
   /** Set the player's chosen heat level in the cooking challenge. */
   setChallengeHeatLevel: (heatLevel: number) => void;
+  /** Set the countdown timer remaining (written by orchestrator each frame). */
+  setChallengeTimeRemaining: (t: number) => void;
+  /** Set the grinding speed zone classification (written by GrinderOrchestrator). */
+  setChallengeSpeedZone: (zone: SpeedZone | null) => void;
+  /** Set the current challenge phase (written by orchestrator on phase transitions). */
+  setChallengePhase: (phase: ChallengePhase) => void;
   /** Change Mr. Sausage's reaction on the CRT TV (idle, happy, angry, etc.). */
   setMrSausageReaction: (reaction: Reaction) => void;
   /** Show or hide the hint overlay. */
@@ -322,6 +340,9 @@ export const INITIAL_GAME_STATE = {
   challengeIsPressing: false,
   challengeTemperature: 70,
   challengeHeatLevel: 0,
+  challengeTimeRemaining: 0,
+  challengeSpeedZone: null as SpeedZone | null,
+  challengePhase: 'dialogue' as ChallengePhase,
   mrSausageReaction: 'idle' as Reaction,
   hintActive: false,
   hintsRemaining: INITIAL_HINTS,
@@ -384,6 +405,9 @@ export const useGameStore = create<GameState>()(
           challengeIsPressing: false,
           challengeTemperature: 70,
           challengeHeatLevel: 0,
+          challengeTimeRemaining: 0,
+          challengeSpeedZone: null,
+          challengePhase: 'dialogue' as ChallengePhase,
           mrSausageReaction: 'idle' as Reaction,
           hintsRemaining: INITIAL_HINTS,
           totalGamesPlayed: state.totalGamesPlayed + 1,
@@ -427,6 +451,9 @@ export const useGameStore = create<GameState>()(
           challengeIsPressing: false,
           challengeTemperature: 70,
           challengeHeatLevel: 0,
+          challengeTimeRemaining: 0,
+          challengeSpeedZone: null,
+          challengePhase: 'dialogue' as ChallengePhase,
           grabbedObject: null,
           grabbedObjectType: null,
           bowlContents: [],
@@ -475,6 +502,9 @@ export const useGameStore = create<GameState>()(
             challengeIsPressing: false,
             challengeTemperature: 70,
             challengeHeatLevel: 0,
+            challengeTimeRemaining: 0,
+            challengeSpeedZone: null,
+            challengePhase: 'dialogue' as ChallengePhase,
             hintActive: false,
             challengeTriggered: false,
             gameStatus: isLastChallenge ? 'victory' : state.gameStatus,
@@ -510,6 +540,12 @@ export const useGameStore = create<GameState>()(
       setChallengeTemperature: (temperature: number) => set({challengeTemperature: temperature}),
 
       setChallengeHeatLevel: (heatLevel: number) => set({challengeHeatLevel: heatLevel}),
+
+      setChallengeTimeRemaining: (t: number) => set({challengeTimeRemaining: t}),
+
+      setChallengeSpeedZone: (zone: SpeedZone | null) => set({challengeSpeedZone: zone}),
+
+      setChallengePhase: (phase: ChallengePhase) => set({challengePhase: phase}),
 
       setMrSausageReaction: (reaction: Reaction) => set({mrSausageReaction: reaction}),
 
@@ -665,6 +701,9 @@ export const useGameStore = create<GameState>()(
           challengeIsPressing: false,
           challengeTemperature: 70,
           challengeHeatLevel: 0,
+          challengeTimeRemaining: 0,
+          challengeSpeedZone: null,
+          challengePhase: 'dialogue' as ChallengePhase,
           mrSausageReaction: 'idle' as Reaction,
           hintActive: false,
           grabbedObject: null,
