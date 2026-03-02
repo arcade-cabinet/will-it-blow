@@ -1,14 +1,15 @@
 /**
  * @module StufferOrchestrator
- * ECS-driven visual driver for the stuffer station.
+ * ECS-driven GAME DRIVER for the stuffer station.
+ *
+ * Owns the full game loop: phase state machine, fill/pressure physics,
+ * burst detection, timer countdown, scoring, and completion.
+ * Reads crank input from ECS entities and writes challenge state to Zustand
+ * so the 2D HUD can display gauges/timer/status.
  *
  * Spawns stuffer machine entities from STUFFER_ARCHETYPE on mount,
  * despawns on unmount. Uses MachineEntitiesRenderer for all ECS entity
  * rendering with automatic input event wiring (crank).
- *
- * This orchestrator is VISUAL ONLY — it reads Zustand state set by the
- * 2D StuffingChallenge overlay and drives ECS entity animations.
- * It does NOT manage game phases, scoring, or completion logic.
  *
  * ECS systems handle:
  * - CrankSystem: drag-to-angularVelocity conversion + damping
@@ -22,6 +23,9 @@ import {useEffect, useMemo, useRef} from 'react';
 import * as THREE from 'three/webgpu';
 import {StufferCasing} from '../../components/kitchen/stuffer/StufferCasing';
 import {WaterBowl} from '../../components/kitchen/stuffer/WaterBowl';
+import type {StuffingVariant} from '../../data/challenges/variants';
+import {audioEngine} from '../../engine/AudioEngine';
+import {pickVariant} from '../../engine/ChallengeRegistry';
 import {fireHaptic} from '../../input/HapticService';
 import {useGameStore} from '../../store/gameStore';
 import {despawnMachine, spawnMachine} from '../archetypes/spawnMachine';
@@ -51,9 +55,26 @@ const SEGMENTS_PER_BONE = 4;
 /** Nozzle tip position -- sausage extrudes from here along +Z. */
 const NOZZLE_TIP: [number, number, number] = [0, 0, 0];
 
+/** Score deducted per casing burst. */
+const SCORE_PENALTY_PER_BURST = 20;
+
+/** Fill dropped on each burst. */
+const FILL_DROP_ON_BURST = 20;
+
+/** Delay (ms) after success before calling completeChallenge. */
+const COMPLETE_DELAY_MS = 1200;
+
+/** Crank angular velocity threshold to count as "dragging". */
+const CRANK_DRAG_THRESHOLD = 0.1;
+
+/** Cooldown (ms) after a burst before another can trigger. */
+const BURST_COOLDOWN_MS = 1000;
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+
+type OrchestratorPhase = 'idle' | 'dialogue' | 'active' | 'success' | 'complete';
 
 export interface StufferOrchestratorProps {
   position: [number, number, number];
@@ -188,13 +209,91 @@ export const StufferOrchestrator = ({position, visible}: StufferOrchestratorProp
     };
   }, []);
 
-  // ---- Store (read-only) ----
+  // ---- Store selectors ----
   const blendColor = useGameStore(s => s.blendColor);
-  const challengeProgress = useGameStore(s => s.challengeProgress);
   const twistPoints = useGameStore(s => s.playerDecisions.twistPoints);
+  const variantSeed = useGameStore(s => s.variantSeed);
+  const challengeTriggered = useGameStore(s => s.challengeTriggered);
+  const gameStatus = useGameStore(s => s.gameStatus);
 
-  // Derive fill level from challenge progress (0-100 -> 0-1)
-  const fillLevel = challengeProgress / 100;
+  // ---- Store actions ----
+  const setChallengeProgress = useGameStore(s => s.setChallengeProgress);
+  const setChallengePressure = useGameStore(s => s.setChallengePressure);
+  const setChallengeTimeRemaining = useGameStore(s => s.setChallengeTimeRemaining);
+  const setChallengePhase = useGameStore(s => s.setChallengePhase);
+  const addStrike = useGameStore(s => s.addStrike);
+  const completeChallenge = useGameStore(s => s.completeChallenge);
+  const setMrSausageReaction = useGameStore(s => s.setMrSausageReaction);
+
+  // ---- Phase state machine ----
+  const phaseRef = useRef<OrchestratorPhase>('idle');
+
+  // ---- Game loop refs (avoid stale closures in useFrame) ----
+  const fillRef = useRef(0);
+  const pressureRef = useRef(0);
+  const timerRef = useRef(0);
+  const burstCountRef = useRef(0);
+  const burstCooldownRef = useRef(false);
+  const lastBeepSecondRef = useRef(-1);
+  const variantRef = useRef<StuffingVariant | null>(null);
+  const squelchThrottleRef = useRef(0);
+
+  // ---- Variant selection on activation ----
+  useEffect(() => {
+    if (visible && challengeTriggered && phaseRef.current === 'idle') {
+      const v = pickVariant('stuffing', variantSeed) as StuffingVariant;
+      variantRef.current = v;
+      fillRef.current = 0;
+      pressureRef.current = 0;
+      timerRef.current = v.timerSeconds;
+      burstCountRef.current = 0;
+      burstCooldownRef.current = false;
+      lastBeepSecondRef.current = -1;
+      squelchThrottleRef.current = 0;
+
+      phaseRef.current = 'dialogue';
+      setChallengePhase('dialogue');
+      setChallengeProgress(0);
+      setChallengePressure(0);
+      setChallengeTimeRemaining(v.timerSeconds);
+    }
+  }, [
+    visible,
+    challengeTriggered,
+    setChallengePhase,
+    setChallengeProgress,
+    setChallengePressure,
+    setChallengeTimeRemaining,
+    variantSeed,
+  ]);
+
+  // ---- Dialogue -> Active transition ----
+  // The HUD fires setChallengePhase('active') when dialogue completes.
+  // We watch for that transition to start the game loop.
+  const storeChallengePhase = useGameStore(s => s.challengePhase);
+  useEffect(() => {
+    if (storeChallengePhase === 'active' && phaseRef.current === 'dialogue') {
+      phaseRef.current = 'active';
+      audioEngine.playPour();
+      setMrSausageReaction('idle');
+    }
+  }, [storeChallengePhase, setMrSausageReaction]);
+
+  // ---- Watch for defeat ----
+  useEffect(() => {
+    if (gameStatus === 'defeat' && phaseRef.current === 'active') {
+      phaseRef.current = 'complete';
+      setChallengePhase('complete');
+      audioEngine.stopPressure();
+    }
+  }, [gameStatus, setChallengePhase]);
+
+  // ---- Audio cleanup on unmount / phase change ----
+  useEffect(() => {
+    return () => {
+      audioEngine.stopPressure();
+    };
+  }, []);
 
   // ---- Enable/disable ECS input primitives + haptic feedback ----
   useEffect(() => {
@@ -214,18 +313,126 @@ export const StufferOrchestrator = ({position, visible}: StufferOrchestratorProp
     prevTwistCountRef.current = twistPoints.length;
   }, [twistPoints.length]);
 
-  // ---- useFrame: sync ECS fillDriven with store-driven fillLevel ----
-  useFrame(() => {
+  // ---- useFrame: game loop + ECS sync ----
+  useFrame((_, delta) => {
     if (!visible) return;
 
-    // Sync fillDriven entity with store-driven fillLevel
+    const v = variantRef.current;
+    const phase = phaseRef.current;
+
+    // Always sync fillDriven entity for plunger disc position
+    const fillLevel = fillRef.current / 100;
     const discEntity = entitiesRef.current.find(e => e.machineSlot?.slotName === 'plunger-disc');
     if (discEntity?.fillDriven) {
       discEntity.fillDriven.fillLevel = fillLevel;
     }
+
+    // Only run game logic when active
+    if (phase !== 'active' || !v) return;
+
+    // Cap delta to prevent spiral-of-death on tab-away
+    const dt = Math.min(delta, 0.1);
+
+    // ---- Read crank input from ECS ----
+    const crankEntity = entitiesRef.current.find(e => e.crank);
+    const isDragging = (crankEntity?.crank?.angularVelocity ?? 0) > CRANK_DRAG_THRESHOLD;
+
+    // ---- Fill + Pressure physics ----
+    if (isDragging) {
+      fillRef.current = Math.min(100, fillRef.current + v.fillRate * dt);
+      pressureRef.current = Math.min(100, pressureRef.current + v.pressureRate * dt);
+
+      // Throttled squelch audio
+      squelchThrottleRef.current -= dt;
+      if (squelchThrottleRef.current <= 0) {
+        audioEngine.playStuffingSquelch();
+        squelchThrottleRef.current = 0.4;
+      }
+    } else {
+      pressureRef.current = Math.max(0, pressureRef.current - v.pressureDecay * dt);
+    }
+
+    // ---- Burst detection ----
+    if (pressureRef.current > v.burstThreshold && !burstCooldownRef.current) {
+      burstCooldownRef.current = true;
+      addStrike();
+      burstCountRef.current += 1;
+      pressureRef.current = 0;
+      fillRef.current = Math.max(0, fillRef.current - FILL_DROP_ON_BURST);
+      setMrSausageReaction('flinch');
+      audioEngine.playBurst();
+      setTimeout(() => {
+        burstCooldownRef.current = false;
+      }, BURST_COOLDOWN_MS);
+    }
+
+    // ---- Pressure audio ----
+    if (pressureRef.current > 10) {
+      audioEngine.updatePressure(pressureRef.current);
+    } else {
+      audioEngine.stopPressure();
+    }
+
+    // ---- Store updates ----
+    setChallengeProgress(fillRef.current);
+    setChallengePressure(pressureRef.current);
+    setChallengeTimeRemaining(timerRef.current);
+
+    // ---- Mr. Sausage reactions ----
+    if (!burstCooldownRef.current) {
+      if (isDragging && pressureRef.current > 70) {
+        setMrSausageReaction('nervous');
+      } else if (isDragging) {
+        setMrSausageReaction('nod');
+      } else {
+        setMrSausageReaction('idle');
+      }
+    }
+
+    // ---- Fill complete -> success ----
+    if (fillRef.current >= 100) {
+      phaseRef.current = 'success';
+      setChallengePhase('success');
+      setMrSausageReaction('excitement');
+      audioEngine.stopPressure();
+
+      // Score: 100 minus burst penalties
+      const score = Math.max(0, Math.round(100 - burstCountRef.current * SCORE_PENALTY_PER_BURST));
+      setTimeout(() => {
+        phaseRef.current = 'complete';
+        setChallengePhase('complete');
+        completeChallenge(score);
+      }, COMPLETE_DELAY_MS);
+      return;
+    }
+
+    // ---- Timer countdown ----
+    timerRef.current = Math.max(0, timerRef.current - dt);
+
+    // Countdown beep for last 5 seconds
+    const currentSecond = Math.ceil(timerRef.current);
+    if (currentSecond <= 5 && currentSecond > 0 && currentSecond !== lastBeepSecondRef.current) {
+      lastBeepSecondRef.current = currentSecond;
+      audioEngine.playCountdownBeep(currentSecond === 1);
+    }
+
+    // Timer expired -> partial score based on fill level
+    if (timerRef.current <= 0) {
+      phaseRef.current = 'complete';
+      setChallengePhase('complete');
+      audioEngine.stopPressure();
+      const score = Math.max(
+        0,
+        Math.round((fillRef.current / 100) * 100 - burstCountRef.current * SCORE_PENALTY_PER_BURST),
+      );
+      completeChallenge(score);
+    }
   });
 
   if (!visible) return null;
+
+  // Derive display values from refs (updated each frame via store)
+  const fillLevel = fillRef.current / 100;
 
   return (
     <group position={position}>
@@ -236,7 +443,11 @@ export const StufferOrchestrator = ({position, visible}: StufferOrchestratorProp
       <WaterBowl position={[-0.5, -0.5, 0.3]} />
 
       {/* Casing tube: inflates based on fill/pressure, shifts color */}
-      <StufferCasing fillLevel={fillLevel} pressureLevel={fillLevel} blendColor={blendColor} />
+      <StufferCasing
+        fillLevel={fillLevel}
+        pressureLevel={pressureRef.current / 100}
+        blendColor={blendColor}
+      />
 
       {/* Sausage body (skinned mesh) */}
       <SausageLinksBody
