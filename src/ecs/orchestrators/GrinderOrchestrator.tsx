@@ -1,14 +1,14 @@
 /**
  * @module GrinderOrchestrator
- * ECS-driven visual driver for the grinder station.
+ * ECS-driven GAME DRIVER for the grinder station.
  *
  * Spawns grinder machine entities from GRINDER_ARCHETYPE on mount,
  * despawns on unmount. Uses MachineEntitiesRenderer for all ECS entity
  * rendering with automatic input event wiring (toggle, plunger).
  *
- * This orchestrator is VISUAL ONLY — it reads Zustand state set by the
- * 2D GrindingChallenge overlay and drives ECS entity animations.
- * It does NOT manage game phases, scoring, or strike logic.
+ * This orchestrator OWNS the game loop — phases, scoring, speed zone
+ * detection, strikes, timer countdown, and completion. The 2D HUD
+ * only reads from the store; it never drives game logic.
  *
  * ECS systems handle:
  * - VibrationSystem: housing vibration when powered
@@ -22,6 +22,9 @@ import {useFrame} from '@react-three/fiber';
 import {damp3} from 'maath/easing';
 import {useEffect, useMemo, useRef} from 'react';
 import * as THREE from 'three/webgpu';
+import type {GrindingVariant} from '../../data/challenges/variants';
+import {audioEngine} from '../../engine/AudioEngine';
+import {pickVariant} from '../../engine/ChallengeRegistry';
 import {INGREDIENTS} from '../../engine/Ingredients';
 import {createMeatMaterial} from '../../engine/MeatTexture';
 import {fireHaptic} from '../../input/HapticService';
@@ -34,6 +37,8 @@ import type {Entity} from '../types';
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+
+type OrchestratorPhase = 'idle' | 'dialogue' | 'active' | 'success' | 'complete';
 
 interface GrinderOrchestratorProps {
   position: [number, number, number];
@@ -57,6 +62,11 @@ interface ParticleData {
 // ---------------------------------------------------------------------------
 
 const MAX_G_PARTS = 150;
+const EMA_ALPHA = 0.3;
+const SLOW_TIMER_MULTIPLIER = 1.5;
+const SCORE_PENALTY_PER_STRIKE = 15;
+const DIALOGUE_DURATION_MS = 3000;
+const SUCCESS_DELAY_MS = 1200;
 
 const CHUNK_BOWL_OFFSETS = Array.from({length: 15}, (_, i) => {
   const angle = (i / 15) * Math.PI * 6;
@@ -89,8 +99,76 @@ export const GrinderOrchestrator = ({position, visible}: GrinderOrchestratorProp
     };
   }, []);
 
-  // ---- Read challenge progress from Zustand (set by 2D overlay) ----
+  // ---- Store selectors ----
   const challengeProgress = useGameStore(s => s.challengeProgress);
+  const setChallengeProgress = useGameStore(s => s.setChallengeProgress);
+  const setChallengeTimeRemaining = useGameStore(s => s.setChallengeTimeRemaining);
+  const setChallengeSpeedZone = useGameStore(s => s.setChallengeSpeedZone);
+  const setChallengePhase = useGameStore(s => s.setChallengePhase);
+  const addStrike = useGameStore(s => s.addStrike);
+  const completeChallenge = useGameStore(s => s.completeChallenge);
+  const setMrSausageReaction = useGameStore(s => s.setMrSausageReaction);
+  const variantSeed = useGameStore(s => s.variantSeed);
+  const challengeTriggered = useGameStore(s => s.challengeTriggered);
+  const gameStatus = useGameStore(s => s.gameStatus);
+  const strikes = useGameStore(s => s.strikes);
+
+  // ---- Refs for game loop (avoid stale closures) ----
+  const phaseRef = useRef<OrchestratorPhase>('idle');
+  const variantRef = useRef<GrindingVariant | null>(null);
+  const progressRef = useRef(0);
+  const timerRef = useRef(0);
+  const smoothedVelocityRef = useRef(0);
+  const splatCooldownRef = useRef(false);
+  const strikesRef = useRef(strikes);
+  const lastBeepSecondRef = useRef(-1);
+  const dialogueTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const completedRef = useRef(false);
+
+  // Keep strikes ref in sync
+  strikesRef.current = strikes;
+
+  // ---- Variant selection on mount when visible ----
+  useEffect(() => {
+    if (!visible || !challengeTriggered) return;
+    const v = pickVariant('grinding', variantSeed) as GrindingVariant;
+    variantRef.current = v;
+    timerRef.current = v.timerSeconds;
+    progressRef.current = 0;
+    smoothedVelocityRef.current = 0;
+    completedRef.current = false;
+    lastBeepSecondRef.current = -1;
+
+    // Transition to dialogue phase
+    phaseRef.current = 'dialogue';
+    setChallengePhase('dialogue');
+
+    // After dialogue timeout, transition to active
+    dialogueTimerRef.current = setTimeout(() => {
+      if (phaseRef.current === 'dialogue') {
+        phaseRef.current = 'active';
+        setChallengePhase('active');
+        audioEngine.startGrinder();
+        audioEngine.playPour();
+      }
+    }, DIALOGUE_DURATION_MS);
+
+    return () => {
+      if (dialogueTimerRef.current) clearTimeout(dialogueTimerRef.current);
+      if (successTimerRef.current) clearTimeout(successTimerRef.current);
+      audioEngine.stopGrinder();
+    };
+  }, [visible, challengeTriggered, variantSeed, setChallengePhase]);
+
+  // ---- Watch for defeat ----
+  useEffect(() => {
+    if (gameStatus === 'defeat' && phaseRef.current === 'active') {
+      phaseRef.current = 'complete';
+      setChallengePhase('complete');
+      audioEngine.stopGrinder();
+    }
+  }, [gameStatus, setChallengePhase]);
 
   // ---- chunk data (decorative only) ----
   const chunks = useMemo<ChunkData[]>(
@@ -164,15 +242,122 @@ export const GrinderOrchestrator = ({position, visible}: GrinderOrchestratorProp
     }
   }, [visible]);
 
-  // ---- useFrame: particle physics + chunk damp + progress-driven visuals ----
+  // ---- useFrame: GAME LOOP + particle physics + chunk damp + visuals ----
   useFrame((_, delta) => {
     if (!visible) return;
+    const dt = Math.min(delta, 0.05); // Cap delta to avoid huge jumps
 
-    // --- Read ECS state for switch notch visual ---
+    // --- Read ECS state ---
     const switchEntity = entitiesRef.current.find(e => e.machineSlot?.slotName === 'switch-body');
     const isGrinderOn = switchEntity?.toggle?.isOn ?? false;
 
-    // --- Progress-driven particle spawning ---
+    // --- Read crank angular velocity from ECS ---
+    const crankEntity = entitiesRef.current.find(e => e.crank);
+    const velocity = crankEntity?.crank?.angularVelocity ?? 0;
+
+    // === GAME LOOP (only when phase is 'active' and grinder is on) ===
+    if (phaseRef.current === 'active' && variantRef.current && !completedRef.current) {
+      const v = variantRef.current;
+
+      // EMA smoothing on velocity
+      smoothedVelocityRef.current =
+        EMA_ALPHA * velocity + (1 - EMA_ALPHA) * smoothedVelocityRef.current;
+      const smoothedVelocity = smoothedVelocityRef.current;
+
+      // Speed zone detection
+      const minSpeed = v.targetSpeed - v.tolerance;
+      const maxSpeed = v.targetSpeed + v.tolerance;
+      let zone: 'slow' | 'good' | 'fast';
+      if (smoothedVelocity > maxSpeed) {
+        zone = 'fast';
+      } else if (smoothedVelocity < minSpeed) {
+        zone = 'slow';
+      } else {
+        zone = 'good';
+      }
+      setChallengeSpeedZone(zone);
+
+      // Only process grinding when switch is ON
+      if (isGrinderOn) {
+        // Progress tracking (only in 'good' zone)
+        if (zone === 'good') {
+          const progressDelta = dt * (smoothedVelocity / v.targetSpeed) * 8;
+          progressRef.current = Math.min(100, progressRef.current + progressDelta);
+          setChallengeProgress(progressRef.current);
+
+          // Check for success
+          if (progressRef.current >= v.targetProgress) {
+            phaseRef.current = 'success';
+            setChallengePhase('success');
+            setMrSausageReaction('excitement');
+            audioEngine.stopGrinder();
+
+            // After success delay, compute score and complete
+            successTimerRef.current = setTimeout(() => {
+              if (completedRef.current) return;
+              completedRef.current = true;
+              phaseRef.current = 'complete';
+              setChallengePhase('complete');
+              const score = Math.max(
+                0,
+                Math.round(100 - strikesRef.current * SCORE_PENALTY_PER_STRIKE),
+              );
+              completeChallenge(score);
+            }, SUCCESS_DELAY_MS);
+            return;
+          }
+
+          setMrSausageReaction('nod');
+        }
+
+        // Strike on 'fast' zone
+        if (zone === 'fast' && !splatCooldownRef.current) {
+          splatCooldownRef.current = true;
+          addStrike();
+          setMrSausageReaction('flinch');
+          setTimeout(() => {
+            splatCooldownRef.current = false;
+          }, 800);
+        }
+
+        // Mr. Sausage reaction for 'slow' zone
+        if (zone === 'slow') {
+          setMrSausageReaction('nervous');
+        }
+      }
+
+      // Timer countdown (runs regardless of switch state, faster when slow)
+      const timerDelta = zone === 'slow' ? dt * SLOW_TIMER_MULTIPLIER : dt;
+      timerRef.current = Math.max(0, timerRef.current - timerDelta);
+      setChallengeTimeRemaining(timerRef.current);
+
+      // Countdown beep for last 5 seconds
+      const currentSecond = Math.ceil(timerRef.current);
+      if (currentSecond <= 5 && currentSecond > 0 && currentSecond !== lastBeepSecondRef.current) {
+        lastBeepSecondRef.current = currentSecond;
+        audioEngine.playCountdownBeep(currentSecond === 1);
+      }
+
+      // Timer expired — compute score and complete
+      if (timerRef.current <= 0 && !completedRef.current) {
+        completedRef.current = true;
+        phaseRef.current = 'complete';
+        setChallengePhase('complete');
+        audioEngine.stopGrinder();
+        const score = Math.max(
+          0,
+          Math.round(
+            (progressRef.current / 100) * 100 - strikesRef.current * SCORE_PENALTY_PER_STRIKE,
+          ),
+        );
+        completeChallenge(score);
+      }
+
+      // Velocity decay when not actively cranking
+      smoothedVelocityRef.current *= 0.95;
+    }
+
+    // --- Progress-driven particle spawning (visual) ---
     const progress = challengeProgress / 100; // 0-1
     const progressDelta = progress - prevProgressRef.current;
 
@@ -205,7 +390,7 @@ export const GrinderOrchestrator = ({position, visible}: GrinderOrchestratorProp
     if (notchEntity?.three) {
       const targetZ = isGrinderOn ? Math.PI / 4 : 0;
       notchEntity.three.rotation.z +=
-        (targetZ - notchEntity.three.rotation.z) * Math.min(1, delta * 10);
+        (targetZ - notchEntity.three.rotation.z) * Math.min(1, dt * 10);
     }
 
     // --- Chunk position damp (decorative) ---
@@ -214,7 +399,7 @@ export const GrinderOrchestrator = ({position, visible}: GrinderOrchestratorProp
       if (!mesh) continue;
       const chunk = chunks[i];
       mesh.visible = true;
-      damp3(mesh.position, chunk.targetPos.toArray(), 0.12, delta);
+      damp3(mesh.position, chunk.targetPos.toArray(), 0.12, dt);
     }
 
     // --- Particle physics ---
@@ -228,9 +413,9 @@ export const GrinderOrchestrator = ({position, visible}: GrinderOrchestratorProp
       for (let i = 0; i < MAX_G_PARTS; i++) {
         const p = pData[i];
         if (p.active) {
-          p.vel.y -= 15 * delta;
-          p.pos.addScaledVector(p.vel, delta);
-          p.rot.x += delta;
+          p.vel.y -= 15 * dt;
+          p.pos.addScaledVector(p.vel, dt);
+          p.rot.x += dt;
           if (p.pos.y < groundY) {
             p.active = false;
           }
