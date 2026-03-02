@@ -42,6 +42,7 @@ import {BlendFunction} from 'postprocessing';
 import {Suspense, useCallback, useRef} from 'react';
 import {Platform, Pressable, Text, View} from 'react-native';
 import {WebGPURenderer} from 'three/webgpu';
+import {ECSScene} from '../ecs/renderers/ECSScene';
 import {DEFAULT_ROOM, resolveTargets, STATION_TARGET_NAMES} from '../engine/FurnitureLayout';
 import {useGameStore} from '../store/gameStore';
 import {FPSController} from './controls/FPSController';
@@ -375,6 +376,9 @@ const SceneContent = ({
 
       {/* Atmospheric basement elements — always visible */}
       <BasementStructure room={DEFAULT_ROOM} />
+
+      {/* ECS-driven renderers — renders nothing until entities are spawned */}
+      <ECSScene />
     </>
   );
 };
