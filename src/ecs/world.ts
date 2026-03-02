@@ -12,6 +12,17 @@ export const orbiting = world.with('orbit', 'three');
 export const cookable = world.with('cookAppearance', 'three');
 export const inflatable = world.with('inflation', 'three');
 export const renderable = world.with('geometry', 'material', 'transform');
+export const nonMachineRenderable = world
+  .with('geometry', 'material', 'transform')
+  .without('machineSlot');
 export const lights = world.with('lightDef', 'transform');
 export const particles = world.with('particle', 'three');
 export const fillDriven = world.with('fillDriven', 'three');
+
+// Input primitive queries
+export const dials = world.with('dial', 'three');
+export const cranks = world.with('crank', 'three');
+export const plungers = world.with('plunger', 'three');
+export const toggles = world.with('toggle', 'three');
+export const buttons = world.with('button', 'three');
+export const contracts = world.with('inputContract');

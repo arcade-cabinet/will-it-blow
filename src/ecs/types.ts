@@ -1,4 +1,5 @@
 import type {Object3D, Side, Vector2} from 'three';
+import type {InputBinding} from './inputTypes';
 import type {MaterialPreset} from './materialPresets';
 
 export type GeometryType =
@@ -9,7 +10,8 @@ export type GeometryType =
   | 'circle'
   | 'plane'
   | 'lathe'
-  | 'cone';
+  | 'cone'
+  | 'dodecahedron';
 
 export type MachineId = 'grinder' | 'stuffer' | 'stove';
 
@@ -104,6 +106,70 @@ export interface Entity {
 
   // Lighting
   lightDef?: {type: 'point'; intensity: number; distance: number; color: number};
+
+  // --- Input primitives ---
+
+  /** Segmented rotary selector. Works for stove heat dial AND grinder speed dial. */
+  dial?: {
+    segments: string[];
+    currentIndex: number;
+    wraps: boolean;
+    pendingTap: boolean;
+    enabled: boolean;
+  };
+
+  /** Continuous rotary input. Player turning speed IS the output speed. */
+  crank?: {
+    angle: number;
+    angularVelocity: number;
+    sensitivity: number;
+    damping: number;
+    dragDelta: number;
+    isDragging: boolean;
+    enabled: boolean;
+  };
+
+  /** Linear drag producing displacement 0-1. Plunger, slider, lever. */
+  plunger?: {
+    displacement: number;
+    axis: 'x' | 'y' | 'z';
+    minWorld: number;
+    maxWorld: number;
+    sensitivity: number;
+    dragDelta: number;
+    isDragging: boolean;
+    springBack: boolean;
+    enabled: boolean;
+  };
+
+  /** Binary toggle. */
+  toggle?: {
+    isOn: boolean;
+    pendingTap: boolean;
+    enabled: boolean;
+  };
+
+  /** One-shot impulse button. */
+  button?: {
+    fired: boolean;
+    pendingTap: boolean;
+    enabled: boolean;
+  };
+
+  // --- Input contract ---
+
+  inputContract?: {
+    machineId: MachineId;
+    bindings: InputBinding[];
+  };
+
+  // --- Power source ---
+
+  powerSource?: {
+    type: 'electric' | 'gas' | 'manual';
+    powerLevel: number;
+    active: boolean;
+  };
 
   // Tags
   isStatic?: true;
