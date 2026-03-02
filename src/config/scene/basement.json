@@ -1,0 +1,32 @@
+{
+  "pipes": {
+    "xFractions": [0.2, 0.5, 0.8],
+    "yOffsetFromCeiling": 0.3,
+    "lengthFraction": 0.85,
+    "radius": 0.08,
+    "elbowPipeIndex": 0,
+    "elbowZFraction": 0.25,
+    "elbowLengthFraction": 0.15,
+    "dripGrowRate": 0.07
+  },
+  "window": {
+    "xEdgeOffset": 0.01,
+    "yFraction": 0.7,
+    "frameWidth": 1.5,
+    "frameHeight": 1.0,
+    "barCount": 3,
+    "barRadius": 0.03
+  },
+  "door": {
+    "xFraction": 0.6,
+    "width": 1.2,
+    "height": 2.2,
+    "deadboltColor": "#8B0000"
+  },
+  "drain": {
+    "xFraction": 0.15,
+    "zFraction": 0.1,
+    "innerRadius": 0.15,
+    "outerRadius": 0.3
+  }
+}

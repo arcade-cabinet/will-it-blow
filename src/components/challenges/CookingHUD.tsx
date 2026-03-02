@@ -12,7 +12,7 @@
 
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {StyleSheet, Text, View} from 'react-native';
-import type {CookingVariant} from '../../data/challenges/variants';
+import type {CookingVariant} from '../../config/types';
 import {COOKING_DIALOGUE, COOKING_SUCCESS} from '../../data/dialogue/cooking';
 import {pickVariant} from '../../engine/ChallengeRegistry';
 import {useGameStore} from '../../store/gameStore';

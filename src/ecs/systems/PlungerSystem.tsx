@@ -1,4 +1,5 @@
 import {useFrame} from '@react-three/fiber';
+import {config} from '../../config';
 import type {Entity} from '../types';
 import {plungers} from '../world';
 
@@ -10,7 +11,7 @@ function clamp(v: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, v));
 }
 
-const SPRING_RATE = 5.0;
+const SPRING_RATE = config.physics.plunger.springRate;
 
 export function updatePlungers(entities: Entity[], delta: number): void {
   for (const e of entities) {

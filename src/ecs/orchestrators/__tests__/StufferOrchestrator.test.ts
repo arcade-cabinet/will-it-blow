@@ -1,5 +1,6 @@
+import {config} from '../../../config';
+import {buildMachineArchetype} from '../../archetypes/buildMachineArchetype';
 import {despawnMachine, spawnMachine} from '../../archetypes/spawnMachine';
-import {STUFFER_ARCHETYPE} from '../../archetypes/stufferArchetype';
 import type {Entity} from '../../types';
 import {world} from '../../world';
 
@@ -7,7 +8,7 @@ describe('StufferOrchestrator — ECS lifecycle', () => {
   let entities: Entity[];
 
   beforeEach(() => {
-    entities = spawnMachine(STUFFER_ARCHETYPE);
+    entities = spawnMachine(buildMachineArchetype(config.machines.stuffer));
   });
 
   afterEach(() => {

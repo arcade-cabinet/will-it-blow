@@ -23,52 +23,34 @@ import {useEffect, useMemo, useRef} from 'react';
 import * as THREE from 'three/webgpu';
 import {StufferCasing} from '../../components/kitchen/stuffer/StufferCasing';
 import {WaterBowl} from '../../components/kitchen/stuffer/WaterBowl';
-import type {StuffingVariant} from '../../data/challenges/variants';
+import {config} from '../../config';
+import type {StuffingVariant} from '../../config/types';
 import {audioEngine} from '../../engine/AudioEngine';
 import {pickVariant} from '../../engine/ChallengeRegistry';
 import {fireHaptic} from '../../input/HapticService';
 import {useGameStore} from '../../store/gameStore';
+import {buildMachineArchetype} from '../archetypes/buildMachineArchetype';
 import {despawnMachine, spawnMachine} from '../archetypes/spawnMachine';
-import {STUFFER_ARCHETYPE} from '../archetypes/stufferArchetype';
 import {MachineEntitiesRenderer} from '../renderers/ECSScene';
 import type {Entity} from '../types';
 
 // ---------------------------------------------------------------------------
-// Constants
+// Constants (from config)
 // ---------------------------------------------------------------------------
 
-/** Number of bones in the sausage skeleton (determines link resolution). */
-const NUM_BONES = 12;
-
-/** Total sausage length along the Z axis when fully extruded. */
-const SAUSAGE_LENGTH = 2.4;
-
-/** Base radius of the sausage cylinder. */
-const SAUSAGE_RADIUS = 0.08;
-
-/** Scale applied to bones at twist/pinch points (creates visual constriction). */
-const PINCH_SCALE = 0.3;
-
-/** How many geometry segments per bone (affects smoothness). */
-const SEGMENTS_PER_BONE = 4;
-
-/** Nozzle tip position -- sausage extrudes from here along +Z. */
-const NOZZLE_TIP: [number, number, number] = [0, 0, 0];
-
-/** Score deducted per casing burst. */
-const SCORE_PENALTY_PER_BURST = 20;
-
-/** Fill dropped on each burst. */
-const FILL_DROP_ON_BURST = 20;
-
-/** Delay (ms) after success before calling completeChallenge. */
-const COMPLETE_DELAY_MS = 1200;
-
-/** Crank angular velocity threshold to count as "dragging". */
-const CRANK_DRAG_THRESHOLD = 0.1;
-
-/** Cooldown (ms) after a burst before another can trigger. */
-const BURST_COOLDOWN_MS = 1000;
+const {
+  numBones: NUM_BONES,
+  sausageLength: SAUSAGE_LENGTH,
+  sausageRadius: SAUSAGE_RADIUS,
+  pinchScale: PINCH_SCALE,
+  segmentsPerBone: SEGMENTS_PER_BONE,
+  nozzleTip: NOZZLE_TIP,
+  scorePenaltyPerBurst: SCORE_PENALTY_PER_BURST,
+  fillDropOnBurst: FILL_DROP_ON_BURST,
+  completeDelayMs: COMPLETE_DELAY_MS,
+  crankDragThreshold: CRANK_DRAG_THRESHOLD,
+  burstCooldownMs: BURST_COOLDOWN_MS,
+} = config.gameplay.stuffing;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -207,7 +189,7 @@ export const StufferOrchestrator = ({position, visible}: StufferOrchestratorProp
   const entitiesRef = useRef<Entity[]>([]);
 
   useEffect(() => {
-    const entities = spawnMachine(STUFFER_ARCHETYPE);
+    const entities = spawnMachine(buildMachineArchetype(config.machines.stuffer));
     entitiesRef.current = entities;
     return () => {
       despawnMachine(entities);

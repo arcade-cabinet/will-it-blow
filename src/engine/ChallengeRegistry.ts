@@ -8,18 +8,18 @@
  * always produces the same challenge parameters, ensuring fair replays.
  */
 
+import {config} from '../config';
 import type {
   CookingVariant,
   GrindingVariant,
   IngredientVariant,
   StuffingVariant,
-} from '../data/challenges/variants';
-import {
-  COOKING_VARIANTS,
-  GRINDING_VARIANTS,
-  INGREDIENT_VARIANTS,
-  STUFFING_VARIANTS,
-} from '../data/challenges/variants';
+} from '../config/types';
+
+const INGREDIENT_VARIANTS = config.variants.ingredients;
+const GRINDING_VARIANTS = config.variants.grinding;
+const STUFFING_VARIANTS = config.variants.stuffing;
+const COOKING_VARIANTS = config.variants.cooking;
 
 /** Identifier for each of the 5 sequential challenge phases. */
 export type ChallengeId = 'ingredients' | 'grinding' | 'stuffing' | 'cooking' | 'tasting';

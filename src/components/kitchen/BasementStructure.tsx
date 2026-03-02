@@ -16,6 +16,9 @@ import {useFrame} from '@react-three/fiber';
 import type React from 'react';
 import {useMemo, useRef} from 'react';
 import * as THREE from 'three/webgpu';
+import {config} from '../../config';
+
+const bc = config.scene.basement;
 
 // ---------------------------------------------------------------------------
 // Props
@@ -44,15 +47,11 @@ function CeilingPipes({
 }) {
   const halfW = room.w / 2;
   const halfD = room.d / 2;
-  const pipeY = room.h - 0.3;
-  const pipeLen = room.d * 0.85;
+  const pipeY = room.h - bc.pipes.yOffsetFromCeiling;
+  const pipeLen = room.d * bc.pipes.lengthFraction;
 
-  // Pipe X positions at ~20%, ~50%, ~80% of room width from left wall
-  const pipeXPositions = [
-    -halfW + room.w * 0.2,
-    -halfW + room.w * 0.5,
-    -halfW + room.w * 0.8,
-  ] as const;
+  // Pipe X positions from config fractions of room width from left wall
+  const pipeXPositions = bc.pipes.xFractions.map(f => -halfW + room.w * f);
 
   // Water drip animation: slowly grows, resets (drop falls) when full
   const dropRef = useRef<THREE.Mesh>(null);
@@ -63,17 +62,17 @@ function CeilingPipes({
     if (!drop) return;
     const dt = Math.min(delta, 0.1);
     const d = dripState.current;
-    d.scale += dt * 0.07;
+    d.scale += dt * bc.pipes.dripGrowRate;
     if (d.scale >= 1.0) {
       d.scale = 0.01; // reset — drop falls and reforms
     }
     drop.scale.setScalar(d.scale);
   });
 
-  // Elbow on pipe 0: short cylinder segment running along X-axis
-  const elbowPipeX = pipeXPositions[0];
-  const elbowPipeZ = halfD * 0.25;
-  const elbowLen = room.w * 0.15;
+  // Elbow on pipe at configured index: short cylinder segment running along X-axis
+  const elbowPipeX = pipeXPositions[bc.pipes.elbowPipeIndex];
+  const elbowPipeZ = halfD * bc.pipes.elbowZFraction;
+  const elbowLen = room.w * bc.pipes.elbowLengthFraction;
 
   return (
     <group>
@@ -81,7 +80,7 @@ function CeilingPipes({
       {pipeXPositions.map((px, i) => (
         <group key={`pipe_${i}`} position={[px, pipeY, 0]} rotation={[Math.PI / 2, 0, 0]}>
           <mesh>
-            <cylinderGeometry args={[0.08, 0.08, pipeLen, 8]} />
+            <cylinderGeometry args={[bc.pipes.radius, bc.pipes.radius, pipeLen, 8]} />
             <primitive object={darkMetal} attach="material" />
           </mesh>
         </group>
@@ -93,7 +92,7 @@ function CeilingPipes({
         rotation={[0, 0, Math.PI / 2]}
       >
         <mesh>
-          <cylinderGeometry args={[0.08, 0.08, elbowLen, 8]} />
+          <cylinderGeometry args={[bc.pipes.radius, bc.pipes.radius, elbowLen, 8]} />
           <primitive object={darkMetal} attach="material" />
         </mesh>
       </group>
@@ -140,12 +139,12 @@ function BarredWindow({
   darkMetal: THREE.MeshStandardMaterial;
 }) {
   const halfW = room.w / 2;
-  const winX = halfW - 0.01;
-  const winY = room.h * 0.7;
+  const winX = halfW - bc.window.xEdgeOffset;
+  const winY = room.h * bc.window.yFraction;
 
-  const frameW = 1.5;
-  const frameH = 1.0;
-  const barSpacing = frameW / 4; // 3 bars spaced evenly across frame
+  const frameW = bc.window.frameWidth;
+  const frameH = bc.window.frameHeight;
+  const barSpacing = frameW / (bc.window.barCount + 1);
 
   return (
     <group position={[winX, winY, 0]} rotation={[0, -Math.PI / 2, 0]}>
@@ -171,7 +170,7 @@ function BarredWindow({
       {/* 3 vertical bars spaced evenly across the window frame */}
       {[-barSpacing, 0, barSpacing].map((bz, i) => (
         <mesh key={`bar_${i}`} position={[bz, 0, 0.06]}>
-          <cylinderGeometry args={[0.03, 0.03, frameH - 0.05, 6]} />
+          <cylinderGeometry args={[bc.window.barRadius, bc.window.barRadius, frameH - 0.05, 6]} />
           <primitive object={darkMetal} attach="material" />
         </mesh>
       ))}
@@ -192,10 +191,10 @@ function LockedDoor({room}: {room: BasementStructureProps['room']}) {
   const halfW = room.w / 2;
   const halfD = room.d / 2;
 
-  const doorX = halfW * 0.6;
+  const doorX = halfW * bc.door.xFraction;
   const doorZ = halfD - 0.01;
-  const doorW = 1.2;
-  const doorH = 2.2;
+  const doorW = bc.door.width;
+  const doorH = bc.door.height;
   const doorY = doorH / 2; // bottom of door flush with floor
 
   return (
@@ -216,7 +215,7 @@ function LockedDoor({room}: {room: BasementStructureProps['room']}) {
       <mesh position={[-(doorW / 2) + 0.08, 0.1, -0.02]}>
         <boxGeometry args={[0.15, 0.05, 0.08]} />
         <meshStandardMaterial
-          color="#8B0000"
+          color={bc.door.deadboltColor}
           roughness={0.5}
           metalness={0.3}
           emissive={new THREE.Color('#3a0000')}
@@ -243,22 +242,22 @@ function FloorDrain({
   room: BasementStructureProps['room'];
   darkMetal: THREE.MeshStandardMaterial;
 }) {
-  // center-right: x = room.w * 0.15 from center, z = room.d * 0.1 from center
-  const drainX = room.w * 0.15;
-  const drainZ = room.d * 0.1;
+  // center-right: x and z from config fractions of room dimensions
+  const drainX = room.w * bc.drain.xFraction;
+  const drainZ = room.d * bc.drain.zFraction;
   const drainY = 0.01;
 
   return (
     <group position={[drainX, drainY, drainZ]} rotation={[-Math.PI / 2, 0, 0]}>
       {/* Dark hole beneath — sits slightly behind grate in render order */}
       <mesh position={[0, 0, 0.002]}>
-        <circleGeometry args={[0.15, 16]} />
+        <circleGeometry args={[bc.drain.innerRadius, 16]} />
         <meshStandardMaterial color="#000000" roughness={1.0} metalness={0.0} />
       </mesh>
 
       {/* Grate ring */}
       <mesh>
-        <ringGeometry args={[0.15, 0.3, 24]} />
+        <ringGeometry args={[bc.drain.innerRadius, bc.drain.outerRadius, 24]} />
         <primitive object={darkMetal} attach="material" />
       </mesh>
 

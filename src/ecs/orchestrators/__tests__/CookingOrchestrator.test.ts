@@ -1,5 +1,6 @@
+import {config} from '../../../config';
+import {buildMachineArchetype} from '../../archetypes/buildMachineArchetype';
 import {despawnMachine, spawnMachine} from '../../archetypes/spawnMachine';
-import {STOVE_ARCHETYPE} from '../../archetypes/stoveArchetype';
 import type {Entity} from '../../types';
 import {world} from '../../world';
 
@@ -7,7 +8,7 @@ describe('CookingOrchestrator — ECS lifecycle', () => {
   let entities: Entity[];
 
   beforeEach(() => {
-    entities = spawnMachine(STOVE_ARCHETYPE);
+    entities = spawnMachine(buildMachineArchetype(config.machines.stove));
   });
 
   afterEach(() => {

@@ -24,13 +24,14 @@
 import {useFrame} from '@react-three/fiber';
 import {useEffect, useRef} from 'react';
 import type * as THREE from 'three/webgpu';
-import type {CookingVariant} from '../../data/challenges/variants';
+import {config} from '../../config';
+import type {CookingVariant} from '../../config/types';
 import {audioEngine} from '../../engine/AudioEngine';
 import {pickVariant} from '../../engine/ChallengeRegistry';
 import {fireHaptic} from '../../input/HapticService';
 import {useGameStore} from '../../store/gameStore';
+import {buildMachineArchetype} from '../archetypes/buildMachineArchetype';
 import {despawnMachine, spawnMachine} from '../archetypes/spawnMachine';
-import {STOVE_ARCHETYPE} from '../archetypes/stoveArchetype';
 import {MachineEntitiesRenderer} from '../renderers/ECSScene';
 import type {Entity} from '../types';
 
@@ -46,51 +47,32 @@ interface CookingOrchestratorProps {
 }
 
 // ---------------------------------------------------------------------------
-// Constants
+// Constants (from config)
 // ---------------------------------------------------------------------------
 
-const PAN_Y = 0.12;
-const PAN_HEIGHT = 0.06;
-const SAUSAGE_RADIUS = 0.07;
-const SAUSAGE_HALF_LENGTH = 0.25;
+const {
+  panY: PAN_Y,
+  panHeight: PAN_HEIGHT,
+  sausageRadius: SAUSAGE_RADIUS,
+  sausageHalfLength: SAUSAGE_HALF_LENGTH,
+  burnerParams: BURNER_PARAMS_MAP,
+  burnThreshold: BURN_THRESHOLD,
+  smokeThreshold: SMOKE_THRESHOLD,
+  steamCount: STEAM_COUNT,
+  smokeCount: SMOKE_COUNT,
+  flipDuration: FLIP_DURATION,
+  coolingRate: COOLING_RATE,
+  roomTemp: ROOM_TEMP,
+  scorePenaltyPerOverheat: SCORE_PENALTY_PER_OVERHEAT,
+  scoreBonusNoOverheat: SCORE_BONUS_NO_OVERHEAT,
+  completeDelaySec: COMPLETE_DELAY_SEC,
+  sizzleThrottleMs: SIZZLE_THROTTLE_MS,
+} = config.gameplay.cooking;
 
-/** Burner visual parameters per power level */
-const BURNER_PARAMS_MAP: Record<number, {color: [number, number, number]; emissive: number}> = {
-  0: {color: [0.15, 0.05, 0.02], emissive: 0},
-  0.33: {color: [0.8, 0.35, 0.05], emissive: 0.3},
-  0.66: {color: [1.0, 0.5, 0.05], emissive: 1.0},
-  1.0: {color: [1.0, 0.2, 0.1], emissive: 2.0},
-};
-
-/** Sausage color keyframes based on cook level */
-const COLOR_RAW: [number, number, number] = [1.0, 0.714, 0.757];
-const COLOR_COOKED: [number, number, number] = [0.545, 0.271, 0.075];
-const COLOR_CHARRED: [number, number, number] = [0.15, 0.1, 0.08];
-const COLOR_BURNT: [number, number, number] = [0.067, 0.067, 0.067];
-
-const BURN_THRESHOLD = 1.0;
-const SMOKE_THRESHOLD = 0.85;
-
-/** Steam / smoke particle counts */
-const STEAM_COUNT = 10;
-const SMOKE_COUNT = 8;
-
-/** Flip animation duration in seconds */
-const FLIP_DURATION = 0.5;
-
-/** Temperature physics */
-const COOLING_RATE = 3; // degrees per second of natural cooling
-const ROOM_TEMP = 70;
-
-/** Scoring */
-const SCORE_PENALTY_PER_OVERHEAT = 15;
-const SCORE_BONUS_NO_OVERHEAT = 10;
-
-/** Delay after success before calling completeChallenge */
-const COMPLETE_DELAY_SEC = 1.2;
-
-/** Sizzle hit audio throttle interval (ms) */
-const SIZZLE_THROTTLE_MS = 1200;
+const COLOR_RAW = config.gameplay.cooking.colorRaw as [number, number, number];
+const COLOR_COOKED = config.gameplay.cooking.colorCooked as [number, number, number];
+const COLOR_CHARRED = config.gameplay.cooking.colorCharred as [number, number, number];
+const COLOR_BURNT = config.gameplay.cooking.colorBurnt as [number, number, number];
 
 /** Orchestrator phase — tracks internal game state progression */
 type OrchestratorPhase = 'idle' | 'dialogue' | 'active' | 'success' | 'complete';
@@ -123,7 +105,7 @@ export function cookLevelToColor(cookLevel: number): [number, number, number] {
 }
 
 /** Find the closest key in a map to a given value */
-function closestKey(map: Record<number, unknown>, value: number): number {
+function closestKey(map: Record<string, unknown>, value: number): number {
   const keys = Object.keys(map).map(Number);
   let closest = keys[0];
   let minDist = Math.abs(value - closest);
@@ -146,7 +128,7 @@ export function CookingOrchestrator({position, visible}: CookingOrchestratorProp
   const entitiesRef = useRef<Entity[]>([]);
 
   useEffect(() => {
-    const entities = spawnMachine(STOVE_ARCHETYPE);
+    const entities = spawnMachine(buildMachineArchetype(config.machines.stove));
     entitiesRef.current = entities;
     return () => {
       despawnMachine(entities);
@@ -441,7 +423,7 @@ export function CookingOrchestrator({position, visible}: CookingOrchestratorProp
     if (burnerMatRef.current) {
       const effectiveLevel = visible ? heatPower : 0;
       const key = closestKey(BURNER_PARAMS_MAP, effectiveLevel);
-      const params = BURNER_PARAMS_MAP[key];
+      const params = BURNER_PARAMS_MAP[String(key)];
       let [r, g, b] = params.color;
       // Flicker when heat is on
       if (effectiveLevel > 0) {

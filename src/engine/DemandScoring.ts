@@ -9,18 +9,11 @@
  * All functions are pure — no store dependencies, only type imports.
  */
 
+import {config} from '../config';
 import type {MrSausageDemands, PlayerDecisions} from '../store/gameStore';
 
 /** Maps cook preference labels to target cook level values (0-1 scale). */
-export const COOK_TARGETS: Record<string, number> = {
-  rare: 0.15,
-  medium: 0.45,
-  'well-done': 0.75,
-  charred: 0.95,
-};
-
-/** Tolerance window for cook level matching — within this delta is a match. */
-const COOK_TOLERANCE = 0.15;
+export const COOK_TARGETS: Record<string, number> = config.scoring.cookTargets;
 
 /** Breakdown of how the player's decisions matched Mr. Sausage's demands. */
 export interface DemandBreakdown {
@@ -50,7 +43,7 @@ export function calculateDemandBonus(
 ): DemandBreakdown {
   // --- Form match ---
   const formMatched = decisions.chosenForm === demands.preferredForm;
-  const formPoints = formMatched ? 15 : -10;
+  const formPoints = formMatched ? config.scoring.formMatch : config.scoring.formMismatch;
   const formMatch = {
     matched: formMatched,
     points: formPoints,
@@ -61,8 +54,8 @@ export function calculateDemandBonus(
   // --- Cook match ---
   const target = COOK_TARGETS[demands.cookPreference] ?? 0.45;
   const delta = Math.abs(decisions.finalCookLevel - target);
-  const cookMatched = delta < COOK_TOLERANCE;
-  const cookPoints = cookMatched ? 10 : -5;
+  const cookMatched = delta < config.scoring.cookTolerance;
+  const cookPoints = cookMatched ? config.scoring.cookMatch : config.scoring.cookMismatch;
   const cookMatch = {
     matched: cookMatched,
     points: cookPoints,
@@ -80,7 +73,9 @@ export function calculateDemandBonus(
     selectedLower.includes(hated.toLowerCase()),
   );
 
-  const ingredientPoints = desiredHits.length * 8 + hatedHits.length * -12;
+  const ingredientPoints =
+    desiredHits.length * config.scoring.ingredientDesired +
+    hatedHits.length * config.scoring.ingredientHated;
   const ingredientMatch = {
     desiredHits,
     hatedHits,

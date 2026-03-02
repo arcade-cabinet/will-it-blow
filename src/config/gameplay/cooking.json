@@ -1,0 +1,27 @@
+{
+  "panY": 0.12,
+  "panHeight": 0.06,
+  "sausageRadius": 0.07,
+  "sausageHalfLength": 0.25,
+  "burnerParams": {
+    "0": { "color": [0.15, 0.05, 0.02], "emissive": 0 },
+    "0.33": { "color": [0.8, 0.35, 0.05], "emissive": 0.3 },
+    "0.66": { "color": [1.0, 0.5, 0.05], "emissive": 1.0 },
+    "1.0": { "color": [1.0, 0.2, 0.1], "emissive": 2.0 }
+  },
+  "colorRaw": [1.0, 0.714, 0.757],
+  "colorCooked": [0.545, 0.271, 0.075],
+  "colorCharred": [0.15, 0.1, 0.08],
+  "colorBurnt": [0.067, 0.067, 0.067],
+  "burnThreshold": 1.0,
+  "smokeThreshold": 0.85,
+  "steamCount": 10,
+  "smokeCount": 8,
+  "flipDuration": 0.5,
+  "coolingRate": 3,
+  "roomTemp": 70,
+  "scorePenaltyPerOverheat": 15,
+  "scoreBonusNoOverheat": 10,
+  "completeDelaySec": 1.2,
+  "sizzleThrottleMs": 1200
+}

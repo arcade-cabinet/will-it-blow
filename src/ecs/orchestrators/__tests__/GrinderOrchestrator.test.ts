@@ -1,4 +1,5 @@
-import {GRINDER_ARCHETYPE} from '../../archetypes/grinderArchetype';
+import {config} from '../../../config';
+import {buildMachineArchetype} from '../../archetypes/buildMachineArchetype';
 import {despawnMachine, spawnMachine} from '../../archetypes/spawnMachine';
 import type {Entity} from '../../types';
 import {world} from '../../world';
@@ -7,7 +8,7 @@ describe('GrinderOrchestrator — ECS lifecycle', () => {
   let entities: Entity[];
 
   beforeEach(() => {
-    entities = spawnMachine(GRINDER_ARCHETYPE);
+    entities = spawnMachine(buildMachineArchetype(config.machines.grinder));
   });
 
   afterEach(() => {

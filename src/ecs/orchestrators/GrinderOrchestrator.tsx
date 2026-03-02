@@ -22,14 +22,15 @@ import {useFrame} from '@react-three/fiber';
 import {damp3} from 'maath/easing';
 import {useEffect, useMemo, useRef} from 'react';
 import * as THREE from 'three/webgpu';
-import type {GrindingVariant} from '../../data/challenges/variants';
+import {config} from '../../config';
+import type {GrindingVariant} from '../../config/types';
 import {audioEngine} from '../../engine/AudioEngine';
 import {pickVariant} from '../../engine/ChallengeRegistry';
 import {INGREDIENTS} from '../../engine/Ingredients';
 import {createMeatMaterial} from '../../engine/MeatTexture';
 import {fireHaptic} from '../../input/HapticService';
 import {useGameStore} from '../../store/gameStore';
-import {GRINDER_ARCHETYPE} from '../archetypes/grinderArchetype';
+import {buildMachineArchetype} from '../archetypes/buildMachineArchetype';
 import {despawnMachine, spawnMachine} from '../archetypes/spawnMachine';
 import {MachineEntitiesRenderer} from '../renderers/ECSScene';
 import type {Entity} from '../types';
@@ -58,19 +59,28 @@ interface ParticleData {
 }
 
 // ---------------------------------------------------------------------------
-// Constants
+// Constants (from config)
 // ---------------------------------------------------------------------------
 
-const MAX_G_PARTS = 150;
-const EMA_ALPHA = 0.3;
-const SLOW_TIMER_MULTIPLIER = 1.5;
-const SCORE_PENALTY_PER_STRIKE = 15;
-const DIALOGUE_DURATION_MS = 3000;
-const SUCCESS_DELAY_MS = 1200;
+const {
+  maxParticles: MAX_G_PARTS,
+  emaAlpha: EMA_ALPHA,
+  slowTimerMultiplier: SLOW_TIMER_MULTIPLIER,
+  scorePenaltyPerStrike: SCORE_PENALTY_PER_STRIKE,
+  dialogueDurationMs: DIALOGUE_DURATION_MS,
+  successDelayMs: SUCCESS_DELAY_MS,
+  chunkCount,
+  chunkBowlAngleDivisor,
+  chunkBowlRadiusBase,
+  chunkBowlRadiusStep,
+  particleGravity: PARTICLE_GRAVITY,
+  velocityDecay: VELOCITY_DECAY,
+  hapticProgressInterval: HAPTIC_PROGRESS_INTERVAL,
+} = config.gameplay.grinding;
 
-const CHUNK_BOWL_OFFSETS = Array.from({length: 15}, (_, i) => {
-  const angle = (i / 15) * Math.PI * 6;
-  const r = 0.3 + (i % 5) * 0.45;
+const CHUNK_BOWL_OFFSETS = Array.from({length: chunkCount}, (_, i) => {
+  const angle = (i / chunkBowlAngleDivisor) * Math.PI * 6;
+  const r = chunkBowlRadiusBase + (i % 5) * chunkBowlRadiusStep;
   return {
     x: Math.cos(angle) * r,
     yExtra: (i % 3) * 0.4,
@@ -91,7 +101,7 @@ export const GrinderOrchestrator = ({position, visible}: GrinderOrchestratorProp
   const entitiesRef = useRef<Entity[]>([]);
 
   useEffect(() => {
-    const entities = spawnMachine(GRINDER_ARCHETYPE);
+    const entities = spawnMachine(buildMachineArchetype(config.machines.grinder));
     entitiesRef.current = entities;
     return () => {
       despawnMachine(entities);
@@ -177,7 +187,7 @@ export const GrinderOrchestrator = ({position, visible}: GrinderOrchestratorProp
   // ---- chunk data (decorative only) ----
   const chunks = useMemo<ChunkData[]>(
     () =>
-      Array.from({length: 15}, (_, i) => ({
+      Array.from({length: chunkCount}, (_, i) => ({
         id: i,
         targetPos: new THREE.Vector3(
           CHUNK_BOWL_OFFSETS[i].x,
@@ -190,7 +200,7 @@ export const GrinderOrchestrator = ({position, visible}: GrinderOrchestratorProp
 
   // ---- mesh refs ----
   const particleMeshRef = useRef<THREE.InstancedMesh>(null);
-  const chunkRefs = useRef<(THREE.Mesh | null)[]>(Array.from({length: 15}, () => null));
+  const chunkRefs = useRef<(THREE.Mesh | null)[]>(Array.from({length: chunkCount}, () => null));
   const prevProgressRef = useRef(0);
   const hapticAccumRef = useRef(0);
 
@@ -222,7 +232,7 @@ export const GrinderOrchestrator = ({position, visible}: GrinderOrchestratorProp
 
   const chunkMats = useMemo(() => {
     if (!chunkColors) return null;
-    return Array.from({length: 15}, (_, i) => {
+    return Array.from({length: chunkCount}, (_, i) => {
       const hex = chunkColors[i % chunkColors.length];
       return new THREE.MeshStandardMaterial({color: hex, roughness: 0.7, metalness: 0.1});
     });
@@ -358,7 +368,7 @@ export const GrinderOrchestrator = ({position, visible}: GrinderOrchestratorProp
       }
 
       // Velocity decay when not actively cranking
-      smoothedVelocityRef.current *= 0.95;
+      smoothedVelocityRef.current *= VELOCITY_DECAY;
     }
 
     // --- Progress-driven particle spawning (visual) ---
@@ -368,7 +378,7 @@ export const GrinderOrchestrator = ({position, visible}: GrinderOrchestratorProp
     if (progressDelta > 0) {
       // Haptic feedback throttled to every 5% progress (0.05 in 0-1 scale)
       hapticAccumRef.current += progressDelta;
-      if (hapticAccumRef.current >= 0.05) {
+      if (hapticAccumRef.current >= HAPTIC_PROGRESS_INTERVAL) {
         hapticAccumRef.current = 0;
         fireHaptic('rotary_feedback');
       }
@@ -398,7 +408,7 @@ export const GrinderOrchestrator = ({position, visible}: GrinderOrchestratorProp
     }
 
     // --- Chunk position damp (decorative) ---
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < chunkCount; i++) {
       const mesh = chunkRefs.current[i];
       if (!mesh) continue;
       const chunk = chunks[i];
@@ -417,7 +427,7 @@ export const GrinderOrchestrator = ({position, visible}: GrinderOrchestratorProp
       for (let i = 0; i < MAX_G_PARTS; i++) {
         const p = pData[i];
         if (p.active) {
-          p.vel.y -= 15 * dt;
+          p.vel.y -= PARTICLE_GRAVITY * dt;
           p.pos.addScaledVector(p.vel, dt);
           p.rot.x += dt;
           if (p.pos.y < groundY) {

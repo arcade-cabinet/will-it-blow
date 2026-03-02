@@ -24,6 +24,7 @@ import {BallCollider, CuboidCollider, RigidBody} from '@react-three/rapier';
 import {useMemo, useRef} from 'react';
 import {Platform} from 'react-native';
 import * as THREE from 'three/webgpu';
+import {config} from '../../config';
 import type {Ingredient} from '../../engine/Ingredients';
 
 /**
@@ -45,31 +46,24 @@ interface FridgeStationProps {
   onHover: (index: number | null) => void;
 }
 
-const FRIDGE_W = 1.01; // x
-const FRIDGE_H = 2.92; // y
-const FRIDGE_D = 1.42; // z
+// Constants from centralized config
+const {
+  fridgeWidth: FRIDGE_W,
+  fridgeHeight: FRIDGE_H,
+  fridgeDepth: FRIDGE_D,
+  shelfYPositions: SHELF_Y_POSITIONS,
+  ingredientDiameter: INGREDIENT_DIAMETER,
+  ingredientColliderPadding,
+  shelfTiers: SHELF_TIER,
+  maxSpacing: MAX_SPACING,
+  zOffset: Z_OFFSET,
+} = config.scene.fridge;
 const HALF_D = FRIDGE_D / 2;
-
-// Shelf Y offsets from fridge center (spread across the 2.92-unit height)
-const SHELF_Y_POSITIONS = [-0.8, 0.0, 0.8];
-const INGREDIENT_DIAMETER = 0.28;
 
 /** Converts a hex color string to a THREE.Color. */
 function hexToThreeColor(hex: string): THREE.Color {
   return new THREE.Color(hex);
 }
-
-/** Maps ingredient category to shelf tier (0=top, 1=middle, 2=bottom). */
-const SHELF_TIER: Record<string, number> = {
-  fancy: 0,
-  international: 0,
-  'fast food': 1,
-  comfort: 1,
-  canned: 1,
-  absurd: 2,
-  sweet: 2,
-  spicy: 2,
-};
 
 // -------------------------------------------------------
 // FridgeShelf — glass/wire shelf with blue tint
@@ -121,7 +115,7 @@ interface IngredientMeshProps {
 }
 
 /** Radius for the BallCollider wrapping each ingredient (slightly larger than visual). */
-const INGREDIENT_COLLIDER_RADIUS = INGREDIENT_DIAMETER / 2 + 0.02;
+const INGREDIENT_COLLIDER_RADIUS = INGREDIENT_DIAMETER / 2 + ingredientColliderPadding;
 
 function IngredientMesh({
   index,
@@ -363,19 +357,17 @@ export const FridgeStation = ({
       {/* Ingredients on shelves — grouped by category tier */}
       {shelfGroups.map((group, shelfIndex) =>
         group.map((entry, slotIndex) => {
-          const maxSpacing = 0.24;
           const availableWidth = FRIDGE_W - 0.16;
-          const spacing = Math.min(maxSpacing, availableWidth / Math.max(group.length, 1));
+          const spacing = Math.min(MAX_SPACING, availableWidth / Math.max(group.length, 1));
           const xOffset = (slotIndex - (group.length - 1) / 2) * spacing;
           const shelfY = SHELF_Y_POSITIONS[shelfIndex] + INGREDIENT_DIAMETER / 2 + 0.012;
-          const zOffset = 0.25;
 
           return (
             <IngredientMesh
               key={entry.originalIndex}
               index={entry.originalIndex}
               ingredient={entry.ingredient}
-              position={[xOffset, shelfY, zOffset]}
+              position={[xOffset, shelfY, Z_OFFSET]}
               isSelected={selectedIds.has(entry.originalIndex)}
               isHinted={hintActive && matchingIndices.has(entry.originalIndex)}
               onSelect={onSelect}

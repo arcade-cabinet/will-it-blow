@@ -10,17 +10,20 @@
 import {useFrame} from '@react-three/fiber';
 import {useMemo, useRef} from 'react';
 import * as THREE from 'three/webgpu';
+import {config} from '../../../config';
 
 // ---------------------------------------------------------------------------
-// Constants
+// Constants (from centralized config)
 // ---------------------------------------------------------------------------
 
-const CASING_LENGTH = 1.2;
-const CASING_BASE_RADIUS = 0.075; // diameter 0.15
-const MAX_INFLATE = 3.5; // max radial scale at full fill
-const PULSE_THRESHOLD = 0.7;
-const PULSE_SPEED = 8; // Hz
-const PULSE_AMP = 0.15; // scale oscillation amplitude
+const {
+  casingLength: CASING_LENGTH,
+  casingBaseRadius: CASING_BASE_RADIUS,
+  maxInflate: MAX_INFLATE,
+  pulseThreshold: PULSE_THRESHOLD,
+  pulseSpeed: PULSE_SPEED,
+  pulseAmplitude: PULSE_AMP,
+} = config.scene.casing;
 
 // ---------------------------------------------------------------------------
 // Color helpers

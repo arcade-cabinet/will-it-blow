@@ -1,7 +1,10 @@
-import {GRINDER_ARCHETYPE} from '../grinderArchetype';
-import {STOVE_ARCHETYPE} from '../stoveArchetype';
-import {STUFFER_ARCHETYPE} from '../stufferArchetype';
+import {config} from '../../../config';
+import {buildMachineArchetype} from '../buildMachineArchetype';
 import type {MachineArchetype} from '../types';
+
+const GRINDER_ARCHETYPE = buildMachineArchetype(config.machines.grinder);
+const STUFFER_ARCHETYPE = buildMachineArchetype(config.machines.stuffer);
+const STOVE_ARCHETYPE = buildMachineArchetype(config.machines.stove);
 
 // ---------------------------------------------------------------------------
 // Helper: collect all slot names with machineId prefix (as entity names)

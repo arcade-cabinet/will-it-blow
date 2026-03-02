@@ -25,7 +25,7 @@
 
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
-import type {IngredientVariant} from '../../data/challenges/variants';
+import type {IngredientVariant} from '../../config/types';
 import {
   INGREDIENTS_DIALOGUE,
   INGREDIENTS_FAIL,
