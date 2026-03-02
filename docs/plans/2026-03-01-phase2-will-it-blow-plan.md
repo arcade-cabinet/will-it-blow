@@ -3,10 +3,10 @@ title: Phase 2 Implementation Plan — Will It Blow + Difficulty + Multi-Round
 domain: implementation
 status: draft
 engine: r3f
-last-verified: 2026-03-01
+last-verified: 2026-03-02
 depends-on: [game-design, state-management, 3d-rendering, phase1-complete]
 agent-context: challenge-dev, scene-architect, store-warden
-summary: Task-by-task execution plan for Phase 2 — 15 tasks across 4 waves
+summary: Task-by-task execution plan for Phase 2 — 21 tasks across 5 waves
 -->
 
 # Phase 2 Implementation Plan: "Will It Blow?" — The Full Game
@@ -19,8 +19,132 @@ summary: Task-by-task execution plan for Phase 2 — 15 tasks across 4 waves
 
 ## Execution Strategy
 
-4 waves of parallelizable work. Each wave completes before the next starts.
-Total: 15 tasks. Estimated: 3-4 agent sessions.
+5 waves of parallelizable work. Each wave completes before the next starts.
+Total: 21 tasks. Estimated: 4-5 agent sessions.
+
+**Wave 0 addresses Phase 1 gaps** — features from the POC (`sausage_factory.html`) that were not ported during Phase 1's orchestrator promotion. These are prerequisites for the Phase 2 gameplay loop.
+
+---
+
+## Wave 0: Phase 1 Completion Gaps (Tasks 0a-0f)
+
+These fill gaps between the POC and the current codebase. All are parallelizable except 0e (depends on 0d).
+
+### Task 0a: Fridge Door Pull Gesture
+
+**Files:**
+- Modify: `src/components/kitchen/FurnitureLoader.tsx`
+- Modify: `src/store/gameStore.ts`
+
+Currently the fridge door auto-opens when `isFridgeActive` becomes true. Replace with a drag-to-open gesture:
+- Add `fridgeDoorProgress: number` (0=closed, 1=open) to store
+- Player clicks fridge door handle mesh → begins drag
+- Vertical drag maps to door animation progress (0→1)
+- Door snaps open at progress > 0.7 (auto-completes animation)
+- Once open, ingredient selection begins as normal
+- POC reference: fridge door opens on proximity but the design spec calls for pull gesture
+
+**Tests:** Drag sets progress, snap threshold works, ingredients accessible only after door open.
+
+### Task 0b: Ingredient GLB Props on Fridge Shelves
+
+**Files:**
+- Create: `public/models/ingredients/` (GLB files per ingredient shape)
+- Modify: `src/components/kitchen/FridgeStation.tsx`
+- Modify: `src/engine/Ingredients.ts`
+
+Currently all ingredients are procedural geometry (boxGeometry, cylinderGeometry, sphereGeometry). Replace with GLB models:
+- Source or generate simple food GLB models (e.g., steak, cheese wheel, carrot, pepper, fish)
+- Add `glbPath?: string` field to ingredient data in `Ingredients.ts`
+- FridgeStation: if ingredient has `glbPath`, render via `useGLTF` instead of procedural shape
+- Fall back to procedural for ingredients without GLB
+- Scale each model to fit within `INGREDIENT_DIAMETER = 0.28` bounding sphere
+- Place on fridge shelves using existing grid: 3 shelves, 5×4 grid per shelf
+
+**Tests:** GLB ingredients render at correct scale, click detection works, fallback to procedural.
+
+### Task 0c: Cutting Board / Chopping Station
+
+**Files:**
+- Create: `src/ecs/orchestrators/ChoppingOrchestrator.tsx`
+- Create: `src/ecs/archetypes/choppingArchetype.ts`
+- Create: `src/components/challenges/ChoppingHUD.tsx`
+- Create: `src/data/dialogue/chopping.ts`
+- Modify: `src/engine/ChallengeRegistry.ts`
+- Modify: `src/store/gameStore.ts`
+- Modify: `src/components/GameWorld.tsx`
+- Modify: `App.tsx`
+
+Add a chopping station between fridge (challenge 0) and grinder (challenge 1). The cutting board GLB already exists in FURNITURE_RULES as a decorative prop — promote it to an interactive station.
+
+Challenge mechanics:
+- Player places selected ingredients on cutting board (via TransferBowl or drag)
+- Tap/rhythm mechanic: tap knife to chop (like POC's crank rhythm but for knife)
+- ECS input: button primitive for chop action
+- Progress: each ingredient needs N chops based on hardness
+- Speed zone: too fast = sloppy (strike), good rhythm = clean cuts
+- Visual: ingredient mesh splits/shrinks with each chop
+- Score: precision + speed
+
+Update challenge indices: ingredients=0, chopping=1, grinding=2, stuffing=3, cooking=4, tasting=5.
+
+**Tests:** Chopping mechanics, station trigger, challenge progression updated.
+
+### Task 0d: Grinder Hopper Tray Interaction
+
+**Files:**
+- Modify: `src/ecs/orchestrators/GrinderOrchestrator.tsx`
+- Modify: `src/ecs/archetypes/grinderArchetype.ts`
+
+Currently ingredients flow through TransferBowl → store state. Add visual hopper loading:
+- Modify grinder tray (already defined as static box in archetype, scale `[5, 0.3, 4]`)
+- When challenge starts, render ingredient chunks in the hopper tray (use ingredient decomposition colors)
+- As grinder runs, chunks visually descend into the grinder body (translate Y down)
+- Hopper empties proportionally to `challengeProgress`
+- Ground output particles emerge from bottom (already implemented)
+
+The tray ECS entity already exists — just needs visual ingredient filling.
+
+**Tests:** Hopper shows ingredients, empties with progress, ingredient colors match.
+
+### Task 0e: Sausage Body Rapier Physics
+
+**Files:**
+- Modify: `src/engine/SausageBody.ts` (407 lines, already has curve + skinned mesh)
+- Modify: `src/ecs/orchestrators/StufferOrchestrator.tsx`
+- Modify: `src/components/GameWorld.tsx`
+
+POC implementation (sausage_factory.html lines 253-305):
+- Each bone segment gets a Rapier `RigidBodyDesc.dynamic()` with `linearDamping: 8`, `angularDamping: 5`
+- Each body gets `ColliderDesc.ball(0.15)` with `mass: 1`, `restitution: 0`
+- Rigid bodies are anchored to target positions via spring-like interpolation
+- On extrusion, anchor targets extend outward, dragging the physics bodies
+- SkinnedMesh bones read positions from Rapier rigid bodies each frame
+- Result: sausage links swing and drape realistically as they extrude
+
+Port this to the existing `SausageBody.ts` + StufferOrchestrator:
+- `SausageBody.ts` already has `SausageLinksCurve`, `pinchFactor`, `NUM_BONES = 12`
+- Add Rapier rigid body creation per bone (web-only, plain mesh fallback on native)
+- StufferOrchestrator's `useFrame` reads Rapier body positions → updates bone transforms
+- Gravity + damping makes links swing naturally as they emerge from casing
+
+**Tests:** Physics bodies created per bone (web), bone positions update from Rapier, native fallback works.
+
+### Task 0f: Pan Flip Player Trigger
+
+**Files:**
+- Modify: `src/ecs/orchestrators/CookingOrchestrator.tsx`
+- Modify: `src/ecs/archetypes/stoveArchetype.ts`
+
+Currently `flipProgressRef` exists but nothing triggers it during active gameplay. Wire it:
+- Add a button ECS input primitive to the stove archetype (e.g., pan handle mesh)
+- Player clicks/taps pan handle → triggers flip animation
+- Flip during target temp zone = flair bonus (call `recordFlairPoint('pan-flip', points)`)
+- Flip outside zone = risky (resets hold timer progress by 0.5s)
+- Mr. Sausage reaction: 'excitement' on successful flip, 'nervous' on risky flip
+- Maximum 3 flips per cooking challenge
+
+**Tests:** Flip triggers on tap, flair bonus when in zone, hold timer penalty outside zone.
 
 ---
 
@@ -341,6 +465,8 @@ Conditional rendering: hidden objects, sink, cabinets based on difficulty.
 ## Execution Order Summary
 
 ```
+Wave 0 (parallel): Tasks 0a, 0b, 0c, 0d, 0f  (0e depends on 0d)
+Wave 0b:           Task 0e (after 0d — sausage physics needs stuffer changes)
 Wave 1 (parallel): Tasks 1, 2, 3, 4
 Wave 2 (parallel): Tasks 5, 6, 7, 8, 9
 Wave 3 (parallel): Tasks 10, 11, 12

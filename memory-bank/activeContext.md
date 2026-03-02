@@ -1,68 +1,61 @@
 # Active Context — Will It Blow?
 
-**Last updated:** 2026-03-01
+**Last updated:** 2026-03-02
 
 ## Current Branch
 
-`feat/physics-gameplay`
+`feat/sausage-factory-kitchen` — PR #25 open, ready for merge to main
 
 ## Current Focus
 
-Documentation overhaul is complete. Ready for gameplay feature work and polish.
+Phase 1 (sausage factory kitchen) is complete. ECS orchestrators promoted to full game drivers, thin HUDs replace old 2D overlays. Ready to merge and begin Phase 2.
 
 ## Recent Work
 
-### Documentation Infrastructure Overhaul (2026-03-01) -- COMPLETE
+### Phase 1 Completion: Orchestrator Promotion (2026-03-02) — COMPLETE
 
-- **Frontmatter** added to all 26 docs (9 core + 15 plans + 2 AGENTS.md) with structured metadata: title, domain, status, engine, last-verified, depends-on, agent-context, summary
-- **AGENTS.md hierarchy** created at 4 levels: root, docs/, docs/plans/, memory-bank/ -- provides multi-agent coordination and scoped instructions
-- **Memory bank** created (7 files): projectbrief, productContext, systemPatterns, techContext, activeContext, progress, AGENTS.md -- persistent session context
-- **`.claude/agents/`** created (5 agents): scene-architect, challenge-dev, store-warden, asset-pipeline, doc-keeper -- specialized agent roles
-- **`.claude/commands/`** created (3 commands): playtest, lint-and-test, update-docs -- reusable workflows
-- **JSDoc coverage** expanded from ~21% to ~90%+ across ~47 production source files
-- **TypeDoc** configured (`docs/typedoc.json`) for API docs generation
-- **CLAUDE.md refactored** to thin wrapper pointing to docs/ directory for details
-- **`.github/copilot-instructions.md`** created for GitHub Copilot context
-- **`docs/status.md`** updated to reflect all physics/Rapier, grab system, bowl blending, settings, and persistence work
+**Commits on `feat/sausage-factory-kitchen`:**
+```
+06fbfaf fix(hud): apply Biome formatting to HUD timer text elements
+ec15f95 chore: delete old 2D challenge overlays
+54adbc8 feat(hud): add thin HUD components, rewire App.tsx
+78b46e6 feat(ecs): promote StufferOrchestrator to full game driver
+93ca03d feat(ecs): promote GrinderOrchestrator to full game driver
+690fc49 feat(store): add HUD fields for orchestrator-driven challenges
+```
 
-### Physics & Gameplay (2026-03-01) -- COMPLETE
+**What changed:**
+- GrinderOrchestrator, StufferOrchestrator, CookingOrchestrator promoted from visual-only to full game drivers
+- All game logic (phase machines, scoring, strikes, timers, audio, Mr. Sausage reactions) now lives in orchestrators
+- 3 new thin HUD components (GrindingHUD, StuffingHUD, CookingHUD) — read-only Zustand subscribers
+- 3 old 2D challenge overlays deleted (GrindingChallenge, StuffingChallenge, CookingChallenge)
+- Store bridge: challengeTimeRemaining, challengeSpeedZone, challengePhase + setters
+- Data flow: 3D input → ECS system → orchestrator → Zustand → HUD display
 
-- **Rapier physics sensors** for station proximity triggers (replaced distance-based checks)
-- **GrabbableSausage** component: physics-enabled sausage link (RigidBody + CapsuleCollider) with dual rendering (Rapier on web, plain mesh on native)
-- **GrabSystem** component: raycasting grab/carry/drop mechanic with receiver pattern, bob animation, emissive pulse highlights
-- **Bowl-based blending**: BlendCalculator computes visual properties (color, roughness, chunkiness, shininess) from ingredient stats; BlendMaterial renders PBR ground meat
-- **Grinder dual rendering**: Rapier rigid bodies for meat chunks/splatter on web, manual useFrame on native
-- **Settings screen**: Volume sliders + mute toggles for music and SFX
-- **State persistence**: AsyncStorage via zustand/middleware persist (progress + settings survive sessions)
+**Verification:** 769 tests, 55 suites, Biome clean, TypeScript clean
 
-### Earlier Milestones
+### ECS Architecture (2026-03-01 – 2026-03-02) — COMPLETE
 
-- **Babylon.js to R3F migration** -- Completed 2026-02-27. All 3D components rewritten as declarative R3F JSX. Platform split eliminated. 93 new R3F component tests added.
-- **CRT shader** -- Migrated from GLSL ShaderMaterial to TSL NodeMaterial for WebGPU compatibility
-- **Code splitting** -- React.lazy() + Suspense at phase boundaries, 17 production chunks
+- 6 input primitive systems with InputContract binding
+- 3 machine archetypes (grinder, stuffer, stove) with slot-based composition
+- MeshRenderer, LightRenderer, LatheRenderer + ECSScene
+- MachineEntitiesRenderer with automatic input event wiring
 
 ## Known Issues
 
 - TypeScript stack overflow requires `node --stack-size=8192` (handled by `pnpm typecheck`)
-- Loading screen needs visual polish
-- Title screen Continue button is a stub (no save-game resume yet)
-- Mobile touch controls untested on real devices
-- Native audio is a complete no-op stub
-- Large assets (kitchen.glb, textures) may not be in git -- game won't render without them
+- Memory bank docs referenced `CameraWalker.tsx` which does NOT exist — navigation is pure FPS controller
+- Phase 1 gaps deferred to Phase 2 Wave 0 (fridge pull gesture, ingredient GLBs, cutting board, hopper tray, sausage physics, flip trigger)
 
 ## Decisions Made
 
-- Zustand over React Context for all game state
-- TSL NodeMaterial over GLSL ShaderMaterial (WebGPU compatibility)
-- Target-based placement over hardcoded coordinates
-- Single GameWorld.tsx over platform-specific splits
-- Biome over ESLint/Prettier
-- pnpm over npm/yarn
-- Rapier physics sensors over distance-based proximity checks
-- GrabSystem receiver pattern for object placement (grab -> carry -> drop on receiver)
-- BlendCalculator derives visual material from ingredient stats (color averaging, texture variance)
-- AsyncStorage persistence for progress + settings
+- Orchestrators own ALL game logic — HUDs are pure read-only display
+- ECS input primitives drive game state (not 2D gestures)
+- `challengePhase` store field bridges orchestrator→HUD dialogue transitions
+- Old 2D challenge overlays fully deleted (not deprecated)
 
-## Session Notes
+## What's Next
 
-_Update this section at the start and end of each work session._
+1. Merge PR #25 to main
+2. Begin Phase 2 Wave 0: port remaining POC features (fridge gesture, ingredient GLBs, cutting board, hopper, sausage physics, flip trigger)
+3. Phase 2 Waves 1-4: difficulty system, multi-round, blowout mechanic, hidden objects
