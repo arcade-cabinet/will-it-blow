@@ -9,7 +9,7 @@ import {
 describe('FurnitureLayout', () => {
   describe('DEFAULT_ROOM', () => {
     it('has correct dimensions', () => {
-      expect(DEFAULT_ROOM).toEqual({w: 13, d: 13, h: 5.5});
+      expect(DEFAULT_ROOM).toEqual({w: 18, d: 16, h: 5.5});
     });
   });
 
@@ -39,6 +39,17 @@ describe('FurnitureLayout', () => {
         expect(t.triggerRadius).toBeGreaterThan(0);
         expect(t.markerY).toBeDefined();
         expect(typeof t.markerY).toBe('number');
+      }
+    });
+
+    it('all station targets within room bounds', () => {
+      const targets = resolveTargets(DEFAULT_ROOM);
+      const halfW = DEFAULT_ROOM.w / 2;
+      const halfD = DEFAULT_ROOM.d / 2;
+      for (const name of STATION_TARGET_NAMES) {
+        const t = targets[name];
+        expect(Math.abs(t.position[0])).toBeLessThanOrEqual(halfW);
+        expect(Math.abs(t.position[2])).toBeLessThanOrEqual(halfD);
       }
     });
 

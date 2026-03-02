@@ -50,8 +50,8 @@ export interface FurnitureRule {
 // Constants
 // ---------------------------------------------------------------------------
 
-/** Default kitchen dimensions: 13x13 floor, 5.5 ceiling height. */
-export const DEFAULT_ROOM: RoomDimensions = {w: 13, d: 13, h: 5.5};
+/** Default kitchen dimensions: 18x16 floor, 5.5 ceiling height. */
+export const DEFAULT_ROOM: RoomDimensions = {w: 18, d: 16, h: 5.5};
 
 /**
  * Target names for the 5 challenge stations, indexed by challenge number (0-4).
@@ -67,12 +67,12 @@ export const STATION_TARGET_NAMES = ['fridge', 'grinder', 'stuffer', 'stove', 'c
  * Computes all named targets from room dimensions.
  * Positions are relative to room center (0, 0, 0).
  *
- * Reference positions (for DEFAULT_ROOM 13x13x5.5):
- *   Fridge:  [-5.16, 1.79, -5.02]
- *   Grinder: [-4.75, 2.06, -0.64]
- *   Stuffer: [ 2.28, 2.68,  2.25]
- *   Stove:   [-4.98, 2.13, -2.23]
- *   CRT TV:  [ 0,    2.50, -5.50] (1 unit inside back wall)
+ * Reference positions (for DEFAULT_ROOM 18x16x5.5):
+ *   Fridge:  [-7.66, 1.79, -6.52]
+ *   Grinder: [-7.25, 2.06, -2.14]
+ *   Stuffer: [ 4.78, 2.68,  3.75]
+ *   Stove:   [-7.48, 2.13, -3.73]
+ *   CRT TV:  [ 0,    2.50, -7.00] (1 unit inside back wall)
  *
  * @param room - The kitchen room dimensions (all targets scale with these)
  * @returns A map of target name to Target. Includes station targets (interactive),
