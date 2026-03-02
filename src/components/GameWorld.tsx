@@ -267,6 +267,7 @@ const SceneContent = ({
   const bowlPosition = useGameStore(s => s.bowlPosition);
   const sausagePlaced = useGameStore(s => s.sausagePlaced);
   const setSausagePlaced = useGameStore(s => s.setSausagePlaced);
+  const setBowlPosition = useGameStore(s => s.setBowlPosition);
   // Shared fridge state from store (IngredientChallenge writes, 3D reads)
   const fridgePool = useGameStore(s => s.fridgePool);
   const fridgeMatchingIndices = useGameStore(s => s.fridgeMatchingIndices);
@@ -319,6 +320,19 @@ const SceneContent = ({
 
   // Callback for when sausage is dropped on the stove pan
   const handleSausagePlaced = useCallback(() => {
+    setSausagePlaced();
+  }, [setSausagePlaced]);
+
+  // Mechanics completion callbacks — drive bowl/sausage pipeline transitions
+  const handleGrindComplete = useCallback(() => {
+    setBowlPosition('grinder-output');
+  }, [setBowlPosition]);
+
+  const handleStuffComplete = useCallback(() => {
+    setBowlPosition('done');
+  }, [setBowlPosition]);
+
+  const handleCookComplete = useCallback(() => {
     setSausagePlaced();
   }, [setSausagePlaced]);
 
@@ -437,16 +451,19 @@ const SceneContent = ({
         position={STATIONS[1].position}
         counterY={STATIONS[1].position[1]}
         visible={isGrinderActive}
+        onGrindComplete={handleGrindComplete}
       />
       <StufferMechanics
         position={STATIONS[2].position}
         counterY={STATIONS[2].position[1]}
         visible={isStufferActive}
+        onStuffComplete={handleStuffComplete}
       />
       <CookingMechanics
         position={STATIONS[3].position}
         counterY={STATIONS[3].position[1]}
         visible={isStoveActive}
+        onCookComplete={handleCookComplete}
       />
 
       {/* Atmospheric basement elements — always visible */}
