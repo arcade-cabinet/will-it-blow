@@ -334,6 +334,76 @@ export function resolveTargets(room: RoomDimensions): Record<string, Target> {
       rotationY: -0.6,
       triggerRadius: 0,
     },
+
+    // ---- New furniture replacement targets ----
+
+    'l-counter-ext': {
+      position: [-halfW + 1.0, 0, -halfD + 5.0],
+      rotationY: 0,
+      triggerRadius: 0,
+    },
+
+    'upper-cabinets-2': {
+      position: [-halfW + 1.0, room.h * 0.65, -halfD + 5.0],
+      rotationY: 0,
+      triggerRadius: 0,
+    },
+
+    // ---- Horror props ----
+
+    'bear-trap': {
+      position: [halfW - 1.5, 0, halfD - 1.0],
+      rotationY: 0.8,
+      triggerRadius: 0,
+    },
+
+    worm: {
+      position: [-halfW + 2.5, 1.08, -halfD + 2.0],
+      rotationY: 2.1,
+      triggerRadius: 0,
+    },
+
+    'fly-swatter': {
+      position: [halfW - 0.3, room.h * 0.45, -halfD + 2.5],
+      rotationY: Math.PI / 2,
+      triggerRadius: 0,
+    },
+
+    'broken-can': {
+      position: [halfW - 3.0, 0, -halfD + 0.5],
+      rotationY: 1.5,
+      triggerRadius: 0,
+    },
+
+    bandages: {
+      position: [-halfW + 3.5, 1.06, -halfD + 4.5],
+      rotationY: 0.3,
+      triggerRadius: 0,
+    },
+
+    matchbox: {
+      position: [-halfW + 2.0, 1.06, -halfD + 4.2],
+      rotationY: -0.4,
+      triggerRadius: 0,
+    },
+
+    'postit-note': {
+      position: [-halfW + 1.5, room.h * 0.35, -halfD + 1.2],
+      rotationY: 0,
+      triggerRadius: 0,
+    },
+
+    'fridge-letters': {
+      position: [-halfW + 1.5, room.h * 0.3, -halfD + 1.6],
+      rotationY: 0,
+      triggerRadius: 0,
+    },
+
+    'prop-knife': {
+      position: [0.6, 1.07, -0.1],
+      rotationY: 2.4,
+      triggerRadius: 0,
+    },
   };
 }
 
@@ -367,22 +437,25 @@ export function getStationTarget(
  * animate each piece of kitchen furniture and atmospheric props.
  */
 export const FURNITURE_RULES: FurnitureRule[] = [
-  // Core kitchen furniture
-  {glb: 'l_counter.glb', target: 'l-counter'},
-  {glb: 'upper_cabinets.glb', target: 'upper-cabinets'},
-  {glb: 'island.glb', target: 'island'},
-  {glb: 'table_chairs.glb', target: 'table'},
-  {glb: 'trash_can.glb', target: 'trash-can'},
+  // Core kitchen furniture (lightweight replacements)
+  {glb: 'workplan.glb', target: 'l-counter'},
+  {glb: 'workplan_001.glb', target: 'l-counter-ext'},
+  {glb: 'kitchen_cabinet1.glb', target: 'upper-cabinets'},
+  {glb: 'kitchen_cabinet2.glb', target: 'upper-cabinets-2'},
+  {glb: 'island_counter.glb', target: 'island'},
+  {glb: 'table_styloo.glb', target: 'table'},
+  {glb: 'trashcan_cylindric.glb', target: 'trash-can'},
+  {glb: 'kitchen_oven_large.glb', target: 'oven'},
+  {glb: 'washing_machine.glb', target: 'dishwasher'},
+  {glb: 'utensil_holder.glb', target: 'utensil-hooks'},
+  {glb: 'shelf_small.glb', target: 'spice-rack'},
+
+  // Interactive/animated furniture (kept from original)
   {glb: 'fridge.glb', target: 'fridge', animated: true},
-  {glb: 'oven_range.glb', target: 'oven'},
-  {glb: 'dishwasher.glb', target: 'dishwasher'},
   {glb: 'meat_grinder.glb', target: 'meat_grinder', animated: true},
   {glb: 'mixing_bowl.glb', target: 'mixing-bowl'},
-  {glb: 'spice_rack.glb', target: 'spice-rack'},
-  {glb: 'utensil_hooks.glb', target: 'utensil-hooks'},
-  // trap_door is room structure (ceiling panel), rendered in KitchenEnvironment — not furniture
 
-  // Atmospheric props — scattered around to set the horror mood
+  // Atmospheric props (kept from original)
   {glb: 'frying_pan.glb', target: 'frying-pan'},
   {glb: 'cutting_board.glb', target: 'cutting-board'},
   {glb: 'pot.glb', target: 'pot'},
@@ -398,5 +471,16 @@ export const FURNITURE_RULES: FurnitureRule[] = [
   {glb: 'cutlery_ladle.glb', target: 'cutlery-ladle'},
   {glb: 'cutlery_fork.glb', target: 'cutlery-fork'},
   {glb: 'cutlery_spoon.glb', target: 'cutlery-spoon'},
-  {glb: 'chair.glb', target: 'chair-extra'},
+  {glb: 'chair_styloo.glb', target: 'chair-extra'},
+
+  // Horror props (NEW — atmospheric horror)
+  {glb: 'beartrap_open.glb', target: 'bear-trap'},
+  {glb: 'worm.glb', target: 'worm'},
+  {glb: 'tapetteamouche.glb', target: 'fly-swatter'},
+  {glb: 'can_broken.glb', target: 'broken-can'},
+  {glb: 'bandages.glb', target: 'bandages'},
+  {glb: 'matchbox.glb', target: 'matchbox'},
+  {glb: 'postit.glb', target: 'postit-note'},
+  {glb: 'fridgeletter.glb', target: 'fridge-letters'},
+  {glb: 'prop_knife.glb', target: 'prop-knife'},
 ];

@@ -136,5 +136,32 @@ describe('FurnitureLayout', () => {
         expect(rule.animated).toBe(true);
       }
     });
+
+    const BLOATED = [
+      'l_counter.glb', 'oven_range.glb', 'upper_cabinets.glb',
+      'utensil_hooks.glb', 'island.glb', 'dishwasher.glb',
+      'trash_can.glb', 'table_chairs.glb', 'spice_rack.glb',
+      'sausage.glb',
+    ];
+
+    it('should not reference any bloated GLBs', () => {
+      for (const rule of FURNITURE_RULES) {
+        expect(BLOATED).not.toContain(rule.glb);
+      }
+    });
+
+    it('should have horror prop targets', () => {
+      const targets = resolveTargets(DEFAULT_ROOM);
+      expect(targets['bear-trap']).toBeDefined();
+      expect(targets['worm']).toBeDefined();
+      expect(targets['fly-swatter']).toBeDefined();
+    });
+
+    it('every rule target must exist in resolveTargets', () => {
+      const targets = resolveTargets(DEFAULT_ROOM);
+      for (const rule of FURNITURE_RULES) {
+        expect(targets[rule.target]).toBeDefined();
+      }
+    });
   });
 });
