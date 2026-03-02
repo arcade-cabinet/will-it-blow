@@ -74,6 +74,17 @@ export interface GameState {
   /** Player's chosen heat level in the cooking challenge (controls temp change rate). */
   challengeHeatLevel: number;
 
+  // ---- Stuffer twist mechanic ----
+
+  /** Normalized positions (0-1) where the player pinched/twisted during stuffing. */
+  twistPoints: number[];
+  /** Derived sausage form: 'coil' (0 twists) or 'links' (1+ twists). Null until recorded. */
+  chosenForm: 'coil' | 'links' | null;
+  /** Number of flair twists (simultaneous crank+twist). */
+  flairTwistCount: number;
+  /** Cumulative flair bonus points earned during stuffing. */
+  flairScore: number;
+
   // ---- Mr. Sausage ----
 
   /** Current reaction displayed on the CRT TV. Shared between 2D overlays and 3D scene. */
@@ -214,6 +225,14 @@ export interface GameState {
   setMusicMuted: (muted: boolean) => void;
   /** Toggle sound effects mute state. */
   setSfxMuted: (muted: boolean) => void;
+  /** Record a twist/pinch at a normalized position (0-1) along the sausage extrusion. */
+  recordTwist: (normalizedPosition: number) => void;
+  /** Record a flair twist (simultaneous crank+twist expert move). */
+  recordFlairTwist: () => void;
+  /** Derive chosenForm from twistPoints: 'coil' if 0 twists, 'links' if 1+. */
+  recordFormChoice: () => void;
+  /** Add flair bonus points with a reason tag. */
+  recordFlairPoint: (reason: string, points: number) => void;
   /** Return to the main menu, resetting all ephemeral game state. */
   returnToMenu: () => void;
 }
@@ -261,6 +280,10 @@ export const INITIAL_GAME_STATE = {
   challengeIsPressing: false,
   challengeTemperature: 70,
   challengeHeatLevel: 0,
+  twistPoints: [] as number[],
+  chosenForm: null as 'coil' | 'links' | null,
+  flairTwistCount: 0,
+  flairScore: 0,
   mrSausageReaction: 'idle' as Reaction,
   hintActive: false,
   hintsRemaining: INITIAL_HINTS,
@@ -311,6 +334,10 @@ export const useGameStore = create<GameState>()(
           challengeIsPressing: false,
           challengeTemperature: 70,
           challengeHeatLevel: 0,
+          twistPoints: [],
+          chosenForm: null,
+          flairTwistCount: 0,
+          flairScore: 0,
           mrSausageReaction: 'idle' as Reaction,
           hintsRemaining: INITIAL_HINTS,
           totalGamesPlayed: state.totalGamesPlayed + 1,
@@ -342,6 +369,10 @@ export const useGameStore = create<GameState>()(
           challengeIsPressing: false,
           challengeTemperature: 70,
           challengeHeatLevel: 0,
+          twistPoints: [],
+          chosenForm: null,
+          flairTwistCount: 0,
+          flairScore: 0,
           grabbedObject: null,
           grabbedObjectType: null,
           bowlContents: [],
@@ -390,6 +421,10 @@ export const useGameStore = create<GameState>()(
             challengeIsPressing: false,
             challengeTemperature: 70,
             challengeHeatLevel: 0,
+            twistPoints: [],
+            chosenForm: null,
+            flairTwistCount: 0,
+            flairScore: 0,
             hintActive: false,
             challengeTriggered: false,
             gameStatus: isLastChallenge ? 'victory' : state.gameStatus,
@@ -481,6 +516,19 @@ export const useGameStore = create<GameState>()(
       setMusicMuted: (muted: boolean) => set({musicMuted: muted}),
       setSfxMuted: (muted: boolean) => set({sfxMuted: muted}),
 
+      recordTwist: (normalizedPosition: number) =>
+        set(state => ({twistPoints: [...state.twistPoints, normalizedPosition]})),
+
+      recordFlairTwist: () => set(state => ({flairTwistCount: state.flairTwistCount + 1})),
+
+      recordFormChoice: () =>
+        set(state => ({
+          chosenForm: state.twistPoints.length > 0 ? 'links' : 'coil',
+        })),
+
+      recordFlairPoint: (_reason: string, points: number) =>
+        set(state => ({flairScore: state.flairScore + points})),
+
       returnToMenu: () =>
         set({
           appPhase: 'menu' as AppPhase,
@@ -491,6 +539,10 @@ export const useGameStore = create<GameState>()(
           challengeIsPressing: false,
           challengeTemperature: 70,
           challengeHeatLevel: 0,
+          twistPoints: [],
+          chosenForm: null,
+          flairTwistCount: 0,
+          flairScore: 0,
           mrSausageReaction: 'idle' as Reaction,
           hintActive: false,
           grabbedObject: null,
