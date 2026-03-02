@@ -46,13 +46,17 @@ import {DEFAULT_ROOM, resolveTargets, STATION_TARGET_NAMES} from '../engine/Furn
 import {useGameStore} from '../store/gameStore';
 import {FPSController} from './controls/FPSController';
 import {GrabSystem} from './controls/GrabSystem';
+import {BasementStructure} from './kitchen/BasementStructure';
+import {CookingMechanics} from './kitchen/CookingMechanics';
 import {CrtTelevision} from './kitchen/CrtTelevision';
 import {FridgeStation} from './kitchen/FridgeStation';
 import {GrabbableSausage} from './kitchen/GrabbableSausage';
+import {GrinderMechanics} from './kitchen/GrinderMechanics';
 import {GrinderStation} from './kitchen/GrinderStation';
 import {KitchenEnvironment} from './kitchen/KitchenEnvironment';
 import {StationMarker} from './kitchen/StationMarker';
 import {StoveStation} from './kitchen/StoveStation';
+import {StufferMechanics} from './kitchen/StufferMechanics';
 import {StufferStation} from './kitchen/StufferStation';
 import {SceneIntrospector} from './SceneIntrospector';
 
@@ -427,6 +431,26 @@ const SceneContent = ({
         heatLevel={isStoveActive ? challengeHeatLevel : 0}
         onSausagePlaced={handleSausagePlaced}
       />
+
+      {/* Procedural mechanics — interactive station geometry from POC */}
+      <GrinderMechanics
+        position={STATIONS[1].position}
+        counterY={STATIONS[1].position[1]}
+        visible={isGrinderActive}
+      />
+      <StufferMechanics
+        position={STATIONS[2].position}
+        counterY={STATIONS[2].position[1]}
+        visible={isStufferActive}
+      />
+      <CookingMechanics
+        position={STATIONS[3].position}
+        counterY={STATIONS[3].position[1]}
+        visible={isStoveActive}
+      />
+
+      {/* Atmospheric basement elements — always visible */}
+      <BasementStructure room={DEFAULT_ROOM} />
     </>
   );
 };
