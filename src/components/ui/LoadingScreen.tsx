@@ -2,15 +2,15 @@
  * @module LoadingScreen
  * Asset preloader with a sausage-shaped progress bar.
  *
- * Preloads the kitchen.glb model and all PBR texture files using streaming
- * fetch with byte-level progress tracking. The progress bar fills as data
- * arrives; a rotating Mr. Sausage quote cycles every 2 seconds.
+ * Preloads all furniture GLB models (from FURNITURE_RULES) and PBR texture
+ * files using parallel fetch with file-count progress tracking. The individual
+ * GLBs are tiny (1-170KB each), so byte-level streaming is overkill — we
+ * simply count completed files instead.
  *
  * **Preload strategy:**
- * 1. HEAD requests to get total byte count for accurate progress.
- * 2. Parallel streaming downloads with ReadableStream byte counting.
- * 3. Critical vs non-critical: kitchen.glb failure = error screen with retry;
- *    texture failure = warning only (textures can lazy-load later).
+ * 1. Build asset list from FURNITURE_RULES GLBs + TEXTURE_FILES.
+ * 2. Parallel fetch all assets via Promise.allSettled.
+ * 3. Tolerant: warns on partial failures, only errors if >50% fail.
  *
  * Also initializes the Tone.js audio engine (requires user gesture — this
  * screen appears after a menu tap, satisfying the browser autoplay policy).
@@ -22,6 +22,7 @@
 import {useEffect, useRef, useState} from 'react';
 import {Animated, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {audioEngine} from '../../engine/AudioEngine';
+import {FURNITURE_RULES} from '../../engine/FurnitureLayout';
 import {getAssetUrl} from '../../engine/assetUrl';
 import {useGameStore} from '../../store/gameStore';
 
@@ -86,88 +87,38 @@ export function LoadingScreen() {
     audioEngine.initTone();
   }, []);
 
-  // Pre-fetch kitchen.glb + all textures to warm the browser cache
-  // biome-ignore lint/correctness/useExhaustiveDependencies: retryCount is an intentional trigger to re-run the preload
+  // Pre-fetch all furniture GLBs + textures to warm the browser cache
+  // biome-ignore lint/correctness/useExhaustiveDependencies: retryCount triggers re-run
   useEffect(() => {
     const controller = new AbortController();
 
     async function preload() {
       try {
-        // Build full asset list: GLB model + all texture files
-        const assets = [
-          {url: getAssetUrl('models', 'kitchen.glb'), critical: true},
-          ...TEXTURE_FILES.map(f => ({url: getAssetUrl('textures', f), critical: false})),
-        ];
+        const glbUrls = FURNITURE_RULES.map(r => getAssetUrl('models', r.glb));
+        const textureUrls = TEXTURE_FILES.map(f => getAssetUrl('textures', f));
+        const allAssets = [...glbUrls, ...textureUrls];
 
-        // Issue HEAD requests to get total byte count for progress bar
-        const sizes = await Promise.all(
-          assets.map(async a => {
-            try {
-              const head = await fetch(a.url, {method: 'HEAD', signal: controller.signal});
-              return Number(head.headers.get('content-length')) || 0;
-            } catch {
-              return 0;
-            }
+        let loaded = 0;
+        const results = await Promise.allSettled(
+          allAssets.map(async url => {
+            const response = await fetch(url, {signal: controller.signal});
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            await response.arrayBuffer();
+            loaded++;
+            setProgress(Math.min(Math.round((loaded / allAssets.length) * 100), 99));
           }),
         );
-        const totalBytes = sizes.reduce((sum, s) => sum + s, 0);
 
         if (controller.signal.aborted) return;
 
-        // Download all in parallel, tracking streamed bytes
-        const receivedBytesRef = {current: 0};
-
-        const downloadOne = async (asset: {url: string; critical: boolean}) => {
-          const response = await fetch(asset.url, {signal: controller.signal});
-          if (!response.ok) {
-            if (asset.critical) {
-              throw new Error(`Failed to load assets (HTTP ${response.status})`);
-            }
-            console.warn(`Failed to preload ${asset.url}: ${response.status}`);
-            return;
-          }
-
-          const reader = response.body?.getReader();
-          if (!reader) {
-            const buf = await response.arrayBuffer();
-            receivedBytesRef.current += buf.byteLength;
-            if (totalBytes > 0) {
-              const pct = Math.min(Math.round((receivedBytesRef.current / totalBytes) * 100), 99);
-              setProgress(pct);
-            }
-            return;
-          }
-
-          while (true) {
-            const {done, value} = await reader.read();
-            if (done || controller.signal.aborted) break;
-            receivedBytesRef.current += value.byteLength;
-            if (totalBytes > 0) {
-              const pct = Math.min(Math.round((receivedBytesRef.current / totalBytes) * 100), 99);
-              setProgress(pct);
-            }
-          }
-        };
-
-        const results = await Promise.allSettled(assets.map(downloadOne));
-
-        if (controller.signal.aborted) return;
-
-        // Check if any critical asset failed
-        const criticalFailed = results.find(
-          (r, i) => r.status === 'rejected' && assets[i].critical,
-        );
-        if (criticalFailed && criticalFailed.status === 'rejected') {
-          setLoadError(criticalFailed.reason?.message ?? 'Failed to load assets.');
+        const failures = results.filter(r => r.status === 'rejected');
+        if (failures.length > allAssets.length / 2) {
+          setLoadError('Failed to load assets. Check your connection.');
           return;
         }
-
-        // Log non-critical failures
-        results.forEach((r, i) => {
-          if (r.status === 'rejected' && !assets[i].critical) {
-            console.warn(`Texture preload failed (non-fatal): ${assets[i].url}`);
-          }
-        });
+        if (failures.length > 0) {
+          console.warn(`${failures.length}/${allAssets.length} assets failed to preload (non-fatal)`);
+        }
 
         setProgress(100);
       } catch (error) {
