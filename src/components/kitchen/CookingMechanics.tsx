@@ -26,6 +26,10 @@ import {useFrame} from '@react-three/fiber';
 import {useCallback, useRef} from 'react';
 import type * as THREE from 'three/webgpu';
 import {useGameStore} from '../../store/gameStore';
+import {BurnerRing} from './stove/BurnerRing';
+import {FryingPan} from './stove/FryingPan';
+import {GlistenLight} from './stove/GlistenLight';
+import {StoveDial} from './stove/StoveDial';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -143,7 +147,6 @@ export function CookingMechanics({position, onCookComplete}: CookingMechanicsPro
   const burnerMatRef = useRef<THREE.MeshBasicMaterial>(null);
   const dialRef = useRef<THREE.Mesh>(null);
   const glistenRef = useRef<THREE.PointLight>(null);
-  const panHandleRef = useRef<THREE.Mesh>(null);
 
   // ---- Steam particles ----
   const steamRefs = useRef<(THREE.Mesh | null)[]>(Array.from({length: STEAM_COUNT}, () => null));
@@ -437,31 +440,14 @@ export function CookingMechanics({position, onCookComplete}: CookingMechanicsPro
 
   return (
     <group position={position}>
-      {/* ---- Burner Ring ---- */}
-      <mesh position={[0, 0.06, 0]}>
-        <torusGeometry args={[0.35, 0.03, 12, 24]} />
-        <meshBasicMaterial ref={burnerMatRef} color={[0.15, 0.05, 0.02]} />
-      </mesh>
+      {/* Burner ring — heat-responsive color */}
+      <BurnerRing ref={burnerMatRef} />
 
-      {/* ---- Frying Pan Group (tips during flip) ---- */}
+      {/* Frying Pan Group (tips during flip) */}
       <group ref={panGroupRef} position={[0, PAN_Y, 0]}>
-        {/* Pan body */}
-        <mesh onClick={handlePanClick}>
-          <cylinderGeometry args={[PAN_RADIUS, PAN_RADIUS, PAN_HEIGHT, 24]} />
-          <meshStandardMaterial color={[0.2, 0.2, 0.22]} metalness={0.7} roughness={0.3} />
-        </mesh>
+        <FryingPan onPanClick={handlePanClick} onHandleClick={handlePanHandleClick} />
 
-        {/* Pan handle — clickable to remove from heat */}
-        <mesh
-          ref={panHandleRef}
-          position={[0, 0, PAN_RADIUS + 0.25]}
-          onClick={handlePanHandleClick}
-        >
-          <boxGeometry args={[0.06, 0.04, 0.5]} />
-          <meshStandardMaterial color={[0.12, 0.12, 0.14]} />
-        </mesh>
-
-        {/* ---- Sausage group (flip rotation target) ---- */}
+        {/* Sausage group (flip rotation target) */}
         <group
           ref={sausageGroupRef}
           position={[0, PAN_HEIGHT / 2 + SAUSAGE_RADIUS, 0]}
@@ -487,19 +473,13 @@ export function CookingMechanics({position, onCookComplete}: CookingMechanicsPro
         </group>
       </group>
 
-      {/* ---- Dial (click to start/cycle heat) ---- */}
-      <mesh ref={dialRef} position={[0.5, 0.1, 0]} onClick={handleDialClick}>
-        <cylinderGeometry args={[0.06, 0.06, 0.04, 12]} />
-        <meshStandardMaterial color={[0.8, 0.2, 0.2]} />
-      </mesh>
+      {/* Dial — click to start/cycle heat */}
+      <StoveDial ref={dialRef} onClick={handleDialClick} />
 
-      {/* ---- Glisten light (orbiting point light for grease specular) ---- */}
-      <pointLight
+      {/* Glisten light — orbiting point light for grease specular */}
+      <GlistenLight
         ref={glistenRef}
-        position={[-2, PAN_Y + 6, -2]}
-        intensity={150}
-        distance={50}
-        color={0xffffff}
+        panY={PAN_Y}
         visible={phaseRef.current === 'cooking' || phaseRef.current === 'done'}
       />
 

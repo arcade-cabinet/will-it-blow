@@ -228,11 +228,19 @@ describe('flip records flair points', () => {
 });
 
 describe('glisten light', () => {
-  it('includes a pointLight in the component (code inspection)', () => {
+  it('renders GlistenLight sub-component (code inspection)', () => {
     const fs = require('node:fs');
     const path = require('node:path');
     const source = fs.readFileSync(path.resolve(__dirname, '../CookingMechanics.tsx'), 'utf8');
-    expect(source).toContain('<pointLight');
+    expect(source).toContain('<GlistenLight');
+    expect(source).toContain('panY={PAN_Y}');
+  });
+
+  it('GlistenLight sub-component has pointLight with correct params', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../stove/GlistenLight.tsx'), 'utf8');
+    expect(source).toContain('pointLight');
     expect(source).toContain('intensity={150}');
     expect(source).toContain('distance={50}');
   });

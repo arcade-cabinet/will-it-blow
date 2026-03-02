@@ -28,6 +28,11 @@ import * as THREE from 'three/webgpu';
 import {INGREDIENTS} from '../../engine/Ingredients';
 import {createMeatMaterial} from '../../engine/MeatTexture';
 import {useGameStore} from '../../store/gameStore';
+import {GrinderBody} from './grinder/GrinderBody';
+import {GrinderFaceplate} from './grinder/GrinderFaceplate';
+import {GrinderPlunger} from './grinder/GrinderPlunger';
+import {GrinderSwitch} from './grinder/GrinderSwitch';
+import {GrinderTray} from './grinder/GrinderTray';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -129,11 +134,6 @@ export const GrinderMechanics = ({
   gamePhasRef.current = gamePhase;
 
   // ---- mesh refs ----
-  const motorRef = useRef<THREE.Mesh>(null);
-  const extruderRef = useRef<THREE.Mesh>(null);
-  const chuteRef = useRef<THREE.Mesh>(null);
-  const faceplateRef = useRef<THREE.Mesh>(null);
-  const switchNotchRef = useRef<THREE.Mesh>(null);
   const plungerGroupRef = useRef<THREE.Group>(null);
   const particleMeshRef = useRef<THREE.InstancedMesh>(null);
 
@@ -154,36 +154,6 @@ export const GrinderMechanics = ({
   const dummyRef = useRef(new THREE.Object3D());
 
   // ---- materials ----
-  const metalMat = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        color: 0xe0e0e0,
-        roughness: 0.3,
-        metalness: 0.9,
-      }),
-    [],
-  );
-
-  const darkMetalMat = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        color: 0x444444,
-        roughness: 0.7,
-        metalness: 0.8,
-      }),
-    [],
-  );
-
-  const plasticMat = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        color: 0xffffff,
-        roughness: 0.6,
-        metalness: 0.0,
-      }),
-    [],
-  );
-
   const meatMat = useMemo(() => createMeatMaterial(), []);
 
   // ---- ingredient-based chunk colors ----
@@ -277,39 +247,12 @@ export const GrinderMechanics = ({
     setIsGrinderOn(prev => !prev);
   };
 
-  // ---- useFrame: vibration, faceplate spin, particle physics, chunk damp ----
-  useFrame((state, delta) => {
+  // ---- useFrame: particle physics + chunk damp ----
+  // (vibration, faceplate spin, and switch animation now handled by sub-components)
+  useFrame((_, delta) => {
     if (!visible) return;
 
-    const time = state.clock.getElapsedTime();
     const phase = gamePhasRef.current;
-    const on = isGrinderOnRef.current;
-
-    // --- Grinder vibration (POC L497) ---
-    if (phase === 'grind' && on) {
-      const v = Math.sin(time * 50) * 0.02;
-      if (motorRef.current) motorRef.current.position.x = v;
-      if (chuteRef.current) chuteRef.current.position.x = v;
-      if (extruderRef.current) extruderRef.current.position.x = v;
-      // Faceplate rotation (POC L497: delta*5)
-      if (faceplateRef.current) faceplateRef.current.rotation.y += delta * 5;
-    } else if (phase === 'grind') {
-      if (motorRef.current) motorRef.current.position.x = 0;
-      if (chuteRef.current) chuteRef.current.position.x = 0;
-      if (extruderRef.current) extruderRef.current.position.x = 0;
-    }
-
-    // --- Switch notch rotation animation ---
-    if (switchNotchRef.current) {
-      const targetZ = on ? Math.PI / 4 : 0;
-      switchNotchRef.current.rotation.z +=
-        (targetZ - switchNotchRef.current.rotation.z) * Math.min(1, delta * 10);
-    }
-
-    // --- Plunger Y clamped during drag (pointer events on canvas handle XY) ---
-    // The drag target Y is tracked by a pointer-move listener on the canvas.
-    // We expose a method via userData so the canvas onPointerMove can update it.
-    // (Pointer events on the plunger hitbox only fire on pointer-down.)
 
     // --- Chunk position damp (replaces anime.js) ---
     for (let i = 0; i < 15; i++) {
@@ -420,87 +363,24 @@ export const GrinderMechanics = ({
       onPointerMove={handleGroupPointerMove}
       onPointerUp={handleGroupPointerUp}
     >
-      {/* ------------------------------------------------------------------ */}
-      {/* Motor block — BoxGeometry(4, 4.5, 5), offset (0, cY+2.25, -2)       */}
-      {/* ------------------------------------------------------------------ */}
-      <mesh ref={motorRef} position={[0, cY + 2.25, -2]} castShadow>
-        <boxGeometry args={[4, 4.5, 5]} />
-        <primitive object={metalMat} attach="material" />
-      </mesh>
+      {/* Grinder body: motor block + extruder + chute (vibrate together) */}
+      <GrinderBody counterY={cY} isOn={isGrinderOn && gamePhase === 'grind'} />
 
-      {/* ------------------------------------------------------------------ */}
-      {/* Extruder — CylinderGeometry(1.0, 1.0, 4, 32) rotX(PI/2)            */}
-      {/* ------------------------------------------------------------------ */}
-      <mesh ref={extruderRef} position={[0, cY + 2.5, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
-        <cylinderGeometry args={[1.0, 1.0, 4, 32]} />
-        <primitive object={metalMat} attach="material" />
-      </mesh>
+      {/* Tray under chute */}
+      <GrinderTray counterY={cY} />
 
-      {/* ------------------------------------------------------------------ */}
-      {/* Chute/hopper — CylinderGeometry(1.2, 0.8, 2.5, 32)                 */}
-      {/* ------------------------------------------------------------------ */}
-      <mesh ref={chuteRef} position={[0, cY + 4.5, 0.5]} castShadow>
-        <cylinderGeometry args={[1.2, 0.8, 2.5, 32]} />
-        <primitive object={metalMat} attach="material" />
-      </mesh>
+      {/* Faceplate: spins when grinder is on */}
+      <GrinderFaceplate counterY={cY} isOn={isGrinderOn && gamePhase === 'grind'} />
 
-      {/* ------------------------------------------------------------------ */}
-      {/* Tray — BoxGeometry(5, 0.3, 4), offset (0, cY+5.6, 0.5)             */}
-      {/* ------------------------------------------------------------------ */}
-      <mesh position={[0, cY + 5.6, 0.5]} castShadow>
-        <boxGeometry args={[5, 0.3, 4]} />
-        <primitive object={metalMat} attach="material" />
-      </mesh>
+      {/* Switch: on/off toggle */}
+      <GrinderSwitch counterY={cY} isOn={isGrinderOn} onClick={handleSwitchClick} />
 
-      {/* ------------------------------------------------------------------ */}
-      {/* Faceplate — CylinderGeometry(1.05, 1.05, 0.2, 32) rotX(PI/2)       */}
-      {/* darkMetal; rotates on Y when grinder is on                          */}
-      {/* ------------------------------------------------------------------ */}
-      <mesh ref={faceplateRef} position={[0, cY + 2.5, 2.0]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[1.05, 1.05, 0.2, 32]} />
-        <primitive object={darkMetalMat} attach="material" />
-      </mesh>
-
-      {/* ------------------------------------------------------------------ */}
-      {/* Switch — CylinderGeometry(0.6, 0.6, 0.5, 16) rotZ(PI/2)            */}
-      {/* ------------------------------------------------------------------ */}
-      <mesh position={[2.1, cY + 3, -2]} rotation={[0, 0, Math.PI / 2]} onClick={handleSwitchClick}>
-        <cylinderGeometry args={[0.6, 0.6, 0.5, 16]} />
-        <primitive object={metalMat} attach="material" />
-      </mesh>
-
-      {/* Switch notch — BoxGeometry(0.1, 1.0, 0.1), rotates 45° when on */}
-      <mesh ref={switchNotchRef} position={[2.35, cY + 3, -2]}>
-        <boxGeometry args={[0.1, 1.0, 0.1]} />
-        <primitive object={darkMetalMat} attach="material" />
-      </mesh>
-
-      {/* ------------------------------------------------------------------ */}
-      {/* Plunger group — draggable vertically                                */}
-      {/* shaft + guard + handle, initial Y = cY + 5.6                       */}
-      {/* ------------------------------------------------------------------ */}
-      <group ref={plungerGroupRef} position={[3, cY + 5.6, 0.5]}>
-        {/* Shaft */}
-        <mesh position={[0, 1.5, 0]}>
-          <cylinderGeometry args={[0.75, 0.75, 3]} />
-          <primitive object={plasticMat} attach="material" />
-        </mesh>
-        {/* Guard */}
-        <mesh position={[0, 3, 0]}>
-          <cylinderGeometry args={[1.2, 1.2, 0.2]} />
-          <primitive object={plasticMat} attach="material" />
-        </mesh>
-        {/* Handle */}
-        <mesh position={[0, 3.8, 0]}>
-          <cylinderGeometry args={[0.3, 0.3, 1.5]} />
-          <primitive object={plasticMat} attach="material" />
-        </mesh>
-        {/* Invisible hitbox for drag start */}
-        <mesh position={[0, 2.5, 0]} onPointerDown={handlePlungerPointerDown}>
-          <cylinderGeometry args={[1.5, 1.5, 5]} />
-          <meshBasicMaterial visible={false} />
-        </mesh>
-      </group>
+      {/* Plunger: draggable vertically */}
+      <GrinderPlunger
+        ref={plungerGroupRef}
+        counterY={cY}
+        onPointerDown={handlePlungerPointerDown}
+      />
 
       {/* Meat chunks — float independently (bowl rendering moved to TransferBowl) */}
       <group position={[-5, cY, 2]}>
