@@ -42,7 +42,11 @@
 import {useFrame, useThree} from '@react-three/fiber';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three/webgpu';
-import {createGreaseMaterial, updateGrease} from '../../engine/GreaseSimulation';
+import {
+  createGreaseMaterial,
+  GreaseWaveSimulation,
+  updateGrease,
+} from '../../engine/GreaseSimulation';
 import {createMeatMaterial, updateCookingAppearance} from '../../engine/MeatTexture';
 
 // ---------------------------------------------------------------------------
@@ -242,9 +246,15 @@ export function CookingMechanics({position, visible, onCookComplete}: CookingMec
   // Thermometer mercury fill ref (height driven by cookLevel)
   const mercuryRef = useRef<THREE.Mesh>(null);
 
+  // Grease wave simulation (browser-only)
+  const greaseSim = useRef<GreaseWaveSimulation | null>(null);
+  if (!greaseSim.current && typeof document !== 'undefined') {
+    greaseSim.current = new GreaseWaveSimulation(128);
+  }
+
   // Grease pool refs
   const greasePoolRef = useRef<THREE.Mesh>(null);
-  const greaseMat = useMemo(() => createGreaseMaterial(), []);
+  const greaseMat = useMemo(() => createGreaseMaterial(greaseSim.current ?? undefined), []);
 
   // Meat material for the sausage inside the pan
   const meatMat = useMemo(() => createMeatMaterial(), []);
@@ -448,6 +458,21 @@ export function CookingMechanics({position, visible, onCookComplete}: CookingMec
 
     // Update grease opacity and shimmer (POC L524)
     updateGrease(greaseMat, newCookLevel, t);
+
+    // Wave simulation — add splats proportional to cook level, then step
+    if (greaseSim.current && phaseRef.current === 'cooking') {
+      if (Math.random() < newCookLevel * 0.3) {
+        greaseSim.current.addSplat(
+          0.3 + Math.random() * 0.4, // u: center area
+          0.3 + Math.random() * 0.4, // v: center area
+          0.05 + Math.random() * 0.05, // radius
+          0.1 + newCookLevel * 0.2, // strength increases with cook
+        );
+      }
+      greaseSim.current.step(0.96);
+      greaseSim.current.computeNormals(2.0);
+      greaseSim.current.update();
+    }
 
     // Raise grease pool slightly during cooking
     if (greasePoolRef.current) {
