@@ -15,6 +15,7 @@ const mockIngredients = [
     blowPower: 2,
     category: 'fast food' as const,
     shape: {base: 'box' as const, detail: 'rounded' as const},
+    formAffinity: 'link' as const,
     decomposition: {
       chunkColor: '#D4A017',
       chunkScale: 1.0,
@@ -33,6 +34,7 @@ const mockIngredients = [
     blowPower: 4,
     category: 'canned' as const,
     shape: {base: 'sphere' as const, detail: 'wobbly' as const},
+    formAffinity: 'neutral' as const,
     decomposition: {
       chunkColor: '#E85D2C',
       chunkScale: 0.5,
@@ -51,6 +53,7 @@ const mockIngredients = [
     blowPower: 1,
     category: 'fancy' as const,
     shape: {base: 'elongated' as const, detail: 'claws' as const},
+    formAffinity: 'coil' as const,
     decomposition: {
       chunkColor: '#C41E3A',
       chunkScale: 1.5,

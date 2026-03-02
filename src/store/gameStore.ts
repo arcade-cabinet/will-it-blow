@@ -20,10 +20,46 @@ import {create} from 'zustand';
 import {createJSONStorage, persist} from 'zustand/middleware';
 import type {Reaction} from '../components/characters/reactions';
 import {computeBlendProperties as computeBlend} from '../engine/BlendCalculator';
-import type {Ingredient} from '../engine/Ingredients';
+import {getRandomIngredientPool, type Ingredient} from '../engine/Ingredients';
 
 /** Top-level application phase controlling which screen is rendered. */
 export type AppPhase = 'menu' | 'loading' | 'playing';
+
+/** Mr. Sausage's hidden demands — generated at game start, revealed at tasting */
+export interface MrSausageDemands {
+  /** Does he want coil (no twists) or links (twisted)? */
+  preferredForm: 'coil' | 'link';
+  /** How many links he wants (only matters if preferredForm === 'link') */
+  desiredLinkCount: number;
+  /** Whether he wants uniform links or doesn't care */
+  uniformity: 'even' | 'any';
+  /** 2-3 ingredients he secretly craves (by name) */
+  desiredIngredients: string[];
+  /** 1-2 ingredients that disgust him (by name) */
+  hatedIngredients: string[];
+  /** How he wants it cooked */
+  cookPreference: 'rare' | 'medium' | 'well-done' | 'charred';
+  /** His mood affects hint style */
+  moodProfile: 'cryptic' | 'passive-aggressive' | 'manic';
+}
+
+/** Player's decisions tracked across stages */
+export interface PlayerDecisions {
+  /** Ingredients selected in the fridge (names, in order) */
+  selectedIngredients: string[];
+  /** Normalized positions where player twisted during stuffing (0-1 along extrusion) */
+  twistPoints: number[];
+  /** Derived: 'coil' if 0 twists, 'link' if 1+ twists */
+  chosenForm: 'coil' | 'link' | null;
+  /** Final cook level when cooking completed (0-1) */
+  finalCookLevel: number;
+  /** Hint IDs the player has seen */
+  hintsViewed: string[];
+  /** Whether a twist happened while cranking (style/flair bonus) */
+  flairTwists: number;
+  /** Time spent at each stage in seconds */
+  stageTimings: Record<string, number>;
+}
 
 /** The type of object the player is currently carrying, or null if hands are empty. */
 export type GrabbedObjectType = 'ingredient' | 'bowl' | 'sausage' | 'pan' | null;
@@ -141,6 +177,13 @@ export interface GameState {
   /** Index of the ingredient the player is hovering over (for highlight). */
   fridgeHoveredIndex: number | null;
 
+  // ---- Demand / decision tracking ----
+
+  /** Mr. Sausage's secret demands for this session */
+  mrSausageDemands: MrSausageDemands | null;
+  /** Player's tracked decisions across all stages */
+  playerDecisions: PlayerDecisions;
+
   // ---- Settings (persisted) ----
 
   /** Music volume level 0-1 */
@@ -214,6 +257,20 @@ export interface GameState {
   setMusicMuted: (muted: boolean) => void;
   /** Toggle sound effects mute state. */
   setSfxMuted: (muted: boolean) => void;
+  /** Generate Mr. Sausage's secret demands from the given ingredient pool. */
+  generateDemands: (ingredientPool: string[]) => void;
+  /** Record a twist at a normalized position (0-1) along the sausage extrusion. */
+  recordTwist: (normalizedPosition: number) => void;
+  /** Record a flair twist performed while cranking. */
+  recordFlairTwist: () => void;
+  /** Derive the chosen form (coil vs link) from twist points. */
+  recordFormChoice: () => void;
+  /** Record the final cook level (0-1) when cooking completes. */
+  recordCookLevel: (level: number) => void;
+  /** Record that a hint was viewed by the player. */
+  recordHintViewed: (hintId: string) => void;
+  /** Record how long the player spent at a given stage. */
+  recordStageTiming: (stage: string, duration: number) => void;
   /** Return to the main menu, resetting all ephemeral game state. */
   returnToMenu: () => void;
 }
@@ -281,6 +338,16 @@ export const INITIAL_GAME_STATE = {
   fridgeHoveredIndex: null as number | null,
   playerPosition: [0, 1.6, 0] as [number, number, number],
   challengeTriggered: false,
+  mrSausageDemands: null as MrSausageDemands | null,
+  playerDecisions: {
+    selectedIngredients: [],
+    twistPoints: [],
+    chosenForm: null,
+    finalCookLevel: 0,
+    hintsViewed: [],
+    flairTwists: 0,
+    stageTimings: {},
+  } as PlayerDecisions,
   musicVolume: 0.7,
   sfxVolume: 0.8,
   musicMuted: false,
@@ -299,7 +366,8 @@ export const useGameStore = create<GameState>()(
 
       setAppPhase: (phase: AppPhase) => set({appPhase: phase}),
 
-      startNewGame: () =>
+      startNewGame: () => {
+        const pool = getRandomIngredientPool();
         set(state => ({
           appPhase: 'playing' as AppPhase,
           currentChallenge: 0,
@@ -330,7 +398,18 @@ export const useGameStore = create<GameState>()(
           fridgeHoveredIndex: null,
           playerPosition: [0, 1.6, 0] as [number, number, number],
           challengeTriggered: false,
-        })),
+          playerDecisions: {
+            selectedIngredients: [],
+            twistPoints: [],
+            chosenForm: null,
+            finalCookLevel: 0,
+            hintsViewed: [],
+            flairTwists: 0,
+            stageTimings: {},
+          },
+        }));
+        get().generateDemands(pool.map(i => i.name));
+      },
 
       continueGame: () =>
         set({
@@ -476,6 +555,76 @@ export const useGameStore = create<GameState>()(
       setPlayerPosition: (pos: [number, number, number]) => set({playerPosition: pos}),
       triggerChallenge: () => set({challengeTriggered: true}),
 
+      generateDemands: (ingredientPool: string[]) => {
+        const shuffled = [...ingredientPool].sort(() => Math.random() - 0.5);
+        const desiredCount = 2 + Math.floor(Math.random() * 2); // 2-3
+        const desiredIngredients = shuffled.slice(0, desiredCount);
+        const remaining = shuffled.slice(desiredCount);
+        const hatedCount = 1 + Math.floor(Math.random() * 2); // 1-2
+        const hatedIngredients = remaining.slice(0, hatedCount);
+
+        set({
+          mrSausageDemands: {
+            preferredForm: Math.random() > 0.5 ? 'coil' : 'link',
+            desiredLinkCount: 2 + Math.floor(Math.random() * 4), // 2-5
+            uniformity: Math.random() > 0.6 ? 'even' : 'any',
+            desiredIngredients,
+            hatedIngredients,
+            cookPreference: (['rare', 'medium', 'well-done', 'charred'] as const)[
+              Math.floor(Math.random() * 4)
+            ],
+            moodProfile: (['cryptic', 'passive-aggressive', 'manic'] as const)[
+              Math.floor(Math.random() * 3)
+            ],
+          },
+        });
+      },
+
+      recordTwist: (normalizedPosition: number) =>
+        set(state => ({
+          playerDecisions: {
+            ...state.playerDecisions,
+            twistPoints: [...state.playerDecisions.twistPoints, normalizedPosition],
+          },
+        })),
+
+      recordFlairTwist: () =>
+        set(state => ({
+          playerDecisions: {
+            ...state.playerDecisions,
+            flairTwists: state.playerDecisions.flairTwists + 1,
+          },
+        })),
+
+      recordFormChoice: () =>
+        set(state => ({
+          playerDecisions: {
+            ...state.playerDecisions,
+            chosenForm: state.playerDecisions.twistPoints.length > 0 ? 'link' : 'coil',
+          },
+        })),
+
+      recordCookLevel: (level: number) =>
+        set(state => ({
+          playerDecisions: {...state.playerDecisions, finalCookLevel: level},
+        })),
+
+      recordHintViewed: (hintId: string) =>
+        set(state => ({
+          playerDecisions: {
+            ...state.playerDecisions,
+            hintsViewed: [...state.playerDecisions.hintsViewed, hintId],
+          },
+        })),
+
+      recordStageTiming: (stage: string, duration: number) =>
+        set(state => ({
+          playerDecisions: {
+            ...state.playerDecisions,
+            stageTimings: {...state.playerDecisions.stageTimings, [stage]: duration},
+          },
+        })),
+
       setMusicVolume: (volume: number) => set({musicVolume: Math.max(0, Math.min(1, volume))}),
       setSfxVolume: (volume: number) => set({sfxVolume: Math.max(0, Math.min(1, volume))}),
       setMusicMuted: (muted: boolean) => set({musicMuted: muted}),
@@ -508,6 +657,16 @@ export const useGameStore = create<GameState>()(
           fridgeHoveredIndex: null,
           playerPosition: [0, 1.6, 0] as [number, number, number],
           challengeTriggered: false,
+          mrSausageDemands: null,
+          playerDecisions: {
+            selectedIngredients: [],
+            twistPoints: [],
+            chosenForm: null,
+            finalCookLevel: 0,
+            hintsViewed: [],
+            flairTwists: 0,
+            stageTimings: {},
+          },
         }),
     }),
     {

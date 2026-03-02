@@ -223,3 +223,121 @@ describe('useHint', () => {
     expect(store().hintsRemaining).toBe(0);
   });
 });
+
+describe('generateDemands', () => {
+  it('creates valid demands with all required fields', () => {
+    const pool = ['Big Mac', 'Lobster', 'Water', 'Pizza', 'Candy Cane', 'Dirt'];
+    store().generateDemands(pool);
+    const demands = store().mrSausageDemands;
+    expect(demands).not.toBeNull();
+    expect(['coil', 'link']).toContain(demands!.preferredForm);
+    expect(demands!.desiredLinkCount).toBeGreaterThanOrEqual(2);
+    expect(demands!.desiredLinkCount).toBeLessThanOrEqual(5);
+    expect(['even', 'any']).toContain(demands!.uniformity);
+    expect(demands!.desiredIngredients.length).toBeGreaterThanOrEqual(2);
+    expect(demands!.desiredIngredients.length).toBeLessThanOrEqual(3);
+    expect(demands!.hatedIngredients.length).toBeGreaterThanOrEqual(1);
+    expect(demands!.hatedIngredients.length).toBeLessThanOrEqual(2);
+    expect(['rare', 'medium', 'well-done', 'charred']).toContain(demands!.cookPreference);
+    expect(['cryptic', 'passive-aggressive', 'manic']).toContain(demands!.moodProfile);
+  });
+
+  it('picks desired and hated ingredients from the pool', () => {
+    const pool = ['Big Mac', 'Lobster', 'Water', 'Pizza', 'Candy Cane', 'Dirt'];
+    store().generateDemands(pool);
+    const demands = store().mrSausageDemands!;
+    for (const ing of demands.desiredIngredients) {
+      expect(pool).toContain(ing);
+    }
+    for (const ing of demands.hatedIngredients) {
+      expect(pool).toContain(ing);
+    }
+  });
+
+  it('does not overlap desired and hated ingredients', () => {
+    const pool = ['Big Mac', 'Lobster', 'Water', 'Pizza', 'Candy Cane', 'Dirt'];
+    store().generateDemands(pool);
+    const demands = store().mrSausageDemands!;
+    const overlap = demands.desiredIngredients.filter(i => demands.hatedIngredients.includes(i));
+    expect(overlap).toEqual([]);
+  });
+});
+
+describe('recordTwist', () => {
+  it('adds to twistPoints', () => {
+    store().recordTwist(0.25);
+    store().recordTwist(0.75);
+    expect(store().playerDecisions.twistPoints).toEqual([0.25, 0.75]);
+  });
+});
+
+describe('recordFormChoice', () => {
+  it('derives coil with 0 twists', () => {
+    store().recordFormChoice();
+    expect(store().playerDecisions.chosenForm).toBe('coil');
+  });
+
+  it('derives link with 1+ twists', () => {
+    store().recordTwist(0.5);
+    store().recordFormChoice();
+    expect(store().playerDecisions.chosenForm).toBe('link');
+  });
+});
+
+describe('recordFlairTwist', () => {
+  it('increments flair twist counter', () => {
+    expect(store().playerDecisions.flairTwists).toBe(0);
+    store().recordFlairTwist();
+    expect(store().playerDecisions.flairTwists).toBe(1);
+    store().recordFlairTwist();
+    expect(store().playerDecisions.flairTwists).toBe(2);
+  });
+});
+
+describe('recordCookLevel', () => {
+  it('records final cook level', () => {
+    store().recordCookLevel(0.72);
+    expect(store().playerDecisions.finalCookLevel).toBe(0.72);
+  });
+});
+
+describe('recordHintViewed', () => {
+  it('tracks viewed hint IDs', () => {
+    store().recordHintViewed('hint-1');
+    store().recordHintViewed('hint-2');
+    expect(store().playerDecisions.hintsViewed).toEqual(['hint-1', 'hint-2']);
+  });
+});
+
+describe('recordStageTiming', () => {
+  it('records stage duration', () => {
+    store().recordStageTiming('fridge', 45.2);
+    store().recordStageTiming('grinder', 30.0);
+    expect(store().playerDecisions.stageTimings).toEqual({fridge: 45.2, grinder: 30.0});
+  });
+});
+
+describe('startNewGame demand integration', () => {
+  it('resets playerDecisions and generates fresh demands', () => {
+    // Dirty the state
+    store().recordTwist(0.5);
+    store().recordFlairTwist();
+    store().recordCookLevel(0.8);
+    store().recordHintViewed('hint-1');
+
+    store().startNewGame();
+
+    // playerDecisions should be reset
+    const pd = store().playerDecisions;
+    expect(pd.twistPoints).toEqual([]);
+    expect(pd.flairTwists).toBe(0);
+    expect(pd.finalCookLevel).toBe(0);
+    expect(pd.hintsViewed).toEqual([]);
+    expect(pd.chosenForm).toBeNull();
+    expect(pd.stageTimings).toEqual({});
+
+    // demands should be generated
+    expect(store().mrSausageDemands).not.toBeNull();
+    expect(store().mrSausageDemands!.desiredIngredients.length).toBeGreaterThanOrEqual(2);
+  });
+});

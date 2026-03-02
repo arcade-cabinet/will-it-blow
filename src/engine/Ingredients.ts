@@ -52,6 +52,8 @@ export interface Ingredient {
   color: string;
   /** 3D shape descriptor used by Ingredient3D to select the mesh geometry */
   shape: IngredientShape;
+  /** Whether this ingredient works better as coil, link, or either */
+  formAffinity: 'coil' | 'link' | 'neutral';
   /** How the ingredient decomposes when ground */
   decomposition: {
     /** Color of chunks when broken apart in the grinder */
@@ -88,6 +90,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 2,
     color: '#D4A017',
     shape: {base: 'box', detail: 'rounded'},
+    formAffinity: 'link',
     decomposition: {
       chunkColor: '#D4A017',
       chunkScale: 1.0,
@@ -106,6 +109,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 4,
     color: '#E85D2C',
     shape: {base: 'sphere', detail: 'wobbly'},
+    formAffinity: 'neutral',
     decomposition: {
       chunkColor: '#E85D2C',
       chunkScale: 0.5,
@@ -124,6 +128,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 1,
     color: '#C41E3A',
     shape: {base: 'elongated', detail: 'claws'},
+    formAffinity: 'coil',
     decomposition: {
       chunkColor: '#C41E3A',
       chunkScale: 1.5,
@@ -142,6 +147,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 5,
     color: '#4FC3F7',
     shape: {base: 'sphere', detail: 'wobbly'},
+    formAffinity: 'neutral',
     decomposition: {
       chunkColor: '#4FC3F7',
       chunkScale: 0.3,
@@ -160,6 +166,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 0,
     color: '#E0E0E0',
     shape: {base: 'sphere'},
+    formAffinity: 'neutral',
     decomposition: {
       chunkColor: '#E0E0E0',
       chunkScale: 0.2,
@@ -178,6 +185,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 2,
     color: '#FF1744',
     shape: {base: 'cone'},
+    formAffinity: 'link',
     decomposition: {
       chunkColor: '#FF1744',
       chunkScale: 0.8,
@@ -196,6 +204,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 3,
     color: '#B71C1C',
     shape: {base: 'small-sphere'},
+    formAffinity: 'link',
     decomposition: {
       chunkColor: '#B71C1C',
       chunkScale: 0.6,
@@ -214,6 +223,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 3,
     color: '#FFC107',
     shape: {base: 'sphere', detail: 'wobbly'},
+    formAffinity: 'neutral',
     decomposition: {
       chunkColor: '#FFC107',
       chunkScale: 0.7,
@@ -232,6 +242,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 1,
     color: '#FAFAFA',
     shape: {base: 'cylinder'},
+    formAffinity: 'neutral',
     decomposition: {
       chunkColor: '#FAFAFA',
       chunkScale: 0.5,
@@ -250,6 +261,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 2,
     color: '#8D6E63',
     shape: {base: 'box', detail: 'rounded'},
+    formAffinity: 'coil',
     decomposition: {
       chunkColor: '#8D6E63',
       chunkScale: 1.2,
@@ -268,6 +280,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 3,
     color: '#FF6D00',
     shape: {base: 'small-sphere'},
+    formAffinity: 'link',
     decomposition: {
       chunkColor: '#FF6D00',
       chunkScale: 0.5,
@@ -286,6 +299,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 1,
     color: '#E040FB',
     shape: {base: 'small-sphere'},
+    formAffinity: 'link',
     decomposition: {
       chunkColor: '#E040FB',
       chunkScale: 0.4,
@@ -304,6 +318,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 3,
     color: '#FF8A65',
     shape: {base: 'sphere', detail: 'wobbly'},
+    formAffinity: 'coil',
     decomposition: {
       chunkColor: '#FF8A65',
       chunkScale: 0.8,
@@ -322,6 +337,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 2,
     color: '#7B1FA2',
     shape: {base: 'cylinder', detail: 'flat'},
+    formAffinity: 'link',
     decomposition: {
       chunkColor: '#7B1FA2',
       chunkScale: 1.0,
@@ -340,6 +356,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 4,
     color: '#F48FB1',
     shape: {base: 'sphere'},
+    formAffinity: 'neutral',
     decomposition: {
       chunkColor: '#F48FB1',
       chunkScale: 0.3,
@@ -358,6 +375,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 2,
     color: '#FFF9C4',
     shape: {base: 'cylinder'},
+    formAffinity: 'link',
     decomposition: {
       chunkColor: '#FFF9C4',
       chunkScale: 0.8,
@@ -376,6 +394,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 3,
     color: '#F57C00',
     shape: {base: 'cylinder', detail: 'flat'},
+    formAffinity: 'link',
     decomposition: {
       chunkColor: '#F57C00',
       chunkScale: 1.0,
@@ -394,6 +413,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 1,
     color: '#5D4037',
     shape: {base: 'irregular'},
+    formAffinity: 'neutral',
     decomposition: {
       chunkColor: '#5D4037',
       chunkScale: 2.0,
@@ -412,6 +432,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 2,
     color: '#FFE082',
     shape: {base: 'box'},
+    formAffinity: 'link',
     decomposition: {
       chunkColor: '#FFE082',
       chunkScale: 0.6,
@@ -430,6 +451,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 2,
     color: '#EF5350',
     shape: {base: 'box', detail: 'rounded'},
+    formAffinity: 'coil',
     decomposition: {
       chunkColor: '#EF5350',
       chunkScale: 1.0,
@@ -448,6 +470,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 3,
     color: '#1565C0',
     shape: {base: 'box', detail: 'rounded'},
+    formAffinity: 'link',
     decomposition: {
       chunkColor: '#1565C0',
       chunkScale: 1.0,
@@ -466,6 +489,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 2,
     color: '#00BFA5',
     shape: {base: 'small-sphere'},
+    formAffinity: 'link',
     decomposition: {
       chunkColor: '#00BFA5',
       chunkScale: 0.3,
@@ -484,6 +508,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 3,
     color: '#FFCA28',
     shape: {base: 'sphere', detail: 'wobbly'},
+    formAffinity: 'neutral',
     decomposition: {
       chunkColor: '#FFCA28',
       chunkScale: 0.7,
@@ -502,6 +527,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 2,
     color: '#F9A825',
     shape: {base: 'elongated'},
+    formAffinity: 'coil',
     decomposition: {
       chunkColor: '#F9A825',
       chunkScale: 1.2,
@@ -520,6 +546,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 1,
     color: '#616161',
     shape: {base: 'irregular'},
+    formAffinity: 'neutral',
     decomposition: {
       chunkColor: '#616161',
       chunkScale: 2.0,
@@ -538,6 +565,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 3,
     color: '#E53935',
     shape: {base: 'small-sphere'},
+    formAffinity: 'link',
     decomposition: {
       chunkColor: '#E53935',
       chunkScale: 0.4,
