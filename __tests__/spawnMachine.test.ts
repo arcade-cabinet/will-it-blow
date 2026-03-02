@@ -60,20 +60,20 @@ beforeEach(() => {
 
 describe('spawnMachine', () => {
   it('creates the correct number of entities', () => {
-    const entities = spawnMachine(testArchetype, [0, 0, 0]);
+    const entities = spawnMachine(testArchetype);
     expect(entities).toHaveLength(3);
     expect(world.entities).toHaveLength(3);
   });
 
   it('assigns correct names from machineId and slotName', () => {
-    const entities = spawnMachine(testArchetype, [0, 0, 0]);
+    const entities = spawnMachine(testArchetype);
     expect(entities[0].name).toBe('grinder/body');
     expect(entities[1].name).toBe('grinder/handle');
     expect(entities[2].name).toBe('grinder/hopper');
   });
 
   it('assigns machineSlot with correct machineId and slotName', () => {
-    const entities = spawnMachine(testArchetype, [0, 0, 0]);
+    const entities = spawnMachine(testArchetype);
     expect(entities[0].machineSlot).toEqual({
       machineId: 'grinder',
       slotName: 'body',
@@ -89,7 +89,7 @@ describe('spawnMachine', () => {
   });
 
   it('copies component data from slot definitions', () => {
-    const entities = spawnMachine(testArchetype, [0, 0, 0]);
+    const entities = spawnMachine(testArchetype);
     expect(entities[0].geometry).toEqual({type: 'box', args: [1, 2, 1]});
     expect(entities[0].material?.color).toBe(0x888888);
     expect(entities[0].isStatic).toBe(true);
@@ -100,20 +100,17 @@ describe('spawnMachine', () => {
     });
   });
 
-  it('offsets slot positions by furniture surface position', () => {
-    // surfacePos = [5, 2, 3] (furniture at X=5, Y=2 surface height, Z=3)
-    // Slot positions are relative to the surface
-    const entities = spawnMachine(testArchetype, [5, 2, 3]);
-    // body: [0,1,0] + [5,2,3] → [5, 3, 3]
-    expect(entities[0].transform?.position).toEqual([5, 3, 3]);
-    // handle: [0.5,2,0] + [5,2,3] → [5.5, 4, 3]
-    expect(entities[1].transform?.position).toEqual([5.5, 4, 3]);
-    // hopper: [0,3,0] + [5,2,3] → [5, 5, 3]
-    expect(entities[2].transform?.position).toEqual([5, 5, 3]);
+  it('preserves slot positions as local coordinates (no world offset)', () => {
+    const entities = spawnMachine(testArchetype);
+    // Positions should be exactly as defined in the archetype —
+    // world positioning is handled by the orchestrator's <group>
+    expect(entities[0].transform?.position).toEqual([0, 1, 0]);
+    expect(entities[1].transform?.position).toEqual([0.5, 2, 0]);
+    expect(entities[2].transform?.position).toEqual([0, 3, 0]);
   });
 
-  it('preserves rotation and scale when offsetting position', () => {
-    const entities = spawnMachine(testArchetype, [1, 0.5, 1]);
+  it('preserves rotation and scale from archetype', () => {
+    const entities = spawnMachine(testArchetype);
     expect(entities[1].transform?.rotation).toEqual([0, 0, Math.PI / 4]);
     expect(entities[1].transform?.scale).toEqual([1, 1, 1]);
   });
@@ -130,7 +127,7 @@ describe('spawnMachine', () => {
         },
       ],
     };
-    const entities = spawnMachine(noTransformArchetype, [1, 1, 2]);
+    const entities = spawnMachine(noTransformArchetype);
     expect(entities).toHaveLength(1);
     expect(entities[0].transform).toBeUndefined();
     expect(entities[0].lightDef).toEqual({
@@ -143,14 +140,14 @@ describe('spawnMachine', () => {
 
   it('adds entities to the world', () => {
     expect(world.entities).toHaveLength(0);
-    spawnMachine(testArchetype, [0, 0, 0]);
+    spawnMachine(testArchetype);
     expect(world.entities).toHaveLength(3);
   });
 });
 
 describe('despawnMachine', () => {
   it('removes all spawned entities from the world', () => {
-    const entities = spawnMachine(testArchetype, [0, 0, 0]);
+    const entities = spawnMachine(testArchetype);
     expect(world.entities).toHaveLength(3);
     despawnMachine(entities);
     expect(world.entities).toHaveLength(0);
@@ -158,7 +155,7 @@ describe('despawnMachine', () => {
 
   it('does not affect other entities in the world', () => {
     const otherEntity = world.add({name: 'other'});
-    const entities = spawnMachine(testArchetype, [0, 0, 0]);
+    const entities = spawnMachine(testArchetype);
     expect(world.entities).toHaveLength(4);
     despawnMachine(entities);
     expect(world.entities).toHaveLength(1);
@@ -166,7 +163,7 @@ describe('despawnMachine', () => {
   });
 
   it('handles an empty entity array', () => {
-    spawnMachine(testArchetype, [0, 0, 0]);
+    spawnMachine(testArchetype);
     despawnMachine([]);
     expect(world.entities).toHaveLength(3);
   });
