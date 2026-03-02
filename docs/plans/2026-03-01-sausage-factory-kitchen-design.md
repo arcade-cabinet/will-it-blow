@@ -1,6 +1,6 @@
 <!--
 title: Sausage Factory Kitchen — Game Completion Design
-domain: game-design
+domain: plan
 status: active
 engine: r3f
 last-verified: 2026-03-01

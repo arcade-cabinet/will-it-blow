@@ -12,7 +12,7 @@ export function updateRotation(entities: Entity[], delta: number): void {
 
 export function RotationSystem() {
   useFrame((_state, delta) => {
-    updateRotation([...rotating], delta);
+    updateRotation(rotating.entities, delta);
   });
   return null;
 }

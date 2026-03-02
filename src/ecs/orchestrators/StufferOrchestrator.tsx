@@ -270,10 +270,14 @@ export const StufferOrchestrator = ({position, visible}: StufferOrchestratorProp
 
   // ---- Watch for defeat ----
   useEffect(() => {
-    if (gameStatus === 'defeat' && phaseRef.current === 'active') {
+    if (gameStatus === 'defeat' && phaseRef.current !== 'complete') {
       phaseRef.current = 'complete';
       setChallengePhase('complete');
       audioEngine.stopPressure();
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current);
+        successTimerRef.current = null;
+      }
     }
   }, [gameStatus, setChallengePhase]);
 

@@ -52,6 +52,7 @@ export function buildInputHandlers(entity: Entity): InputHandlers {
   const onPointerDown = hasDrag
     ? (e: ThreeEvent<PointerEvent>) => {
         e.stopPropagation();
+        (e.nativeEvent.target as Element)?.setPointerCapture?.(e.nativeEvent.pointerId);
         if (entity.crank?.enabled) {
           entity.crank.isDragging = true;
           entity.crank.dragDelta = 0;
@@ -83,6 +84,7 @@ export function buildInputHandlers(entity: Entity): InputHandlers {
   const onPointerUp = hasDrag
     ? (e: ThreeEvent<PointerEvent>) => {
         e.stopPropagation();
+        (e.nativeEvent.target as Element)?.releasePointerCapture?.(e.nativeEvent.pointerId);
         if (entity.crank) entity.crank.isDragging = false;
         if (entity.plunger) entity.plunger.isDragging = false;
       }

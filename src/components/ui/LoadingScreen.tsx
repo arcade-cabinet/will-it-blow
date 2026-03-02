@@ -273,14 +273,22 @@ export function LoadingScreen() {
 
         if (controller.signal.aborted) return;
 
-        const failures = results.filter(r => r.status === 'rejected');
-        if (failures.length > allAssets.length / 2) {
+        // GLB models are required — any failure is fatal
+        const glbFailures = results.slice(0, glbUrls.length).filter(r => r.status === 'rejected');
+        if (glbFailures.length > 0) {
+          setLoadError('Failed to load required game models. Check your connection.');
+          return;
+        }
+
+        // Optional assets (textures/audio) — tolerate partial failures
+        const optionalFailures = results.slice(glbUrls.length).filter(r => r.status === 'rejected');
+        if (optionalFailures.length > (allAssets.length - glbUrls.length) / 2) {
           setLoadError('Failed to load assets. Check your connection.');
           return;
         }
-        if (failures.length > 0) {
+        if (optionalFailures.length > 0) {
           console.warn(
-            `${failures.length}/${allAssets.length} assets failed to preload (non-fatal)`,
+            `${optionalFailures.length}/${allAssets.length - glbUrls.length} optional assets failed to preload (non-fatal)`,
           );
         }
 
@@ -338,6 +346,10 @@ export function LoadingScreen() {
   const handleRetry = () => {
     setLoadError(null);
     setProgress(0);
+    activatedRef.current = Array(LINK_COUNT).fill(false);
+    for (const scale of linkScales) {
+      scale.setValue(0);
+    }
     setRetryCount(c => c + 1);
   };
 

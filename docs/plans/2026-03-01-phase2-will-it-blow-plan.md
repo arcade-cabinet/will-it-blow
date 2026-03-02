@@ -1,7 +1,7 @@
 <!--
 title: Phase 2 Implementation Plan — Will It Blow + Difficulty + Multi-Round
-domain: game-design
-status: draft
+domain: plan
+status: current
 engine: r3f
 last-verified: 2026-03-02
 depends-on: [game-design, state-management, 3d-rendering, phase1-complete]

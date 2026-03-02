@@ -1,6 +1,6 @@
 <!--
 title: Room Architecture — The Sausage Factory Kitchen
-domain: architecture
+domain: reference
 status: stale
 engine: r3f
 last-verified: 2026-03-01

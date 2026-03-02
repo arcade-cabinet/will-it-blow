@@ -41,7 +41,7 @@ export function updatePlungers(entities: Entity[], delta: number): void {
 
 export function PlungerSystem() {
   useFrame((_state, delta) => {
-    updatePlungers([...plungers], delta);
+    updatePlungers(plungers.entities, delta);
   });
   return null;
 }

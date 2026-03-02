@@ -1,5 +1,5 @@
 <!--
-domain: game-design
+domain: plan
 status: active
 -->
 

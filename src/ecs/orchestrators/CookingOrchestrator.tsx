@@ -375,7 +375,8 @@ export function CookingOrchestrator({position, visible}: CookingOrchestratorProp
       }
 
       // Timer expired — score based on partial hold progress
-      if (timerRef.current <= 0) {
+      // Guard: only fire if we haven't already transitioned (e.g., success in same frame)
+      if (timerRef.current <= 0 && phaseRef.current === 'active') {
         phaseRef.current = 'complete';
         setChallengePhase('complete');
         audioEngine.stopCookingSizzle();

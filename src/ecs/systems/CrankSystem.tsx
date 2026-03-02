@@ -14,7 +14,7 @@ export function updateCranks(entities: Entity[], delta: number): void {
       }
       crank.dragDelta = 0; // Always consume to prevent stale delta on re-enable
     } else {
-      crank.angularVelocity *= 1 - crank.damping * delta;
+      crank.angularVelocity *= Math.max(0, 1 - crank.damping * delta);
       crank.angle += crank.angularVelocity * delta;
     }
     three.rotation.y = crank.angle;
@@ -23,7 +23,7 @@ export function updateCranks(entities: Entity[], delta: number): void {
 
 export function CrankSystem() {
   useFrame((_state, delta) => {
-    updateCranks([...cranks], delta);
+    updateCranks(cranks.entities, delta);
   });
   return null;
 }

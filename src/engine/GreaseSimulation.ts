@@ -9,16 +9,17 @@
  * Visual goal: "shimmering oily grease in a frying pan" — animated roughness
  * noise for shimmer, opacity driven by cookLevel.
  *
- * Ported values from POC sausage_factory.html:
- *   - color: 0xcca600      (L240)
- *   - roughness: 0.05      (L240)
- *   - metalness: 0.1       (L240)
- *   - transmission: 0.2    (L240)
- *   - ior: 1.4             (L240)
- *   - opacity: 0.2 + cookLevel * 0.6  (L524)
+ * All tunable values sourced from config.physics.grease (physics/grease.json).
  */
 
 import {CanvasTexture, MeshPhysicalMaterial, RepeatWrapping} from 'three/webgpu';
+import {config} from '../config';
+
+// ---------------------------------------------------------------------------
+// Config shorthand
+// ---------------------------------------------------------------------------
+
+const greaseConfig = config.physics.grease;
 
 // ---------------------------------------------------------------------------
 // GreaseWaveSimulation — 2D wave equation on CPU canvas
@@ -51,7 +52,7 @@ export class GreaseWaveSimulation {
   private normalCtx: CanvasRenderingContext2D | null;
   private normalTexture: CanvasTexture | null;
 
-  constructor(size: number = 128) {
+  constructor(size: number = greaseConfig.waveSimSize) {
     this.size = size;
     const n = size * size;
     this.curr = new Float32Array(n);
@@ -111,7 +112,7 @@ export class GreaseWaveSimulation {
   }
 
   /** Step the wave equation (damped 2D wave propagation). */
-  step(damping: number = 0.98): void {
+  step(damping: number = greaseConfig.waveDamping): void {
     const s = this.size;
     this.next.fill(0);
 
@@ -134,7 +135,7 @@ export class GreaseWaveSimulation {
   }
 
   /** Compute normal map from the heightfield via finite differences. */
-  computeNormals(scale: number = 2.0): void {
+  computeNormals(scale: number = greaseConfig.normalScale): void {
     if (!this.normalCtx) return;
     const s = this.size;
     const imgData = this.normalCtx.createImageData(s, s);
@@ -206,20 +207,21 @@ export class GreaseWaveSimulation {
 export function createGreaseMaterial(sim?: GreaseWaveSimulation): MeshPhysicalMaterial {
   const displacementMap = sim?.getDisplacementMap() ?? undefined;
   const normalMap = sim?.getNormalMap() ?? undefined;
+  const mat = greaseConfig.material;
 
   return new MeshPhysicalMaterial({
-    color: 0xcca600,
+    color: mat.color,
     transparent: true,
     opacity: 0.0,
-    roughness: 0.05,
-    metalness: 0.1,
-    transmission: 0.2,
-    ior: 1.4,
+    roughness: mat.roughness,
+    metalness: mat.metalness,
+    transmission: mat.transmission,
+    ior: mat.ior,
     depthWrite: false,
     ...(displacementMap
       ? {
           displacementMap,
-          displacementScale: 0.8,
+          displacementScale: mat.displacementScale,
           normalMap,
         }
       : {}),
@@ -229,12 +231,7 @@ export function createGreaseMaterial(sim?: GreaseWaveSimulation): MeshPhysicalMa
 /**
  * Update grease material appearance each frame based on cook level and time.
  *
- * Opacity is driven directly from cookLevel (POC L524):
- *   `opacity = 0.2 + cookLevel * 0.6`
- *
- * Roughness animates with a sinusoidal shimmer pattern to simulate the
- * flickering specular highlights of hot liquid grease. This replaces the
- * POC's FBO wave simulation with a lightweight procedural alternative.
+ * Opacity ramp and roughness shimmer driven by config.physics.grease values.
  *
  * @param material  - The MeshPhysicalMaterial returned by createGreaseMaterial()
  * @param cookLevel - 0 (raw / no grease) to 1 (fully cooked / grease fully visible)
@@ -248,9 +245,9 @@ export function updateGrease(
   const clamped = Math.max(0, Math.min(1, cookLevel));
 
   // Opacity ramp: fully transparent when cold, nearly opaque when charred
-  material.opacity = 0.2 + clamped * 0.6;
+  material.opacity = greaseConfig.opacityBase + clamped * greaseConfig.opacityScale;
 
-  // Shimmer: base roughness 0.05, animate +/- 0.04 at cooking frequencies
+  // Shimmer: animate roughness at cooking frequencies
   // Multiple sine waves at different frequencies simulate turbulent grease
   const shimmer =
     Math.sin(time * 3.7) * 0.02 +
@@ -258,5 +255,13 @@ export function updateGrease(
     Math.sin(time * 13.3 + 2.7) * 0.005;
 
   // Roughness increases slightly as grease heats and bubbles
-  material.roughness = Math.max(0.01, Math.min(0.3, 0.05 + clamped * 0.08 + shimmer));
+  material.roughness = Math.max(
+    0.01,
+    Math.min(
+      0.3,
+      greaseConfig.shimmerBaseRoughness +
+        clamped * greaseConfig.shimmerHeatRoughnessScale +
+        shimmer,
+    ),
+  );
 }
