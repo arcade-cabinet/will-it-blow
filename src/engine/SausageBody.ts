@@ -7,12 +7,15 @@
  * The R3F component that uses this module owns the Rapier rigid bodies.
  *
  * Exports:
- *  - SausageCurve          — spiral coil curve (radius 0.5 → 3.3)
- *  - SausageParams         — geometry configuration interface
- *  - BoneAnchor            — per-bone state interface
- *  - buildSausageGeometry  — builds SkinnedMesh geometry + anchor list
- *  - computeSpringImpulse  — spring-damper impulse vector
- *  - applyCookingShrinkage — cooking deformation of an anchor target position
+ *  - SausageCurve              — spiral coil curve (radius 0.5 → 3.3)
+ *  - SausageParams             — geometry configuration interface
+ *  - BoneAnchor                — per-bone state interface
+ *  - buildSausageGeometry      — builds SkinnedMesh geometry + anchor list
+ *  - SausageLinksCurve         — straight-line links curve
+ *  - SausageLinksParams        — links geometry configuration interface
+ *  - buildSausageLinksGeometry — builds SkinnedMesh geometry for sausage links
+ *  - computeSpringImpulse      — spring-damper impulse vector
+ *  - applyCookingShrinkage     — cooking deformation of an anchor target position
  */
 
 import * as THREE from 'three/webgpu';
@@ -158,6 +161,150 @@ export function buildSausageGeometry(params: SausageParams): SausageGeometryResu
   }
 
   // Triangle indices (POC lines 296-299)
+  for (let i = 0; i < pSeg; i++) {
+    for (let j = 0; j < rSeg; j++) {
+      const a = i * (rSeg + 1) + (j + 1);
+      const b = i * (rSeg + 1) + j;
+      const c = (i + 1) * (rSeg + 1) + j;
+      const d = (i + 1) * (rSeg + 1) + (j + 1);
+      inds.push(a, d, b, b, d, c);
+    }
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(sInds, 4));
+  geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sWts, 4));
+  geo.setIndex(inds);
+  geo.computeVertexNormals();
+
+  return {geometry: geo, numBones, anchors};
+}
+
+// ---------------------------------------------------------------------------
+// SausageLinksCurve — straight-line links path
+// ---------------------------------------------------------------------------
+
+/**
+ * Straight-line curve along the Z axis used for sausage links.
+ *
+ * Total length = numLinks * linkLength, centered at the origin.
+ */
+export class SausageLinksCurve extends THREE.Curve<THREE.Vector3> {
+  readonly numLinks: number;
+  readonly linkLength: number;
+
+  constructor(numLinks: number = 5, linkLength: number = 0.8) {
+    super();
+    this.numLinks = numLinks;
+    this.linkLength = linkLength;
+  }
+
+  getPoint(t: number, target = new THREE.Vector3()): THREE.Vector3 {
+    const totalLength = this.numLinks * this.linkLength;
+    const z = t * totalLength - totalLength / 2;
+    return target.set(0, 0, z);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// SausageLinksParams
+// ---------------------------------------------------------------------------
+
+export interface SausageLinksParams {
+  numLinks: number;
+  thickness: number;
+  linkLength: number;
+  pathSegments: number;
+  radialSegments: number;
+}
+
+// ---------------------------------------------------------------------------
+// buildSausageLinksGeometry
+// ---------------------------------------------------------------------------
+
+/**
+ * Creates skinned-mesh geometry for a string of sausage links.
+ *
+ * Each link pinches at the boundaries (radius → 30% of thickness) and
+ * swells at the center (full thickness). One bone per link, placed at the
+ * link center.
+ *
+ * @param params - Geometry configuration.
+ * @returns BufferGeometry, numBones count, and per-bone BoneAnchor array.
+ */
+export function buildSausageLinksGeometry(params: SausageLinksParams): SausageGeometryResult {
+  const {numLinks, thickness, linkLength, pathSegments: pSeg, radialSegments: rSeg} = params;
+
+  const curve = new SausageLinksCurve(numLinks, linkLength);
+  const numBones = numLinks;
+
+  // One bone per link, anchored at center of each link
+  const anchors: BoneAnchor[] = [];
+  for (let i = 0; i < numBones; i++) {
+    const t = (i + 0.5) / numLinks;
+    const p = curve.getPointAt(t);
+    anchors.push({
+      t,
+      base: p.clone(),
+      tgt: p.clone(),
+      extruded: false,
+    });
+  }
+
+  // Frenet frames for tube orientation
+  const frames = curve.computeFrenetFrames(pSeg, false);
+
+  const verts: number[] = [];
+  const uvs: number[] = [];
+  const inds: number[] = [];
+  const sInds: number[] = [];
+  const sWts: number[] = [];
+
+  for (let i = 0; i <= pSeg; i++) {
+    const t = i / pSeg;
+    const p = curve.getPointAt(t);
+    const N = frames.normals[i];
+    const B = frames.binormals[i];
+
+    // Bone weight interpolation
+    const bF = t * (numBones - 1);
+    let b0 = Math.floor(bF);
+    let b1 = Math.ceil(bF);
+    const w1 = bF - b0;
+    const w0 = 1 - w1;
+    if (b0 >= numBones) b0 = numBones - 1;
+    if (b1 >= numBones) b1 = numBones - 1;
+
+    // Per-link radius modulation: pinch at link boundaries, swell at center
+    const tInLink = t * numLinks - Math.floor(t * numLinks);
+    const pinchFactor = Math.sin(tInLink * Math.PI);
+    let cR = thickness * (0.3 + 0.7 * pinchFactor);
+
+    // Tapered ends: if within 2% of either end, taper radius to near zero
+    const dE = Math.min(t, 1 - t);
+    if (dE < 0.02) {
+      cR *= 0.01 + 0.99 * Math.sin((dE / 0.02) * (Math.PI / 2));
+    }
+
+    for (let j = 0; j <= rSeg; j++) {
+      const th = (j / rSeg) * Math.PI * 2;
+      const cosT = Math.cos(th);
+      const sinT = Math.sin(th);
+
+      verts.push(
+        p.x + cR * (cosT * N.x + sinT * B.x),
+        p.y + cR * (cosT * N.y + sinT * B.y),
+        p.z + cR * (cosT * N.z + sinT * B.z),
+      );
+      uvs.push(j / rSeg, t * (pSeg / 10));
+      sInds.push(b0, b1, 0, 0);
+      sWts.push(w0, w1, 0, 0);
+    }
+  }
+
+  // Triangle indices
   for (let i = 0; i < pSeg; i++) {
     for (let j = 0; j < rSeg; j++) {
       const a = i * (rSeg + 1) + (j + 1);

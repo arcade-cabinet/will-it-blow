@@ -3,8 +3,11 @@ import {
   applyCookingShrinkage,
   type BoneAnchor,
   buildSausageGeometry,
+  buildSausageLinksGeometry,
   computeSpringImpulse,
   SausageCurve,
+  SausageLinksCurve,
+  type SausageLinksParams,
   type SausageParams,
 } from '../SausageBody';
 
@@ -145,6 +148,93 @@ describe('buildSausageGeometry', () => {
     const r = buildSausageGeometry({loops: 2, thickness: 0.3, pathSegments: 50, radialSegments: 8});
     expect(r.numBones).toBe(20);
     expect(r.anchors).toHaveLength(20);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SausageLinksCurve
+// ---------------------------------------------------------------------------
+
+describe('SausageLinksCurve', () => {
+  const numLinks = 5;
+  const linkLength = 0.8;
+  const curve = new SausageLinksCurve(numLinks, linkLength);
+  const totalLength = numLinks * linkLength; // 4.0
+
+  it('getPoint(0) returns (0, 0, -totalLength/2)', () => {
+    const p = curve.getPoint(0);
+    expect(p.x).toBeCloseTo(0, 5);
+    expect(p.y).toBeCloseTo(0, 5);
+    expect(p.z).toBeCloseTo(-totalLength / 2, 5);
+  });
+
+  it('getPoint(1) returns (0, 0, +totalLength/2)', () => {
+    const p = curve.getPoint(1);
+    expect(p.x).toBeCloseTo(0, 5);
+    expect(p.y).toBeCloseTo(0, 5);
+    expect(p.z).toBeCloseTo(totalLength / 2, 5);
+  });
+
+  it('getPoint(0.5) returns (0, 0, 0)', () => {
+    const p = curve.getPoint(0.5);
+    expect(p.x).toBeCloseTo(0, 5);
+    expect(p.y).toBeCloseTo(0, 5);
+    expect(p.z).toBeCloseTo(0, 5);
+  });
+
+  it('uses the supplied target vector and returns it', () => {
+    const target = new THREE.Vector3(99, 99, 99);
+    const result = curve.getPoint(0, target);
+    expect(result).toBe(target);
+    expect(target.z).toBeCloseTo(-totalLength / 2, 5);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// buildSausageLinksGeometry
+// ---------------------------------------------------------------------------
+
+describe('buildSausageLinksGeometry', () => {
+  const LINKS_PARAMS: SausageLinksParams = {
+    numLinks: 5,
+    thickness: 0.4,
+    linkLength: 0.8,
+    pathSegments: 100,
+    radialSegments: 16,
+  };
+  const result = buildSausageLinksGeometry(LINKS_PARAMS);
+  const {geometry, numBones, anchors} = result;
+
+  it('numBones equals numLinks', () => {
+    expect(numBones).toBe(LINKS_PARAMS.numLinks);
+  });
+
+  it('vertex count matches (pathSegments+1) * (radialSegments+1)', () => {
+    const expectedVertices = (LINKS_PARAMS.pathSegments + 1) * (LINKS_PARAMS.radialSegments + 1);
+    const posAttr = geometry.getAttribute('position');
+    expect(posAttr.count).toBe(expectedVertices);
+  });
+
+  it('geometry has skinIndex and skinWeight attributes', () => {
+    expect(geometry.getAttribute('skinIndex')).toBeDefined();
+    expect(geometry.getAttribute('skinWeight')).toBeDefined();
+  });
+
+  it('anchors array has numBones entries', () => {
+    expect(anchors).toHaveLength(numBones);
+  });
+
+  it('anchor t values are centered in each link', () => {
+    for (let i = 0; i < LINKS_PARAMS.numLinks; i++) {
+      const expectedT = (i + 0.5) / LINKS_PARAMS.numLinks;
+      expect(anchors[i].t).toBeCloseTo(expectedT, 5);
+    }
+  });
+
+  it('anchors start with extruded = false', () => {
+    for (const a of anchors) {
+      expect(a.extruded).toBe(false);
+    }
   });
 });
 
