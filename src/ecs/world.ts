@@ -14,3 +14,4 @@ export const inflatable = world.with('inflation', 'three');
 export const renderable = world.with('geometry', 'material', 'transform');
 export const lights = world.with('lightDef', 'transform');
 export const particles = world.with('particle', 'three');
+export const fillDriven = world.with('fillDriven', 'three');
