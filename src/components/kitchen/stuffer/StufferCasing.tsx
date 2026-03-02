@@ -69,6 +69,8 @@ export function StufferCasing({fillLevel, pressureLevel, blendColor}: StufferCas
   const meshRef = useRef<THREE.Mesh>(null);
   const capRef = useRef<THREE.Mesh>(null);
   const colorObj = useMemo(() => new THREE.Color(), []);
+  const blendTint = useRef(new THREE.Color(0xffffff));
+  const prevBlendColor = useRef<string | undefined>(undefined);
 
   useFrame(({clock}) => {
     if (!meshRef.current) return;
@@ -87,10 +89,17 @@ export function StufferCasing({fillLevel, pressureLevel, blendColor}: StufferCas
     meshRef.current.scale.set(scaleXZ, 1, scaleXZ);
 
     // Update color from pressure
+    if (blendColor !== prevBlendColor.current) {
+      prevBlendColor.current = blendColor;
+      if (blendColor) {
+        blendTint.current.set(blendColor);
+      }
+    }
+
     const [r, g, b] = pressureToColor(pressureLevel);
     if (blendColor) {
       // Blend pressure color with ingredient tint (50/50)
-      const tint = new THREE.Color(blendColor);
+      const tint = blendTint.current;
       colorObj.setRGB(
         lerpScalar(r, tint.r, 0.5),
         lerpScalar(g, tint.g, 0.5),

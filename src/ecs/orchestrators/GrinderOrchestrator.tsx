@@ -129,6 +129,10 @@ export const GrinderOrchestrator = ({position, visible}: GrinderOrchestratorProp
   // Keep strikes ref in sync
   strikesRef.current = strikes;
 
+  // Ref for store selector read inside useFrame (avoid stale closure)
+  const challengeProgressRef = useRef(challengeProgress);
+  challengeProgressRef.current = challengeProgress;
+
   // ---- Variant selection on mount when visible ----
   useEffect(() => {
     if (!visible || !challengeTriggered) return;
@@ -358,13 +362,13 @@ export const GrinderOrchestrator = ({position, visible}: GrinderOrchestratorProp
     }
 
     // --- Progress-driven particle spawning (visual) ---
-    const progress = challengeProgress / 100; // 0-1
+    const progress = challengeProgressRef.current / 100; // 0-1
     const progressDelta = progress - prevProgressRef.current;
 
     if (progressDelta > 0) {
-      // Haptic feedback throttled to every 5% progress
+      // Haptic feedback throttled to every 5% progress (0.05 in 0-1 scale)
       hapticAccumRef.current += progressDelta;
-      if (hapticAccumRef.current >= 5) {
+      if (hapticAccumRef.current >= 0.05) {
         hapticAccumRef.current = 0;
         fireHaptic('rotary_feedback');
       }

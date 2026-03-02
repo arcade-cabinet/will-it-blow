@@ -363,7 +363,10 @@ export const FridgeStation = ({
       {/* Ingredients on shelves — grouped by category tier */}
       {shelfGroups.map((group, shelfIndex) =>
         group.map((entry, slotIndex) => {
-          const xOffset = (slotIndex - (group.length - 1) / 2) * 0.24;
+          const maxSpacing = 0.24;
+          const availableWidth = FRIDGE_W - 0.16;
+          const spacing = Math.min(maxSpacing, availableWidth / Math.max(group.length, 1));
+          const xOffset = (slotIndex - (group.length - 1) / 2) * spacing;
           const shelfY = SHELF_Y_POSITIONS[shelfIndex] + INGREDIENT_DIAMETER / 2 + 0.012;
           const zOffset = 0.25;
 

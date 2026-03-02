@@ -32,7 +32,7 @@ export function updatePlungers(entities: Entity[], delta: number): void {
       }
       plunger.dragDelta = 0; // Always consume to prevent stale delta on re-enable
     } else if (plunger.springBack) {
-      plunger.displacement *= 1 - SPRING_RATE * delta;
+      plunger.displacement = Math.max(0, plunger.displacement * (1 - SPRING_RATE * delta));
       three.position[plunger.axis] = lerp(plunger.minWorld, plunger.maxWorld, plunger.displacement);
     }
   }

@@ -43,6 +43,7 @@ export class GreaseWaveSimulation {
   readonly size: number;
   curr: Float32Array;
   prev: Float32Array;
+  private next: Float32Array;
   private canvas: HTMLCanvasElement | null;
   private ctx: CanvasRenderingContext2D | null;
   private texture: CanvasTexture | null;
@@ -55,6 +56,7 @@ export class GreaseWaveSimulation {
     const n = size * size;
     this.curr = new Float32Array(n);
     this.prev = new Float32Array(n);
+    this.next = new Float32Array(n);
 
     // Canvas-dependent resources — only available in browser environments
     if (typeof document !== 'undefined') {
@@ -90,6 +92,7 @@ export class GreaseWaveSimulation {
     const cx = Math.floor(u * this.size);
     const cy = Math.floor(v * this.size);
     const r = Math.ceil(radius * this.size);
+    if (r <= 0) return;
 
     for (let dy = -r; dy <= r; dy++) {
       for (let dx = -r; dx <= r; dx++) {
@@ -110,7 +113,7 @@ export class GreaseWaveSimulation {
   /** Step the wave equation (damped 2D wave propagation). */
   step(damping: number = 0.98): void {
     const s = this.size;
-    const next = new Float32Array(s * s);
+    this.next.fill(0);
 
     for (let y = 1; y < s - 1; y++) {
       for (let x = 1; x < s - 1; x++) {
@@ -120,12 +123,14 @@ export class GreaseWaveSimulation {
           (this.curr[i - 1] + this.curr[i + 1] + this.curr[i - s] + this.curr[i + s]) / 2 -
           this.prev[i];
 
-        next[i] = avg * damping;
+        this.next[i] = avg * damping;
       }
     }
 
+    const temp = this.prev;
     this.prev = this.curr;
-    this.curr = next;
+    this.curr = this.next;
+    this.next = temp;
   }
 
   /** Compute normal map from the heightfield via finite differences. */
@@ -240,8 +245,10 @@ export function updateGrease(
   cookLevel: number,
   time: number,
 ): void {
+  const clamped = Math.max(0, Math.min(1, cookLevel));
+
   // Opacity ramp: fully transparent when cold, nearly opaque when charred
-  material.opacity = 0.2 + cookLevel * 0.6;
+  material.opacity = 0.2 + clamped * 0.6;
 
   // Shimmer: base roughness 0.05, animate +/- 0.04 at cooking frequencies
   // Multiple sine waves at different frequencies simulate turbulent grease
@@ -251,5 +258,5 @@ export function updateGrease(
     Math.sin(time * 13.3 + 2.7) * 0.005;
 
   // Roughness increases slightly as grease heats and bubbles
-  material.roughness = Math.max(0.01, Math.min(0.3, 0.05 + cookLevel * 0.08 + shimmer));
+  material.roughness = Math.max(0.01, Math.min(0.3, 0.05 + clamped * 0.08 + shimmer));
 }

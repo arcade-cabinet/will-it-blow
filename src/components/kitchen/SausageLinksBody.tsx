@@ -101,6 +101,8 @@ export function SausageLinksBody({
   // --- 4. Rapier rigid body refs ---
   const rigidBodyRefs = useRef<(RapierRigidBody | null)[]>(Array(numLinks).fill(null));
 
+  const springTargetVec = useRef(new THREE.Vector3());
+
   // Track cook level and cooking state in refs for useFrame
   const cookLevelRef = useRef(cookLevel);
   cookLevelRef.current = cookLevel;
@@ -148,7 +150,7 @@ export function SausageLinksBody({
       }
 
       // Spring physics
-      const springTarget = new THREE.Vector3(
+      springTargetVec.current.set(
         position[0] + anchor.base.x,
         position[1] + anchor.base.y,
         position[2] + anchor.base.z,
@@ -156,7 +158,14 @@ export function SausageLinksBody({
 
       const bodyPos = body.translation();
       const bodyVel = body.linvel();
-      const impulse = computeSpringImpulse(springTarget, bodyPos, bodyVel, delta, 80, 10);
+      const impulse = computeSpringImpulse(
+        springTargetVec.current,
+        bodyPos,
+        bodyVel,
+        delta,
+        80,
+        10,
+      );
       body.applyImpulse(impulse, true);
 
       // Read body position back to bone

@@ -35,7 +35,7 @@ After stuffing, the game doesn't immediately proceed to cooking. Instead, a new 
 
 ### 3D Scene Elements
 
-```
+```text
 TABLE (existing dining table position from FurnitureLayout)
 ├── Place Setting (GLB assets)
 │   ├── Plate — white ceramic, centered
@@ -88,7 +88,7 @@ TABLE (existing dining table position from FurnitureLayout)
 
 After clicking NEW GAME, a difficulty modal appears before the loading screen:
 
-```
+```text
 ╔══════════════════════════════════════════╗
 ║         CHOOSE YOUR DONENESS            ║
 ║                                         ║
@@ -231,7 +231,7 @@ interface KitchenState {
 
 ### Searchable Locations
 
-```
+```text
 KITCHEN CABINETS (upper, procedural doors)
 ├── Cabinet 1: frying pan
 ├── Cabinet 2: grinder motor housing
@@ -272,7 +272,7 @@ At "extreme" difficulty, parts are scattered randomly among ALL locations.
 
 Replace the static sink GLB with a procedural chrome sink:
 
-```
+```text
 SINK (procedural geometry)
 ├── Basin — LatheGeometry (chrome material, reflective)
 ├── Faucet — curved CylinderGeometry (chrome)
@@ -305,7 +305,7 @@ SINK (procedural geometry)
 
 The dining table (already in FurnitureLayout) gets dressed:
 
-```
+```text
 TABLE
 ├── Tablecloth — PlaneGeometry with checkered CanvasTexture
 ├── Plate — plate.glb (white ceramic)
@@ -323,6 +323,7 @@ GLB assets needed: plate, fork, knife (simple silverware — can be found in fre
 ## Architecture Changes Summary
 
 ### New Store Fields
+
 - `difficulty: DifficultyConfig`
 - `currentRound: number`
 - `totalRounds: number`
@@ -332,6 +333,7 @@ GLB assets needed: plate, fork, knife (simple silverware — can be found in fre
 - `casingTied: boolean`
 
 ### New Components
+
 - `DifficultySelector.tsx` — 3x2 grid modal with SausageButton variants
 - `TieGesture.tsx` — casing tie-off interaction
 - `BlowoutMechanics.tsx` — tube detach, blow, particle landing
@@ -342,12 +344,14 @@ GLB assets needed: plate, fork, knife (simple silverware — can be found in fre
 - `CabinetDrawer.tsx` — interactive cabinet/drawer with open/close animation
 
 ### New Engine Modules
+
 - `DifficultyConfig.ts` — difficulty tier definitions
 - `RoundManager.ts` — multi-round progression logic
 - `KitchenAssembly.ts` — equipment placement and assembly validation
 - `BlowoutPhysics.ts` — tube blow simulation + particle landing
 
 ### Modified Files
+
 - `gameStore.ts` — new state fields + round management actions
 - `GameWorld.tsx` — conditional rendering based on difficulty (hidden objects, sink)
 - `StufferMechanics.tsx` — tube detach + tie gesture hooks

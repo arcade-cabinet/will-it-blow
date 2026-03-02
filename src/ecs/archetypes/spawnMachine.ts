@@ -66,7 +66,7 @@ export function spawnMachine(archetype: MachineArchetype): Entity[] {
         removable: slot.removable,
         findableTier: slot.findableTier,
       },
-      ...slot.components,
+      ...structuredClone(slot.components),
     };
     world.add(entity);
     entities.push(entity);

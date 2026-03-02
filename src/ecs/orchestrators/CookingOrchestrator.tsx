@@ -174,6 +174,12 @@ export function CookingOrchestrator({position, visible}: CookingOrchestratorProp
   // Derive cook level from challenge progress (0-100 -> 0-1)
   const cookLevel = challengeProgress / 100;
 
+  // ---- Refs for store selectors read inside useFrame (avoid stale closures) ----
+  const challengeHeatLevelRef = useRef(challengeHeatLevel);
+  challengeHeatLevelRef.current = challengeHeatLevel;
+  const cookLevelRef = useRef(cookLevel);
+  cookLevelRef.current = cookLevel;
+
   // ---- Game logic refs (avoid stale closures in useFrame) ----
   const phaseRef = useRef<OrchestratorPhase>('idle');
   const variantRef = useRef<CookingVariant | null>(null);
@@ -421,13 +427,13 @@ export function CookingOrchestrator({position, visible}: CookingOrchestratorProp
     // VISUALS — all existing visual code below, now driven by store
     // ==================================================================
 
-    // ---- Derive heat level for visuals from store ----
+    // ---- Derive heat level for visuals from store (via ref to avoid stale closure) ----
     // Map challengeHeatLevel (0-3) to powerLevel-like value (0, 0.33, 0.66, 1.0)
-    const heatPower = challengeHeatLevel / 3;
+    const heatPower = challengeHeatLevelRef.current / 3;
 
-    // ---- Sausage color driven by store cook level ----
+    // ---- Sausage color driven by store cook level (via ref to avoid stale closure) ----
     if (sausageMatRef.current) {
-      const targetColor = cookLevelToColor(cookLevel);
+      const targetColor = cookLevelToColor(cookLevelRef.current);
       sausageMatRef.current.color.setRGB(targetColor[0], targetColor[1], targetColor[2]);
     }
 
@@ -467,7 +473,7 @@ export function CookingOrchestrator({position, visible}: CookingOrchestratorProp
     }
 
     // ---- Glisten light orbit ----
-    if (glistenRef.current && cookLevel > 0) {
+    if (glistenRef.current && cookLevelRef.current > 0) {
       glistenRef.current.position.x = -2 + Math.sin(timeRef.current * 0.5) * 2;
       glistenRef.current.position.z = -2 + Math.cos(timeRef.current * 0.7) * 1.5;
     }
@@ -518,7 +524,7 @@ export function CookingOrchestrator({position, visible}: CookingOrchestratorProp
     }
 
     // ---- Smoke particles (dark, when cookLevel > 0.85) ----
-    if (cookLevel > SMOKE_THRESHOLD) {
+    if (cookLevelRef.current > SMOKE_THRESHOLD) {
       smokeTimerRef.current += dt;
       const smokeInterval = 0.1;
       if (smokeTimerRef.current >= smokeInterval) {

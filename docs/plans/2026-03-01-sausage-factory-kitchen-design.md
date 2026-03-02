@@ -1,7 +1,7 @@
 <!--
 title: Sausage Factory Kitchen — Game Completion Design
-domain: plan
-status: current
+domain: game-design
+status: active
 engine: r3f
 last-verified: 2026-03-01
 depends-on: [architecture, game-design, 3d-rendering, state-management]
@@ -97,7 +97,7 @@ Text-only `TouchableOpacity` buttons with CSS styling. Butcher shop sign header 
 
 Replace text buttons with the 6 sausage character PNG sprites from `public/ui/`:
 
-```
+```text
 btn_newgame_normal.png  /  btn_newgame_hover.png
 btn_load_normal.png     /  btn_load_hover.png
 btn_quit_normal.png     /  btn_quit_hover.png
@@ -108,7 +108,7 @@ Each button is a `<Image>` with `onPressIn`/`onPressOut` swapping normal↔hover
 **Settings button:** No PNG exists. Create a 4th button matching the sausage character style using a `<View>` composite: sausage body shape with gear icon eyes, rendered with React Native drawing (no SVG dependency). Alternatively, use a text-styled button that matches the aesthetic but doesn't require a custom PNG.
 
 **Layout:**
-```
+```text
 ┌──────────────────────────┐
 │   🔗 WILL IT BLOW? 🔗   │  ← Keep butcher sign + chains
 │   ⛓️  (swing anim)  ⛓️   │
@@ -184,7 +184,7 @@ This isn't a restaurant kitchen — it's a **basement prison**. The player woke 
 
 Expand from current 13×13 to **18×16** for more gameplay space. The extra room allows proper station separation and atmospheric dead zones (creepy corners the player must walk through).
 
-```
+```text
          18 units wide
     ┌────────────────────────────────┐
     │ PIPES  PIPES  PIPES  PIPES    │ ← ceiling pipes
@@ -268,7 +268,7 @@ The sausage_factory.html POC proves all factory physics. Each station keeps its 
 - Rhythm mechanic: crank handle at consistent BPM for bonus score
 
 **State machine:**
-```
+```text
 FILL_GRINDER → GRINDING → MOVE_BOWL
 ```
 
@@ -293,7 +293,7 @@ FILL_GRINDER → GRINDING → MOVE_BOWL
 - Completed casing detaches as sausage body
 
 **State machine:**
-```
+```text
 ATTACH_CASING → STUFFING → MOVE_SAUSAGE
 ```
 
@@ -322,7 +322,7 @@ ATTACH_CASING → STUFFING → MOVE_SAUSAGE
 - Visual: sausage skin color shifts from pink → golden brown → burnt black
 
 **Grease FBO (critical — needs TSL conversion):**
-```
+```text
 POC uses WebGL ShaderMaterial for wave equation:
   prev_height → curr_height → next_height (ping-pong render targets)
   normal_map computed from height field
@@ -335,7 +335,7 @@ For WebGPU: Convert to TSL NodeMaterial
 ```
 
 **State machine:**
-```
+```text
 MOVE_PAN → COOKING → DONE
 ```
 
@@ -389,7 +389,7 @@ Spring constant 80, damping 10. This creates the wobbly-but-following behavior.
 
 Extends the POC's 9 states with front-end ingredient selection:
 
-```
+```text
 MENU → LOADING → INTRO_DIALOGUE
   → OPEN_FRIDGE → PICK_INGREDIENTS → CLOSE_FRIDGE
   → FILL_GRINDER → GRINDING → MOVE_BOWL
@@ -479,6 +479,7 @@ Integration via existing `AudioEngine` (Tone.js on web, no-op on native).
 ## 11. Implementation Priority
 
 ### Phase 1: Asset Swap + Title Screen (Minimal Risk)
+
 1. Copy replacement GLBs from asset library → `public/models/`
 2. Update `FURNITURE_RULES` in `FurnitureLayout.ts`
 3. Delete bloated GLBs
@@ -487,6 +488,7 @@ Integration via existing `AudioEngine` (Tone.js on web, no-op on native).
 6. Test: game loads, kitchen renders with new furniture
 
 ### Phase 2: Room Expansion + Horror Props
+
 1. Expand room to 18×16
 2. Add procedural room elements (pipes, window, door)
 3. Place horror prop GLBs (bear trap, worm, bandages, etc.)
@@ -495,6 +497,7 @@ Integration via existing `AudioEngine` (Tone.js on web, no-op on native).
 6. Test: atmosphere feels right, stations reachable
 
 ### Phase 3: Procedural Sausage System
+
 1. Port `generateMeatTexture()` canvas texture
 2. Implement bone chain SkinnedMesh + Rapier bodies
 3. Port grinder mechanics (chunks, particles, vibration)
@@ -503,6 +506,7 @@ Integration via existing `AudioEngine` (Tone.js on web, no-op on native).
 6. Test: full factory pipeline works end-to-end
 
 ### Phase 4: Polish + Fridge Interior
+
 1. Procedural fridge interior (shelves, drawers)
 2. Food GLB placement with depth awareness
 3. Ingredient selection → mixing bowl flow

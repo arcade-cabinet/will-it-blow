@@ -149,6 +149,12 @@ interface SausageLinksBodyProps {
 function SausageLinksBody({extrusionProgress, twistPositions, blendColor}: SausageLinksBodyProps) {
   const meshRef = useRef<THREE.SkinnedMesh>(null);
 
+  // Refs to avoid stale closures in useFrame
+  const extrusionRef = useRef(extrusionProgress);
+  extrusionRef.current = extrusionProgress;
+  const twistRef = useRef(twistPositions);
+  twistRef.current = twistPositions;
+
   const {geometry, skeleton, rootBone, bones} = useMemo(
     () => buildSausageGeometry(NUM_BONES, SAUSAGE_LENGTH, SAUSAGE_RADIUS),
     [],
@@ -157,14 +163,14 @@ function SausageLinksBody({extrusionProgress, twistPositions, blendColor}: Sausa
   useFrame(() => {
     if (!meshRef.current) return;
 
-    const visibleBones = Math.floor(extrusionProgress * NUM_BONES);
+    const visibleBones = Math.floor(extrusionRef.current * NUM_BONES);
 
     for (let i = 1; i <= NUM_BONES; i++) {
       const bone = bones[i];
       if (i <= visibleBones) {
         const boneNormalized = i / NUM_BONES;
         let isPinched = false;
-        for (const tp of twistPositions) {
+        for (const tp of twistRef.current) {
           if (Math.abs(boneNormalized - tp) < 1 / NUM_BONES) {
             isPinched = true;
             break;
@@ -237,6 +243,7 @@ export const StufferOrchestrator = ({position, visible}: StufferOrchestratorProp
   const lastBeepSecondRef = useRef(-1);
   const variantRef = useRef<StuffingVariant | null>(null);
   const squelchThrottleRef = useRef(0);
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ---- Variant selection on activation ----
   useEffect(() => {
@@ -288,10 +295,13 @@ export const StufferOrchestrator = ({position, visible}: StufferOrchestratorProp
     }
   }, [gameStatus, setChallengePhase]);
 
-  // ---- Audio cleanup on unmount / phase change ----
+  // ---- Audio + timer cleanup on unmount ----
   useEffect(() => {
     return () => {
       audioEngine.stopPressure();
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current);
+      }
     };
   }, []);
 
@@ -398,7 +408,7 @@ export const StufferOrchestrator = ({position, visible}: StufferOrchestratorProp
 
       // Score: 100 minus burst penalties
       const score = Math.max(0, Math.round(100 - burstCountRef.current * SCORE_PENALTY_PER_BURST));
-      setTimeout(() => {
+      successTimerRef.current = setTimeout(() => {
         phaseRef.current = 'complete';
         setChallengePhase('complete');
         completeChallenge(score);

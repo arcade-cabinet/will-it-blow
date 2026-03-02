@@ -1,3 +1,8 @@
+<!--
+domain: game-design
+status: active
+-->
+
 # Sausage Factory Kitchen — Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
@@ -64,6 +69,7 @@ pnpm add expo-audio
 ```
 
 Audit `src/` for any `expo-av` imports and replace:
+
 ```typescript
 // OLD
 import { Audio } from 'expo-av';
@@ -261,6 +267,7 @@ pnpm test -- --testPathPattern='FurnitureLayout' --verbose
 Replace the array at line 369 with new rules referencing the lightweight GLBs. Remove all 10 bloated GLB references. Add horror prop rules. (See design doc Section 2 for full mapping.)
 
 Core furniture rules (11 entries replacing the bloated ones):
+
 ```typescript
 {glb: 'workplan.glb', target: 'l-counter'},
 {glb: 'workplan_001.glb', target: 'l-counter-ext'},
@@ -277,6 +284,7 @@ Core furniture rules (11 entries replacing the bloated ones):
 ```
 
 Horror prop rules (9 entries — new):
+
 ```typescript
 {glb: 'beartrap_open.glb', target: 'bear-trap'},
 {glb: 'worm.glb', target: 'worm'},

@@ -9,7 +9,8 @@ export function LatheRenderer() {
       {bucket.entities
         .filter(e => e.geometry!.type === 'lathe')
         .map((entity, i) => {
-          const points = entity.geometry!.lathePoints!;
+          if (!entity.geometry!.lathePoints) return null;
+          const points = entity.geometry!.lathePoints;
           const segments = entity.geometry!.args[0] ?? 24;
           return (
             <mesh

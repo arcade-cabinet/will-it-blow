@@ -1,6 +1,6 @@
 <!--
 title: Phase 2 Implementation Plan — Will It Blow + Difficulty + Multi-Round
-domain: implementation
+domain: game-design
 status: draft
 engine: r3f
 last-verified: 2026-03-02
@@ -212,6 +212,7 @@ Store actions:
 - Modify: `src/store/gameStore.ts`
 
 Add `KitchenState` interface to store:
+
 ```typescript
 interface KitchenState {
   cabinets: boolean[];     // open/closed per index
@@ -444,7 +445,8 @@ This is the TRUE ending — escaping the kitchen.
 - Modify: `src/store/gameStore.ts`
 
 Wire the full Phase 2 pipeline:
-```
+
+```text
 MENU → DIFFICULTY → LOADING → ROUND N:
   Fridge → Grinder → Stuffer → [TIE] → [WILL IT BLOW] → Cooking → Tasting
   → Next Round OR Win OR Game Over
@@ -464,7 +466,7 @@ Conditional rendering: hidden objects, sink, cabinets based on difficulty.
 
 ## Execution Order Summary
 
-```
+```text
 Wave 0 (parallel): Tasks 0a, 0b, 0c, 0d, 0f  (0e depends on 0d)
 Wave 0b:           Task 0e (after 0d — sausage physics needs stuffer changes)
 Wave 1 (parallel): Tasks 1, 2, 3, 4
@@ -476,6 +478,7 @@ Wave 4 (sequential): Task 13 → 14 → 15
 ## Verification
 
 After each wave:
+
 ```bash
 pnpm test:ci          # All tests pass
 pnpm lint             # Clean

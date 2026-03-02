@@ -122,6 +122,9 @@ export function TastingChallenge({onComplete: _onComplete, onReaction}: TastingC
   const phaseRef = useRef(phase);
   phaseRef.current = phase;
 
+  // Track all scheduled timeouts for cleanup
+  const timerRefs = useRef<ReturnType<typeof setTimeout>[]>([]);
+
   // Phase 1: Title fade-in
   useEffect(() => {
     // Fade in overlay background
@@ -237,6 +240,16 @@ export function TastingChallenge({onComplete: _onComplete, onReaction}: TastingC
   useEffect(() => {
     if (phase !== 'scores') return;
 
+    // Clear any previously scheduled timers from this chain
+    timerRefs.current.forEach(clearTimeout);
+    timerRefs.current = [];
+
+    const scheduleTimeout = (fn: () => void, delay: number) => {
+      const id = setTimeout(fn, delay);
+      timerRefs.current.push(id);
+      return id;
+    };
+
     const totalToReveal = CHALLENGE_LABELS.length;
     let count = 0;
 
@@ -252,10 +265,10 @@ export function TastingChallenge({onComplete: _onComplete, onReaction}: TastingC
       }
 
       if (count < totalToReveal) {
-        timer = setTimeout(revealNext, 500);
+        scheduleTimeout(revealNext, 500);
       } else {
         // Reveal average after last score
-        timer = setTimeout(() => {
+        scheduleTimeout(() => {
           Animated.timing(averageOpacity, {
             toValue: 1,
             duration: 400,
@@ -264,7 +277,7 @@ export function TastingChallenge({onComplete: _onComplete, onReaction}: TastingC
 
           // Then reveal demand breakdown (if present)
           if (demandBreakdown) {
-            setTimeout(() => {
+            scheduleTimeout(() => {
               Animated.timing(demandOpacity, {
                 toValue: 1,
                 duration: 400,
@@ -272,13 +285,13 @@ export function TastingChallenge({onComplete: _onComplete, onReaction}: TastingC
               }).start();
 
               // Then move to rank phase
-              setTimeout(() => {
+              scheduleTimeout(() => {
                 setPhase('rank');
               }, 1500);
             }, 600);
           } else {
             // No demand breakdown — go straight to rank
-            setTimeout(() => {
+            scheduleTimeout(() => {
               setPhase('rank');
             }, 1200);
           }
@@ -286,9 +299,12 @@ export function TastingChallenge({onComplete: _onComplete, onReaction}: TastingC
       }
     };
 
-    let timer = setTimeout(revealNext, 300);
+    scheduleTimeout(revealNext, 300);
 
-    return () => clearTimeout(timer);
+    return () => {
+      timerRefs.current.forEach(clearTimeout);
+      timerRefs.current = [];
+    };
   }, [phase, scoreOpacities, averageOpacity, demandOpacity, demandBreakdown]);
 
   // Phase 8: Rank badge reveal

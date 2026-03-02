@@ -12,7 +12,8 @@ export function computeInflationScale(
 ): number {
   let scale = 1 + fillLevel * (maxScale - 1);
   if (fillLevel > pulseThreshold) {
-    const normalizedExcess = (fillLevel - pulseThreshold) / (1 - pulseThreshold);
+    const denom = 1 - pulseThreshold;
+    const normalizedExcess = denom > 0 ? (fillLevel - pulseThreshold) / denom : 0;
     scale += Math.sin(elapsed * pulseSpeed) * pulseAmplitude * normalizedExcess;
   }
   return scale;

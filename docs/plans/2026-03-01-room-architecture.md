@@ -1,7 +1,7 @@
 <!--
 title: Room Architecture — The Sausage Factory Kitchen
-domain: plan
-status: current
+domain: architecture
+status: stale
 engine: r3f
 last-verified: 2026-03-01
 depends-on: [architecture, game-design, 3d-rendering, state-management]
@@ -19,7 +19,7 @@ The player is trapped in a filthy basement kitchen. Subway tile on the lower wal
 
 ### 1.1 Coordinate System
 
-```
+```text
         +Y (up)
         │
         │     -Z (back wall — where CRT TV lives)
@@ -81,7 +81,7 @@ This means the spatial layout **adapts to any screen shape** while keeping relat
 
 ### 1.3 Room Structure (Top-Down, aspect=1, 13×13)
 
-```
+```text
     Left wall (-X)                                Right wall (+X)
     x = -6.5                                      x = +6.5
     ┌──────────────────────────────────────────────────────┐
@@ -117,7 +117,7 @@ This means the spatial layout **adapts to any screen shape** while keeping relat
 
 ### 1.4 Room Structure (Side View, looking from right wall)
 
-```
+```text
     y = 5.5  ┌───────────────────────────────────────┐ CEILING
              │  ═══ fluorescent tubes ═══            │
     y = 4.2  │  💡    💡    💡                       │
@@ -144,7 +144,7 @@ This means the spatial layout **adapts to any screen shape** while keeping relat
 
 Each wall is two stacked planes with different PBR materials:
 
-```
+```text
     y = 5.5  ┬────────────────┬
              │   CONCRETE     │  Upper wall: concrete PBR
              │   (3×2 tile)   │  roughness: 0.9
@@ -311,7 +311,7 @@ This is the definitive inventory. Every piece of 3D geometry in the game falls i
 
 ### Station Map (with challenge flow)
 
-```
+```text
     ┌────────────────────────────────────────────────┐
     │                                                 │
     │  ╔═S0═╗                                        │
@@ -364,7 +364,7 @@ Each station has a **trigger radius** (scaled by `min(w,d)/13`) and a **marker Y
 
 ### Lighting Rig
 
-```
+```text
     CEILING (y=5.5)
     ┌────────────────────────────────────────┐
     │                                         │
@@ -390,7 +390,7 @@ Each station has a **trigger radius** (scaled by `min(w,d)/13`) and a **marker Y
 ### Flicker System
 
 Every 3–11 seconds, a random fluorescent tube flickers for 0.1–0.4 seconds:
-```
+```text
     Normal:  intensity = 2.0 (BASE_INTENSITY)
     Flicker: intensity = sin(time×60) > 0 ? 0.4 : 2.0  (rapid strobe)
 ```
@@ -403,7 +403,7 @@ This creates subliminal unease — the player never consciously notices the flic
 
 ### FPS Controller
 
-```
+```text
     EYE_HEIGHT = 1.6 (locked Y — no jump, no crouch)
     WALK_SPEED = 3.0 units/sec
     MOUSE_SENSITIVITY = 0.002 rad/pixel
@@ -418,7 +418,7 @@ This creates subliminal unease — the player never consciously notices the flic
 
 ### What the Player Sees on Spawn
 
-```
+```text
     Standing at room center, facing back wall (-Z):
 
     ┌──────────────────────────────────────────────┐
@@ -495,7 +495,7 @@ The first thing they see: a dimly lit kitchen. Fluorescent tubes hum overhead wi
 
 **Mechanic:** The player drags/flings to control grind speed. A speed indicator shows three zones:
 
-```
+```text
     ┌─────────────────────────────────────┐
     │▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░│  SLOW (yellow)
     │▓▓▓▓▓▓▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░│  GOOD (green)
@@ -521,7 +521,7 @@ The grinder crank animates to match player input. Too fast: splatter particle ef
 
 **Mechanic:** Hold to fill, release to let pressure drop. The casing (TubeGeometry on a SquigglyCurve) extends from the nozzle, filling with meat.
 
-```
+```text
     PRESSURE GAUGE:
     ┌──────────────────────────┐
     │████████████░░░░░░░░░░░░│  50% — green
@@ -548,7 +548,7 @@ Burst = particle spray, flash, strike. Must fill to 100% before timer expires.
 
 **Mechanic:** Control heat level to keep temperature in a target zone.
 
-```
+```text
     TEMPERATURE:
     ═══════════════════════════════════
     ░░░░░░░░░░░░░░░║TARGET║░░░░░░░░░
@@ -579,7 +579,7 @@ Too hot: sausage darkens (material color shifts pink → brown → black). Too c
 2. Mr. Sausage's face cycles through reaction animations (flinch, disgust, excitement, nod)
 3. Final rank badge appears:
 
-```
+```text
     ╔═══════════════════════════╗
     ║         S  RANK           ║
     ║   THE SAUSAGE KING        ║
@@ -627,7 +627,7 @@ That's ~48 visible objects in 169 square units = roughly 1 object per 3.5 sq uni
 
 From the player's spawn position (center, facing -Z), the key sightlines are:
 
-```
+```text
     Player at (0, 1.6, 0), facing -Z:
     ─────────────────────────────
     LEFT:   Counter surface → fridge (S0), stove (S3), grinder (S1)
@@ -670,7 +670,7 @@ Some areas of the room have NO functional purpose — they exist purely for atmo
 
 The challenge flow (S0 → S1 → S2 → S3 → S4) moves the player in an intentional pattern:
 
-```
+```text
     S0 (back-left) → S1 (left counter, mid) : moving along left wall
     S1 (left counter) → S2 (center island)  : crossing open floor
     S2 (center island) → S3 (left counter)  : back to counter
@@ -761,7 +761,7 @@ F-rank (< 50): Unacceptable          — defeat ("You are the sausage now")
 
 The original scoring model (pre-horror redesign) is still in the codebase and may be used for the tasting challenge's theatrical score reveal:
 
-```
+```text
 finalScore = (tasteRating/5 × 60) + (ruffalos/5 × 20) + (noBurstBonus: 20) + bonus
 
 Where:
@@ -814,7 +814,7 @@ Getting S-rank (≥92 average) is intentionally difficult. The ingredient databa
 
 ## 11. State Machine
 
-```
+```text
     ┌─────────┐
     │  MENU   │←──────────────────────────────────┐
     │ appPhase│                                    │
@@ -880,7 +880,7 @@ Getting S-rank (≥92 average) is intentionally difficult. The ingredient databa
 
 ## 12. File Architecture
 
-```
+```text
 src/
 ├── engine/                    # Pure logic, no React
 │   ├── FurnitureLayout.ts     # Room dimensions, targets, FURNITURE_RULES
