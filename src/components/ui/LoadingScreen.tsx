@@ -22,8 +22,8 @@
 import {useEffect, useRef, useState} from 'react';
 import {Animated, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {audioEngine} from '../../engine/AudioEngine';
-import {FURNITURE_RULES} from '../../engine/FurnitureLayout';
 import {getAssetUrl} from '../../engine/assetUrl';
+import {FURNITURE_RULES} from '../../engine/FurnitureLayout';
 import {useGameStore} from '../../store/gameStore';
 
 const TEXTURE_FILES = [
@@ -117,7 +117,9 @@ export function LoadingScreen() {
           return;
         }
         if (failures.length > 0) {
-          console.warn(`${failures.length}/${allAssets.length} assets failed to preload (non-fatal)`);
+          console.warn(
+            `${failures.length}/${allAssets.length} assets failed to preload (non-fatal)`,
+          );
         }
 
         setProgress(100);

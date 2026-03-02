@@ -1,1 +1,5 @@
-module.exports = { useKeepAwake: () => {}, activateKeepAwakeAsync: async () => {}, deactivateKeepAwakeAsync: async () => {} };
+module.exports = {
+  useKeepAwake: () => {},
+  activateKeepAwakeAsync: async () => {},
+  deactivateKeepAwakeAsync: async () => {},
+};
