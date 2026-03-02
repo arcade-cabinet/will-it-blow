@@ -21,6 +21,13 @@
  */
 
 import {Canvas, useFrame, useThree} from '@react-three/fiber';
+import {
+  Bloom,
+  ChromaticAberration,
+  EffectComposer,
+  Noise,
+  Vignette,
+} from '@react-three/postprocessing';
 import type {RapierRigidBody} from '@react-three/rapier';
 import {
   BallCollider,
@@ -31,6 +38,7 @@ import {
 } from '@react-three/rapier';
 import {createXRStore, XR} from '@react-three/xr';
 import {useKeepAwake} from 'expo-keep-awake';
+import {BlendFunction} from 'postprocessing';
 import {Suspense, useCallback, useEffect, useRef, useState} from 'react';
 import {Platform, Pressable, Text, View} from 'react-native';
 import {WebGPURenderer} from 'three/webgpu';
@@ -379,6 +387,14 @@ const SceneContent = ({
 
       {/* Grabbable sausage — spawns at stuffer output after Challenge 2 */}
       {showSausage && <GrabbableSausage position={STUFFER_OUTPUT_POS} />}
+
+      {/* Horror post-processing: subtle bloom, vignette, chromatic aberration, film noise */}
+      <EffectComposer>
+        <Bloom intensity={0.3} luminanceThreshold={0.9} luminanceSmoothing={0.025} mipmapBlur />
+        <Vignette offset={0.3} darkness={0.7} blendFunction={BlendFunction.NORMAL} />
+        <ChromaticAberration offset={[0.002, 0.002]} blendFunction={BlendFunction.NORMAL} />
+        <Noise opacity={0.05} blendFunction={BlendFunction.OVERLAY} />
+      </EffectComposer>
 
       {/* All stations always rendered — positions from target system */}
       {isFridgeActive && fridgePool.length > 0 && (

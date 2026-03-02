@@ -3,7 +3,7 @@ module.exports = {
   setupFiles: ['./jest.setup.js'],
   testPathIgnorePatterns: ['/node_modules/', '/e2e/'],
   transformIgnorePatterns: [
-    'node_modules/(?!(.pnpm|react-native|@react-native|@react-native-async-storage|expo|@expo|babel-preset-expo|three|@react-three|zustand|three-mesh-bvh|tsl-textures|maath)/)',
+    'node_modules/(?!(.pnpm|react-native|@react-native|@react-native-async-storage|expo|@expo|babel-preset-expo|three|@react-three|zustand|three-mesh-bvh|tsl-textures|maath|postprocessing)/)',
   ],
   moduleNameMapper: {
     '^three/webgpu$': '<rootDir>/__mocks__/three_webgpu.js',
@@ -11,5 +11,7 @@ module.exports = {
     '.*/engine/AudioEngine$': '<rootDir>/__mocks__/AudioEngine.js',
     '^@shopify/react-native-skia$': '<rootDir>/__mocks__/react-native-skia.js',
     '^expo-keep-awake$': '<rootDir>/__mocks__/expo-keep-awake.js',
+    '^@react-three/postprocessing$': '<rootDir>/__mocks__/postprocessing.js',
+    '^postprocessing$': '<rootDir>/__mocks__/postprocessing.js',
   },
 };
