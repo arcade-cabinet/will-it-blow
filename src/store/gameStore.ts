@@ -128,6 +128,13 @@ export interface GameState {
   /** True once the sausage has been placed on the stove pan for cooking. */
   sausagePlaced: boolean;
 
+  // ---- Cooking mechanics (3D CookingMechanics bridge) ----
+
+  /** Final cook level (0-1+) recorded when the player removes the pan from heat. */
+  cookLevel: number;
+  /** Accumulated flair bonus points from pan flips during cooking. */
+  flairPoints: number;
+
   // ---- Fridge challenge bridge (3D <-> 2D communication) ----
 
   /** The 12 ingredients currently displayed in the fridge. */
@@ -200,6 +207,10 @@ export interface GameState {
   setBowlPosition: (pos: BowlPosition) => void;
   /** Mark the sausage as placed on the stove pan for cooking. */
   setSausagePlaced: () => void;
+  /** Record the final cook level when the player removes the pan from heat. */
+  recordCookLevel: (level: number) => void;
+  /** Record a flair bonus (e.g. pan flip) with a label and point value. */
+  recordFlairPoint: (label: string, points: number) => void;
   /** Recompute blendColor/blendRoughness/blendChunkiness from current bowlContents. */
   updateBlendProperties: () => void;
   /** Update the player's world-space position (written by FPS controller every frame). */
@@ -274,6 +285,8 @@ export const INITIAL_GAME_STATE = {
   blendRoughness: 0.7,
   blendChunkiness: 0,
   sausagePlaced: false,
+  cookLevel: 0,
+  flairPoints: 0,
   fridgePool: [] as Ingredient[],
   fridgeMatchingIndices: [] as number[],
   fridgeSelectedIndices: [] as number[],
@@ -323,6 +336,8 @@ export const useGameStore = create<GameState>()(
           blendRoughness: 0.5,
           blendChunkiness: 0.5,
           sausagePlaced: false,
+          cookLevel: 0,
+          flairPoints: 0,
           fridgePool: [],
           fridgeMatchingIndices: [],
           fridgeSelectedIndices: [],
@@ -350,6 +365,8 @@ export const useGameStore = create<GameState>()(
           blendRoughness: 0.5,
           blendChunkiness: 0.5,
           sausagePlaced: false,
+          cookLevel: 0,
+          flairPoints: 0,
           fridgePool: [],
           fridgeMatchingIndices: [],
           fridgeSelectedIndices: [],
@@ -471,6 +488,11 @@ export const useGameStore = create<GameState>()(
 
       setSausagePlaced: () => set({sausagePlaced: true}),
 
+      recordCookLevel: (level: number) => set({cookLevel: level}),
+
+      recordFlairPoint: (_label: string, points: number) =>
+        set(state => ({flairPoints: state.flairPoints + points})),
+
       updateBlendProperties: () => set(state => mapBlendToStore(state.bowlContents)),
 
       setPlayerPosition: (pos: [number, number, number]) => set({playerPosition: pos}),
@@ -501,6 +523,8 @@ export const useGameStore = create<GameState>()(
           blendRoughness: 0.5,
           blendChunkiness: 0.5,
           sausagePlaced: false,
+          cookLevel: 0,
+          flairPoints: 0,
           fridgePool: [],
           fridgeMatchingIndices: [],
           fridgeSelectedIndices: [],
