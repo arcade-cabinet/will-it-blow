@@ -54,6 +54,7 @@ import {GrinderMechanics} from './kitchen/GrinderMechanics';
 import {KitchenEnvironment} from './kitchen/KitchenEnvironment';
 import {StationMarker} from './kitchen/StationMarker';
 import {StufferMechanics} from './kitchen/StufferMechanics';
+import {TransferBowl} from './kitchen/TransferBowl';
 import {SceneIntrospector} from './SceneIntrospector';
 
 // -----------------------------------------------------------------
@@ -71,9 +72,6 @@ const STATIONS = STATION_TARGET_NAMES.map(name => {
     markerY: t.markerY ?? t.position[1],
   };
 });
-
-// Output positions for carried objects between stations — from named targets
-const GRINDER_OUTPUT_POS = RESOLVED_TARGETS['grinder-output'].position;
 
 // -----------------------------------------------------------------
 // PlayerBody — kinematic rigid body that follows the camera
@@ -246,7 +244,6 @@ const SceneContent = ({
   const challengeTriggered = useGameStore(s => s.challengeTriggered);
   const mrSausageReaction = useGameStore(s => s.mrSausageReaction);
   const hintActive = useGameStore(s => s.hintActive);
-  // Bowl tracking for inter-station flow
   const bowlPosition = useGameStore(s => s.bowlPosition);
   const setSausagePlaced = useGameStore(s => s.setSausagePlaced);
   const setBowlPosition = useGameStore(s => s.setBowlPosition);
@@ -276,15 +273,6 @@ const SceneContent = ({
   const handleCookComplete = useCallback(() => {
     setSausagePlaced();
   }, [setSausagePlaced]);
-
-  // Determine bowl rendering position based on bowlPosition store state
-  const bowlRenderPos =
-    bowlPosition === 'fridge'
-      ? RESOLVED_TARGETS['mixing-bowl'].position
-      : bowlPosition === 'grinder-output'
-        ? GRINDER_OUTPUT_POS
-        : null;
-  const showBowl = bowlRenderPos !== null;
 
   // Convert store arrays to Sets for FridgeStation props
   const fridgeSelectedSet = new Set(fridgeSelectedIndices);
@@ -324,7 +312,7 @@ const SceneContent = ({
       <KitchenEnvironment
         fridgeDoorOpen={isFridgeActive}
         grinderCranking={isGrinderActive}
-        bowlPosition={showBowl ? bowlRenderPos : null}
+        bowlPosition={null}
         bowlReceiving={bowlPosition === 'fridge'}
       />
       <CrtTelevision
@@ -381,6 +369,9 @@ const SceneContent = ({
         visible={isStoveActive}
         onCookComplete={handleCookComplete}
       />
+
+      {/* Procedural transfer bowl — follows bowlPosition through the pipeline */}
+      <TransferBowl />
 
       {/* Atmospheric basement elements — always visible */}
       <BasementStructure room={DEFAULT_ROOM} />

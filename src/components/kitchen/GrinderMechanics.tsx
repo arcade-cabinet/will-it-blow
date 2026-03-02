@@ -65,16 +65,6 @@ interface ParticleData {
 
 const MAX_G_PARTS = 150;
 
-/** Mixing bowl lathe profile — exact from POC L153. */
-const BOWL_POINTS = [
-  new THREE.Vector2(0.01, 0),
-  new THREE.Vector2(3, 0),
-  new THREE.Vector2(3.5, 1.5),
-  new THREE.Vector2(3.3, 1.6),
-  new THREE.Vector2(2.8, 0.2),
-  new THREE.Vector2(0.01, 0.2),
-];
-
 /** Pre-seeded chunk positions in the mixing bowl (relative to bowl centre). */
 const CHUNK_BOWL_OFFSETS = Array.from({length: 15}, (_, i) => {
   // Deterministic spiral so tests are stable
@@ -145,9 +135,7 @@ export const GrinderMechanics = ({
   const faceplateRef = useRef<THREE.Mesh>(null);
   const switchNotchRef = useRef<THREE.Mesh>(null);
   const plungerGroupRef = useRef<THREE.Group>(null);
-  const meatMoundRef = useRef<THREE.Mesh>(null);
   const particleMeshRef = useRef<THREE.InstancedMesh>(null);
-  const bowlGroupRef = useRef<THREE.Group>(null);
 
   // Per-chunk mesh refs (for damp3 animation)
   const chunkRefs = useRef<(THREE.Mesh | null)[]>(Array.from({length: 15}, () => null));
@@ -196,15 +184,6 @@ export const GrinderMechanics = ({
     [],
   );
 
-  const bowlMat = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        color: 0xffffff,
-        roughness: 0.1,
-      }),
-    [],
-  );
-
   const meatMat = useMemo(() => createMeatMaterial(), []);
 
   // ---- ingredient-based chunk colors ----
@@ -228,7 +207,6 @@ export const GrinderMechanics = ({
   }, [chunkColors]);
 
   // ---- geometry (memoised to avoid recreation) ----
-  const bowlGeo = useMemo(() => new THREE.LatheGeometry(BOWL_POINTS, 32), []);
   const chunkGeo = useMemo(() => new THREE.DodecahedronGeometry(0.5, 1), []);
   const particleGeo = useMemo(() => makeParticleGeo(), []);
 
@@ -280,17 +258,6 @@ export const GrinderMechanics = ({
         }
         return c;
       });
-
-      // Check if all chunks are now past BOWL
-      const allOffBowl = next.every(c => c.state !== 'BOWL');
-      if (allOffBowl && prev.some(c => c.state === 'BOWL')) {
-        // Move bowl under grinder when all chunks on tray
-        if (bowlGroupRef.current) {
-          // Will be animated to grinder by damp3 in useFrame
-          bowlGroupRef.current.userData.targetX = 0;
-          bowlGroupRef.current.userData.targetZ = 3.5;
-        }
-      }
 
       // Check if all chunks are in CHUTE → advance to grind phase
       const allInChute = next.every(c => c.state === 'CHUTE' || c.state === 'BOWL');
@@ -344,13 +311,6 @@ export const GrinderMechanics = ({
     // We expose a method via userData so the canvas onPointerMove can update it.
     // (Pointer events on the plunger hitbox only fire on pointer-down.)
 
-    // --- Smooth bowl position toward its target ---
-    if (bowlGroupRef.current) {
-      const tX = bowlGroupRef.current.userData.targetX ?? -5;
-      const tZ = bowlGroupRef.current.userData.targetZ ?? 2;
-      damp3(bowlGroupRef.current.position, [tX, cY, tZ], 0.15, delta);
-    }
-
     // --- Chunk position damp (replaces anime.js) ---
     for (let i = 0; i < 15; i++) {
       const mesh = chunkRefs.current[i];
@@ -392,12 +352,6 @@ export const GrinderMechanics = ({
         needsUpdate = true;
       }
       if (needsUpdate) pMesh.instanceMatrix.needsUpdate = true;
-    }
-
-    // --- Meat mound scale ---
-    if (meatMoundRef.current) {
-      const s = Math.max(0.001, groundVolRef.current * 1.5);
-      meatMoundRef.current.scale.setScalar(s);
     }
   });
 
@@ -548,24 +502,8 @@ export const GrinderMechanics = ({
         </mesh>
       </group>
 
-      {/* ------------------------------------------------------------------ */}
-      {/* Mixing bowl — LatheGeometry, offset (-5, cY, 2) relative to grinder */}
-      {/* The bowl slides to (0, cY, 3.5) once all chunks are on the tray    */}
-      {/* ------------------------------------------------------------------ */}
-      <group ref={bowlGroupRef} position={[-5, cY, 2]}>
-        <mesh castShadow>
-          <primitive object={bowlGeo} attach="geometry" />
-          <primitive object={bowlMat} attach="material" />
-        </mesh>
-
-        {/* Meat mound inside bowl — half-sphere, scales up as ground volume grows */}
-        <mesh ref={meatMoundRef} position={[0, 0.2, 0]} scale={[0.001, 0.001, 0.001]}>
-          {/* SphereGeometry(2.8, 32, 16, 0, PI*2, 0, PI/2) */}
-          <sphereGeometry args={[2.8, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
-          <primitive object={meatMat} attach="material" />
-        </mesh>
-
-        {/* Meat chunks in/around bowl */}
+      {/* Meat chunks — float independently (bowl rendering moved to TransferBowl) */}
+      <group position={[-5, cY, 2]}>
         {chunks.map((chunk, i) => (
           <mesh
             key={chunk.id}
