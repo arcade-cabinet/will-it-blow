@@ -143,6 +143,9 @@ function createGovernor(): GameGov {
         sfxVolume: s.sfxVolume,
         musicMuted: s.musicMuted,
         sfxMuted: s.sfxMuted,
+        bowlPosition: s.bowlPosition,
+        sausagePlaced: s.sausagePlaced,
+        blendColor: s.blendColor,
       };
     },
 

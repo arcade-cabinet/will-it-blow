@@ -2,56 +2,25 @@
  * @module TitleScreen
  * Main menu screen styled as a hanging butcher shop sign.
  *
- * Displays the game title with a swinging sign animation, three PNG sprite
- * menu buttons (New Game, Load, Quit/Settings), and a footer. The sign subtly
- * sways on a looped Animated timing sequence.
+ * Displays the game title with a swinging sign animation, three procedural
+ * sausage-shaped buttons (New Game, Load, Settings), and a footer. The sign
+ * subtly sways on a looped Animated timing sequence.
  *
- * Each button shows Mr. Sausage holding a sign; hover/press state swaps to an
- * excited/alarmed sprite variant.
+ * Buttons are pure React Native components (no PNGs) — pill-shaped sausage
+ * bodies with googly eyes, a tiny mouth, and Bangers font labels. Hover/press
+ * state swaps to darker body tones.
  *
  * - **New Game**: Transitions to the loading phase (resets all state).
  * - **Load**: Restores saved progress via `continueGame()` then loads.
  *   Disabled (dimmed) when no save data exists.
- * - **Quit**: Opens SettingsScreen in-place (replaces this component).
+ * - **Settings**: Opens SettingsScreen in-place.
  */
 
 import {useCallback, useEffect, useRef, useState} from 'react';
-import {Animated, Image, Pressable, StyleSheet, Text, View} from 'react-native';
-import {getAssetUrl} from '../../engine/assetUrl';
+import {Animated, StyleSheet, Text, View} from 'react-native';
 import {useGameStore} from '../../store/gameStore';
+import {SausageButton} from './SausageButton';
 import {SettingsScreen} from './SettingsScreen';
-
-/** A single PNG sprite button — swaps to hover variant on press/hover. */
-function SausageButton({
-  normalSource,
-  hoverSource,
-  onPress,
-  disabled = false,
-}: {
-  normalSource: {uri: string};
-  hoverSource: {uri: string};
-  onPress: () => void;
-  disabled?: boolean;
-}) {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <Pressable
-      onPress={onPress}
-      onPressIn={() => setHovered(true)}
-      onPressOut={() => setHovered(false)}
-      onHoverIn={() => setHovered(true)}
-      onHoverOut={() => setHovered(false)}
-      disabled={disabled}
-      style={{marginVertical: 8, opacity: disabled ? 0.5 : 1}}
-    >
-      <Image
-        source={hovered ? hoverSource : normalSource}
-        style={{width: 280, height: 92}}
-        resizeMode="contain"
-      />
-    </Pressable>
-  );
-}
 
 export function TitleScreen() {
   const {setAppPhase, continueGame, currentChallenge, challengeScores} = useGameStore();
@@ -148,24 +117,11 @@ export function TitleScreen() {
         </View>
       </Animated.View>
 
-      {/* Menu buttons — PNG sprite sausage characters */}
+      {/* Menu buttons — procedural sausage-shaped RN components */}
       <View style={styles.menuContainer}>
-        <SausageButton
-          normalSource={{uri: getAssetUrl('ui', 'btn_newgame_normal.png')}}
-          hoverSource={{uri: getAssetUrl('ui', 'btn_newgame_hover.png')}}
-          onPress={() => handleMenuPress(0)}
-        />
-        <SausageButton
-          normalSource={{uri: getAssetUrl('ui', 'btn_load_normal.png')}}
-          hoverSource={{uri: getAssetUrl('ui', 'btn_load_hover.png')}}
-          onPress={() => handleMenuPress(1)}
-          disabled={!hasSaveData}
-        />
-        <SausageButton
-          normalSource={{uri: getAssetUrl('ui', 'btn_quit_normal.png')}}
-          hoverSource={{uri: getAssetUrl('ui', 'btn_quit_hover.png')}}
-          onPress={() => setShowSettings(true)}
-        />
+        <SausageButton label="NEW GAME" onPress={() => handleMenuPress(0)} />
+        <SausageButton label="LOAD" onPress={() => handleMenuPress(1)} disabled={!hasSaveData} />
+        <SausageButton label="SETTINGS" onPress={() => setShowSettings(true)} />
       </View>
 
       {/* Footer */}
