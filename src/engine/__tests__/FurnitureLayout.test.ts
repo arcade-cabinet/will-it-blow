@@ -1,4 +1,5 @@
 import {
+  computeRoom,
   DEFAULT_ROOM,
   FURNITURE_RULES,
   getStationTarget,
@@ -7,6 +8,24 @@ import {
 } from '../FurnitureLayout';
 
 describe('FurnitureLayout', () => {
+  describe('computeRoom', () => {
+    it('computeRoom(1) matches DEFAULT_ROOM', () => {
+      expect(DEFAULT_ROOM).toEqual(computeRoom(1));
+    });
+
+    it('computeRoom scales width with aspect ratio', () => {
+      const wide = computeRoom(16 / 9);
+      const narrow = computeRoom(1);
+      expect(wide.w).toBeGreaterThan(narrow.w);
+      expect(wide.d).toBeLessThan(narrow.d);
+      expect(wide.h).toBe(narrow.h);
+      // Floor area should be roughly similar
+      const areaWide = wide.w * wide.d;
+      const areaNarrow = narrow.w * narrow.d;
+      expect(Math.abs(areaWide - areaNarrow)).toBeLessThan(1);
+    });
+  });
+
   describe('DEFAULT_ROOM', () => {
     it('has correct dimensions', () => {
       expect(DEFAULT_ROOM).toEqual({w: 13, d: 13, h: 5.5});
@@ -87,6 +106,16 @@ describe('FurnitureLayout', () => {
         expect(Number.isFinite(z)).toBe(true);
       }
     });
+
+    it('all positions scale proportionally with room size', () => {
+      const small = resolveTargets(computeRoom(1));
+      const wide = resolveTargets(computeRoom(2));
+      // Fridge should be further from center in wider room
+      expect(Math.abs(wide.fridge.position[0])).toBeGreaterThan(Math.abs(small.fridge.position[0]));
+      // Island stays at center
+      expect(wide.island.position[0]).toBe(0);
+      expect(wide.island.position[2]).toBe(0);
+    });
   });
 
   describe('getStationTarget', () => {
@@ -138,9 +167,15 @@ describe('FurnitureLayout', () => {
     });
 
     const BLOATED = [
-      'l_counter.glb', 'oven_range.glb', 'upper_cabinets.glb',
-      'utensil_hooks.glb', 'island.glb', 'dishwasher.glb',
-      'trash_can.glb', 'table_chairs.glb', 'spice_rack.glb',
+      'l_counter.glb',
+      'oven_range.glb',
+      'upper_cabinets.glb',
+      'utensil_hooks.glb',
+      'island.glb',
+      'dishwasher.glb',
+      'trash_can.glb',
+      'table_chairs.glb',
+      'spice_rack.glb',
       'sausage.glb',
     ];
 
@@ -153,7 +188,7 @@ describe('FurnitureLayout', () => {
     it('should have horror prop targets', () => {
       const targets = resolveTargets(DEFAULT_ROOM);
       expect(targets['bear-trap']).toBeDefined();
-      expect(targets['worm']).toBeDefined();
+      expect(targets.worm).toBeDefined();
       expect(targets['fly-swatter']).toBeDefined();
     });
 

@@ -50,8 +50,28 @@ export interface FurnitureRule {
 // Constants
 // ---------------------------------------------------------------------------
 
-/** Default kitchen dimensions: 13x13 floor, 5.5 ceiling height. */
-export const DEFAULT_ROOM: RoomDimensions = {w: 13, d: 13, h: 5.5};
+/** Base room depth — determines overall scale. */
+const BASE_DEPTH = 13;
+
+/**
+ * Compute room dimensions from viewport aspect ratio.
+ * Width scales with aspect ratio; depth and height are fixed.
+ * This ensures the room fills the viewport naturally.
+ *
+ * Keep total floor area roughly constant (~169 sq units)
+ * so gameplay feel is consistent across aspect ratios.
+ *
+ * @param aspect - viewport width / height (e.g. 16/9 = 1.778)
+ */
+export function computeRoom(aspect: number): RoomDimensions {
+  const area = BASE_DEPTH * BASE_DEPTH;
+  const d = Math.sqrt(area / Math.max(aspect, 0.5));
+  const w = d * Math.max(aspect, 0.5);
+  return {w, d, h: 5.5};
+}
+
+/** Fallback: square room for tests and contexts without viewport info. */
+export const DEFAULT_ROOM: RoomDimensions = computeRoom(1);
 
 /**
  * Target names for the 5 challenge stations, indexed by challenge number (0-4).
@@ -65,14 +85,9 @@ export const STATION_TARGET_NAMES = ['fridge', 'grinder', 'stuffer', 'stove', 'c
 
 /**
  * Computes all named targets from room dimensions.
- * Positions are relative to room center (0, 0, 0).
- *
- * Reference positions (for DEFAULT_ROOM 13x13x5.5):
- *   Fridge:  [-5.16, 1.79, -5.02]
- *   Grinder: [-4.75, 2.06, -0.64]
- *   Stuffer: [ 2.28, 2.68,  2.25]
- *   Stove:   [-4.98, 2.13, -2.23]
- *   CRT TV:  [ 0,    2.50, -5.50] (1 unit inside back wall)
+ * All positions use proportional placement (fractions of room width/depth/height)
+ * so furniture layout scales correctly for any room size derived from viewport aspect ratio.
+ * Heights for counters/tables are absolute (always ~1m) since they must match human scale.
  *
  * @param room - The kitchen room dimensions (all targets scale with these)
  * @returns A map of target name to Target. Includes station targets (interactive),
@@ -81,17 +96,26 @@ export const STATION_TARGET_NAMES = ['fridge', 'grinder', 'stuffer', 'stove', 'c
 export function resolveTargets(room: RoomDimensions): Record<string, Target> {
   const halfW = room.w / 2;
   const halfD = room.d / 2;
+  const scale = Math.min(room.w, room.d) / 13;
 
-  const grinderPos: [number, number, number] = [-halfW + 1.75, room.h * 0.375, -halfD + 5.86];
+  // Proportional fractions: offset / 13 (based on original 13x13 room)
+  // Width fractions (multiply by room.w)
+  // Depth fractions (multiply by room.d)
+
+  const grinderPos: [number, number, number] = [
+    -halfW + room.w * (1.75 / 13),
+    room.h * 0.375,
+    -halfD + room.d * (5.86 / 13),
+  ];
 
   return {
     // ---- Station targets (challenge order 0-4) ----
 
     // 0 — Fridge: left-back corner
     fridge: {
-      position: [-halfW + 1.34, room.h * 0.325, -halfD + 1.48],
+      position: [-halfW + room.w * (1.34 / 13), room.h * 0.325, -halfD + room.d * (1.48 / 13)],
       rotationY: 0,
-      triggerRadius: 2.0,
+      triggerRadius: 2.0 * scale,
       markerY: 2.5,
     },
 
@@ -99,38 +123,39 @@ export function resolveTargets(room: RoomDimensions): Record<string, Target> {
     grinder: {
       position: grinderPos,
       rotationY: 0,
-      triggerRadius: 1.5,
+      triggerRadius: 1.5 * scale,
       markerY: 2.8,
     },
 
     // 2 — Stuffer: right side, front area
     stuffer: {
-      position: [halfW - 4.22, room.h * 0.487, halfD - 4.25],
+      position: [halfW - room.w * (4.22 / 13), room.h * 0.487, halfD - room.d * (4.25 / 13)],
       rotationY: Math.PI,
-      triggerRadius: 1.5,
+      triggerRadius: 1.5 * scale,
       markerY: 3.5,
     },
 
     // 3 — Stove: left wall, between fridge and grinder
     stove: {
-      position: [-halfW + 1.52, room.h * 0.387, -halfD + 4.27],
+      position: [-halfW + room.w * (1.52 / 13), room.h * 0.387, -halfD + room.d * (4.27 / 13)],
       rotationY: 0,
-      triggerRadius: 1.5,
+      triggerRadius: 1.5 * scale,
       markerY: 2.8,
     },
 
     // 4 — CRT TV: centered on back wall (z inside room, ~1 unit from wall)
     'crt-tv': {
-      position: [0, room.h * 0.455, -halfD + 1.0],
+      position: [0, room.h * 0.455, -halfD + room.d * (1.0 / 13)],
       rotationY: 0,
-      triggerRadius: 2.0,
+      triggerRadius: 2.0 * scale,
       markerY: 3.5,
     },
 
     // ---- Interactive objects ----
 
     'mixing-bowl': {
-      position: [-halfW + 1.34 + 1.5, 1.0, -halfD + 1.48],
+      // 1.34 + 1.5 = 2.84 → 2.84/13
+      position: [-halfW + room.w * (2.84 / 13), 1.0, -halfD + room.d * (1.48 / 13)],
       rotationY: 0,
       triggerRadius: 0,
     },
@@ -138,13 +163,13 @@ export function resolveTargets(room: RoomDimensions): Record<string, Target> {
     // ---- Decorative targets ----
 
     'l-counter': {
-      position: [-halfW + 1.0, 0, -halfD + 3.0],
+      position: [-halfW + room.w * (1.0 / 13), 0, -halfD + room.d * (3.0 / 13)],
       rotationY: 0,
       triggerRadius: 0,
     },
 
     'upper-cabinets': {
-      position: [-halfW + 1.0, room.h * 0.65, -halfD + 3.0],
+      position: [-halfW + room.w * (1.0 / 13), room.h * 0.65, -halfD + room.d * (3.0 / 13)],
       rotationY: 0,
       triggerRadius: 0,
     },
@@ -156,37 +181,37 @@ export function resolveTargets(room: RoomDimensions): Record<string, Target> {
     },
 
     table: {
-      position: [halfW - 2.5, 0, halfD - 2.5],
+      position: [halfW - room.w * (2.5 / 13), 0, halfD - room.d * (2.5 / 13)],
       rotationY: 0,
       triggerRadius: 0,
     },
 
     'trash-can': {
-      position: [halfW - 1.0, 0, -halfD + 1.0],
+      position: [halfW - room.w * (1.0 / 13), 0, -halfD + room.d * (1.0 / 13)],
       rotationY: 0,
       triggerRadius: 0,
     },
 
     oven: {
-      position: [-halfW + 1.5, 0, -halfD + 4.5],
+      position: [-halfW + room.w * (1.5 / 13), 0, -halfD + room.d * (4.5 / 13)],
       rotationY: 0,
       triggerRadius: 0,
     },
 
     dishwasher: {
-      position: [-halfW + 1.5, 0, -halfD + 6.0],
+      position: [-halfW + room.w * (1.5 / 13), 0, -halfD + room.d * (6.0 / 13)],
       rotationY: 0,
       triggerRadius: 0,
     },
 
     'spice-rack': {
-      position: [-halfW + 0.5, room.h * 0.5, -halfD + 5.0],
+      position: [-halfW + room.w * (0.5 / 13), room.h * 0.5, -halfD + room.d * (5.0 / 13)],
       rotationY: 0,
       triggerRadius: 0,
     },
 
     'utensil-hooks': {
-      position: [-halfW + 0.5, room.h * 0.55, -halfD + 3.5],
+      position: [-halfW + room.w * (0.5 / 13), room.h * 0.55, -halfD + room.d * (3.5 / 13)],
       rotationY: 0,
       triggerRadius: 0,
     },
@@ -205,13 +230,19 @@ export function resolveTargets(room: RoomDimensions): Record<string, Target> {
     },
 
     // Grinder output: slightly in front of grinder (toward +Z), on counter surface
+    // Horizontal offsets are proportional; vertical offset stays absolute (machine-relative)
     'grinder-output': {
-      position: [grinderPos[0] + 0.6, grinderPos[1] - 0.2, grinderPos[2] + 0.5],
+      position: [
+        grinderPos[0] + room.w * (0.6 / 13),
+        grinderPos[1] - 0.2,
+        grinderPos[2] + room.d * (0.5 / 13),
+      ],
       rotationY: 0,
       triggerRadius: 0,
     },
 
     // Grinder receiver: invisible mesh at hopper opening for bowl drop detection
+    // Vertical offsets stay absolute (machine-relative)
     'grinder-receiver': {
       position: [grinderPos[0], grinderPos[1] + 0.7 + 0.5 + 0.05, grinderPos[2]],
       rotationY: 0,
@@ -219,8 +250,13 @@ export function resolveTargets(room: RoomDimensions): Record<string, Target> {
     },
 
     // Stuffer output: slightly in front of stuffer, on the table
+    // Horizontal offsets are proportional; vertical offset stays absolute
     'stuffer-output': {
-      position: [halfW - 4.22 + 0.5, room.h * 0.487 - 0.3, halfD - 4.25 + 0.5],
+      position: [
+        halfW - room.w * (4.22 / 13) + room.w * (0.5 / 13),
+        room.h * 0.487 - 0.3,
+        halfD - room.d * (4.25 / 13) + room.d * (0.5 / 13),
+      ],
       rotationY: 0,
       triggerRadius: 0,
     },
@@ -229,108 +265,108 @@ export function resolveTargets(room: RoomDimensions): Record<string, Target> {
 
     // Frying pan resting near the stove
     'frying-pan': {
-      position: [-halfW + 2.0, 1.05, -halfD + 4.8],
+      position: [-halfW + room.w * (2.0 / 13), 1.05, -halfD + room.d * (4.8 / 13)],
       rotationY: 0.3,
       triggerRadius: 0,
     },
 
-    // Cutting board on the island
+    // Cutting board on the island (center-relative, fraction of halfW/halfD)
     'cutting-board': {
-      position: [0.4, 1.05, -0.3],
+      position: [halfW * (0.4 / 6.5), 1.05, -halfD * (0.3 / 6.5)],
       rotationY: -0.2,
       triggerRadius: 0,
     },
 
     // Pot on the counter near stove
     pot: {
-      position: [-halfW + 2.5, 1.05, -halfD + 3.5],
+      position: [-halfW + room.w * (2.5 / 13), 1.05, -halfD + room.d * (3.5 / 13)],
       rotationY: 0,
       triggerRadius: 0,
     },
 
     // Pot lid next to the pot
     'pot-lid': {
-      position: [-halfW + 3.0, 1.05, -halfD + 3.3],
+      position: [-halfW + room.w * (3.0 / 13), 1.05, -halfD + room.d * (3.3 / 13)],
       rotationY: 0.5,
       triggerRadius: 0,
     },
 
-    // Bottle on the island (ominous unlabeled bottle)
+    // Bottle on the island (ominous unlabeled bottle — center-relative)
     bottle: {
-      position: [-0.5, 1.05, 0.5],
+      position: [-halfW * (0.5 / 6.5), 1.05, halfD * (0.5 / 6.5)],
       rotationY: 0,
       triggerRadius: 0,
     },
 
     // Glass on the table
     glass: {
-      position: [halfW - 2.8, 0.95, halfD - 2.2],
+      position: [halfW - room.w * (2.8 / 13), 0.95, halfD - room.d * (2.2 / 13)],
       rotationY: 0,
       triggerRadius: 0,
     },
 
     // Plate on the table
     plate: {
-      position: [halfW - 2.2, 0.95, halfD - 2.8],
+      position: [halfW - room.w * (2.2 / 13), 0.95, halfD - room.d * (2.8 / 13)],
       rotationY: 0,
       triggerRadius: 0,
     },
 
     // Knife holder on counter
     'knife-holder': {
-      position: [-halfW + 1.2, 1.05, -halfD + 5.5],
+      position: [-halfW + room.w * (1.2 / 13), 1.05, -halfD + room.d * (5.5 / 13)],
       rotationY: 0,
       triggerRadius: 0,
     },
 
     // Toaster on counter
     toaster: {
-      position: [-halfW + 1.8, 1.05, -halfD + 6.8],
+      position: [-halfW + room.w * (1.8 / 13), 1.05, -halfD + room.d * (6.8 / 13)],
       rotationY: 0.1,
       triggerRadius: 0,
     },
 
-    // Rolling pin on island
+    // Rolling pin on island (center-relative)
     roller: {
-      position: [0.8, 1.08, 0.1],
+      position: [halfW * (0.8 / 6.5), 1.08, halfD * (0.1 / 6.5)],
       rotationY: 0.7,
       triggerRadius: 0,
     },
 
-    // Cutlery scattered on island for horror atmosphere
+    // Cutlery scattered on island for horror atmosphere (center-relative)
     'cutlery-knife': {
-      position: [0.2, 1.06, -0.6],
+      position: [halfW * (0.2 / 6.5), 1.06, -halfD * (0.6 / 6.5)],
       rotationY: 1.2,
       triggerRadius: 0,
     },
 
     'cutlery-cleaver': {
-      position: [-0.3, 1.06, 0.2],
+      position: [-halfW * (0.3 / 6.5), 1.06, halfD * (0.2 / 6.5)],
       rotationY: -0.8,
       triggerRadius: 0,
     },
 
     'cutlery-ladle': {
-      position: [-halfW + 1.5, 1.06, -halfD + 4.0],
+      position: [-halfW + room.w * (1.5 / 13), 1.06, -halfD + room.d * (4.0 / 13)],
       rotationY: 0.4,
       triggerRadius: 0,
     },
 
     'cutlery-fork': {
-      position: [halfW - 2.5, 0.96, halfD - 2.5],
+      position: [halfW - room.w * (2.5 / 13), 0.96, halfD - room.d * (2.5 / 13)],
       rotationY: 0.3,
       triggerRadius: 0,
     },
 
     'cutlery-spoon': {
-      position: [halfW - 2.0, 0.96, halfD - 3.0],
+      position: [halfW - room.w * (2.0 / 13), 0.96, halfD - room.d * (3.0 / 13)],
       rotationY: -0.2,
       triggerRadius: 0,
     },
 
     // Extra chair pushed aside (someone left in a hurry)
     'chair-extra': {
-      position: [halfW - 4.0, 0, halfD - 1.5],
+      position: [halfW - room.w * (4.0 / 13), 0, halfD - room.d * (1.5 / 13)],
       rotationY: -0.6,
       triggerRadius: 0,
     },
@@ -338,13 +374,13 @@ export function resolveTargets(room: RoomDimensions): Record<string, Target> {
     // ---- New furniture replacement targets ----
 
     'l-counter-ext': {
-      position: [-halfW + 1.0, 0, -halfD + 5.0],
+      position: [-halfW + room.w * (1.0 / 13), 0, -halfD + room.d * (5.0 / 13)],
       rotationY: 0,
       triggerRadius: 0,
     },
 
     'upper-cabinets-2': {
-      position: [-halfW + 1.0, room.h * 0.65, -halfD + 5.0],
+      position: [-halfW + room.w * (1.0 / 13), room.h * 0.65, -halfD + room.d * (5.0 / 13)],
       rotationY: 0,
       triggerRadius: 0,
     },
@@ -352,55 +388,55 @@ export function resolveTargets(room: RoomDimensions): Record<string, Target> {
     // ---- Horror props ----
 
     'bear-trap': {
-      position: [halfW - 1.5, 0, halfD - 1.0],
+      position: [halfW - room.w * (1.5 / 13), 0, halfD - room.d * (1.0 / 13)],
       rotationY: 0.8,
       triggerRadius: 0,
     },
 
     worm: {
-      position: [-halfW + 2.5, 1.08, -halfD + 2.0],
+      position: [-halfW + room.w * (2.5 / 13), 1.08, -halfD + room.d * (2.0 / 13)],
       rotationY: 2.1,
       triggerRadius: 0,
     },
 
     'fly-swatter': {
-      position: [halfW - 0.3, room.h * 0.45, -halfD + 2.5],
+      position: [halfW - room.w * (0.3 / 13), room.h * 0.45, -halfD + room.d * (2.5 / 13)],
       rotationY: Math.PI / 2,
       triggerRadius: 0,
     },
 
     'broken-can': {
-      position: [halfW - 3.0, 0, -halfD + 0.5],
+      position: [halfW - room.w * (3.0 / 13), 0, -halfD + room.d * (0.5 / 13)],
       rotationY: 1.5,
       triggerRadius: 0,
     },
 
     bandages: {
-      position: [-halfW + 3.5, 1.06, -halfD + 4.5],
+      position: [-halfW + room.w * (3.5 / 13), 1.06, -halfD + room.d * (4.5 / 13)],
       rotationY: 0.3,
       triggerRadius: 0,
     },
 
     matchbox: {
-      position: [-halfW + 2.0, 1.06, -halfD + 4.2],
+      position: [-halfW + room.w * (2.0 / 13), 1.06, -halfD + room.d * (4.2 / 13)],
       rotationY: -0.4,
       triggerRadius: 0,
     },
 
     'postit-note': {
-      position: [-halfW + 1.5, room.h * 0.35, -halfD + 1.2],
+      position: [-halfW + room.w * (1.5 / 13), room.h * 0.35, -halfD + room.d * (1.2 / 13)],
       rotationY: 0,
       triggerRadius: 0,
     },
 
     'fridge-letters': {
-      position: [-halfW + 1.5, room.h * 0.3, -halfD + 1.6],
+      position: [-halfW + room.w * (1.5 / 13), room.h * 0.3, -halfD + room.d * (1.6 / 13)],
       rotationY: 0,
       triggerRadius: 0,
     },
 
     'prop-knife': {
-      position: [0.6, 1.07, -0.1],
+      position: [halfW * (0.6 / 6.5), 1.07, -halfD * (0.1 / 6.5)],
       rotationY: 2.4,
       triggerRadius: 0,
     },
