@@ -65,12 +65,12 @@ describe('GameWorld', () => {
     // Manual ProximityTrigger replaced (native fallback renamed)
     expect(source).not.toContain('function ProximityTrigger');
     expect(source).not.toContain('STATION_TRIGGERS');
-    // Fridge + CRT are station-level components; grinder/stuffer/stove use Mechanics
+    // Fridge + CRT are station-level components; all three machines use ECS orchestrators
     expect(source).toContain('FridgeStation');
     expect(source).toContain('CrtTelevision');
-    expect(source).toContain('GrinderMechanics');
-    expect(source).toContain('StufferMechanics');
-    expect(source).toContain('CookingMechanics');
+    expect(source).toContain('GrinderOrchestrator');
+    expect(source).toContain('StufferOrchestrator');
+    expect(source).toContain('CookingOrchestrator');
   });
 
   it('derives station positions from FurnitureLayout targets (not hardcoded)', () => {
@@ -91,7 +91,7 @@ describe('GameWorld', () => {
     const fs = require('node:fs');
     const path = require('node:path');
     const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
-    // FridgeStation, GrinderMechanics, StufferMechanics, CookingMechanics, CrtTelevision
+    // FridgeStation, GrinderOrchestrator, StufferOrchestrator, CookingOrchestrator, CrtTelevision
     expect(source).toContain('position={STATIONS[0].position}');
     expect(source).toContain('position={STATIONS[1].position}');
     expect(source).toContain('position={STATIONS[2].position}');

@@ -1,33 +1,43 @@
 /**
- * @module StufferMechanics
- * 3D crank-driven sausage extrusion with tap-to-twist link creation.
+ * @module StufferOrchestrator
+ * ECS-driven replacement for StufferMechanics.
  *
- * This component renders:
- * - A rotary crank handle that the player drags to extrude sausage
- * - A SkinnedMesh sausage body that extends from the nozzle as stuffLevel rises
- * - Tap-to-twist interaction: tapping the sausage body creates a pinch/twist,
- *   visually constricting a bone and recording the position in the store
- * - Flair detection: twisting while simultaneously cranking awards bonus points
+ * Spawns stuffer machine entities from STUFFER_ARCHETYPE on mount,
+ * despawns on unmount. Uses MachineEntitiesRenderer for all ECS entity
+ * rendering with automatic input event wiring (crank).
  *
- * Phase state machine: 'idle' -> 'drag' -> 'crank' -> 'done'
- * - idle: waiting for interaction
- * - drag: player is dragging the crank
- * - crank: actively cranking (stuffLevel increasing)
- * - done: extrusion complete
+ * Challenge-specific elements (sausage skinned mesh, casing inflation,
+ * water bowl, twist flashes) remain as R3F JSX since they are unique to
+ * the stuffer challenge and not part of the machine's compositional ECS model.
  *
- * @see StuffingChallenge - the 2D overlay that drives pressure/fill via store
- * @see StufferBody - the metal canister with plunger and spout
- * @see StufferCasing - the translucent casing tube
- * @see WaterBowl - the casing soaking bowl
+ * ECS systems handle:
+ * - CrankSystem: drag-to-angularVelocity conversion + damping
+ * - InputContractSystem: wiring crank -> vibration/power
+ * - VibrationSystem: canister/spout vibration when powered
+ * - FillDrivenSystem: plunger-disc Y-position driven by fillLevel
+ *
+ * The orchestrator only:
+ * - Manages phase state machine (fill -> stuff -> done)
+ * - Reads crank angularVelocity each frame to advance fillLevel
+ * - Toggles crank.enabled based on game phase
+ * - Manages challenge-specific elements (sausage body, casing, twist detection)
+ * - Fires onStuffComplete callback with twist/flair data
+ *
+ * @see StufferMechanics - the old monolithic component this replaces
+ * @see StufferCasing - inflation/pressure color visual
+ * @see WaterBowl - casing soaking bowl decoration
  */
 
 import {useFrame} from '@react-three/fiber';
-import {useCallback, useEffect, useMemo, useRef} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three/webgpu';
+import {StufferCasing} from '../../components/kitchen/stuffer/StufferCasing';
+import {WaterBowl} from '../../components/kitchen/stuffer/WaterBowl';
 import {useGameStore} from '../../store/gameStore';
-import {StufferBody} from './stuffer/StufferBody';
-import {StufferCasing} from './stuffer/StufferCasing';
-import {WaterBowl} from './stuffer/WaterBowl';
+import {despawnMachine, spawnMachine} from '../archetypes/spawnMachine';
+import {STUFFER_ARCHETYPE} from '../archetypes/stufferArchetype';
+import {MachineEntitiesRenderer} from '../renderers/ECSScene';
+import type {Entity} from '../types';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -51,32 +61,35 @@ const TWIST_PULSE_DURATION = 0.25;
 /** How many geometry segments per bone (affects smoothness). */
 const SEGMENTS_PER_BONE = 4;
 
-/** Crank rotation speed multiplier: radians of crank per pointer-drag pixel. */
-const CRANK_SENSITIVITY = 0.008;
+/** How much fillLevel (0-1) increases per unit of angular velocity per second. */
+const FILL_PER_VELOCITY = 0.04;
 
-/** How much stuffLevel (0-1) increases per radian of crank rotation. */
-const STUFF_PER_RADIAN = 0.04;
+/** Minimum angular velocity threshold to register as cranking. */
+const VELOCITY_THRESHOLD = 0.1;
 
-/** Nozzle tip position — sausage extrudes from here along +Z. */
+/** Nozzle tip position -- sausage extrudes from here along +Z. */
 const NOZZLE_TIP: [number, number, number] = [0, 0, 0];
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-export type StufferPhase = 'idle' | 'drag' | 'crank' | 'done';
+export type StufferPhase = 'fill' | 'stuff' | 'done';
 
-export interface StufferMechanicsProps {
-  /** World position offset for this component group. */
-  position?: [number, number, number];
-  /** Called when extrusion is fully complete (stuffLevel reached 1). */
-  onStuffComplete?: () => void;
-  /** Blend color hex from the store, used to tint the sausage. */
-  blendColor?: string;
+export interface StufferOrchestratorProps {
+  position: [number, number, number];
+  counterY: number;
+  visible: boolean;
+  onStuffComplete?: (result: {twistPoints: number[]; flairPoints: number}) => void;
+}
+
+interface TwistFlashData {
+  position: [number, number, number];
+  startTime: number;
 }
 
 // ---------------------------------------------------------------------------
-// Geometry builder — procedural sausage cylinder with skeleton
+// Geometry builder -- procedural sausage cylinder with skeleton
 // ---------------------------------------------------------------------------
 
 interface SausageGeometryResult {
@@ -86,11 +99,6 @@ interface SausageGeometryResult {
   bones: THREE.Bone[];
 }
 
-/**
- * Builds a skinned cylinder geometry with bones along its length.
- * The cylinder is oriented along the Y axis (Three.js convention for
- * CylinderGeometry) and will be rotated to align with Z in the scene.
- */
 function buildSausageGeometry(
   numBones: number,
   length: number,
@@ -101,7 +109,6 @@ function buildSausageGeometry(
 
   const geometry = new THREE.CylinderGeometry(radius, radius, length, 8, totalSegments);
 
-  // Build bone chain
   const rootBone = new THREE.Bone();
   rootBone.position.set(0, -length / 2, 0);
   const bones: THREE.Bone[] = [rootBone];
@@ -115,13 +122,12 @@ function buildSausageGeometry(
 
   const skeleton = new THREE.Skeleton(bones);
 
-  // Assign skin weights — each vertex influenced by nearest bone
   const posAttr = geometry.getAttribute('position');
   const skinIndices: number[] = [];
   const skinWeights: number[] = [];
 
   for (let i = 0; i < posAttr.count; i++) {
-    const y = posAttr.getY(i) + length / 2; // shift to 0..length range
+    const y = posAttr.getY(i) + length / 2;
     const boneFloat = (y / length) * numBones;
     const boneIdx = Math.min(Math.floor(boneFloat), numBones - 1);
     const nextIdx = Math.min(boneIdx + 1, numBones);
@@ -138,15 +144,10 @@ function buildSausageGeometry(
 }
 
 // ---------------------------------------------------------------------------
-// TwistFlash — brief scale-pulse feedback at a twist point
+// TwistFlash -- brief scale-pulse feedback at a twist point
 // ---------------------------------------------------------------------------
 
-interface TwistFlashProps {
-  position: [number, number, number];
-  startTime: number;
-}
-
-function TwistFlash({position, startTime}: TwistFlashProps) {
+function TwistFlash({position, startTime}: TwistFlashData) {
   const meshRef = useRef<THREE.Mesh>(null);
 
   useFrame(({clock}) => {
@@ -173,7 +174,7 @@ function TwistFlash({position, startTime}: TwistFlashProps) {
 }
 
 // ---------------------------------------------------------------------------
-// SausageLinksBody — skinned mesh sausage with twist pinches
+// SausageLinksBody -- skinned mesh sausage with twist pinches
 // ---------------------------------------------------------------------------
 
 interface SausageLinksBodyProps {
@@ -193,13 +194,11 @@ function SausageLinksBody({extrusionProgress, twistPositions, blendColor}: Sausa
   useFrame(() => {
     if (!meshRef.current) return;
 
-    // Show/hide bones based on extrusion progress
     const visibleBones = Math.floor(extrusionProgress * NUM_BONES);
 
     for (let i = 1; i <= NUM_BONES; i++) {
       const bone = bones[i];
       if (i <= visibleBones) {
-        // Check if this bone is near a twist position
         const boneNormalized = i / NUM_BONES;
         let isPinched = false;
         for (const tp of twistPositions) {
@@ -210,7 +209,6 @@ function SausageLinksBody({extrusionProgress, twistPositions, blendColor}: Sausa
         }
         bone.scale.setScalar(isPinched ? PINCH_SCALE : 1.0);
       } else {
-        // Hide bones beyond current extrusion by collapsing them
         bone.scale.setScalar(0.001);
       }
     }
@@ -232,112 +230,77 @@ function SausageLinksBody({extrusionProgress, twistPositions, blendColor}: Sausa
 }
 
 // ---------------------------------------------------------------------------
-// StufferMechanics — main component
+// StufferOrchestrator
 // ---------------------------------------------------------------------------
 
-export function StufferMechanics({
-  position = [0, 0, 0],
+export const StufferOrchestrator = ({
+  position,
+  counterY: _counterY,
+  visible,
   onStuffComplete,
-  blendColor: blendColorProp,
-}: StufferMechanicsProps) {
+}: StufferOrchestratorProps) => {
+  // ---- ECS entity lifecycle ----
+  const entitiesRef = useRef<Entity[]>([]);
+
+  useEffect(() => {
+    const entities = spawnMachine(STUFFER_ARCHETYPE);
+    entitiesRef.current = entities;
+    return () => {
+      despawnMachine(entities);
+      entitiesRef.current = [];
+    };
+  }, []);
+
   // ---- Store ----
-  const storeBlendColor = useGameStore(s => s.blendColor);
+  const blendColor = useGameStore(s => s.blendColor);
   const recordTwist = useGameStore(s => s.recordTwist);
   const recordFlairTwist = useGameStore(s => s.recordFlairTwist);
   const recordFormChoice = useGameStore(s => s.recordFormChoice);
   const recordFlairPoint = useGameStore(s => s.recordFlairPoint);
 
-  const blendColor = blendColorProp ?? storeBlendColor;
+  // ---- Phase state machine ----
+  const [gamePhase, setGamePhase] = useState<StufferPhase>('fill');
+  const gamePhaseRef = useRef<StufferPhase>('fill');
+  gamePhaseRef.current = gamePhase;
 
-  // ---- Phase state ----
-  const phaseRef = useRef<StufferPhase>('idle');
-  const stuffLevelRef = useRef(0);
+  // ---- Mutable refs (avoid stale closure in useFrame) ----
+  const fillLevelRef = useRef(0);
   const isCrankingRef = useRef(false);
-  const crankAngleRef = useRef(0);
-  const lastPointerYRef = useRef(0);
-
-  // ---- Twist tracking (local for visuals) ----
-  const twistPositionsRef = useRef<number[]>([]);
-  const twistFlashesRef = useRef<TwistFlashProps[]>([]);
+  const twistPointsRef = useRef<number[]>([]);
+  const flairPointsRef = useRef(0);
+  const twistFlashesRef = useRef<TwistFlashData[]>([]);
   const clockRef = useRef(0);
 
-  // Track flash count for key stability
-  const flashCountRef = useRef(0);
-
-  // Sync phase to 'crank' when stuffLevel > 0 and <= 1
-  useFrame(({clock}) => {
-    clockRef.current = clock.getElapsedTime();
-  });
-
-  // ---- Crank pointer handlers ----
-  const handleCrankPointerDown = useCallback(
-    (e: {stopPropagation: () => void; point?: {y: number}}) => {
-      e.stopPropagation();
-      if (phaseRef.current === 'done') return;
-      phaseRef.current = 'drag';
-      isCrankingRef.current = true;
-      lastPointerYRef.current = e.point?.y ?? 0;
-    },
-    [],
-  );
-
-  const handleCrankPointerMove = useCallback(
-    (e: {stopPropagation: () => void; point?: {y: number}}) => {
-      if (phaseRef.current !== 'drag' || !isCrankingRef.current) return;
-      e.stopPropagation();
-
-      const currentY = e.point?.y ?? 0;
-      const delta = (currentY - lastPointerYRef.current) * CRANK_SENSITIVITY * 100;
-      lastPointerYRef.current = currentY;
-
-      crankAngleRef.current += Math.abs(delta);
-      const newLevel = Math.min(1, stuffLevelRef.current + Math.abs(delta) * STUFF_PER_RADIAN);
-
-      if (newLevel > stuffLevelRef.current) {
-        stuffLevelRef.current = newLevel;
-        phaseRef.current = 'crank';
+  // ---- Enable/disable ECS input primitives based on game phase ----
+  useEffect(() => {
+    for (const entity of entitiesRef.current) {
+      if (entity.crank) {
+        entity.crank.enabled = gamePhase === 'stuff';
       }
-
-      // Check for completion
-      if (stuffLevelRef.current >= 1 && phaseRef.current !== 'done') {
-        phaseRef.current = 'done';
-        recordFormChoice();
-        onStuffComplete?.();
-      }
-    },
-    [onStuffComplete, recordFormChoice],
-  );
-
-  const handleCrankPointerUp = useCallback(() => {
-    isCrankingRef.current = false;
-    if (phaseRef.current === 'drag') {
-      phaseRef.current = stuffLevelRef.current > 0 ? 'crank' : 'idle';
     }
-  }, []);
+  }, [gamePhase]);
 
   // ---- Twist handler (tap on sausage hitbox) ----
   const handleTwistTap = useCallback(
     (e: {stopPropagation: () => void; point?: {z: number}}) => {
       e.stopPropagation();
 
-      // Only allow twists during crank phase
-      if (phaseRef.current !== 'crank' && phaseRef.current !== 'drag') return;
-      if (stuffLevelRef.current <= 0) return;
+      // Only allow twists during stuff phase
+      if (gamePhaseRef.current !== 'stuff') return;
+      if (fillLevelRef.current <= 0) return;
 
-      // Calculate normalized position based on where they tapped,
-      // or fall back to current stuff level
-      let normalizedPos = stuffLevelRef.current;
+      // Calculate normalized position based on tap location
+      let normalizedPos = fillLevelRef.current;
       if (e.point) {
-        // Map the Z coordinate of the tap to a 0-1 position along the sausage
         const localZ = e.point.z - NOZZLE_TIP[2];
         normalizedPos = Math.max(0.05, Math.min(0.95, localZ / SAUSAGE_LENGTH));
       }
 
-      // Record the twist in the store
+      // Record the twist in store
       recordTwist(normalizedPos);
 
       // Track locally for visual feedback
-      twistPositionsRef.current = [...twistPositionsRef.current, normalizedPos];
+      twistPointsRef.current = [...twistPointsRef.current, normalizedPos];
 
       // Add a twist flash
       twistFlashesRef.current = [
@@ -347,74 +310,85 @@ export function StufferMechanics({
           startTime: clockRef.current,
         },
       ];
-      flashCountRef.current += 1;
 
       // Flair: simultaneous crank + twist
       if (isCrankingRef.current) {
         recordFlairTwist();
         recordFlairPoint('simultaneous-crank-twist', 5);
+        flairPointsRef.current += 5;
       }
     },
     [recordTwist, recordFlairTwist, recordFlairPoint],
   );
 
-  // ---- Completion side-effect: record form choice ----
-  const completedRef = useRef(false);
-  useEffect(() => {
-    // Guard for double-calls
-    return () => {
-      completedRef.current = false;
-    };
-  }, []);
+  // ---- useFrame: read ECS state + advance fill level ----
+  useFrame(({clock}, delta) => {
+    if (!visible) return;
+
+    clockRef.current = clock.getElapsedTime();
+
+    const phase = gamePhaseRef.current;
+
+    // Auto-transition from fill to stuff phase (stuffer starts immediately)
+    if (phase === 'fill') {
+      setGamePhase('stuff');
+      gamePhaseRef.current = 'stuff';
+      return;
+    }
+
+    // --- Read ECS crank state ---
+    const crankEntity = entitiesRef.current.find(e => e.machineSlot?.slotName === 'crank-handle');
+    const discEntity = entitiesRef.current.find(e => e.machineSlot?.slotName === 'plunger-disc');
+
+    if (crankEntity?.crank && discEntity?.fillDriven && phase === 'stuff') {
+      const velocity = Math.abs(crankEntity.crank.angularVelocity);
+      isCrankingRef.current = velocity > VELOCITY_THRESHOLD;
+
+      // Advance fill level based on crank velocity
+      if (velocity > VELOCITY_THRESHOLD) {
+        const newLevel = Math.min(1, fillLevelRef.current + velocity * FILL_PER_VELOCITY * delta);
+        fillLevelRef.current = newLevel;
+        discEntity.fillDriven.fillLevel = newLevel;
+      }
+
+      // Check for completion
+      if (fillLevelRef.current >= 1.0 && phase === 'stuff') {
+        setGamePhase('done');
+        gamePhaseRef.current = 'done';
+        recordFormChoice();
+        onStuffComplete?.({
+          twistPoints: twistPointsRef.current,
+          flairPoints: flairPointsRef.current,
+        });
+      }
+    }
+  });
+
+  if (!visible) return null;
 
   return (
     <group position={position}>
-      {/* Stuffer body: canister, plunger, meat fill, spout */}
-      <StufferBody fillLevel={stuffLevelRef.current} isCranking={isCrankingRef.current} />
+      {/* ECS machine entities -- rendered with automatic input event wiring */}
+      <MachineEntitiesRenderer entities={entitiesRef.current} />
 
       {/* Water bowl: casing soaking bowl, offset to left/front */}
       <WaterBowl position={[-0.5, -0.5, 0.3]} />
 
-      {/* Casing tube: extends from spout toward nozzle */}
+      {/* Casing tube: inflates based on fill/pressure, shifts color */}
       <StufferCasing
-        fillLevel={stuffLevelRef.current}
-        pressureLevel={stuffLevelRef.current}
+        fillLevel={fillLevelRef.current}
+        pressureLevel={fillLevelRef.current}
         blendColor={blendColor}
       />
-
-      {/* Crank handle — draggable sphere */}
-      <mesh
-        position={[0.4, 0.3, 0]}
-        onPointerDown={handleCrankPointerDown}
-        onPointerMove={handleCrankPointerMove}
-        onPointerUp={handleCrankPointerUp}
-        onPointerLeave={handleCrankPointerUp}
-      >
-        <sphereGeometry args={[0.12, 12, 12]} />
-        <meshBasicMaterial color={0x888888} />
-      </mesh>
-
-      {/* Crank arm visual */}
-      <mesh position={[0.2, 0.3, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.02, 0.02, 0.4, 6]} />
-        <meshBasicMaterial color={0x666666} />
-      </mesh>
-
-      {/* Nozzle tip marker */}
-      <mesh position={NOZZLE_TIP}>
-        <cylinderGeometry args={[0.05, 0.04, 0.15, 8]} />
-        <meshBasicMaterial color={0x555555} />
-      </mesh>
 
       {/* Sausage body (skinned mesh) */}
       <SausageLinksBody
-        extrusionProgress={stuffLevelRef.current}
-        twistPositions={twistPositionsRef.current}
+        extrusionProgress={fillLevelRef.current}
+        twistPositions={twistPointsRef.current}
         blendColor={blendColor}
       />
 
-      {/* Twist hitbox — invisible mesh along the sausage extrusion path.
-          Only accepts pointer events (click/tap) during crank phase. */}
+      {/* Twist hitbox -- invisible mesh along the sausage extrusion path */}
       <mesh
         position={[NOZZLE_TIP[0], NOZZLE_TIP[1], NOZZLE_TIP[2] + SAUSAGE_LENGTH / 2]}
         onClick={handleTwistTap}
@@ -434,4 +408,4 @@ export function StufferMechanics({
       ))}
     </group>
   );
-}
+};

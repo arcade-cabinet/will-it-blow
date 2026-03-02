@@ -2,8 +2,8 @@
  * @module GameWorld
  * Main R3F Canvas scene orchestrator for the "Will It Blow?" kitchen.
  *
- * Renders the full 3D scene: kitchen environment, procedural Mechanics
- * components (grinder, stuffer, cooking), the CRT television, fridge station,
+ * Renders the full 3D scene: kitchen environment, ECS-driven orchestrators
+ * (grinder, stuffer, cooking), the CRT television, fridge station,
  * FPS camera controller, physics world, grab system, and station waypoint markers.
  *
  * Architecture:
@@ -42,19 +42,19 @@ import {BlendFunction} from 'postprocessing';
 import {Suspense, useCallback, useRef} from 'react';
 import {Platform, Pressable, Text, View} from 'react-native';
 import {WebGPURenderer} from 'three/webgpu';
+import {CookingOrchestrator} from '../ecs/orchestrators/CookingOrchestrator';
+import {GrinderOrchestrator} from '../ecs/orchestrators/GrinderOrchestrator';
+import {StufferOrchestrator} from '../ecs/orchestrators/StufferOrchestrator';
 import {ECSScene} from '../ecs/renderers/ECSScene';
 import {DEFAULT_ROOM, resolveTargets, STATION_TARGET_NAMES} from '../engine/FurnitureLayout';
 import {useGameStore} from '../store/gameStore';
 import {FPSController} from './controls/FPSController';
 import {GrabSystem} from './controls/GrabSystem';
 import {BasementStructure} from './kitchen/BasementStructure';
-import {CookingMechanics} from './kitchen/CookingMechanics';
 import {CrtTelevision} from './kitchen/CrtTelevision';
 import {FridgeStation} from './kitchen/FridgeStation';
-import {GrinderMechanics} from './kitchen/GrinderMechanics';
 import {KitchenEnvironment} from './kitchen/KitchenEnvironment';
 import {StationMarker} from './kitchen/StationMarker';
-import {StufferMechanics} from './kitchen/StufferMechanics';
 import {TransferBowl} from './kitchen/TransferBowl';
 import {SceneIntrospector} from './SceneIntrospector';
 
@@ -352,19 +352,19 @@ const SceneContent = ({
       )}
 
       {/* Procedural mechanics — interactive station geometry from POC */}
-      <GrinderMechanics
+      <GrinderOrchestrator
         position={STATIONS[1].position}
         counterY={STATIONS[1].position[1]}
         visible={isGrinderActive}
         onGrindComplete={handleGrindComplete}
       />
-      <StufferMechanics
+      <StufferOrchestrator
         position={STATIONS[2].position}
         counterY={STATIONS[2].position[1]}
         visible={isStufferActive}
         onStuffComplete={handleStuffComplete}
       />
-      <CookingMechanics
+      <CookingOrchestrator
         position={STATIONS[3].position}
         counterY={STATIONS[3].position[1]}
         visible={isStoveActive}

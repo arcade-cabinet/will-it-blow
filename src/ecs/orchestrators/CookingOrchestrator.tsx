@@ -1,35 +1,35 @@
 /**
- * @module CookingMechanics
- * 3D cooking mechanics for the frying pan station.
+ * @module CookingOrchestrator
+ * ECS-driven replacement for CookingMechanics.
  *
- * Manages the interactive cooking loop: player-controlled heat via dial
- * clicks (low/medium/high/off cycle), burn detection (cookLevel > 1.0 =
- * instant defeat), pan-flip flair gesture for bonus points, and a grease
- * glisten orbiting point light.
+ * Spawns stove machine entities from STOVE_ARCHETYPE on mount,
+ * despawns on unmount. Uses MachineEntitiesRenderer for all ECS entity
+ * rendering with automatic input event wiring (dial).
  *
- * Phase state machine:
- * - 'place'     — drag pan to front burner
- * - 'dial'      — click dial to ignite
- * - 'cooking'   — player controls heat, can flip sausage, remove pan when done
- * - 'overcooked' — burn state, instant game over
- * - 'done'      — pan removed, cook level recorded
+ * Challenge-specific elements (sausage body, steam/smoke particles,
+ * flip animation, glisten light) remain as R3F JSX since they are
+ * unique to the cooking challenge and not part of the machine's
+ * compositional ECS model.
  *
- * Visual feedback:
- * - Burner color/intensity scales with heat setting
- * - Sausage color transitions pink -> brown -> black based on cookLevel
- * - Steam/smoke particles scale with heat and cookLevel
- * - Orbiting glisten light creates grease specular highlights during cooking
- * - Pan flip animation with sparkle burst on clean flips
+ * ECS systems handle:
+ * - DialSystem: tap processing for heat setting cycle (off/low/medium/high)
+ * - InputContractSystem: wiring dial segment -> powerSource level + active
+ *
+ * The orchestrator only:
+ * - Toggles enabled flags on input primitives based on game phase
+ * - Reads powerSource outputs (powerLevel, active)
+ * - Manages challenge-specific elements (sausage, particles, burner color)
+ * - Fires onCookComplete callback to Zustand store
  */
 
 import {useFrame} from '@react-three/fiber';
-import {useCallback, useRef} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import type * as THREE from 'three/webgpu';
 import {useGameStore} from '../../store/gameStore';
-import {BurnerRing} from './stove/BurnerRing';
-import {FryingPan} from './stove/FryingPan';
-import {GlistenLight} from './stove/GlistenLight';
-import {StoveDial} from './stove/StoveDial';
+import {despawnMachine, spawnMachine} from '../archetypes/spawnMachine';
+import {STOVE_ARCHETYPE} from '../archetypes/stoveArchetype';
+import {MachineEntitiesRenderer} from '../renderers/ECSScene';
+import type {Entity} from '../types';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -39,47 +39,43 @@ export type CookingPhase = 'place' | 'dial' | 'cooking' | 'overcooked' | 'done';
 
 export type HeatSetting = 'off' | 'low' | 'medium' | 'high';
 
-interface CookingMechanicsProps {
-  /** World position of the cooking station */
+interface CookingOrchestratorProps {
   position: [number, number, number];
-  /** Called when the player finishes cooking (pan removed or overcooked) */
-  onCookComplete: () => void;
+  counterY: number;
+  visible: boolean;
+  onCookComplete?: (cookLevel: number) => void;
 }
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const PAN_RADIUS = 0.4;
-const PAN_HEIGHT = 0.06;
 const PAN_Y = 0.12;
+const PAN_HEIGHT = 0.06;
 const SAUSAGE_RADIUS = 0.07;
 const SAUSAGE_HALF_LENGTH = 0.25;
 
-/** Heat rates per setting (cook level units per second) */
-const HEAT_RATES: Record<HeatSetting, number> = {
-  off: 0,
-  low: 0.03,
-  medium: 0.06,
-  high: 0.12,
+/** Heat rates per power level (cook level units per second) */
+const HEAT_RATE_MAP: Record<number, number> = {
+  0: 0, // off
+  0.33: 0.03, // low
+  0.66: 0.06, // medium
+  1.0: 0.12, // high
 };
 
-/** Heat setting cycle order */
-const HEAT_CYCLE: HeatSetting[] = ['low', 'medium', 'high', 'off'];
-
-/** Burner visual parameters per heat setting */
-const BURNER_PARAMS: Record<HeatSetting, {color: [number, number, number]; emissive: number}> = {
-  off: {color: [0.15, 0.05, 0.02], emissive: 0},
-  low: {color: [0.8, 0.35, 0.05], emissive: 0.3},
-  medium: {color: [1.0, 0.5, 0.05], emissive: 1.0},
-  high: {color: [1.0, 0.2, 0.1], emissive: 2.0},
+/** Burner visual parameters per power level */
+const BURNER_PARAMS_MAP: Record<number, {color: [number, number, number]; emissive: number}> = {
+  0: {color: [0.15, 0.05, 0.02], emissive: 0},
+  0.33: {color: [0.8, 0.35, 0.05], emissive: 0.3},
+  0.66: {color: [1.0, 0.5, 0.05], emissive: 1.0},
+  1.0: {color: [1.0, 0.2, 0.1], emissive: 2.0},
 };
 
 /** Sausage color keyframes based on cook level */
 const COLOR_RAW: [number, number, number] = [1.0, 0.714, 0.757];
 const COLOR_COOKED: [number, number, number] = [0.545, 0.271, 0.075];
 const COLOR_CHARRED: [number, number, number] = [0.15, 0.1, 0.08];
-const COLOR_BURNT: [number, number, number] = [0.067, 0.067, 0.067]; // 0x111111
+const COLOR_BURNT: [number, number, number] = [0.067, 0.067, 0.067];
 
 const BURN_THRESHOLD = 1.0;
 const SMOKE_THRESHOLD = 0.85;
@@ -123,20 +119,55 @@ export function cookLevelToColor(cookLevel: number): [number, number, number] {
   return COLOR_BURNT;
 }
 
+/** Find the closest key in a map to a given value */
+function closestKey(map: Record<number, unknown>, value: number): number {
+  const keys = Object.keys(map).map(Number);
+  let closest = keys[0];
+  let minDist = Math.abs(value - closest);
+  for (const k of keys) {
+    const dist = Math.abs(value - k);
+    if (dist < minDist) {
+      closest = k;
+      minDist = dist;
+    }
+  }
+  return closest;
+}
+
 // ---------------------------------------------------------------------------
-// Component
+// CookingOrchestrator
 // ---------------------------------------------------------------------------
 
-export function CookingMechanics({position, onCookComplete}: CookingMechanicsProps) {
+export function CookingOrchestrator({
+  position,
+  counterY: _counterY,
+  visible,
+  onCookComplete,
+}: CookingOrchestratorProps) {
+  // ---- ECS entity lifecycle ----
+  const entitiesRef = useRef<Entity[]>([]);
+
+  useEffect(() => {
+    const entities = spawnMachine(STOVE_ARCHETYPE);
+    entitiesRef.current = entities;
+    return () => {
+      despawnMachine(entities);
+      entitiesRef.current = [];
+    };
+  }, []);
+
   // ---- Store actions ----
   const addStrike = useGameStore(s => s.addStrike);
   const setMrSausageReaction = useGameStore(s => s.setMrSausageReaction);
   const recordCookLevel = useGameStore(s => s.recordCookLevel);
   const recordFlairPoint = useGameStore(s => s.recordFlairPoint);
 
-  // ---- Refs for frame loop (avoid stale closures) ----
+  // ---- Local phase state ----
+  const [gamePhase, setGamePhase] = useState<CookingPhase>('place');
   const phaseRef = useRef<CookingPhase>('place');
-  const heatSettingRef = useRef<HeatSetting>('off');
+  phaseRef.current = gamePhase;
+
+  // ---- Mutable refs (avoid stale closure in useFrame) ----
   const cookLevelRef = useRef(0);
   const timeRef = useRef(0);
 
@@ -145,7 +176,6 @@ export function CookingMechanics({position, onCookComplete}: CookingMechanicsPro
   const sausageGroupRef = useRef<THREE.Group>(null);
   const sausageMatRef = useRef<THREE.MeshStandardMaterial>(null);
   const burnerMatRef = useRef<THREE.MeshBasicMaterial>(null);
-  const dialRef = useRef<THREE.Mesh>(null);
   const glistenRef = useRef<THREE.PointLight>(null);
 
   // ---- Steam particles ----
@@ -185,8 +215,18 @@ export function CookingMechanics({position, onCookComplete}: CookingMechanicsPro
   const flipCountRef = useRef(0);
   const pointerStartRef = useRef<{y: number; time: number} | null>(null);
 
-  // ---- Pan placement flag (simplified: auto-placed for now) ----
+  // ---- Pan placement flag ----
   const panPlacedRef = useRef(false);
+
+  // ---- Enable/disable ECS input primitives based on game phase ----
+  useEffect(() => {
+    const isActive = gamePhase === 'dial' || gamePhase === 'cooking';
+    for (const entity of entitiesRef.current) {
+      if (entity.dial) {
+        entity.dial.enabled = isActive;
+      }
+    }
+  }, [gamePhase]);
 
   // ------------------------------------------------------------------
   // Interactions
@@ -196,38 +236,21 @@ export function CookingMechanics({position, onCookComplete}: CookingMechanicsPro
   const handlePanClick = useCallback(() => {
     if (phaseRef.current !== 'place') return;
     panPlacedRef.current = true;
-    phaseRef.current = 'dial';
-  }, []);
-
-  /** Click dial to start cooking or cycle heat */
-  const handleDialClick = useCallback(() => {
-    if (phaseRef.current === 'dial') {
-      // First dial click starts cooking at low heat
-      heatSettingRef.current = 'low';
-      phaseRef.current = 'cooking';
-      return;
-    }
-    if (phaseRef.current === 'cooking') {
-      // Cycle heat: low -> medium -> high -> off -> low
-      const current = heatSettingRef.current;
-      const idx = HEAT_CYCLE.indexOf(current);
-      const next = HEAT_CYCLE[(idx + 1) % HEAT_CYCLE.length];
-      heatSettingRef.current = next;
-    }
+    setGamePhase('dial');
   }, []);
 
   /** Click the pan handle during cooking to remove pan and finish */
   const handlePanHandleClick = useCallback(() => {
     if (phaseRef.current !== 'cooking') return;
-    phaseRef.current = 'done';
+    setGamePhase('done');
     recordCookLevel(cookLevelRef.current);
-    onCookComplete();
+    onCookComplete?.(cookLevelRef.current);
   }, [onCookComplete, recordCookLevel]);
 
   /** Pointer down on pan for flip gesture tracking */
   const handlePanPointerDown = useCallback((e: THREE.Event) => {
     if (phaseRef.current !== 'cooking') return;
-    if (flipProgressRef.current >= 0) return; // Already flipping
+    if (flipProgressRef.current >= 0) return;
     const event = e as unknown as {clientY?: number};
     pointerStartRef.current = {
       y: event.clientY ?? 0,
@@ -240,22 +263,19 @@ export function CookingMechanics({position, onCookComplete}: CookingMechanicsPro
     (e: THREE.Event) => {
       if (phaseRef.current !== 'cooking') return;
       if (!pointerStartRef.current) return;
-      if (flipProgressRef.current >= 0) return; // Already flipping
+      if (flipProgressRef.current >= 0) return;
 
       const event = e as unknown as {clientY?: number};
       const endY = event.clientY ?? 0;
-      const dy = pointerStartRef.current.y - endY; // Positive = swipe up
+      const dy = pointerStartRef.current.y - endY;
       const dtMs = performance.now() - pointerStartRef.current.time;
       pointerStartRef.current = null;
 
-      if (dy < 30) return; // Not enough upward motion
+      if (dy < 30) return;
 
-      const speed = (dy / dtMs) * 1000; // px/s
-
-      // Start flip animation
+      const speed = (dy / dtMs) * 1000;
       flipProgressRef.current = 0;
 
-      // Check if flip is "clean"
       if (speed >= FLIP_SPEED_MIN && speed <= FLIP_SPEED_MAX) {
         const points = FLAIR_POINTS[Math.min(flipCountRef.current, FLAIR_POINTS.length - 1)];
         recordFlairPoint('pan-flip', points);
@@ -270,24 +290,37 @@ export function CookingMechanics({position, onCookComplete}: CookingMechanicsPro
   // ------------------------------------------------------------------
 
   useFrame((_, delta) => {
+    if (!visible) return;
+
     const dt = Math.min(delta, 0.05);
     timeRef.current += dt;
     const phase = phaseRef.current;
-    const heat = heatSettingRef.current;
+
+    // ---- Read ECS state ----
+    const powerEntity = entitiesRef.current.find(e => e.machineSlot?.slotName === 'power-source');
+    const powerLevel = powerEntity?.powerSource?.powerLevel ?? 0;
+    const isActive = powerEntity?.powerSource?.active ?? false;
+
+    // ---- Detect first dial click -> transition from 'dial' to 'cooking' ----
+    if (phase === 'dial' && isActive) {
+      setGamePhase('cooking');
+      phaseRef.current = 'cooking';
+    }
 
     // ---- Cook level advancement ----
-    if (phase === 'cooking') {
-      const rate = HEAT_RATES[heat];
+    if (phase === 'cooking' && isActive) {
+      const key = closestKey(HEAT_RATE_MAP, powerLevel);
+      const rate = HEAT_RATE_MAP[key];
       cookLevelRef.current += rate * dt;
 
       // ---- BURN CHECK ----
       if (cookLevelRef.current > BURN_THRESHOLD) {
+        setGamePhase('overcooked');
         phaseRef.current = 'overcooked';
-        // Instant defeat: 3 strikes
         addStrike();
         addStrike();
         addStrike();
-        setMrSausageReaction('angry');
+        setMrSausageReaction('disgust');
       }
     }
 
@@ -298,12 +331,14 @@ export function CookingMechanics({position, onCookComplete}: CookingMechanicsPro
       sausageMatRef.current.color.setRGB(targetColor[0], targetColor[1], targetColor[2]);
     }
 
-    // ---- Burner visual ----
+    // ---- Burner visual (reads powerLevel from ECS) ----
     if (burnerMatRef.current) {
-      const params = BURNER_PARAMS[phase === 'cooking' ? heat : 'off'];
+      const effectiveLevel = phase === 'cooking' || phase === 'dial' ? powerLevel : 0;
+      const key = closestKey(BURNER_PARAMS_MAP, effectiveLevel);
+      const params = BURNER_PARAMS_MAP[key];
       let [r, g, b] = params.color;
       // Flicker when heat is on
-      if (phase === 'cooking' && heat !== 'off') {
+      if (phase === 'cooking' && effectiveLevel > 0) {
         const flicker = Math.sin(timeRef.current * 20) * 0.05;
         r = Math.min(1, r + flicker);
       }
@@ -324,7 +359,6 @@ export function CookingMechanics({position, onCookComplete}: CookingMechanicsPro
     // ---- Pan tip during flip ----
     if (panGroupRef.current) {
       if (flipProgressRef.current >= 0 && flipProgressRef.current < 1) {
-        // Tip the pan slightly during flip
         const tipAmount = Math.sin(flipProgressRef.current * Math.PI) * 0.3;
         panGroupRef.current.rotation.z = tipAmount;
       } else {
@@ -339,9 +373,9 @@ export function CookingMechanics({position, onCookComplete}: CookingMechanicsPro
     }
 
     // ---- Steam particles (scale with heat) ----
-    if (phase === 'cooking' && heat !== 'off') {
+    if (phase === 'cooking' && isActive && powerLevel > 0) {
       steamTimerRef.current += dt;
-      const heatMultiplier = heat === 'high' ? 3 : heat === 'medium' ? 2 : 1;
+      const heatMultiplier = powerLevel >= 0.9 ? 3 : powerLevel >= 0.5 ? 2 : 1;
       const spawnInterval = 0.12 / heatMultiplier;
 
       if (steamTimerRef.current >= spawnInterval) {
@@ -350,9 +384,9 @@ export function CookingMechanics({position, onCookComplete}: CookingMechanicsPro
           const s = steamState.current[i];
           if (!s.active) {
             s.active = true;
-            s.x = (Math.random() - 0.5) * PAN_RADIUS * 1.2;
+            s.x = (Math.random() - 0.5) * 0.4 * 1.2;
             s.y = PAN_Y + PAN_HEIGHT;
-            s.z = (Math.random() - 0.5) * PAN_RADIUS * 1.2;
+            s.z = (Math.random() - 0.5) * 0.4 * 1.2;
             s.vy = 0.5 + Math.random() * 0.5;
             s.life = 0;
             s.maxLife = 0.3 + Math.random() * 0.3;
@@ -438,14 +472,32 @@ export function CookingMechanics({position, onCookComplete}: CookingMechanicsPro
   // JSX
   // ------------------------------------------------------------------
 
+  if (!visible) return null;
+
   return (
     <group position={position}>
-      {/* Burner ring — heat-responsive color */}
-      <BurnerRing ref={burnerMatRef} />
+      {/* ECS machine entities — rendered with automatic input event wiring */}
+      <MachineEntitiesRenderer entities={entitiesRef.current} />
+
+      {/* Burner ring override — heat-responsive color (uses ref, not ECS material) */}
+      <mesh position={[0, 0.06, 0]}>
+        <torusGeometry args={[0.35, 0.03, 12, 24]} />
+        <meshBasicMaterial ref={burnerMatRef} color={[0.15, 0.05, 0.02]} />
+      </mesh>
 
       {/* Frying Pan Group (tips during flip) */}
       <group ref={panGroupRef} position={[0, PAN_Y, 0]}>
-        <FryingPan onPanClick={handlePanClick} onHandleClick={handlePanHandleClick} />
+        {/* Pan body */}
+        <mesh onClick={handlePanClick}>
+          <cylinderGeometry args={[0.4, 0.4, PAN_HEIGHT, 24]} />
+          <meshStandardMaterial color={[0.2, 0.2, 0.22]} metalness={0.7} roughness={0.3} />
+        </mesh>
+
+        {/* Pan handle */}
+        <mesh position={[0, 0, 0.65]} onClick={handlePanHandleClick}>
+          <boxGeometry args={[0.06, 0.04, 0.5]} />
+          <meshStandardMaterial color={[0.12, 0.12, 0.14]} />
+        </mesh>
 
         {/* Sausage group (flip rotation target) */}
         <group
@@ -473,14 +525,14 @@ export function CookingMechanics({position, onCookComplete}: CookingMechanicsPro
         </group>
       </group>
 
-      {/* Dial — click to start/cycle heat */}
-      <StoveDial ref={dialRef} onClick={handleDialClick} />
-
       {/* Glisten light — orbiting point light for grease specular */}
-      <GlistenLight
+      <pointLight
         ref={glistenRef}
-        panY={PAN_Y}
-        visible={phaseRef.current === 'cooking' || phaseRef.current === 'done'}
+        position={[-2, PAN_Y + 6, -2]}
+        intensity={150}
+        distance={50}
+        color={0xffffff}
+        visible={gamePhase === 'cooking' || gamePhase === 'done'}
       />
 
       {/* ---- Steam particles ---- */}
