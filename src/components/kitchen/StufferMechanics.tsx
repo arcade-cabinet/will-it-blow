@@ -16,13 +16,18 @@
  * - done: extrusion complete
  *
  * @see StuffingChallenge - the 2D overlay that drives pressure/fill via store
- * @see StufferStation - the 3D stuffer body with plunger/casing/burst visuals
+ * @see StufferBody - the metal canister with plunger and spout
+ * @see StufferCasing - the translucent casing tube
+ * @see WaterBowl - the casing soaking bowl
  */
 
 import {useFrame} from '@react-three/fiber';
 import {useCallback, useEffect, useMemo, useRef} from 'react';
 import * as THREE from 'three/webgpu';
 import {useGameStore} from '../../store/gameStore';
+import {StufferBody} from './StufferBody';
+import {StufferCasing} from './StufferCasing';
+import {WaterBowl} from './WaterBowl';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -364,6 +369,19 @@ export function StufferMechanics({
 
   return (
     <group position={position}>
+      {/* Stuffer body: canister, plunger, meat fill, spout */}
+      <StufferBody fillLevel={stuffLevelRef.current} isCranking={isCrankingRef.current} />
+
+      {/* Water bowl: casing soaking bowl, offset to left/front */}
+      <WaterBowl position={[-0.5, -0.5, 0.3]} />
+
+      {/* Casing tube: extends from spout toward nozzle */}
+      <StufferCasing
+        fillLevel={stuffLevelRef.current}
+        pressureLevel={stuffLevelRef.current}
+        blendColor={blendColor}
+      />
+
       {/* Crank handle — draggable sphere */}
       <mesh
         position={[0.4, 0.3, 0]}
