@@ -129,7 +129,7 @@ describe('PlungerSystem', () => {
     expect(three.position.y).toBe(5); // unchanged
   });
 
-  it('does nothing when disabled', () => {
+  it('consumes dragDelta but does not move when disabled', () => {
     const three = makeObject3D()!;
     const entity: Entity = {
       plunger: {
@@ -147,8 +147,8 @@ describe('PlungerSystem', () => {
     };
 
     updatePlungers([entity], 0.016);
-    expect(entity.plunger!.displacement).toBe(0.5);
-    expect(entity.plunger!.dragDelta).toBe(0.3); // not consumed
+    expect(entity.plunger!.displacement).toBe(0.5); // unchanged
+    expect(entity.plunger!.dragDelta).toBe(0); // consumed to prevent stale accumulation
   });
 
   it('handles empty entity list', () => {

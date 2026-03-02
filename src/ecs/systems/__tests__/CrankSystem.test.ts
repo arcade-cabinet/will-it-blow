@@ -58,7 +58,7 @@ describe('CrankSystem', () => {
     expect(three.rotation.y).toBeCloseTo(expectedAngle);
   });
 
-  it('still updates rotation when dragging but disabled (decay path)', () => {
+  it('consumes dragDelta but does not apply velocity when dragging but disabled', () => {
     const three = makeObject3D()!;
     const entity: Entity = {
       crank: {
@@ -73,15 +73,13 @@ describe('CrankSystem', () => {
       three,
     };
 
-    const delta = 0.016;
-    updateCranks([entity], delta);
+    updateCranks([entity], 0.016);
 
-    // disabled → falls through to else branch (decay)
-    const expectedVelocity = 2.0 * (1 - 0.5 * delta);
-    const expectedAngle = expectedVelocity * delta;
-    expect(entity.crank!.angularVelocity).toBeCloseTo(expectedVelocity);
-    expect(entity.crank!.angle).toBeCloseTo(expectedAngle);
-    expect(three.rotation.y).toBeCloseTo(expectedAngle);
+    // disabled → dragDelta consumed, but velocity/angle unchanged
+    expect(entity.crank!.dragDelta).toBe(0);
+    expect(entity.crank!.angularVelocity).toBe(2.0); // not overwritten
+    expect(entity.crank!.angle).toBe(0); // not advanced
+    expect(three.rotation.y).toBe(0);
   });
 
   it('accumulates angle across multiple frames', () => {

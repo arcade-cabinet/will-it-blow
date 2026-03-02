@@ -54,7 +54,8 @@ function applyTransform(transform: BindingTransform, sourceValue: unknown): unkn
 }
 
 export function updateContracts(contractEntities: Entity[], allEntities: Entity[]): void {
-  // Build name → entity lookup
+  // Build name → entity lookup.
+  // O(N) rebuild per frame is acceptable at current entity counts (<100).
   const nameMap = new Map<string, Entity>();
   for (const e of allEntities) {
     if (e.name) {
