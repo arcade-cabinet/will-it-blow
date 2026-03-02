@@ -70,9 +70,7 @@ export function StuffingHUD() {
         <>
           {/* Timer */}
           <View style={styles.timerBanner}>
-            <Text
-              style={[styles.timerText, challengeTimeRemaining < 10 && styles.timerDanger]}
-            >
+            <Text style={[styles.timerText, challengeTimeRemaining < 10 && styles.timerDanger]}>
               {Math.ceil(challengeTimeRemaining)}s
             </Text>
           </View>
