@@ -23,6 +23,8 @@
 import {type ThreeEvent, useFrame, useThree} from '@react-three/fiber';
 import {useCallback, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three/webgpu';
+import {buildSausageLinksGeometry} from '../../engine/SausageBody';
+import {useGameStore} from '../../store/gameStore';
 
 // SquigglyCurve — matches POC line 194 exactly
 class SquigglyCurve extends THREE.Curve<THREE.Vector3> {
@@ -74,6 +76,98 @@ function buildBunchedGeo(): THREE.CylinderGeometry {
   return geo;
 }
 
+// ---------------------------------------------------------------------------
+// SausageLinksBody — inline R3F component for extruding sausage links
+// ---------------------------------------------------------------------------
+
+const LINKS_PARAMS = {
+  numLinks: 5,
+  thickness: 0.35,
+  linkLength: 0.8,
+  pathSegments: 150,
+  radialSegments: 16,
+};
+
+/**
+ * Renders a skinned-mesh string of sausage links emerging from the nozzle.
+ * As extrusionProgress goes 0→1, links progressively appear.
+ * blendColor tints the sausage material with the ingredient mix color.
+ */
+function SausageLinksBody({
+  position,
+  visible,
+  extrusionProgress,
+  blendColor,
+}: {
+  position: [number, number, number];
+  visible: boolean;
+  extrusionProgress: number;
+  blendColor: string;
+}) {
+  const geoResult = useMemo(() => buildSausageLinksGeometry(LINKS_PARAMS), []);
+  const {geometry, numBones, anchors} = geoResult;
+
+  // Build skeleton: one bone per link
+  const {skeleton, rootBone} = useMemo(() => {
+    const bones: THREE.Bone[] = [];
+    const root = new THREE.Bone();
+    root.position.set(0, 0, 0);
+
+    for (let i = 0; i < numBones; i++) {
+      const bone = new THREE.Bone();
+      bone.position.copy(anchors[i].base);
+      root.add(bone);
+      bones.push(bone);
+    }
+
+    return {skeleton: new THREE.Skeleton([root, ...bones]), rootBone: root};
+  }, [numBones, anchors]);
+
+  // Material tinted with blendColor
+  const material = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: new THREE.Color(blendColor),
+        roughness: 0.55,
+        metalness: 0.05,
+      }),
+    [blendColor],
+  );
+
+  // Ref for the SkinnedMesh
+  const meshRef = useRef<THREE.SkinnedMesh>(null);
+
+  // Bind skeleton on mount
+  const bindRef = useRef(false);
+  useFrame(() => {
+    if (!bindRef.current && meshRef.current) {
+      meshRef.current.add(rootBone);
+      meshRef.current.bind(skeleton);
+      bindRef.current = true;
+    }
+
+    // Per-link visibility: hide bones for links not yet extruded
+    for (let i = 0; i < numBones; i++) {
+      const linkThreshold = (i + 1) / numBones;
+      const boneIdx = i + 1; // +1 because root is at index 0
+      const bone = skeleton.bones[boneIdx];
+      if (bone) {
+        // Scale to zero if not yet extruded, otherwise full size
+        const s = extrusionProgress >= linkThreshold ? 1 : 0;
+        bone.scale.setScalar(s);
+      }
+    }
+  });
+
+  return (
+    <group position={position} visible={visible}>
+      <skinnedMesh ref={meshRef} geometry={geometry}>
+        <primitive object={material} attach="material" />
+      </skinnedMesh>
+    </group>
+  );
+}
+
 /**
  * Props for StufferMechanics.
  */
@@ -105,10 +199,12 @@ export function StufferMechanics({
   onStuffComplete,
 }: StufferMechanicsProps) {
   const {gl} = useThree();
+  const blendColor = useGameStore(s => s.blendColor);
 
   // ---- Phase state ----
   const [phase, setPhase] = useState<'idle' | 'drag' | 'crank' | 'done'>('idle');
   const stuffLevelRef = useRef(0);
+  const [extrusionProgress, setExtrusionProgress] = useState(0);
 
   // ---- Drag state ----
   const isDraggingRef = useRef(false);
@@ -255,6 +351,14 @@ export function StufferMechanics({
     if (attachedRef.current) {
       attachedRef.current.scale.z = Math.max(0.01, 1.0 - sl);
       attachedRef.current.position.z = 0 - sl * 1.5;
+    }
+
+    // Sync extrusion progress — only update state when crossing a link threshold
+    // to avoid re-rendering every frame
+    const prevLinks = Math.floor(extrusionProgress * LINKS_PARAMS.numLinks);
+    const currLinks = Math.floor(sl * LINKS_PARAMS.numLinks);
+    if (currLinks !== prevLinks || (sl >= 1.0 && extrusionProgress < 1.0)) {
+      setExtrusionProgress(sl);
     }
   });
 
@@ -482,6 +586,14 @@ export function StufferMechanics({
       <mesh ref={attachedRef} geometry={bunchedGeo} position={[0, cY + 1.0, 0]} visible={false}>
         <primitive object={casingMat} attach="material" />
       </mesh>
+
+      {/* ---- Extruded sausage links emerging from nozzle tip ---- */}
+      <SausageLinksBody
+        position={[0, cY + 1.0, 1.25]}
+        visible={phase === 'crank' || phase === 'done'}
+        extrusionProgress={extrusionProgress}
+        blendColor={blendColor}
+      />
     </group>
   );
 }
