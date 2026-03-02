@@ -159,6 +159,7 @@ export interface Verdict {
 
 /**
  * Averages challenge scores and returns a final verdict.
+ * If a demandBonus is provided, it is added to the average before ranking.
  *
  * Rank thresholds:
  * - S (>= 92): "THE SAUSAGE KING" — the only true victory
@@ -167,10 +168,11 @@ export interface Verdict {
  * - F (< 50):  "Unacceptable" — "You are the sausage now"
  *
  * @param challengeScores - Array of scores (0-100) from each completed challenge
+ * @param demandBonus - Optional bonus/penalty from demand matching (added to average, clamped 0-100)
  * @returns Verdict with rank, title, average score, and Mr. Sausage's message
  * @throws {Error} If any score is non-finite (NaN, Infinity)
  */
-export function calculateFinalVerdict(challengeScores: number[]): Verdict {
+export function calculateFinalVerdict(challengeScores: number[], demandBonus?: number): Verdict {
   if (challengeScores.length === 0) {
     return {rank: 'F', averageScore: 0, title: 'FAILED', message: 'No challenges completed.'};
   }
@@ -178,7 +180,9 @@ export function calculateFinalVerdict(challengeScores: number[]): Verdict {
   if (bad !== undefined) {
     throw new Error(`calculateFinalVerdict received non-finite score: ${bad}`);
   }
-  const averageScore = challengeScores.reduce((sum, s) => sum + s, 0) / challengeScores.length;
+  const rawAverage = challengeScores.reduce((sum, s) => sum + s, 0) / challengeScores.length;
+  const averageScore =
+    demandBonus !== undefined ? Math.max(0, Math.min(100, rawAverage + demandBonus)) : rawAverage;
 
   if (averageScore >= 92) {
     return {
