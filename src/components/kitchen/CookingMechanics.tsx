@@ -24,9 +24,9 @@
  *   - Sausage group scale: (1 - cookLevel*0.15, 1, 1 - cookLevel*0.15)
  *   - Steam particles: spawn from sausage center, rise with noise
  *
- * **Geometry (from POC L207-250):**
- *   - Stove base:        BoxGeometry(12,1,11)        color #111111
- *   - Stove back:        BoxGeometry(12,3,1)          same material
+ * **Geometry (from POC L207-250, raw POC scale):**
+ *   - Stove base:        BoxGeometry(12,1,11)          color #111111
+ *   - Stove back:        BoxGeometry(12,3,1)           same material
  *   - Burner (back-right):  TorusGeometry(1.5,0.15,8,32)  dark metal
  *   - Burner (front-left):  same torus, lights up when cooking
  *   - Dials:             CylinderGeometry(0.4,0.4,0.3) rotated to face forward
@@ -34,6 +34,7 @@
  *   - Pan handle:        CylinderGeometry(0.2,0.3,6)   rotateZ+translate
  *   - Grease pool:       PlaneGeometry(8.6,8.6,64,64)  circle-clipped vertices
  *   - Steam particles:   Points geometry, 200 particles, canvas radial gradient
+ *   - Thermometer:       tube + mercury fill + bulb on right side of stove
  *
  * Import path note: THREE imported from 'three/webgpu' per project convention.
  */
@@ -62,69 +63,70 @@ interface CookingMechanicsProps {
 type Phase = 'place' | 'dial' | 'cooking' | 'done';
 
 // ---------------------------------------------------------------------------
-// Constants — ported from POC proportionally (POC used large absolute units;
-// these are scaled by 1/10 to fit the game's metric-ish world scale)
+// Constants — ported from POC at raw POC scale (world units)
 // ---------------------------------------------------------------------------
 
-// Scale factor: POC units → game world units (10:1 reduction)
-const S = 0.1;
+// Stove geometry (POC L207-208)
+const STOVE_BASE_W = 12;
+const STOVE_BASE_H = 1;
+const STOVE_BASE_D = 11;
+const STOVE_BACK_H = 3;
+const STOVE_BACK_D = 1;
+const STOVE_BACK_Y = 2;
 
-// Stove geometry (POC L207-208, scaled)
-const STOVE_BASE_W = 12 * S; // 1.2
-const STOVE_BASE_H = 1 * S; // 0.1
-const STOVE_BASE_D = 11 * S; // 1.1
-const STOVE_BACK_H = 3 * S; // 0.3
-const STOVE_BACK_D = 1 * S; // 0.1
-const STOVE_BACK_Y = 2 * S; // 0.2 above stove base center
+// Burner positions relative to stove group center (POC L212-213)
+const BURNER_Y = 0.5 + 1 / 2; // 1.0 — top of stove base
+const BURNER_BR: [number, number, number] = [2.5, BURNER_Y, -2];
+const BURNER_FL: [number, number, number] = [-2.5, BURNER_Y, 2];
+const BURNER_MAJOR_R = 1.5;
+const BURNER_TUBE_R = 0.15;
 
-// Burner positions relative to stove group center (POC L212-213, scaled)
-// POC: BR at (+2.5, cY+1.05, -2), FL at (-2.5, cY+1.05, +2)
-// Here positions are local to the stove group
-const BURNER_Y = 0.5 * S + (1 * S) / 2; // top of stove base = STOVE_BASE_H/2
-const BURNER_BR: [number, number, number] = [2.5 * S, BURNER_Y, -2 * S];
-const BURNER_FL: [number, number, number] = [-2.5 * S, BURNER_Y, 2 * S];
-const BURNER_MAJOR_R = 1.5 * S;
-const BURNER_TUBE_R = 0.15 * S;
+// Dial positions (POC L216-217)
+const DIAL_Y = 2.5;
+const DIAL_BR: [number, number, number] = [3, DIAL_Y, -4.4];
+const DIAL_FL: [number, number, number] = [-3, DIAL_Y, -4.4];
+const DIAL_R = 0.4;
+const DIAL_H = 0.3;
 
-// Dial positions (POC L216-217, scaled)
-const DIAL_Y = 2.5 * S;
-const DIAL_BR: [number, number, number] = [3 * S, DIAL_Y, -4.4 * S];
-const DIAL_FL: [number, number, number] = [-3 * S, DIAL_Y, -4.4 * S];
-const DIAL_R = 0.4 * S;
-const DIAL_H = 0.3 * S;
-
-// Pan geometry (POC L221-226, scaled)
-// LatheGeometry profile — exact POC vector list, scaled
+// Pan geometry (POC L221-226)
+// LatheGeometry profile — exact POC vector list
 const PAN_PROFILE_POINTS = [
   new THREE.Vector2(0.001, 0),
-  new THREE.Vector2(4.5 * S, 0),
-  new THREE.Vector2(5.5 * S, 1.2 * S),
-  new THREE.Vector2(5.2 * S, 1.2 * S),
-  new THREE.Vector2(4.3 * S, 0.2 * S),
-  new THREE.Vector2(0.001, 0.2 * S),
+  new THREE.Vector2(4.5, 0),
+  new THREE.Vector2(5.5, 1.2),
+  new THREE.Vector2(5.2, 1.2),
+  new THREE.Vector2(4.3, 0.2),
+  new THREE.Vector2(0.001, 0.2),
 ];
 
 // Pan handle: CylinderGeometry(0.2,0.3,6) rotateZ+translate from POC L224
-const PAN_HANDLE_R_TOP = 0.2 * S;
-const PAN_HANDLE_R_BOTTOM = 0.3 * S;
-const PAN_HANDLE_LEN = 6 * S;
-const PAN_HANDLE_OFFSET_X = 8 * S; // translate along +X
-const PAN_HANDLE_OFFSET_Y = 0.8 * S;
+const PAN_HANDLE_R_TOP = 0.2;
+const PAN_HANDLE_R_BOTTOM = 0.3;
+const PAN_HANDLE_LEN = 6;
+const PAN_HANDLE_OFFSET_X = 8;
+const PAN_HANDLE_OFFSET_Y = 0.8;
 
-// Grease pool (POC L231-232, scaled)
-const GREASE_SIZE = 8.6 * S; // plane side length
+// Grease pool (POC L231-232)
+const GREASE_SIZE = 8.6;
 const GREASE_SEGS = 64;
-const GREASE_CLIP_R = 4.3 * S; // circle clip radius
-const GREASE_Y_BASE = 0.25 * S; // y inside pan group at rest
-const GREASE_Y_COOKING = 0.35 * S; // rises when cooking
+const GREASE_CLIP_R = 4.3;
+const GREASE_Y_BASE = 0.25;
+const GREASE_Y_COOKING = 0.35;
 
 // Steam particles (POC L248-250)
 const STEAM_COUNT = 200;
-const STEAM_PARTICLE_SIZE = 3 * S * 10; // PointsMaterial size
-const STEAM_SPAWN_PROB_PER_FRAME = 0.5; // = cookLevel * 0.5
+const STEAM_PARTICLE_SIZE = 3;
+const STEAM_SPAWN_PROB_PER_FRAME = 0.5;
 
 // Snap distance for pan drag
-const PAN_SNAP_DIST = 1.0 * S * 10; // generous threshold in game scale
+const PAN_SNAP_DIST = 1.0;
+
+// Thermometer (from deleted StoveStation)
+const THERMO_TUBE_R = 0.03;
+const THERMO_TUBE_H = 0.8;
+const THERMO_FILL_R = 0.025;
+const THERMO_BULB_R = 0.06;
+const THERMO_X = STOVE_BASE_W / 2 + 0.5; // right side of stove
 
 // Cook rate (POC L515)
 const COOK_RATE = 0.06;
@@ -236,6 +238,9 @@ export function CookingMechanics({position, visible, onCookComplete}: CookingMec
 
   // Sausage group ref (for scale shrink during cooking)
   const sausageGroupRef = useRef<THREE.Group>(null);
+
+  // Thermometer mercury fill ref (height driven by cookLevel)
+  const mercuryRef = useRef<THREE.Mesh>(null);
 
   // Grease pool refs
   const greasePoolRef = useRef<THREE.Mesh>(null);
@@ -450,6 +455,13 @@ export function CookingMechanics({position, visible, onCookComplete}: CookingMec
         GREASE_Y_BASE + (GREASE_Y_COOKING - GREASE_Y_BASE) * newCookLevel;
     }
 
+    // Thermometer mercury fill height
+    if (mercuryRef.current) {
+      const fillH = Math.max(0.01, THERMO_TUBE_H * newCookLevel);
+      mercuryRef.current.scale.y = newCookLevel || 0.01;
+      mercuryRef.current.position.y = -THERMO_TUBE_H / 2 + fillH / 2;
+    }
+
     // Sausage shrinks as it cooks (POC L522)
     if (sausageGroupRef.current) {
       const shrink = 1 - newCookLevel * 0.15;
@@ -477,7 +489,7 @@ export function CookingMechanics({position, visible, onCookComplete}: CookingMec
         sPos[i * 3 + 1] = GREASE_Y_COOKING;
         sPos[i * 3 + 2] = r * Math.sin(angle);
         sVel[i][0] = (Math.random() - 0.5) * 0.3;
-        sVel[i][1] = 1 * S * (1 + Math.random() * 2) * 3; // rise velocity
+        sVel[i][1] = 0.3 * (1 + Math.random() * 2); // rise velocity
         sVel[i][2] = (Math.random() - 0.5) * 0.3;
         sLife[i] = 1.0; // normalized lifetime
       }
@@ -528,7 +540,7 @@ export function CookingMechanics({position, visible, onCookComplete}: CookingMec
         <boxGeometry args={[STOVE_BASE_W, STOVE_BASE_H, STOVE_BASE_D]} />
       </mesh>
 
-      {/* --- Stove back panel (POC L208, offset 0,2,-5 in POC → scaled) --- */}
+      {/* --- Stove back panel (POC L208) --- */}
       <mesh
         position={[0, STOVE_BASE_H / 2 + STOVE_BACK_Y, -STOVE_BASE_D / 2 - STOVE_BACK_D / 2]}
         material={blackPlasticMat}
@@ -584,8 +596,8 @@ export function CookingMechanics({position, visible, onCookComplete}: CookingMec
         <mesh geometry={panHandleGeo} material={panMat} castShadow />
 
         {/* --- Invisible hitbox for easier pan picking (POC L228) --- */}
-        <mesh position={[0, 1 * S, 0]} onPointerDown={handlePointerDown}>
-          <cylinderGeometry args={[5.5 * S, 5.5 * S, 2 * S, 16]} />
+        <mesh position={[0, 1, 0]} onPointerDown={handlePointerDown}>
+          <cylinderGeometry args={[5.5, 5.5, 2, 16]} />
           <meshBasicMaterial visible={false} />
         </mesh>
 
@@ -598,11 +610,11 @@ export function CookingMechanics({position, visible, onCookComplete}: CookingMec
         />
 
         {/* --- Sausage inside pan (from MeatTexture) --- */}
-        <group ref={sausageGroupRef} position={[0, 0.25 * S, 0]}>
+        <group ref={sausageGroupRef} position={[0, 0.25, 0]}>
           {/* Coil-shaped sausage approximation: a few overlapping capsule segments */}
           {Array.from({length: 5}, (_, i) => {
             const angle = (i / 5) * Math.PI * 2;
-            const r = 1.8 * S;
+            const r = 1.8;
             return (
               <mesh
                 key={`sausage_${i}`}
@@ -610,7 +622,7 @@ export function CookingMechanics({position, visible, onCookComplete}: CookingMec
                 rotation={[Math.PI / 2, 0, angle + Math.PI / 2]}
                 material={meatMat}
               >
-                <cylinderGeometry args={[0.3 * S, 0.3 * S, 1.4 * S, 8]} />
+                <cylinderGeometry args={[0.3, 0.3, 1.4, 8]} />
               </mesh>
             );
           })}
@@ -637,6 +649,25 @@ export function CookingMechanics({position, visible, onCookComplete}: CookingMec
           sizeAttenuation
         />
       </points>
+
+      {/* --- Thermometer (right side of stove, from deleted StoveStation) --- */}
+      <group position={[THERMO_X, STOVE_BASE_H, 0]}>
+        {/* Glass tube */}
+        <mesh position={[0, THERMO_TUBE_H / 2, 0]}>
+          <cylinderGeometry args={[THERMO_TUBE_R, THERMO_TUBE_R, THERMO_TUBE_H, 8]} />
+          <meshStandardMaterial color={0xcccccc} transparent opacity={0.4} />
+        </mesh>
+        {/* Mercury fill — scale.y driven by cookLevel in useFrame */}
+        <mesh ref={mercuryRef} position={[0, 0, 0]}>
+          <cylinderGeometry args={[THERMO_FILL_R, THERMO_FILL_R, THERMO_TUBE_H, 8]} />
+          <meshStandardMaterial color={0xff0000} />
+        </mesh>
+        {/* Bulb at bottom */}
+        <mesh position={[0, 0, 0]}>
+          <sphereGeometry args={[THERMO_BULB_R, 8, 8]} />
+          <meshStandardMaterial color={0xff0000} />
+        </mesh>
+      </group>
 
       {/* --- Phase indicator: instructions text (minimal, handled by overlay) --- */}
     </group>
