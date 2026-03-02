@@ -24,23 +24,14 @@
 
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {Animated, StyleSheet, Text, View} from 'react-native';
+import type {MrSausageDemands} from '../../store/gameStore';
 import {useGameStore} from '../../store/gameStore';
 
-// ---- Types ----
-
-/** Mr. Sausage's hidden demands, generated at game start and revealed at tasting. */
-export interface MrSausageDemands {
-  /** Preferred sausage form: links, coiled, patties, etc. */
-  preferredForm: string;
-  /** Ingredients Mr. Sausage craves. */
-  desiredIngredients: string[];
-  /** Ingredients Mr. Sausage despises. */
-  hatedIngredients: string[];
-  /** How Mr. Sausage likes his sausage cooked: rare, medium, well-done, charred. */
-  cookPreference: string;
-  /** Mr. Sausage's personality this session: cryptic, passive-aggressive, manic. */
-  moodProfile: string;
-}
+/** Subset of MrSausageDemands used by the hint generation system. */
+export type HintDemands = Pick<
+  MrSausageDemands,
+  'preferredForm' | 'desiredIngredients' | 'hatedIngredients' | 'cookPreference' | 'moodProfile'
+>;
 
 /** A generated hint with a unique ID and display text. */
 export interface Hint {
@@ -169,7 +160,7 @@ const HINT_TEMPLATES: Record<number, Record<string, string[]>> = {
  * @returns A hint object with a unique ID and the formatted hint text
  */
 export function generateHint(
-  demands: MrSausageDemands,
+  demands: HintDemands,
   stage: number,
   moodProfile: string,
   attemptIndex = 0,
@@ -205,7 +196,7 @@ export function generateHint(
 
 interface HintDialogueProps {
   /** Mr. Sausage's demands for this game session. Required to generate hints. */
-  demands: MrSausageDemands | null;
+  demands: HintDemands | null;
 }
 
 /**

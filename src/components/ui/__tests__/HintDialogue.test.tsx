@@ -13,14 +13,14 @@
 import {afterEach, beforeEach, describe, expect, it, jest} from '@jest/globals';
 import renderer, {act} from 'react-test-renderer';
 import {INITIAL_GAME_STATE, useGameStore} from '../../../store/gameStore';
-import type {MrSausageDemands} from '../HintDialogue';
+import type {HintDemands} from '../HintDialogue';
 import {generateHint, HintDialogue} from '../HintDialogue';
 
 const store = () => useGameStore.getState();
 const reset = () => useGameStore.setState({...INITIAL_GAME_STATE});
 
 /** Reusable test demands with known values for assertion. */
-const TEST_DEMANDS: MrSausageDemands = {
+const TEST_DEMANDS: HintDemands = {
   preferredForm: 'LINKS',
   desiredIngredients: ['Lobster', 'Beef Wellington'],
   hatedIngredients: ['Water', 'Dirt'],
@@ -148,7 +148,7 @@ describe('generateHint', () => {
     });
 
     it('handles empty desired ingredients gracefully', () => {
-      const emptyDemands: MrSausageDemands = {
+      const emptyDemands: HintDemands = {
         ...TEST_DEMANDS,
         desiredIngredients: [],
       };
@@ -157,7 +157,7 @@ describe('generateHint', () => {
     });
 
     it('handles empty hated ingredients gracefully', () => {
-      const emptyDemands: MrSausageDemands = {
+      const emptyDemands: HintDemands = {
         ...TEST_DEMANDS,
         hatedIngredients: [],
       };
