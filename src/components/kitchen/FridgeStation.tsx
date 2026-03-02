@@ -21,7 +21,7 @@
 import {useFrame} from '@react-three/fiber';
 import type {RapierRigidBody} from '@react-three/rapier';
 import {BallCollider, CuboidCollider, RigidBody} from '@react-three/rapier';
-import {useRef} from 'react';
+import {useMemo, useRef} from 'react';
 import {Platform} from 'react-native';
 import * as THREE from 'three/webgpu';
 import type {Ingredient} from '../../engine/Ingredients';
@@ -50,16 +50,26 @@ const FRIDGE_H = 2.92; // y
 const FRIDGE_D = 1.42; // z
 const HALF_D = FRIDGE_D / 2;
 
-const SHELF_COUNT = 3;
 // Shelf Y offsets from fridge center (spread across the 2.92-unit height)
 const SHELF_Y_POSITIONS = [-0.8, 0.0, 0.8];
-const ITEMS_PER_SHELF = 4;
 const INGREDIENT_DIAMETER = 0.28;
 
 /** Converts a hex color string to a THREE.Color. */
 function hexToThreeColor(hex: string): THREE.Color {
   return new THREE.Color(hex);
 }
+
+/** Maps ingredient category to shelf tier (0=top, 1=middle, 2=bottom). */
+const SHELF_TIER: Record<string, number> = {
+  fancy: 0,
+  international: 0,
+  'fast food': 1,
+  comfort: 1,
+  canned: 1,
+  absurd: 2,
+  sweet: 2,
+  spicy: 2,
+};
 
 // -------------------------------------------------------
 // FridgeShelf — glass/wire shelf with blue tint
@@ -311,6 +321,16 @@ export const FridgeStation = ({
   onSelect,
   onHover,
 }: FridgeStationProps) => {
+  // Group ingredients by category into shelf tiers, preserving original indices
+  const shelfGroups = useMemo(() => {
+    const tiers: Array<Array<{ingredient: Ingredient; originalIndex: number}>> = [[], [], []];
+    for (let i = 0; i < ingredients.length; i++) {
+      const tier = SHELF_TIER[ingredients[i].category] ?? 2;
+      tiers[tier].push({ingredient: ingredients[i], originalIndex: i});
+    }
+    return tiers;
+  }, [ingredients]);
+
   return (
     <group position={position}>
       {/* Interior fridge lighting — cool white glow from top and middle shelf */}
@@ -340,31 +360,27 @@ export const FridgeStation = ({
         <meshStandardMaterial color="#eae8e0" roughness={0.8} metalness={0.0} />
       </mesh>
 
-      {/* Ingredients on shelves */}
-      {ingredients.map((ingredient, i) => {
-        const shelfIndex = Math.floor(i / ITEMS_PER_SHELF) % SHELF_COUNT;
-        const slotIndex = i % ITEMS_PER_SHELF;
+      {/* Ingredients on shelves — grouped by category tier */}
+      {shelfGroups.map((group, shelfIndex) =>
+        group.map((entry, slotIndex) => {
+          const xOffset = (slotIndex - (group.length - 1) / 2) * 0.24;
+          const shelfY = SHELF_Y_POSITIONS[shelfIndex] + INGREDIENT_DIAMETER / 2 + 0.012;
+          const zOffset = 0.25;
 
-        // Spread items across the fridge width (~1.0 unit wide)
-        const xOffset = (slotIndex - (ITEMS_PER_SHELF - 1) / 2) * 0.24;
-        // Place on shelf + half diameter clearance above shelf surface
-        const shelfY = SHELF_Y_POSITIONS[shelfIndex] + INGREDIENT_DIAMETER / 2 + 0.012;
-        // Push forward toward fridge opening so they're visible
-        const zOffset = 0.25;
-
-        return (
-          <IngredientMesh
-            key={i}
-            index={i}
-            ingredient={ingredient}
-            position={[xOffset, shelfY, zOffset]}
-            isSelected={selectedIds.has(i)}
-            isHinted={hintActive && matchingIndices.has(i)}
-            onSelect={onSelect}
-            onHover={onHover}
-          />
-        );
-      })}
+          return (
+            <IngredientMesh
+              key={entry.originalIndex}
+              index={entry.originalIndex}
+              ingredient={entry.ingredient}
+              position={[xOffset, shelfY, zOffset]}
+              isSelected={selectedIds.has(entry.originalIndex)}
+              isHinted={hintActive && matchingIndices.has(entry.originalIndex)}
+              onSelect={onSelect}
+              onHover={onHover}
+            />
+          );
+        }),
+      )}
     </group>
   );
 };

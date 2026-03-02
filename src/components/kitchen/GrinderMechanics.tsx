@@ -25,7 +25,9 @@ import {useFrame} from '@react-three/fiber';
 import {damp3} from 'maath/easing';
 import {useMemo, useRef, useState} from 'react';
 import * as THREE from 'three/webgpu';
+import {INGREDIENTS} from '../../engine/Ingredients';
 import {createMeatMaterial} from '../../engine/MeatTexture';
+import {useGameStore} from '../../store/gameStore';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -204,6 +206,26 @@ export const GrinderMechanics = ({
   );
 
   const meatMat = useMemo(() => createMeatMaterial(), []);
+
+  // ---- ingredient-based chunk colors ----
+  const bowlContents = useGameStore(s => s.bowlContents);
+  const chunkColors = useMemo(() => {
+    if (bowlContents.length === 0) return null;
+    const colors: string[] = [];
+    for (const name of bowlContents) {
+      const ing = INGREDIENTS.find(i => i.name === name);
+      if (ing) colors.push(ing.decomposition.chunkColor);
+    }
+    return colors.length > 0 ? colors : null;
+  }, [bowlContents]);
+
+  const chunkMats = useMemo(() => {
+    if (!chunkColors) return null;
+    return Array.from({length: 15}, (_, i) => {
+      const hex = chunkColors[i % chunkColors.length];
+      return new THREE.MeshStandardMaterial({color: hex, roughness: 0.7, metalness: 0.1});
+    });
+  }, [chunkColors]);
 
   // ---- geometry (memoised to avoid recreation) ----
   const bowlGeo = useMemo(() => new THREE.LatheGeometry(BOWL_POINTS, 32), []);
@@ -556,7 +578,7 @@ export const GrinderMechanics = ({
             onClick={() => handleChunkClick(chunk.id)}
           >
             <primitive object={chunkGeo} attach="geometry" />
-            <primitive object={meatMat} attach="material" />
+            <primitive object={chunkMats ? chunkMats[i] : meatMat} attach="material" />
           </mesh>
         ))}
       </group>

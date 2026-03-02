@@ -49,11 +49,11 @@ describe('BlendCalculator', () => {
     });
 
     it('computes properties for a single ingredient', () => {
-      // Big Mac: tasteMod=3, textureMod=3, color='#D4A017'
+      // Big Mac: tasteMod=3, textureMod=3, groundColor='#B8860B', fatRatio=0.6
       const result = computeBlendProperties(['Big Mac']);
-      expect(result.color).toBe('#D4A017');
-      // textureMod 3 -> roughness = 1.0 - 3 * 0.14 = 0.58
-      expect(result.roughness).toBeCloseTo(0.58, 2);
+      expect(result.color).toBe('#B8860B');
+      // roughness = 1.0 - 3*0.14 - 0.6*0.15 = 0.49
+      expect(result.roughness).toBeCloseTo(0.49, 2);
       // single ingredient -> no variance -> chunkiness 0
       expect(result.chunkiness).toBe(0);
       // tasteMod 3 -> shininess = 0.05 + (4/6) * 0.45 = 0.35
@@ -61,15 +61,15 @@ describe('BlendCalculator', () => {
     });
 
     it('computes properties for multiple ingredients', () => {
-      // Water: textureMod=0, tasteMod=0, color='#4FC3F7'
-      // Beef Wellington: textureMod=5, tasteMod=5, color='#8D6E63'
+      // Water: textureMod=0, tasteMod=0, groundColor='#A0C4E0', fatRatio=0.0
+      // Beef Wellington: textureMod=5, tasteMod=5, groundColor='#9C7A6E', fatRatio=0.5
       const result = computeBlendProperties(['Water', 'Beef Wellington']);
 
-      // Average of #4FC3F7 and #8D6E63
+      // Average of #A0C4E0 and #9C7A6E
       expect(result.color).not.toBe('#808080');
 
-      // avgTexture = (0+5)/2 = 2.5, roughness = 1.0 - 2.5*0.14 = 0.65
-      expect(result.roughness).toBeCloseTo(0.65, 2);
+      // avgTexture=2.5, avgFat=0.25, roughness = 1.0 - 2.5*0.14 - 0.25*0.15 = 0.6125
+      expect(result.roughness).toBeCloseTo(0.6125, 2);
 
       // variance = ((0-2.5)^2 + (5-2.5)^2)/2 = 6.25, stddev = 2.5
       // chunkiness = min(1, 2.5/2.5) = 1.0
@@ -100,13 +100,13 @@ describe('BlendCalculator', () => {
     });
 
     it('roughness is high for rough ingredients, low for smooth', () => {
-      // Water (textureMod=0) -> roughness ~1.0
+      // Water (textureMod=0, fatRatio=0.0) -> roughness = 1.0 - 0 - 0 = 1.0
       const rough = computeBlendProperties(['Water']);
       expect(rough.roughness).toBeCloseTo(1.0, 2);
 
-      // Beef Wellington (textureMod=5) -> roughness = 1.0 - 5*0.14 = 0.3
+      // Beef Wellington (textureMod=5, fatRatio=0.5) -> roughness = 1.0 - 0.70 - 0.075 = 0.225
       const smooth = computeBlendProperties(['Beef Wellington']);
-      expect(smooth.roughness).toBeCloseTo(0.3, 2);
+      expect(smooth.roughness).toBeCloseTo(0.225, 2);
 
       expect(rough.roughness).toBeGreaterThan(smooth.roughness);
     });

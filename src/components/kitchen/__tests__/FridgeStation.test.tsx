@@ -15,6 +15,13 @@ const mockIngredients = [
     blowPower: 2,
     category: 'fast food' as const,
     shape: {base: 'box' as const, detail: 'rounded' as const},
+    decomposition: {
+      chunkColor: '#D4A017',
+      chunkScale: 1.0,
+      chunkCount: 8,
+      groundColor: '#B8860B',
+      fatRatio: 0.6,
+    },
   },
   {
     name: 'SpaghettiOs',
@@ -26,6 +33,13 @@ const mockIngredients = [
     blowPower: 4,
     category: 'canned' as const,
     shape: {base: 'sphere' as const, detail: 'wobbly' as const},
+    decomposition: {
+      chunkColor: '#E85D2C',
+      chunkScale: 0.5,
+      chunkCount: 10,
+      groundColor: '#D4654A',
+      fatRatio: 0.3,
+    },
   },
   {
     name: 'Lobster',
@@ -37,6 +51,13 @@ const mockIngredients = [
     blowPower: 1,
     category: 'fancy' as const,
     shape: {base: 'elongated' as const, detail: 'claws' as const},
+    decomposition: {
+      chunkColor: '#C41E3A',
+      chunkScale: 1.5,
+      chunkCount: 6,
+      groundColor: '#D4796B',
+      fatRatio: 0.2,
+    },
   },
 ];
 

@@ -78,11 +78,13 @@ export function computeBlendProperties(ingredientNames: string[]): BlendProperti
 
   if (found.length === 0) return {...DEFAULTS};
 
-  const color = averageColors(found.map(i => i.color));
+  const color = averageColors(found.map(i => i.decomposition.groundColor));
 
   const avgTexture = found.reduce((sum, i) => sum + i.textureMod, 0) / found.length;
-  // textureMod 0 (rough) -> roughness 1.0, textureMod 5 (smooth) -> roughness 0.3
-  const roughness = 1.0 - avgTexture * 0.14;
+  const avgFat = found.reduce((sum, i) => sum + i.decomposition.fatRatio, 0) / found.length;
+  // textureMod 0 (rough) -> roughness ~1.0, textureMod 5 (smooth) -> roughness ~0.3
+  // Higher fat = lower roughness (shinier)
+  const roughness = 1.0 - avgTexture * 0.14 - avgFat * 0.15;
 
   // Standard deviation of textureMod, normalized so max possible (~2.5) maps to 1.0
   const textureVariance =
