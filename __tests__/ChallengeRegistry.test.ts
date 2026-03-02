@@ -93,4 +93,46 @@ describe('ChallengeRegistry', () => {
     expect(verdict.averageScore).toBe(50);
     expect(verdict.rank).toBe('B');
   });
+
+  describe('calculateFinalVerdict with demandBonus', () => {
+    it('adds demandBonus to average score', () => {
+      // Average of [80, 80, 80, 80] = 80, +15 = 95 → S rank
+      const verdict = calculateFinalVerdict([80, 80, 80, 80], 15);
+      expect(verdict.averageScore).toBe(95);
+      expect(verdict.rank).toBe('S');
+    });
+
+    it('negative demandBonus lowers rank', () => {
+      // Average of [80, 80, 80, 80] = 80, -35 = 45 → F rank
+      const verdict = calculateFinalVerdict([80, 80, 80, 80], -35);
+      expect(verdict.averageScore).toBe(45);
+      expect(verdict.rank).toBe('F');
+    });
+
+    it('clamps score to 0 minimum', () => {
+      // Average of [10, 10, 10, 10] = 10, -50 = clamped to 0
+      const verdict = calculateFinalVerdict([10, 10, 10, 10], -50);
+      expect(verdict.averageScore).toBe(0);
+      expect(verdict.rank).toBe('F');
+    });
+
+    it('clamps score to 100 maximum', () => {
+      // Average of [95, 95, 95, 95] = 95, +30 = clamped to 100
+      const verdict = calculateFinalVerdict([95, 95, 95, 95], 30);
+      expect(verdict.averageScore).toBe(100);
+      expect(verdict.rank).toBe('S');
+    });
+
+    it('behaves the same as no bonus when demandBonus is undefined', () => {
+      const withoutBonus = calculateFinalVerdict([70, 70, 70, 70]);
+      const withUndefined = calculateFinalVerdict([70, 70, 70, 70], undefined);
+      expect(withoutBonus).toEqual(withUndefined);
+    });
+
+    it('zero demandBonus does not change the score', () => {
+      const verdict = calculateFinalVerdict([75, 75, 75, 75], 0);
+      expect(verdict.averageScore).toBe(75);
+      expect(verdict.rank).toBe('A');
+    });
+  });
 });
