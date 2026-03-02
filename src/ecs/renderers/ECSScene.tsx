@@ -3,6 +3,8 @@ import {LatheRenderer} from './LatheRenderer';
 import {LightRenderer} from './LightRenderer';
 import {MeshRenderer} from './MeshRenderer';
 
+export {buildInputHandlers, MachineEntitiesRenderer, MachineEntityMesh} from './InputRenderer';
+
 export function ECSScene() {
   return (
     <>
