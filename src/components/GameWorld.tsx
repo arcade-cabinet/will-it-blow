@@ -225,16 +225,10 @@ function ManualProximityTrigger() {
  * All 3D content rendered inside the R3F Canvas.
  *
  * Reads game state from Zustand and distributes it as props to child
- * components (stations, environment, markers). Manages derived state
- * such as grinder crank angle, splatter timing, and bowl/sausage visibility.
- *
- * Key responsibilities:
- * - Determines which station is "active" based on gameStatus, currentChallenge,
- *   and challengeTriggered
- * - Converts store arrays to Sets for FridgeStation props (performance)
- * - Tracks strike count changes to trigger splatter/burst visuals with timeouts
- * - Computes bowl render position from the bowlPosition state machine
- *   (fridge -> grinder-output -> stuffer -> done)
+ * components (Mechanics, environment, markers). Determines which station
+ * is "active" based on gameStatus / currentChallenge / challengeTriggered,
+ * converts store arrays to Sets for FridgeStation, and computes bowl
+ * render position from the bowlPosition state machine.
  *
  * @param props.joystickRef - Shared ref from MobileJoystick for movement input
  * @param props.lookDeltaRef - Shared ref from MobileJoystick for look-drag input
