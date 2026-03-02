@@ -1,9 +1,9 @@
 import {useEntities} from 'miniplex-react';
 import {PRESETS} from '../materialPresets';
 import type {Entity} from '../types';
-import {renderable} from '../world';
+import {nonMachineRenderable} from '../world';
 
-function GeometryElement({def}: {def: NonNullable<Entity['geometry']>}) {
+export function GeometryElement({def}: {def: NonNullable<Entity['geometry']>}) {
   switch (def.type) {
     case 'box':
       return <boxGeometry args={def.args as [number, number, number]} />;
@@ -19,6 +19,8 @@ function GeometryElement({def}: {def: NonNullable<Entity['geometry']>}) {
       return <planeGeometry args={def.args as [number, number]} />;
     case 'cone':
       return <coneGeometry args={def.args as [number, number, number]} />;
+    case 'dodecahedron':
+      return <dodecahedronGeometry args={def.args as [number, number]} />;
     default:
       return <boxGeometry />;
   }
@@ -41,7 +43,7 @@ export function MaterialElement({def}: {def: NonNullable<Entity['material']>}) {
 }
 
 export function MeshRenderer() {
-  const bucket = useEntities(renderable);
+  const bucket = useEntities(nonMachineRenderable);
   return (
     <>
       {bucket.entities.map((entity, i) => {

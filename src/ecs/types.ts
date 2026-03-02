@@ -95,7 +95,9 @@ export interface Entity {
   };
 
   // Interaction
+  /** @deprecated Use `dial`, `toggle`, or `button` input primitives instead. Will be removed after orchestrator migration (Tasks 6-8). */
   clickable?: {action: string; enabled: boolean};
+  /** @deprecated Use `plunger` or `crank` input primitives instead. Will be removed after orchestrator migration (Tasks 6-8). */
   draggable?: {
     axis: 'x' | 'y' | 'z';
     minValue: number;
