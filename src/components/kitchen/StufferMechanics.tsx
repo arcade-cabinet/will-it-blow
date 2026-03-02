@@ -25,9 +25,9 @@ import {useFrame} from '@react-three/fiber';
 import {useCallback, useEffect, useMemo, useRef} from 'react';
 import * as THREE from 'three/webgpu';
 import {useGameStore} from '../../store/gameStore';
-import {StufferBody} from './StufferBody';
-import {StufferCasing} from './StufferCasing';
-import {WaterBowl} from './WaterBowl';
+import {StufferBody} from './stuffer/StufferBody';
+import {StufferCasing} from './stuffer/StufferCasing';
+import {WaterBowl} from './stuffer/WaterBowl';
 
 // ---------------------------------------------------------------------------
 // Constants
