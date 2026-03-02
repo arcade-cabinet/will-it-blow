@@ -26,19 +26,19 @@ const IngredientChallenge = lazy(() =>
     default: m.IngredientChallenge,
   })),
 );
-const GrindingChallenge = lazy(() =>
-  import('./src/components/challenges/GrindingChallenge').then(m => ({
-    default: m.GrindingChallenge,
+const GrindingHUD = lazy(() =>
+  import('./src/components/challenges/GrindingHUD').then(m => ({
+    default: m.GrindingHUD,
   })),
 );
-const StuffingChallenge = lazy(() =>
-  import('./src/components/challenges/StuffingChallenge').then(m => ({
-    default: m.StuffingChallenge,
+const StuffingHUD = lazy(() =>
+  import('./src/components/challenges/StuffingHUD').then(m => ({
+    default: m.StuffingHUD,
   })),
 );
-const CookingChallenge = lazy(() =>
-  import('./src/components/challenges/CookingChallenge').then(m => ({
-    default: m.CookingChallenge,
+const CookingHUD = lazy(() =>
+  import('./src/components/challenges/CookingHUD').then(m => ({
+    default: m.CookingHUD,
   })),
 );
 const TastingChallenge = lazy(() =>
@@ -124,15 +124,9 @@ const GameUI = () => {
           {isIngredientChallenge && (
             <IngredientChallenge onComplete={completeChallenge} onReaction={handleReaction} />
           )}
-          {isGrindingChallenge && (
-            <GrindingChallenge onComplete={completeChallenge} onReaction={handleReaction} />
-          )}
-          {isStuffingChallenge && (
-            <StuffingChallenge onComplete={completeChallenge} onReaction={handleReaction} />
-          )}
-          {isCookingChallenge && (
-            <CookingChallenge onComplete={completeChallenge} onReaction={handleReaction} />
-          )}
+          {isGrindingChallenge && <GrindingHUD />}
+          {isStuffingChallenge && <StuffingHUD />}
+          {isCookingChallenge && <CookingHUD />}
           {isTastingChallenge && (
             <TastingChallenge onComplete={completeChallenge} onReaction={handleReaction} />
           )}
