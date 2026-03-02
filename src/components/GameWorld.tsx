@@ -30,6 +30,7 @@ import {
   RigidBody,
 } from '@react-three/rapier';
 import {createXRStore, XR} from '@react-three/xr';
+import {useKeepAwake} from 'expo-keep-awake';
 import {Suspense, useCallback, useEffect, useRef, useState} from 'react';
 import {Platform, Pressable, Text, View} from 'react-native';
 import {WebGPURenderer} from 'three/webgpu';
@@ -238,6 +239,7 @@ const SceneContent = ({
   joystickRef?: React.RefObject<{x: number; y: number}>;
   lookDeltaRef?: React.RefObject<{dx: number; dy: number}>;
 }) => {
+  useKeepAwake();
   const gameStatus = useGameStore(s => s.gameStatus);
   const currentChallenge = useGameStore(s => s.currentChallenge);
   const challengeTriggered = useGameStore(s => s.challengeTriggered);

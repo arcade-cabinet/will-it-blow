@@ -1,9 +1,9 @@
-// Native AudioEngine — uses expo-av for basic audio on iOS/Android.
+// Native AudioEngine — uses expo-audio for basic audio on iOS/Android.
 // Metro resolves AudioEngine.web.ts on web (Tone.js), this file on native.
 
-import {Audio} from 'expo-av';
+import {createAudioPlayer, setAudioModeAsync} from 'expo-audio';
 
-/** Simple beep generator via expo-av. Falls back to no-op if audio context unavailable. */
+/** Simple beep generator via expo-audio. Falls back to no-op if audio context unavailable. */
 async function playBeep(frequencyHz: number, durationMs: number, volume = 0.5): Promise<void> {
   try {
     // Generate a WAV buffer with a sine wave
@@ -50,13 +50,17 @@ async function playBeep(frequencyHz: number, durationMs: number, volume = 0.5): 
     const base64 = btoa(binary);
     const uri = `data:audio/wav;base64,${base64}`;
 
-    const {sound} = await Audio.Sound.createAsync({uri}, {shouldPlay: true});
-    // Auto-unload after playback
-    sound.setOnPlaybackStatusUpdate(status => {
-      if ('didJustFinish' in status && status.didJustFinish) {
-        sound.unloadAsync();
+    const player = createAudioPlayer(uri);
+    player.volume = volume;
+    player.play();
+    // Auto-release after playback finishes
+    setTimeout(() => {
+      try {
+        player.remove();
+      } catch {
+        // Player may already be released
       }
-    });
+    }, durationMs + 500);
   } catch {
     // Silently fail — audio is non-critical
   }
@@ -68,10 +72,10 @@ class AudioEngine {
   async initTone() {
     if (this.isInitialized) return;
     try {
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-        playsInSilentModeIOS: true,
-        shouldDuckAndroid: true,
+      await setAudioModeAsync({
+        allowsRecording: false,
+        playsInSilentMode: true,
+        interruptionMode: 'duckOthers',
       });
       this.isInitialized = true;
     } catch {
