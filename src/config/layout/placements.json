@@ -62,7 +62,7 @@
       "minBounds": [1.5, 0.9, 1.2],
       "rotationY": 0,
       "triggerRadius": 2,
-      "markerY": 3.0
+      "markerY": 3
     },
     "mixing-bowl": {
       "on": "left-wall",
@@ -280,6 +280,80 @@
         }
       },
       "minBounds": [1.4, 0.5, 0.5]
+    },
+    "l-counter": {
+      "on": "left-wall",
+      "at": [0.2308, 0],
+      "minBounds": [1.5, 1, 0.8],
+      "rotationY": 0
+    },
+    "l-counter-ext": {
+      "on": "left-wall",
+      "at": [0.3846, 0],
+      "minBounds": [1.5, 1, 0.8],
+      "rotationY": 0
+    },
+    "upper-cabinets": {
+      "on": "left-wall",
+      "at": [0.2308, 0.3818],
+      "minBounds": [1.2, 0.6, 0.4],
+      "rotationY": 0
+    },
+    "upper-cabinets-2": {
+      "on": "left-wall",
+      "at": [0.3846, 0.3818],
+      "minBounds": [1.2, 0.6, 0.4],
+      "rotationY": 0
+    },
+    "oven": {
+      "on": "left-wall",
+      "at": [0.3462, 0],
+      "minBounds": [0.8, 1, 0.6],
+      "rotationY": 0
+    },
+    "dishwasher": {
+      "on": "left-wall",
+      "at": [0.4615, 0],
+      "minBounds": [0.7, 0.9, 0.6],
+      "rotationY": 0
+    },
+    "cutting-board": {
+      "on": "floor",
+      "at": [0.5308, 0.4769],
+      "minBounds": [0.4, 0.05, 0.3],
+      "rotationY": -0.2,
+      "triggerRadius": 1.5,
+      "markerY": 2.5
+    },
+    "bottle": {
+      "on": "floor",
+      "at": [0.5231, 0.5308],
+      "minBounds": [0.1, 0.3, 0.1],
+      "rotationY": 0
+    },
+    "roller": {
+      "on": "floor",
+      "at": [0.5077, 0.5385],
+      "minBounds": [0.3, 0.08, 0.08],
+      "rotationY": 0.7
+    },
+    "cutlery-knife": {
+      "on": "floor",
+      "at": [0.5154, 0.4538],
+      "minBounds": [0.05, 0.02, 0.25],
+      "rotationY": 1.2
+    },
+    "cutlery-cleaver": {
+      "on": "floor",
+      "at": [0.4769, 0.5154],
+      "minBounds": [0.05, 0.02, 0.2],
+      "rotationY": -0.8
+    },
+    "prop-knife": {
+      "on": "floor",
+      "at": [0.5462, 0.4923],
+      "minBounds": [0.05, 0.02, 0.3],
+      "rotationY": 2.4
     }
   },
   "_anchors": {
@@ -723,6 +797,61 @@
     "cutlery-spoon:top:top-left": [2.505, 0.01, 1.0752],
     "cutlery-spoon:top:top-midpoint": [2.5148, 0.01, 1.0732],
     "cutlery-spoon:top:top-right": [2.5246, 0.01, 1.0712],
+    "dining-table:back:bottom-left": [3.2499, 0, 1.8999],
+    "dining-table:back:bottom-midpoint": [2.4999, 0, 1.8999],
+    "dining-table:back:bottom-right": [1.7499, 0, 1.8999],
+    "dining-table:back:center": [2.4999, 0.45, 1.8999],
+    "dining-table:back:left-midpoint": [3.2499, 0.45, 1.8999],
+    "dining-table:back:right-midpoint": [1.7499, 0.45, 1.8999],
+    "dining-table:back:top-left": [3.2499, 0.9, 1.8999],
+    "dining-table:back:top-midpoint": [2.4999, 0.9, 1.8999],
+    "dining-table:back:top-right": [1.7499, 0.9, 1.8999],
+    "dining-table:bottom:bottom-left": [1.7499, 0, 3.0999],
+    "dining-table:bottom:bottom-midpoint": [2.4999, 0, 3.0999],
+    "dining-table:bottom:bottom-right": [3.2499, 0, 3.0999],
+    "dining-table:bottom:center": [2.4999, 0, 2.4999],
+    "dining-table:bottom:left-midpoint": [1.7499, 0, 2.4999],
+    "dining-table:bottom:right-midpoint": [3.2499, 0, 2.4999],
+    "dining-table:bottom:top-left": [1.7499, 0, 1.8999],
+    "dining-table:bottom:top-midpoint": [2.4999, 0, 1.8999],
+    "dining-table:bottom:top-right": [3.2499, 0, 1.8999],
+    "dining-table:center": [2.4999, 0.45, 2.4999],
+    "dining-table:front:bottom-left": [1.7499, 0, 3.0999],
+    "dining-table:front:bottom-midpoint": [2.4999, 0, 3.0999],
+    "dining-table:front:bottom-right": [3.2499, 0, 3.0999],
+    "dining-table:front:center": [2.4999, 0.45, 3.0999],
+    "dining-table:front:left-midpoint": [1.7499, 0.45, 3.0999],
+    "dining-table:front:right-midpoint": [3.2499, 0.45, 3.0999],
+    "dining-table:front:top-left": [1.7499, 0.9, 3.0999],
+    "dining-table:front:top-midpoint": [2.4999, 0.9, 3.0999],
+    "dining-table:front:top-right": [3.2499, 0.9, 3.0999],
+    "dining-table:left:bottom-left": [1.7499, 0, 1.8999],
+    "dining-table:left:bottom-midpoint": [1.7499, 0, 2.4999],
+    "dining-table:left:bottom-right": [1.7499, 0, 3.0999],
+    "dining-table:left:center": [1.7499, 0.45, 2.4999],
+    "dining-table:left:left-midpoint": [1.7499, 0.45, 1.8999],
+    "dining-table:left:right-midpoint": [1.7499, 0.45, 3.0999],
+    "dining-table:left:top-left": [1.7499, 0.9, 1.8999],
+    "dining-table:left:top-midpoint": [1.7499, 0.9, 2.4999],
+    "dining-table:left:top-right": [1.7499, 0.9, 3.0999],
+    "dining-table:right:bottom-left": [3.2499, 0, 3.0999],
+    "dining-table:right:bottom-midpoint": [3.2499, 0, 2.4999],
+    "dining-table:right:bottom-right": [3.2499, 0, 1.8999],
+    "dining-table:right:center": [3.2499, 0.45, 2.4999],
+    "dining-table:right:left-midpoint": [3.2499, 0.45, 3.0999],
+    "dining-table:right:right-midpoint": [3.2499, 0.45, 1.8999],
+    "dining-table:right:top-left": [3.2499, 0.9, 3.0999],
+    "dining-table:right:top-midpoint": [3.2499, 0.9, 2.4999],
+    "dining-table:right:top-right": [3.2499, 0.9, 1.8999],
+    "dining-table:top:bottom-left": [1.7499, 0.9, 1.8999],
+    "dining-table:top:bottom-midpoint": [2.4999, 0.9, 1.8999],
+    "dining-table:top:bottom-right": [3.2499, 0.9, 1.8999],
+    "dining-table:top:center": [2.4999, 0.9, 2.4999],
+    "dining-table:top:left-midpoint": [1.7499, 0.9, 2.4999],
+    "dining-table:top:right-midpoint": [3.2499, 0.9, 2.4999],
+    "dining-table:top:top-left": [1.7499, 0.9, 3.0999],
+    "dining-table:top:top-midpoint": [2.4999, 0.9, 3.0999],
+    "dining-table:top:top-right": [3.2499, 0.9, 3.0999],
     "fluorescent-panel-0:back:bottom-left": [-2.55, 5, -3.5],
     "fluorescent-panel-0:back:bottom-midpoint": [-3.25, 5, -3.5],
     "fluorescent-panel-0:back:bottom-right": [-3.95, 5, -3.5],
