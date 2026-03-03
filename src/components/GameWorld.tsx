@@ -293,6 +293,8 @@ function XROriginWrapper() {
 
 const BASE_FOV = 80;
 const MIN_HFOV_DEG = 65;
+const MAX_VFOV_DEG = 150;
+const ASPECT_EPSILON = 1e-6;
 
 /** Adjusts camera vertical FOV on portrait viewports so horizontal FOV stays usable. */
 function PortraitFOVAdjuster() {
@@ -301,16 +303,22 @@ function PortraitFOVAdjuster() {
 
   useEffect(() => {
     const aspect = size.width / size.height;
-    if (aspect >= 1) {
+    const cam = camera as THREE.PerspectiveCamera;
+
+    if (!Number.isFinite(aspect) || aspect < ASPECT_EPSILON) {
+      cam.fov = BASE_FOV;
+    } else if (aspect >= 1) {
       // Landscape / square — use base FOV
-      (camera as THREE.PerspectiveCamera).fov = BASE_FOV;
+      cam.fov = BASE_FOV;
     } else {
       // Portrait — increase vFOV so hFOV >= MIN_HFOV_DEG
       const minHRad = (MIN_HFOV_DEG * Math.PI) / 180;
       const neededVFov = 2 * Math.atan(Math.tan(minHRad / 2) / aspect) * (180 / Math.PI);
-      (camera as THREE.PerspectiveCamera).fov = Math.max(BASE_FOV, neededVFov);
+      cam.fov = Number.isFinite(neededVFov)
+        ? Math.max(BASE_FOV, Math.min(neededVFov, MAX_VFOV_DEG))
+        : BASE_FOV;
     }
-    (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
+    cam.updateProjectionMatrix();
   }, [camera, size]);
 
   return null;

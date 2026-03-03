@@ -36,7 +36,11 @@ const VIEWPORTS = [
   {name: 'desktop-720p', w: 1280, h: 720, dpr: 1, touch: false},
 ];
 
-const browser = await chromium.launch({headless: true, channel: 'chrome'});
+const launchOptions = {headless: true};
+if (process.env.PLAYWRIGHT_CHANNEL) {
+  launchOptions.channel = process.env.PLAYWRIGHT_CHANNEL;
+}
+const browser = await chromium.launch(launchOptions);
 
 for (const vp of VIEWPORTS) {
   console.log(`\n=== ${vp.name} (${vp.w}x${vp.h} @${vp.dpr}x) ===`);
