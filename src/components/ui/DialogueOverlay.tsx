@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
     borderColor: '#333',
     borderRadius: 12,
     padding: 16,
-    minHeight: 120,
+    minHeight: 80,
   },
   speakerLabel: {
     fontSize: 16,
@@ -209,11 +209,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   dialogueText: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: 'Bangers',
     color: '#E0E0E0',
-    lineHeight: 26,
-    letterSpacing: 0.5,
+    lineHeight: 22,
+    letterSpacing: 0.3,
+    flexShrink: 1,
+    flexWrap: 'wrap',
   },
   tapHint: {
     fontSize: 12,
