@@ -411,6 +411,71 @@ describe('STOVE_ARCHETYPE', () => {
 });
 
 // ---------------------------------------------------------------------------
+// FLUORESCENT_PANEL_ARCHETYPE (lightBox tube expansion)
+// ---------------------------------------------------------------------------
+
+const PANEL_ARCHETYPE = buildMachineArchetype(config.machines['fluorescent-panel']);
+
+describe('FLUORESCENT_PANEL_ARCHETYPE', () => {
+  it('has machineId "fluorescent-panel"', () => {
+    expect(PANEL_ARCHETYPE.machineId).toBe('fluorescent-panel');
+  });
+
+  it('expands lightBox tubes from fractions', () => {
+    const slotNames = PANEL_ARCHETYPE.slots.map(s => s.slotName);
+    expect(slotNames).toContain('tube-0');
+    expect(slotNames).toContain('tube-1');
+    expect(slotNames).toContain('endcap-0-left');
+    expect(slotNames).toContain('endcap-0-right');
+    expect(slotNames).toContain('endcap-1-left');
+    expect(slotNames).toContain('endcap-1-right');
+  });
+
+  it('tube positions computed from depth fractions (25%, 75%)', () => {
+    const tube0 = PANEL_ARCHETYPE.slots.find(s => s.slotName === 'tube-0');
+    const tube1 = PANEL_ARCHETYPE.slots.find(s => s.slotName === 'tube-1');
+    const _depth = 0.46;
+    // fraction 0.25 → z = (0.25 - 0.5) * 0.46 = -0.115
+    expect(tube0!.components.transform!.position[2]).toBeCloseTo(-0.115, 3);
+    // fraction 0.75 → z = (0.75 - 0.5) * 0.46 = 0.115
+    expect(tube1!.components.transform!.position[2]).toBeCloseTo(0.115, 3);
+  });
+
+  it('tube length computed from box width minus inset', () => {
+    const tube0 = PANEL_ARCHETYPE.slots.find(s => s.slotName === 'tube-0');
+    const expectedLength = 1.36 * (1 - 2 * 0.05); // 1.224
+    // cylinder args: [radiusTop, radiusBottom, height, segments]
+    expect(tube0!.components.geometry!.args[2]).toBeCloseTo(expectedLength, 3);
+  });
+
+  it('endcaps positioned at tube ends', () => {
+    const ecLeft = PANEL_ARCHETYPE.slots.find(s => s.slotName === 'endcap-0-left');
+    const ecRight = PANEL_ARCHETYPE.slots.find(s => s.slotName === 'endcap-0-right');
+    const halfTube = (1.36 * (1 - 2 * 0.05)) / 2;
+    expect(ecLeft!.components.transform!.position[0]).toBeCloseTo(-halfTube, 3);
+    expect(ecRight!.components.transform!.position[0]).toBeCloseTo(halfTube, 3);
+  });
+
+  it('tube material has emissive properties', () => {
+    const tube0 = PANEL_ARCHETYPE.slots.find(s => s.slotName === 'tube-0');
+    expect(tube0!.components.material!.emissive).toBe('#e6ffe0');
+    expect(tube0!.components.material!.emissiveIntensity).toBe(2.5);
+  });
+
+  it('has housing diffuser and downlight extra', () => {
+    const slotNames = PANEL_ARCHETYPE.slots.map(s => s.slotName);
+    expect(slotNames).toContain('diffuser');
+    expect(slotNames).toContain('downlight');
+  });
+
+  it('downlight has flicker behavior', () => {
+    const dl = PANEL_ARCHETYPE.slots.find(s => s.slotName === 'downlight');
+    expect(dl!.components.flicker).toBeDefined();
+    expect(dl!.components.flicker!.active).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Cross-archetype: unique slot names within each machine
 // ---------------------------------------------------------------------------
 

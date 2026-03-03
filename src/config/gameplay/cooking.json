@@ -23,5 +23,8 @@
   "scorePenaltyPerOverheat": 15,
   "scoreBonusNoOverheat": 10,
   "completeDelaySec": 1.2,
-  "sizzleThrottleMs": 1200
+  "sizzleThrottleMs": 1200,
+  "maxFlips": 3,
+  "flipFlairPoints": 5,
+  "flipHoldTimerPenalty": 0.5
 }

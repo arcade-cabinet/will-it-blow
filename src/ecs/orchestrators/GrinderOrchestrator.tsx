@@ -76,6 +76,12 @@ const {
   particleGravity: PARTICLE_GRAVITY,
   velocityDecay: VELOCITY_DECAY,
   hapticProgressInterval: HAPTIC_PROGRESS_INTERVAL,
+  hopperChunkCount: HOPPER_CHUNK_COUNT,
+  hopperTopY: HOPPER_TOP_Y,
+  hopperBottomY: HOPPER_BOTTOM_Y,
+  hopperSpreadX: HOPPER_SPREAD_X,
+  hopperSpreadZ: HOPPER_SPREAD_Z,
+  hopperChunkScale: HOPPER_CHUNK_SCALE,
 } = config.gameplay.grinding;
 
 const CHUNK_BOWL_OFFSETS = Array.from({length: chunkCount}, (_, i) => {
@@ -238,8 +244,34 @@ export const GrinderOrchestrator = ({position, visible}: GrinderOrchestratorProp
     });
   }, [chunkColors]);
 
+  // ---- hopper chunk layout (ingredient chunks inside tray that descend with progress) ----
+  const hopperInitialPositions = useMemo(() => {
+    return Array.from({length: HOPPER_CHUNK_COUNT}, (_, i) => {
+      const angle = (i / HOPPER_CHUNK_COUNT) * Math.PI * 2;
+      const r = 0.4 + (i % 3) * 0.3;
+      return new THREE.Vector3(
+        Math.cos(angle) * r * HOPPER_SPREAD_X * 0.5,
+        HOPPER_TOP_Y - (i % 4) * 0.15,
+        0.5 + Math.sin(angle) * r * HOPPER_SPREAD_Z * 0.5,
+      );
+    });
+  }, []);
+
+  const hopperRefs = useRef<(THREE.Mesh | null)[]>(
+    Array.from({length: HOPPER_CHUNK_COUNT}, () => null),
+  );
+
+  const hopperMats = useMemo(() => {
+    if (!chunkColors) return null;
+    return Array.from({length: HOPPER_CHUNK_COUNT}, (_, i) => {
+      const hex = chunkColors[i % chunkColors.length];
+      return new THREE.MeshStandardMaterial({color: hex, roughness: 0.8, metalness: 0.05});
+    });
+  }, [chunkColors]);
+
   // ---- geometry ----
   const chunkGeo = useMemo(() => new THREE.DodecahedronGeometry(0.5, 1), []);
+  const hopperChunkGeo = useMemo(() => new THREE.DodecahedronGeometry(HOPPER_CHUNK_SCALE, 1), []);
   const particleGeo = useMemo(() => makeParticleGeo(), []);
 
   // ---- Enable/disable ECS input primitives + haptic feedback ----
@@ -416,6 +448,25 @@ export const GrinderOrchestrator = ({position, visible}: GrinderOrchestratorProp
       damp3(mesh.position, chunk.targetPos.toArray(), 0.12, dt);
     }
 
+    // --- Hopper chunk descent (ingredient chunks in tray descend with progress) ---
+    for (let i = 0; i < HOPPER_CHUNK_COUNT; i++) {
+      const mesh = hopperRefs.current[i];
+      if (!mesh) continue;
+
+      // Each chunk disappears at a staggered progress threshold
+      const disappearAt = (i + 1) / HOPPER_CHUNK_COUNT;
+      if (progress >= disappearAt) {
+        mesh.visible = false;
+        continue;
+      }
+
+      mesh.visible = phaseRef.current === 'active' || phaseRef.current === 'success';
+      // Descend Y from initial to hopperBottomY proportional to progress
+      const initial = hopperInitialPositions[i];
+      const descent = progress * (HOPPER_TOP_Y - HOPPER_BOTTOM_Y);
+      mesh.position.set(initial.x, initial.y - descent, initial.z);
+    }
+
     // --- Particle physics ---
     const pData = particleDataRef.current;
     const pMesh = particleMeshRef.current;
@@ -466,6 +517,23 @@ export const GrinderOrchestrator = ({position, visible}: GrinderOrchestratorProp
           >
             <primitive object={chunkGeo} attach="geometry" />
             <primitive object={chunkMats ? chunkMats[i] : meatMat} attach="material" />
+          </mesh>
+        ))}
+      </group>
+
+      {/* Hopper chunks — ingredient pieces inside the tray that descend with progress */}
+      <group>
+        {hopperInitialPositions.map((pos, i) => (
+          <mesh
+            key={`hopper-${i}`}
+            ref={el => {
+              hopperRefs.current[i] = el;
+            }}
+            position={pos.toArray()}
+            visible={false}
+          >
+            <primitive object={hopperChunkGeo} attach="geometry" />
+            <primitive object={hopperMats ? hopperMats[i] : meatMat} attach="material" />
           </mesh>
         ))}
       </group>

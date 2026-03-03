@@ -48,18 +48,25 @@ import type {MachineArchetype} from './types';
  * ```
  */
 
+let instanceCounter = 0;
+
 /**
  * Spawn all slot entities for a machine archetype.
  *
  * Entities are created with LOCAL coordinates (as defined in the
  * archetype). The orchestrator's R3F `<group>` provides the
  * world-space transform — no position offset is applied here.
+ *
+ * Each call gets a unique instance ID so multiple spawns of the same
+ * archetype produce distinct entity names (avoids React key collisions
+ * in global renderers like LightRenderer).
  */
 export function spawnMachine(archetype: MachineArchetype): Entity[] {
+  const id = instanceCounter++;
   const entities: Entity[] = [];
   for (const slot of archetype.slots) {
     const entity: Entity = {
-      name: `${archetype.machineId}/${slot.slotName}`,
+      name: `${archetype.machineId}#${id}/${slot.slotName}`,
       machineSlot: {
         machineId: archetype.machineId,
         slotName: slot.slotName,

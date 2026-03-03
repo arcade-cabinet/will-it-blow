@@ -1,5 +1,5 @@
-import {useCallback} from 'react';
-import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {useCallback, useEffect, useState} from 'react';
+import {Platform, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {version} from '../../../package.json';
 import {useGameStore} from '../../store/gameStore';
 
@@ -86,13 +86,28 @@ interface SettingsScreenProps {
   onBack: () => void;
 }
 
+/** Detect WebXR availability at runtime (web only). */
+function useXrSupported(): boolean {
+  const [supported, setSupported] = useState(false);
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof navigator === 'undefined') return;
+    const xr = (navigator as {xr?: {isSessionSupported?: (m: string) => Promise<boolean>}}).xr;
+    if (xr?.isSessionSupported) {
+      xr.isSessionSupported('immersive-vr')
+        .then(setSupported)
+        .catch(() => setSupported(false));
+    }
+  }, []);
+  return supported;
+}
+
 /**
- * Settings panel with music/SFX volume controls and mute toggles.
+ * Settings panel with music/SFX volume controls, mute toggles, and VR preference.
  *
- * Reads `musicVolume`, `sfxVolume`, `musicMuted`, and `sfxMuted` from
- * the Zustand store, and writes back via the corresponding setters.
- * Each audio channel gets a `VolumeSlider` (5-step discrete bar + mute
- * icon toggle). Displays the app version from package.json at the bottom.
+ * Reads `musicVolume`, `sfxVolume`, `musicMuted`, `sfxMuted`, and `xrEnabled`
+ * from the Zustand store. Each audio channel gets a `VolumeSlider` (5-step
+ * discrete bar + mute icon toggle). The VR toggle only appears when the
+ * browser supports WebXR immersive-vr sessions.
  *
  * Styled to match the butcher-shop aesthetic (dark panel, saddlebrown
  * border, Bangers font, gold dividers).
@@ -100,8 +115,9 @@ interface SettingsScreenProps {
  * @param props.onBack - Called when the BACK button is pressed to return to the title screen
  */
 export function SettingsScreen({onBack}: SettingsScreenProps) {
-  const {musicVolume, sfxVolume, musicMuted, sfxMuted} = useGameStore();
-  const {setMusicVolume, setSfxVolume, setMusicMuted, setSfxMuted} = useGameStore();
+  const {musicVolume, sfxVolume, musicMuted, sfxMuted, xrEnabled} = useGameStore();
+  const {setMusicVolume, setSfxVolume, setMusicMuted, setSfxMuted, setXrEnabled} = useGameStore();
+  const xrSupported = useXrSupported();
 
   const toggleMusicMute = useCallback(
     () => setMusicMuted(!musicMuted),
@@ -130,6 +146,23 @@ export function SettingsScreen({onBack}: SettingsScreenProps) {
           onValueChange={setSfxVolume}
           onMuteToggle={toggleSfxMute}
         />
+
+        {xrSupported && (
+          <>
+            <View style={styles.divider} />
+            <TouchableOpacity
+              style={styles.xrRow}
+              onPress={() => setXrEnabled(!xrEnabled)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.xrLabel}>VR MODE</Text>
+              <Text style={[styles.xrToggle, xrEnabled && styles.xrToggleActive]}>
+                {xrEnabled ? 'ON' : 'OFF'}
+              </Text>
+            </TouchableOpacity>
+            <Text style={styles.xrHint}>Enters VR automatically when the game starts</Text>
+          </>
+        )}
 
         <View style={styles.divider} />
 
@@ -174,6 +207,41 @@ const styles = StyleSheet.create({
     backgroundColor: '#D2A24C',
     marginVertical: 16,
     opacity: 0.5,
+  },
+  xrRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginVertical: 12,
+  },
+  xrLabel: {
+    fontFamily: 'Bangers',
+    fontSize: 18,
+    color: '#CCBBAA',
+    letterSpacing: 2,
+  },
+  xrToggle: {
+    fontFamily: 'Bangers',
+    fontSize: 18,
+    color: '#555',
+    letterSpacing: 2,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: '#555',
+    borderRadius: 3,
+  },
+  xrToggleActive: {
+    color: '#FF1744',
+    borderColor: '#FF1744',
+  },
+  xrHint: {
+    fontFamily: 'Bangers',
+    fontSize: 11,
+    color: '#666',
+    letterSpacing: 1,
+    marginTop: -4,
+    marginBottom: 4,
   },
   backButton: {
     alignSelf: 'center',

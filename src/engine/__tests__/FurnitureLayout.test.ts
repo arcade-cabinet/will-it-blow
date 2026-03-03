@@ -1,11 +1,21 @@
+import {config} from '../../config';
+import type {RoomDimensions} from '../FurnitureLayout';
 import {
   computeRoom,
   DEFAULT_ROOM,
   FURNITURE_RULES,
   getStationTarget,
-  resolveTargets,
   STATION_TARGET_NAMES,
 } from '../FurnitureLayout';
+import {mergeLayoutConfigs, resolveLayout} from '../layout';
+
+/** Helper — replaces deleted resolveTargets() for tests */
+function resolve(room: RoomDimensions = DEFAULT_ROOM) {
+  return resolveLayout(
+    mergeLayoutConfigs(config.layout.room, config.layout.rails, config.layout.placements),
+    room,
+  ).targets;
+}
 
 describe('FurnitureLayout', () => {
   describe('computeRoom', () => {
@@ -33,14 +43,21 @@ describe('FurnitureLayout', () => {
   });
 
   describe('STATION_TARGET_NAMES', () => {
-    it('has 5 station names in challenge order', () => {
-      expect(STATION_TARGET_NAMES).toEqual(['fridge', 'grinder', 'stuffer', 'stove', 'crt-tv']);
-      expect(STATION_TARGET_NAMES).toHaveLength(5);
+    it('has 6 station names in challenge order', () => {
+      expect(STATION_TARGET_NAMES).toEqual([
+        'fridge',
+        'cutting-board',
+        'grinder',
+        'stuffer',
+        'stove',
+        'crt-tv',
+      ]);
+      expect(STATION_TARGET_NAMES).toHaveLength(6);
     });
   });
 
-  describe('resolveTargets', () => {
-    const targets = resolveTargets(DEFAULT_ROOM);
+  describe('resolveLayout', () => {
+    const targets = resolve(DEFAULT_ROOM);
 
     it('returns named targets with position, rotationY, and triggerRadius', () => {
       for (const key of Object.keys(targets)) {
@@ -79,20 +96,21 @@ describe('FurnitureLayout', () => {
       }
     });
 
-    it('trap-door is at ceiling height', () => {
-      expect(targets['trap-door'].position[1]).toBe(DEFAULT_ROOM.h);
+    it('trap-door is near ceiling height (adhesion offset)', () => {
+      // trap-door minBounds height = 0.1, ceiling adhesion = -0.05
+      expect(targets['trap-door'].position[1]).toBeCloseTo(DEFAULT_ROOM.h, 0);
     });
 
     it('positions are computed from room dimensions', () => {
-      const small = resolveTargets({w: 8, d: 8, h: 4});
-      const large = resolveTargets({w: 20, d: 20, h: 8});
+      const small = resolve({w: 8, d: 8, h: 4});
+      const large = resolve({w: 20, d: 20, h: 8});
 
       // Fridge x should be more negative in a wider room
       expect(large.fridge.position[0]).toBeLessThan(small.fridge.position[0]);
 
-      // Trap-door y should scale with room height
-      expect(small['trap-door'].position[1]).toBe(4);
-      expect(large['trap-door'].position[1]).toBe(8);
+      // Trap-door y should scale with room height (close, not exact due to adhesion)
+      expect(small['trap-door'].position[1]).toBeCloseTo(4, 0);
+      expect(large['trap-door'].position[1]).toBeCloseTo(8, 0);
 
       // Station y values should scale with height
       expect(large.fridge.position[1]).toBeGreaterThan(small.fridge.position[1]);
@@ -108,8 +126,8 @@ describe('FurnitureLayout', () => {
     });
 
     it('all positions scale proportionally with room size', () => {
-      const small = resolveTargets(computeRoom(1));
-      const wide = resolveTargets(computeRoom(2));
+      const small = resolve(computeRoom(1));
+      const wide = resolve(computeRoom(2));
       // Fridge should be further from center in wider room
       expect(Math.abs(wide.fridge.position[0])).toBeGreaterThan(Math.abs(small.fridge.position[0]));
       // Island stays at center
@@ -119,10 +137,10 @@ describe('FurnitureLayout', () => {
   });
 
   describe('getStationTarget', () => {
-    const targets = resolveTargets(DEFAULT_ROOM);
+    const targets = resolve(DEFAULT_ROOM);
 
-    it('returns correct target for indices 0-4', () => {
-      for (let i = 0; i < 5; i++) {
+    it('returns correct target for indices 0-5', () => {
+      for (let i = 0; i < 6; i++) {
         const t = getStationTarget(targets, i);
         expect(t).toBeDefined();
         expect(t).toBe(targets[STATION_TARGET_NAMES[i]]);
@@ -131,7 +149,7 @@ describe('FurnitureLayout', () => {
 
     it('returns undefined for invalid indices', () => {
       expect(getStationTarget(targets, -1)).toBeUndefined();
-      expect(getStationTarget(targets, 5)).toBeUndefined();
+      expect(getStationTarget(targets, 6)).toBeUndefined();
       expect(getStationTarget(targets, 100)).toBeUndefined();
     });
   });
@@ -151,8 +169,8 @@ describe('FurnitureLayout', () => {
       }
     });
 
-    it('every target name maps to a valid target from resolveTargets', () => {
-      const targets = resolveTargets(DEFAULT_ROOM);
+    it('every target name maps to a valid resolved target', () => {
+      const targets = resolve(DEFAULT_ROOM);
       for (const rule of FURNITURE_RULES) {
         expect(targets[rule.target]).toBeDefined();
       }
@@ -186,14 +204,14 @@ describe('FurnitureLayout', () => {
     });
 
     it('should have horror prop targets', () => {
-      const targets = resolveTargets(DEFAULT_ROOM);
+      const targets = resolve(DEFAULT_ROOM);
       expect(targets['bear-trap']).toBeDefined();
       expect(targets.worm).toBeDefined();
       expect(targets['fly-swatter']).toBeDefined();
     });
 
-    it('every rule target must exist in resolveTargets', () => {
-      const targets = resolveTargets(DEFAULT_ROOM);
+    it('every rule target must exist in resolved layout', () => {
+      const targets = resolve(DEFAULT_ROOM);
       for (const rule of FURNITURE_RULES) {
         expect(targets[rule.target]).toBeDefined();
       }

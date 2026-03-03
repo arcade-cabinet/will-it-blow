@@ -15,7 +15,9 @@ import {useFrame} from '@react-three/fiber';
 import {damp3} from 'maath/easing';
 import {useMemo, useRef} from 'react';
 import * as THREE from 'three/webgpu';
-import {DEFAULT_ROOM, resolveTargets} from '../../engine/FurnitureLayout';
+import {config} from '../../config';
+import {DEFAULT_ROOM} from '../../engine/FurnitureLayout';
+import {mergeLayoutConfigs, resolveLayout} from '../../engine/layout';
 import type {BowlPosition} from '../../store/gameStore';
 import {useGameStore} from '../../store/gameStore';
 
@@ -36,7 +38,12 @@ const BOWL_POINTS = [
 // Station positions for the bowl (derived from FurnitureLayout targets)
 // ---------------------------------------------------------------------------
 
-const TARGETS = resolveTargets(DEFAULT_ROOM);
+const KITCHEN_LAYOUT = mergeLayoutConfigs(
+  config.layout.room,
+  config.layout.rails,
+  config.layout.placements,
+);
+const TARGETS = resolveLayout(KITCHEN_LAYOUT, DEFAULT_ROOM).targets;
 
 const BOWL_POSITIONS: Partial<Record<BowlPosition, [number, number, number]>> = {
   fridge: TARGETS['mixing-bowl'].position,

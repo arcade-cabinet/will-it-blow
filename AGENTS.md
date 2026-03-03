@@ -11,10 +11,11 @@ Entry point for all AI agents working in this codebase.
 | Location | What you'll find |
 |----------|-----------------|
 | `AGENTS.md` (this file) | High-level entry point — project overview, architecture, commands, rules |
-| `CLAUDE.md` | Claude Code-specific configuration — commands, pitfalls, CI/CD |
+| `memory-bank/` | Persistent context — tech stack, patterns, pitfalls, progress (read `memory-bank/AGENTS.md` for order) |
 | `docs/AGENTS.md` | Full documentation index with frontmatter schema reference |
 | `docs/plans/AGENTS.md` | Plan archive (historical BabylonJS + completed R3F migration) |
-| `memory-bank/` | Persistent context (Cline-style memory bank) |
+| `CLAUDE.md` | **Claude Code only** — tool-specific behavior, slash commands, agent definitions |
+| `.github/copilot-instructions.md` | **GitHub Copilot only** — tool-specific behavior |
 | `.claude/agents/` | Bespoke agent definitions (scene-architect, challenge-dev, store-warden, asset-pipeline, doc-keeper) |
 | `.claude/commands/` | Slash commands (playtest, lint-and-test, update-docs) |
 
@@ -108,3 +109,11 @@ pnpm docs:build               # Generate TypeDoc API docs
 - **useRef** for mutable state in `useFrame` callbacks (avoid stale closures)
 - **Feature branches** — branch protection on main; use feat/* branches and PRs
 - **Squash merge** — preferred merge strategy
+
+## Common Pitfalls
+
+11 documented pitfalls covering TypeScript, Metro, testing, and 3D geometry. See `memory-bank/techContext.md` § "Known Technical Pitfalls" for the full list.
+
+## CI/CD
+
+See `memory-bank/techContext.md` § "CI/CD" for workflow details. Live site: https://arcade-cabinet.github.io/will-it-blow/

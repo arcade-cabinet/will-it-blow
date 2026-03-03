@@ -28,6 +28,7 @@
 
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {Animated, StyleSheet, Text, View} from 'react-native';
+import {config} from '../../config';
 import {VERDICT_A, VERDICT_B, VERDICT_F, VERDICT_S} from '../../data/dialogue/verdict';
 import {calculateFinalVerdict, type Verdict} from '../../engine/ChallengeRegistry';
 import {calculateDemandBonus, type DemandBreakdown} from '../../engine/DemandScoring';
@@ -56,7 +57,9 @@ type TastingPhase =
   | 'dialogue' // Verdict dialogue plays
   | 'complete'; // Outcome applied
 
-const CHALLENGE_LABELS = ['Ingredients', 'Grinding', 'Stuffing', 'Cooking'];
+const CHALLENGE_LABELS = config.scene.challengeSequence.stations
+  .slice(0, -1) // All stations except tasting (last)
+  .map(s => s.challengeType.charAt(0).toUpperCase() + s.challengeType.slice(1));
 
 const RANK_COLORS: Record<string, string> = {
   S: '#FFD700',

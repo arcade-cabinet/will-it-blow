@@ -18,13 +18,15 @@
  * - Native: Manual position animation in useFrame
  */
 
+import {useGLTF} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
 import type {RapierRigidBody} from '@react-three/rapier';
 import {BallCollider, CuboidCollider, RigidBody} from '@react-three/rapier';
-import {useMemo, useRef} from 'react';
+import {Suspense, useMemo, useRef} from 'react';
 import {Platform} from 'react-native';
 import * as THREE from 'three/webgpu';
 import {config} from '../../config';
+import {getAssetUrl} from '../../engine/assetUrl';
 import type {Ingredient} from '../../engine/Ingredients';
 
 /**
@@ -101,6 +103,33 @@ function FridgeShelf({y}: {y: number}) {
 }
 
 // -------------------------------------------------------
+// GlbIngredientGeometry — loads a GLB model and scales it to fit INGREDIENT_DIAMETER
+// -------------------------------------------------------
+
+function GlbIngredientGeometry({glbPath}: {glbPath: string}) {
+  const url = getAssetUrl('models', `ingredients/${glbPath}`);
+  const {scene} = useGLTF(url);
+  const cloned = useMemo(() => {
+    const c = scene.clone(true);
+    // Normalize scale to fit within INGREDIENT_DIAMETER bounding sphere
+    const box = new THREE.Box3().setFromObject(c);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    const maxDim = Math.max(size.x, size.y, size.z);
+    if (maxDim > 0) {
+      const scale = INGREDIENT_DIAMETER / maxDim;
+      c.scale.multiplyScalar(scale);
+    }
+    // Center the model
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+    c.position.sub(center.multiplyScalar(c.scale.x));
+    return c;
+  }, [scene]);
+
+  return <primitive object={cloned} />;
+}
+
 // IngredientMesh — PBR clickable ingredient on shelf
 // -------------------------------------------------------
 
@@ -282,6 +311,13 @@ function IngredientMesh({
         emissive={ingredient.color}
         emissiveIntensity={0.15}
       />
+      {/* GLB model overlay — when glbPath exists, render the loaded model as a child.
+          The procedural geometry stays as the collision/click target + material host. */}
+      {ingredient.glbPath && (
+        <Suspense fallback={null}>
+          <GlbIngredientGeometry glbPath={ingredient.glbPath} />
+        </Suspense>
+      )}
     </mesh>
   );
 

@@ -16,11 +16,14 @@
 
 import {useEffect, useRef} from 'react';
 import {Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {config} from '../../config';
 import {audioEngine} from '../../engine/AudioEngine';
 import {calculateFinalVerdict} from '../../engine/ChallengeRegistry';
 import {useGameStore} from '../../store/gameStore';
 
-const CHALLENGE_NAMES = ['Ingredients', 'Grinding', 'Stuffing', 'Cooking', 'Tasting'];
+const CHALLENGE_NAMES = config.scene.challengeSequence.stations.map(
+  s => s.challengeType.charAt(0).toUpperCase() + s.challengeType.slice(1),
+);
 
 export function GameOverScreen() {
   const {gameStatus, challengeScores, returnToMenu, setAppPhase} = useGameStore();

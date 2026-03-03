@@ -119,15 +119,15 @@ describe('completeChallenge', () => {
     expect(store().currentChallenge).toBe(1);
   });
 
-  it('sets victory when completing challenge 4 (the last)', () => {
+  it('sets victory when completing challenge 5 (the last)', () => {
     useGameStore.setState({
       gameStatus: 'playing',
-      currentChallenge: 4,
-      challengeScores: [80, 90, 70, 85],
+      currentChallenge: 5,
+      challengeScores: [80, 85, 90, 70, 85],
     });
     store().completeChallenge(95);
     expect(store().gameStatus).toBe('victory');
-    expect(store().challengeScores).toEqual([80, 90, 70, 85, 95]);
+    expect(store().challengeScores).toEqual([80, 85, 90, 70, 85, 95]);
   });
 
   it('resets strikes on challenge completion', () => {
@@ -136,20 +136,20 @@ describe('completeChallenge', () => {
     expect(store().strikes).toBe(0);
   });
 
-  it('transitions bowlPosition to grinder-output after challenge 1', () => {
+  it('transitions bowlPosition to grinder-output after challenge 2 (grinding)', () => {
     useGameStore.setState({
       gameStatus: 'playing',
-      currentChallenge: 1,
+      currentChallenge: 2,
       bowlPosition: 'grinder',
     });
     store().completeChallenge(80);
     expect(store().bowlPosition).toBe('grinder-output');
   });
 
-  it('transitions bowlPosition to done after challenge 2 and resets sausagePlaced', () => {
+  it('transitions bowlPosition to done after challenge 3 (stuffing) and resets sausagePlaced', () => {
     useGameStore.setState({
       gameStatus: 'playing',
-      currentChallenge: 2,
+      currentChallenge: 3,
       bowlPosition: 'stuffer',
       sausagePlaced: true,
     });

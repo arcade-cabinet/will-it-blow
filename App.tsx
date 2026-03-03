@@ -26,6 +26,11 @@ const IngredientChallenge = lazy(() =>
     default: m.IngredientChallenge,
   })),
 );
+const ChoppingHUD = lazy(() =>
+  import('./src/components/challenges/ChoppingHUD').then(m => ({
+    default: m.ChoppingHUD,
+  })),
+);
 const GrindingHUD = lazy(() =>
   import('./src/components/challenges/GrindingHUD').then(m => ({
     default: m.GrindingHUD,
@@ -101,10 +106,11 @@ const GameUI = () => {
 
   const showChallenge = gameStatus === 'playing' && !transitioning && challengeTriggered;
   const isIngredientChallenge = showChallenge && currentChallenge === 0;
-  const isGrindingChallenge = showChallenge && currentChallenge === 1;
-  const isStuffingChallenge = showChallenge && currentChallenge === 2;
-  const isCookingChallenge = showChallenge && currentChallenge === 3;
-  const isTastingChallenge = showChallenge && currentChallenge === 4;
+  const isChoppingChallenge = showChallenge && currentChallenge === 1;
+  const isGrindingChallenge = showChallenge && currentChallenge === 2;
+  const isStuffingChallenge = showChallenge && currentChallenge === 3;
+  const isCookingChallenge = showChallenge && currentChallenge === 4;
+  const isTastingChallenge = showChallenge && currentChallenge === 5;
 
   return (
     <View style={styles.overlay} pointerEvents="box-none" testID="game-overlay">
@@ -124,6 +130,7 @@ const GameUI = () => {
           {isIngredientChallenge && (
             <IngredientChallenge onComplete={completeChallenge} onReaction={handleReaction} />
           )}
+          {isChoppingChallenge && <ChoppingHUD />}
           {isGrindingChallenge && <GrindingHUD />}
           {isStuffingChallenge && <StuffingHUD />}
           {isCookingChallenge && <CookingHUD />}
@@ -152,19 +159,18 @@ export default function App() {
   // Shared refs for mobile FPS controls (joystick writes, FPSController reads)
   const joystickRef = useRef({x: 0, y: 0});
   const lookDeltaRef = useRef({dx: 0, dy: 0});
-  const isMobile = Platform.OS !== 'web';
+  // Detect touch-primary device (native app OR mobile web browser)
+  const isTouchDevice =
+    Platform.OS !== 'web' ||
+    (typeof window !== 'undefined' && 'ontouchstart' in window && navigator.maxTouchPoints > 0);
 
-  // Start/stop ambient horror drone based on game phase
+  // Ambient drone disabled — synthesized 55Hz sawtooth + pink noise was awful.
+  // TODO: Replace with real incidental audio from asset library.
   useEffect(() => {
-    if (appPhase === 'playing') {
-      audioEngine.startAmbientDrone();
-    } else {
-      audioEngine.stopAmbientDrone();
-    }
     return () => {
       audioEngine.stopAmbientDrone();
     };
-  }, [appPhase]);
+  }, []);
 
   // Prefetch heavy chunks while the loading screen is showing.
   // By the time kitchen.glb finishes downloading, the GameWorld JS
@@ -183,11 +189,11 @@ export default function App() {
       {appPhase === 'playing' && (
         <Suspense fallback={<ChunkFallback />}>
           <GameWorld
-            joystickRef={isMobile ? joystickRef : undefined}
-            lookDeltaRef={isMobile ? lookDeltaRef : undefined}
+            joystickRef={isTouchDevice ? joystickRef : undefined}
+            lookDeltaRef={isTouchDevice ? lookDeltaRef : undefined}
           />
           <GameUI />
-          {isMobile && (
+          {isTouchDevice && (
             <MobileJoystick
               joystickRef={joystickRef}
               onLookDrag={(dx, dy) => {

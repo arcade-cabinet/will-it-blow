@@ -86,7 +86,7 @@ describe('StufferOrchestrator — ECS lifecycle', () => {
   describe('entity naming', () => {
     it('all entities have "stuffer/" prefixed names', () => {
       for (const entity of entities) {
-        expect(entity.name).toMatch(/^stuffer\//);
+        expect(entity.name).toMatch(/^stuffer#\d+\//);
       }
     });
 

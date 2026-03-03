@@ -1,0 +1,10 @@
+{
+  "housingId": "ceiling-housing",
+  "mountType": "ceiling",
+  "width": 1.4,
+  "depth": 0.5,
+  "thickness": 0.07,
+  "bracketColor": "#555555",
+  "bracketRoughness": 0.75,
+  "bracketMetalness": 0.6
+}

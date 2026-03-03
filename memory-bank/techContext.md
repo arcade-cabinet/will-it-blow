@@ -93,8 +93,12 @@ Everything else (including the entire 3D layer) is unified cross-platform.
 
 1. **TypeScript stack overflow:** `npx tsc --noEmit` crashes — Three.js recursive types exceed Node default stack. Use `pnpm typecheck` (sets --stack-size=8192). `skipLibCheck: true` alone is insufficient.
 2. **import.meta in Metro:** Zustand ESM uses `import.meta.env.MODE`. Must have `unstable_transformImportMeta: true` in babel.config.js.
-3. **TSL vs GLSL:** WebGPU renderer rejects raw GLSL ShaderMaterial. Use TSL NodeMaterial.
+3. **TSL vs GLSL:** WebGPU renderer rejects raw GLSL ShaderMaterial. Use TSL NodeMaterial. Import node functions from `'three/tsl'`.
 4. **useGLTF in tests:** Must mock `@react-three/drei`'s `useGLTF` — file loading doesn't work in Node.js.
 5. **Stale closures in useFrame:** Use `useRef` for values read inside `useFrame` callbacks.
 6. **`let` + closure = `never` type:** TypeScript can't track mutations inside callbacks. Assign to `const` after null guard.
 7. **Metro WebGPU resolver:** On native, bare `'three'` is remapped to `'three/webgpu'`. Direct `'three/webgpu'` imports work everywhere.
+8. **sphereGeometry takes radius, not diameter:** Babylon.js used `diameter: 3.6` → R3F uses `args={[1.8, 24, 24]}` (radius, widthSegments, heightSegments).
+9. **Camera inside mesh:** Check STATION_CAMERAS values. Camera needs ≥0.5 units clearance from solid meshes.
+10. **MrSausage3D overlap:** The character is ~3.5 units tall at scale 1.0. Verify position in each scene doesn't clip animated geometry.
+11. **Three.js transform allowlist:** `jest.config.js` must include `three` and `@react-three` in `transformIgnorePatterns` or tests fail with ESM syntax errors.

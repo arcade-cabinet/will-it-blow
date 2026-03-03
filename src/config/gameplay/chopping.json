@@ -1,0 +1,15 @@
+{
+  "chopTarget": 12,
+  "sweetSpotWindow": 0.25,
+  "goodChopProgress": 8.5,
+  "badChopProgress": 3,
+  "knifeBaseFrequency": 2.5,
+  "knifeAmplitude": 0.4,
+  "knifeRestY": 0.6,
+  "dialogueDurationMs": 3000,
+  "successDelayMs": 1500,
+  "scorePenaltyPerStrike": 15,
+  "streakBonusThreshold": 3,
+  "streakFlairPoints": 3,
+  "missStrikeCooldownMs": 600
+}

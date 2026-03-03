@@ -79,7 +79,7 @@ describe('GameWorld', () => {
     const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
     // Should import from FurnitureLayout
     expect(source).toContain('FurnitureLayout');
-    expect(source).toContain('resolveTargets');
+    expect(source).toContain('resolveLayout');
     expect(source).toContain('STATION_TARGET_NAMES');
     // Uses RESOLVED_TARGETS / STATIONS instead of old STATION_TRIGGERS
     expect(source).toContain('RESOLVED_TARGETS');
@@ -91,12 +91,13 @@ describe('GameWorld', () => {
     const fs = require('node:fs');
     const path = require('node:path');
     const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
-    // FridgeStation, GrinderOrchestrator, StufferOrchestrator, CookingOrchestrator, CrtTelevision
+    // FridgeStation, ChoppingOrchestrator, GrinderOrchestrator, StufferOrchestrator, CookingOrchestrator, CrtTelevision
     expect(source).toContain('position={STATIONS[0].position}');
     expect(source).toContain('position={STATIONS[1].position}');
     expect(source).toContain('position={STATIONS[2].position}');
     expect(source).toContain('position={STATIONS[3].position}');
     expect(source).toContain('position={STATIONS[4].position}');
+    expect(source).toContain('position={STATIONS[5].position}');
   });
 
   it('keeps a ManualProximityTrigger fallback for native platforms', () => {

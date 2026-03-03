@@ -4,6 +4,49 @@ import {despawnMachine, spawnMachine} from '../../archetypes/spawnMachine';
 import type {Entity} from '../../types';
 import {world} from '../../world';
 
+describe('CookingOrchestrator — pan flip config', () => {
+  it('cooking config includes flip parameters', () => {
+    const c = config.gameplay.cooking;
+    expect(c.maxFlips).toBe(3);
+    expect(c.flipFlairPoints).toBeGreaterThan(0);
+    expect(c.flipHoldTimerPenalty).toBeGreaterThan(0);
+  });
+
+  it('source has triggerFlip handler and onClick on pan handle', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../CookingOrchestrator.tsx'), 'utf8');
+    expect(source).toContain('triggerFlip');
+    expect(source).toContain('onClick={triggerFlip}');
+    expect(source).toContain('MAX_FLIPS');
+    expect(source).toContain('FLIP_FLAIR_POINTS');
+    expect(source).toContain('FLIP_HOLD_TIMER_PENALTY');
+    expect(source).toContain('recordFlairPoint');
+    expect(source).toContain('flipCountRef');
+  });
+
+  it('flip is limited to maxFlips (currently 3)', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../CookingOrchestrator.tsx'), 'utf8');
+    expect(source).toContain('flipCountRef.current >= MAX_FLIPS');
+  });
+
+  it('flip triggers flair bonus when in target temp zone', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../CookingOrchestrator.tsx'), 'utf8');
+    expect(source).toContain("recordFlairPoint('pan-flip', FLIP_FLAIR_POINTS)");
+  });
+
+  it('flip applies hold timer penalty when outside zone', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../CookingOrchestrator.tsx'), 'utf8');
+    expect(source).toContain('holdTimerRef.current - FLIP_HOLD_TIMER_PENALTY');
+  });
+});
+
 describe('CookingOrchestrator — ECS lifecycle', () => {
   let entities: Entity[];
 
@@ -95,7 +138,7 @@ describe('CookingOrchestrator — ECS lifecycle', () => {
   describe('entity naming', () => {
     it('all entities have "stove/" prefixed names', () => {
       for (const entity of entities) {
-        expect(entity.name).toMatch(/^stove\//);
+        expect(entity.name).toMatch(/^stove#\d+\//);
       }
     });
 

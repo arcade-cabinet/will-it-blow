@@ -190,6 +190,8 @@ export interface GameState {
   pendingFridgeClick: number | null;
   /** Index of the ingredient the player is hovering over (for highlight). */
   fridgeHoveredIndex: number | null;
+  /** Fridge door pull progress (0=closed, 1=open). Snaps open at FRIDGE_SNAP_THRESHOLD. */
+  fridgeDoorProgress: number;
 
   // ---- Demand / decision tracking ----
 
@@ -208,6 +210,8 @@ export interface GameState {
   musicMuted: boolean;
   /** Whether sound effects are muted */
   sfxMuted: boolean;
+  /** Whether to auto-enter VR when the game starts (requires WebXR support) */
+  xrEnabled: boolean;
 
   // ---- Actions ----
 
@@ -245,6 +249,8 @@ export interface GameState {
   setHintActive: (active: boolean) => void;
   /** Populate the fridge with a new ingredient pool and identify which indices match the demand. */
   setFridgePool: (pool: Ingredient[], matching: number[]) => void;
+  /** Set fridge door pull progress (0-1). Snaps to 1.0 when above threshold. */
+  setFridgeDoorProgress: (progress: number) => void;
   /** Signal from 3D FridgeStation that the player clicked ingredient at `index`. */
   triggerFridgeClick: (index: number) => void;
   /** Clear the pending fridge click after the 2D overlay has processed it. */
@@ -277,6 +283,8 @@ export interface GameState {
   setMusicMuted: (muted: boolean) => void;
   /** Toggle sound effects mute state. */
   setSfxMuted: (muted: boolean) => void;
+  /** Enable or disable VR auto-entry on game start. */
+  setXrEnabled: (enabled: boolean) => void;
   /** Generate Mr. Sausage's secret demands from the given ingredient pool. */
   generateDemands: (ingredientPool: string[]) => void;
   /** Record a twist at a normalized position (0-1) along the sausage extrusion. */
@@ -298,7 +306,7 @@ export interface GameState {
 }
 
 /** Number of sequential challenges in a full game (ingredients through tasting). */
-const TOTAL_CHALLENGES = 5;
+const TOTAL_CHALLENGES = 6;
 /** Hint tokens given at the start of each new game. */
 const INITIAL_HINTS = 3;
 /** Maximum strikes before the game ends in defeat. */
@@ -361,6 +369,7 @@ export const INITIAL_GAME_STATE = {
   fridgeSelectedIndices: [] as number[],
   pendingFridgeClick: null as number | null,
   fridgeHoveredIndex: null as number | null,
+  fridgeDoorProgress: 0,
   playerPosition: [0, 1.6, 0] as [number, number, number],
   challengeTriggered: false,
   mrSausageDemands: null as MrSausageDemands | null,
@@ -378,6 +387,7 @@ export const INITIAL_GAME_STATE = {
   sfxVolume: 0.8,
   musicMuted: false,
   sfxMuted: false,
+  xrEnabled: false,
 };
 
 /**
@@ -425,6 +435,7 @@ export const useGameStore = create<GameState>()(
           fridgeSelectedIndices: [],
           pendingFridgeClick: null,
           fridgeHoveredIndex: null,
+          fridgeDoorProgress: 0,
           playerPosition: [0, 1.6, 0] as [number, number, number],
           challengeTriggered: false,
           playerDecisions: {
@@ -467,6 +478,7 @@ export const useGameStore = create<GameState>()(
           fridgeSelectedIndices: [],
           pendingFridgeClick: null,
           fridgeHoveredIndex: null,
+          fridgeDoorProgress: 0,
           playerPosition: [0, 1.6, 0] as [number, number, number],
           challengeTriggered: false,
         }),
@@ -482,13 +494,14 @@ export const useGameStore = create<GameState>()(
 
           // Bowl/sausage transitions per challenge completion:
           // Challenge 0 (ingredients) → bowl stays at fridge, player carries to grinder
-          // Challenge 1 (grinding) → ground meat bowl appears at grinder output
-          // Challenge 2 (stuffing) → bowl done, sausage spawns at stuffer output
+          // Challenge 1 (chopping) → no bowl transition (prep station)
+          // Challenge 2 (grinding) → ground meat bowl appears at grinder output
+          // Challenge 3 (stuffing) → bowl done, sausage spawns at stuffer output
           let bowlPosition = state.bowlPosition;
           let sausagePlaced = state.sausagePlaced;
-          if (state.currentChallenge === 1) {
+          if (state.currentChallenge === 2) {
             bowlPosition = 'grinder-output';
-          } else if (state.currentChallenge === 2) {
+          } else if (state.currentChallenge === 3) {
             bowlPosition = 'done';
             sausagePlaced = false;
           }
@@ -559,6 +572,12 @@ export const useGameStore = create<GameState>()(
           pendingFridgeClick: null,
           fridgeHoveredIndex: null,
         }),
+
+      setFridgeDoorProgress: (progress: number) => {
+        const SNAP_THRESHOLD = 0.7;
+        const clamped = Math.max(0, Math.min(1, progress));
+        set({fridgeDoorProgress: clamped >= SNAP_THRESHOLD ? 1 : clamped});
+      },
 
       triggerFridgeClick: (index: number) => set({pendingFridgeClick: index}),
 
@@ -690,6 +709,7 @@ export const useGameStore = create<GameState>()(
       setSfxVolume: (volume: number) => set({sfxVolume: Math.max(0, Math.min(1, volume))}),
       setMusicMuted: (muted: boolean) => set({musicMuted: muted}),
       setSfxMuted: (muted: boolean) => set({sfxMuted: muted}),
+      setXrEnabled: (enabled: boolean) => set({xrEnabled: enabled}),
 
       returnToMenu: () =>
         set({
@@ -719,6 +739,7 @@ export const useGameStore = create<GameState>()(
           fridgeSelectedIndices: [],
           pendingFridgeClick: null,
           fridgeHoveredIndex: null,
+          fridgeDoorProgress: 0,
           playerPosition: [0, 1.6, 0] as [number, number, number],
           challengeTriggered: false,
           mrSausageDemands: null,
@@ -748,6 +769,7 @@ export const useGameStore = create<GameState>()(
         sfxVolume: state.sfxVolume,
         musicMuted: state.musicMuted,
         sfxMuted: state.sfxMuted,
+        xrEnabled: state.xrEnabled,
       }),
     },
   ),

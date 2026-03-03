@@ -55,7 +55,9 @@ export function FPSController({
 
   // Desktop: pointer lock + keyboard
   useEffect(() => {
-    if (Platform.OS !== 'web') return;
+    // Skip desktop pointer-lock setup on touch-primary devices
+    const isTouchPrimary = 'ontouchstart' in window && navigator.maxTouchPoints > 0;
+    if (Platform.OS !== 'web' || isTouchPrimary) return;
 
     const canvas = gl.domElement;
 

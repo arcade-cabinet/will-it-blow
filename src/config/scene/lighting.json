@@ -1,0 +1,16 @@
+{
+  "panels": [
+    { "position": [-3.0, 5.2, -3.0] },
+    { "position": [3.0, 5.2, -3.0] },
+    { "position": [-3.0, 5.2, 3.0] },
+    { "position": [3.0, 5.2, 3.0] }
+  ],
+  "ambient": {
+    "hemisphere": 1.0,
+    "centerFill": 1.2
+  },
+  "horror": {
+    "redEmergency": { "position": [1.5, 5.2, 1.5], "intensity": 0.4 },
+    "underCounter": { "intensity": 0.3 }
+  }
+}

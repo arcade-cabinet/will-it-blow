@@ -67,9 +67,9 @@ describe('spawnMachine', () => {
 
   it('assigns correct names from machineId and slotName', () => {
     const entities = spawnMachine(testArchetype);
-    expect(entities[0].name).toBe('grinder/body');
-    expect(entities[1].name).toBe('grinder/handle');
-    expect(entities[2].name).toBe('grinder/hopper');
+    expect(entities[0].name).toMatch(/^grinder#\d+\/body$/);
+    expect(entities[1].name).toMatch(/^grinder#\d+\/handle$/);
+    expect(entities[2].name).toMatch(/^grinder#\d+\/hopper$/);
   });
 
   it('assigns machineSlot with correct machineId and slotName', () => {

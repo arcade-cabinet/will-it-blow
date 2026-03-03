@@ -9,7 +9,18 @@
  *   await page.evaluate(() => window.__gov.getState());
  */
 
+import {config} from '../config';
+import {DEFAULT_ROOM} from '../engine/FurnitureLayout';
+import {mergeLayoutConfigs, resolveLayout} from '../engine/layout';
 import {useGameStore} from '../store/gameStore';
+
+const KITCHEN_LAYOUT = mergeLayoutConfigs(
+  config.layout.room,
+  config.layout.rails,
+  config.layout.placements,
+);
+const TARGETS = resolveLayout(KITCHEN_LAYOUT, DEFAULT_ROOM).targets;
+const CHALLENGE_STATIONS = config.scene.challengeSequence.stations;
 
 export interface GameGov {
   /** True once the 3D scene + GLB meshes are fully loaded and rendered */
@@ -27,7 +38,7 @@ export interface GameGov {
   /** Complete the current challenge with a given score and advance */
   completeCurrentChallenge: (score: number) => void;
 
-  /** Skip directly to a specific challenge index (0-4) */
+  /** Skip directly to a specific challenge index (0-5) */
   skipToChallenge: (index: number) => void;
 
   /** Skip to a specific challenge with custom scores for preceding challenges */
@@ -162,6 +173,14 @@ function createGovernor(): GameGov {
       store.getState().completeChallenge(score);
       // Auto-trigger the next challenge (simulates player walking to next station)
       if (store.getState().gameStatus === 'playing') {
+        const nextIdx = store.getState().currentChallenge;
+        const nextStation = CHALLENGE_STATIONS[nextIdx];
+        if (nextStation) {
+          const target = TARGETS[nextStation.stationName];
+          if (target) {
+            store.getState().setPlayerPosition(target.position);
+          }
+        }
         store.getState().triggerChallenge();
       }
     },
@@ -174,6 +193,13 @@ function createGovernor(): GameGov {
       while (store.getState().currentChallenge < index) {
         store.getState().completeChallenge(75);
       }
+      const station = CHALLENGE_STATIONS[index];
+      if (station) {
+        const target = TARGETS[station.stationName];
+        if (target) {
+          store.getState().setPlayerPosition(target.position);
+        }
+      }
       store.getState().triggerChallenge();
     },
 
@@ -184,6 +210,13 @@ function createGovernor(): GameGov {
       }
       for (let i = 0; i < index; i++) {
         store.getState().completeChallenge(scores[i] ?? 75);
+      }
+      const station = CHALLENGE_STATIONS[index];
+      if (station) {
+        const target = TARGETS[station.stationName];
+        if (target) {
+          store.getState().setPlayerPosition(target.position);
+        }
       }
       store.getState().triggerChallenge();
     },

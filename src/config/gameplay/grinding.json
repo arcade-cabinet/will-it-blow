@@ -11,5 +11,11 @@
   "chunkBowlRadiusStep": 0.45,
   "particleGravity": 15,
   "velocityDecay": 0.95,
-  "hapticProgressInterval": 0.05
+  "hapticProgressInterval": 0.05,
+  "hopperChunkCount": 10,
+  "hopperTopY": 6.2,
+  "hopperBottomY": 4.5,
+  "hopperSpreadX": 1.8,
+  "hopperSpreadZ": 1.4,
+  "hopperChunkScale": 0.35
 }

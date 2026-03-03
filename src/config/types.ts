@@ -29,6 +29,8 @@ export interface MaterialDef {
   color: number | string;
   roughness?: number;
   metalness?: number;
+  emissive?: number | string;
+  emissiveIntensity?: number;
 }
 
 /** A housing component (part of the machine body). */
@@ -46,6 +48,7 @@ export interface HousingComponentDef {
 export interface BehaviorsDef {
   rotation?: {axis: 'x' | 'y' | 'z'; speed: number};
   fillDriven?: {minY: number; maxY: number; fillLevel: number};
+  flicker?: {dimIntensity: number; intervalMin: number; intervalMax: number; duration: number};
 }
 
 /** An extra component beyond the template (machine-specific parts). */
@@ -58,6 +61,7 @@ export interface ExtraComponentDef {
   rotation?: [number, number, number];
   isStatic?: boolean;
   behaviors?: BehaviorsDef;
+  lightDef?: {type: 'point'; color: number; intensity: number; distance: number; decay?: number};
 }
 
 /** Switch control config (for powered machines). */
@@ -131,6 +135,46 @@ export interface BurnerDef {
   position: [number, number, number];
 }
 
+/** Tube layout within a light box — positions computed from box fractions. */
+export interface TubeLayoutDef {
+  /** Number of tubes (must match depthFractions length) */
+  count: number;
+  /** Where each tube sits along the depth axis (0=front, 1=back) */
+  depthFractions: number[];
+  /** Fraction of box width to inset from each wall (e.g., 0.05 = 5% shorter each side) */
+  wallInsetFraction: number;
+  /** Tube cylinder radius */
+  radius: number;
+  /** Y offset from housing center (negative = below ceiling) */
+  yOffset: number;
+  /** Tube material (should have emissive for glow) */
+  material: MaterialDef;
+  /** Endcap cylinder radius */
+  endcapRadius: number;
+  /** Endcap cylinder length */
+  endcapLength: number;
+  /** Endcap material */
+  endcapMaterial: MaterialDef;
+}
+
+/** Light box definition — auto-generates tube housing components from fractions. */
+export interface LightBoxDef {
+  /** Internal box width (X axis) for computing tube lengths */
+  width: number;
+  /** Internal box depth (Z axis) for computing tube positions */
+  depth: number;
+  /** Tube auto-placement rules */
+  tubeLayout: TubeLayoutDef;
+}
+
+/** CRT display config — screen geometry, character placement, and reaction intensity. */
+export interface CrtDisplayConfig {
+  screen: {width: number; height: number; z: number};
+  bezel: {width: number; height: number; z: number};
+  character: {scale: number; yOffset: number};
+  reactionIntensity: Record<string, number>;
+}
+
 /** Input contract binding (JSON-serializable). */
 export interface ContractBindingDef {
   source: {entity: string; field: string};
@@ -155,18 +199,26 @@ export interface MechanicalVibrationDef {
 /**
  * Complete machine configuration (Tier 3).
  * Replaces grinderArchetype.ts, stufferArchetype.ts, stoveArchetype.ts.
+ *
+ * All machines use the same config shape — the template determines default
+ * composition (what gets auto-added), but control/contract/vibration are
+ * always optional. A 'bare' machine is just housing + extras with no
+ * template-specific composition. This means any machine can gain controls,
+ * state-driven behaviors, or input contracts without changing template type.
  */
 export interface MachineConfig {
   machineId: string;
-  template: 'powered' | 'mechanical' | 'heat';
+  template: 'powered' | 'mechanical' | 'heat' | 'bare';
   housing: HousingComponentDef[];
-  control: ControlDef;
+  control?: ControlDef;
   vibration?: VibrationDef;
   mechanicalVibration?: MechanicalVibrationDef;
   burner?: BurnerDef;
   extras: ExtraComponentDef[];
   plunger?: PlungerDef;
-  contract: ContractBindingDef[];
+  contract?: ContractBindingDef[];
+  display?: CrtDisplayConfig;
+  lightBox?: LightBoxDef;
 }
 
 // ---------------------------------------------------------------------------
@@ -187,6 +239,12 @@ export interface GrindingGameplayConfig {
   particleGravity: number;
   velocityDecay: number;
   hapticProgressInterval: number;
+  hopperChunkCount: number;
+  hopperTopY: number;
+  hopperBottomY: number;
+  hopperSpreadX: number;
+  hopperSpreadZ: number;
+  hopperChunkScale: number;
 }
 
 export interface StuffingGameplayConfig {
@@ -201,6 +259,22 @@ export interface StuffingGameplayConfig {
   completeDelayMs: number;
   crankDragThreshold: number;
   burstCooldownMs: number;
+}
+
+export interface ChoppingGameplayConfig {
+  chopTarget: number;
+  sweetSpotWindow: number;
+  goodChopProgress: number;
+  badChopProgress: number;
+  knifeBaseFrequency: number;
+  knifeAmplitude: number;
+  knifeRestY: number;
+  dialogueDurationMs: number;
+  successDelayMs: number;
+  scorePenaltyPerStrike: number;
+  streakBonusThreshold: number;
+  streakFlairPoints: number;
+  missStrikeCooldownMs: number;
 }
 
 export interface CookingGameplayConfig {
@@ -224,6 +298,9 @@ export interface CookingGameplayConfig {
   scoreBonusNoOverheat: number;
   completeDelaySec: number;
   sizzleThrottleMs: number;
+  maxFlips: number;
+  flipFlairPoints: number;
+  flipHoldTimerPenalty: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -339,12 +416,6 @@ export interface BasementSceneConfig {
     barCount: number;
     barRadius: number;
   };
-  door: {
-    xFraction: number;
-    width: number;
-    height: number;
-    deadboltColor: string;
-  };
   drain: {
     xFraction: number;
     zFraction: number;
@@ -383,6 +454,13 @@ export interface StuffingVariant {
   timerSeconds: number;
 }
 
+export interface ChoppingVariant {
+  chopCount: number;
+  knifeSpeed: number;
+  sweetSpotSize: number;
+  timerSeconds: number;
+}
+
 export interface CookingVariant {
   targetTemp: number;
   tempTolerance: number;
@@ -393,7 +471,47 @@ export interface CookingVariant {
 
 export interface VariantsConfig {
   ingredients: IngredientVariant[];
+  chopping: ChoppingVariant[];
   grinding: GrindingVariant[];
   stuffing: StuffingVariant[];
   cooking: CookingVariant[];
+}
+
+// ---------------------------------------------------------------------------
+// Display Housing Config
+// ---------------------------------------------------------------------------
+
+export interface DisplayHousingConfig {
+  housingId: string;
+  mountType: 'ceiling' | 'wall';
+  width: number;
+  depth: number;
+  thickness: number;
+  bracketColor: string;
+  bracketRoughness?: number;
+  bracketMetalness?: number;
+}
+
+// ---------------------------------------------------------------------------
+// Lighting Scene Config
+// ---------------------------------------------------------------------------
+
+export interface LightingSceneConfig {
+  panels: Array<{position: [number, number, number]; rotationY?: number}>;
+  ambient: {hemisphere: number; centerFill: number};
+  horror: {
+    redEmergency: {position: [number, number, number]; intensity: number};
+    underCounter: {intensity: number};
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Challenge Sequence Config
+// ---------------------------------------------------------------------------
+
+export interface ChallengeSequenceConfig {
+  stations: Array<{
+    stationName: string;
+    challengeType: string;
+  }>;
 }

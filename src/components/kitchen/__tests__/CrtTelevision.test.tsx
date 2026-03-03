@@ -1,8 +1,13 @@
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import {DEFAULT_ROOM, resolveTargets} from '../../../engine/FurnitureLayout';
+import {config} from '../../../config';
+import {DEFAULT_ROOM} from '../../../engine/FurnitureLayout';
+import {mergeLayoutConfigs, resolveLayout} from '../../../engine/layout';
 import {CrtTelevision} from '../CrtTelevision';
 
-const targets = resolveTargets(DEFAULT_ROOM);
+const targets = resolveLayout(
+  mergeLayoutConfigs(config.layout.room, config.layout.rails, config.layout.placements),
+  DEFAULT_ROOM,
+).targets;
 
 describe('CrtTelevision', () => {
   it('renders without crashing', async () => {

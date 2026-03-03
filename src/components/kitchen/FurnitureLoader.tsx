@@ -17,15 +17,21 @@
  */
 
 import {useAnimations, useGLTF} from '@react-three/drei';
+import {useFrame} from '@react-three/fiber';
 import {useEffect, useMemo, useRef} from 'react';
 import * as THREE from 'three/webgpu';
+import {config} from '../../config';
 import {getAssetUrl} from '../../engine/assetUrl';
 import type {FurnitureRule, RoomDimensions, Target} from '../../engine/FurnitureLayout';
-import {DEFAULT_ROOM, FURNITURE_RULES, resolveTargets} from '../../engine/FurnitureLayout';
+import {DEFAULT_ROOM, FURNITURE_RULES} from '../../engine/FurnitureLayout';
+import {mergeLayoutConfigs, resolveLayout} from '../../engine/layout';
+import {useGameStore} from '../../store/gameStore';
+
+/** Snap threshold for fridge door pull gesture — progress above this snaps to 1.0. */
+const _FRIDGE_SNAP_THRESHOLD = 0.7;
 
 interface FurnitureLoaderProps {
   room?: RoomDimensions;
-  fridgeDoorOpen?: boolean;
   grinderCranking?: boolean;
 }
 
@@ -45,12 +51,10 @@ function resolveGlbUrl(glb: string): string {
 function FurniturePiece({
   rule,
   target,
-  fridgeDoorOpen,
   grinderCranking,
 }: {
   rule: FurnitureRule;
   target: Target;
-  fridgeDoorOpen: boolean;
   grinderCranking: boolean;
 }) {
   const url = resolveGlbUrl(rule.glb);
@@ -70,8 +74,15 @@ function FurniturePiece({
     });
   }, [scene]);
 
-  // Fridge door animation
+  // Fridge door animation — driven by store fridgeDoorProgress (0-1)
   const isFridge = rule.glb === 'fridge.glb';
+  const fridgeDoorProgress = useGameStore(s => s.fridgeDoorProgress);
+  const setFridgeDoorProgress = useGameStore(s => s.setFridgeDoorProgress);
+  const doorActionRef = useRef<THREE.AnimationAction | null>(null);
+  const isDraggingRef = useRef(false);
+  const dragStartYRef = useRef(0);
+  const dragStartProgressRef = useRef(0);
+
   useEffect(() => {
     if (!isFridge) return;
     const doorAction =
@@ -82,15 +93,42 @@ function FurniturePiece({
 
     doorAction.clampWhenFinished = true;
     doorAction.setLoop(THREE.LoopOnce, 1);
+    doorAction.play();
+    doorAction.paused = true;
+    doorActionRef.current = doorAction;
+  }, [isFridge, actions]);
 
-    if (fridgeDoorOpen) {
-      doorAction.timeScale = 1;
-      doorAction.reset().play();
-    } else {
-      doorAction.timeScale = -1;
-      doorAction.paused = false;
-    }
-  }, [isFridge, fridgeDoorOpen, actions]);
+  // Sync animation time to door progress
+  useFrame(() => {
+    const action = doorActionRef.current;
+    if (!action || !isFridge) return;
+    const clip = action.getClip();
+    action.time = fridgeDoorProgress * clip.duration;
+  });
+
+  // Pointer drag handlers for fridge door
+  const onFridgePointerDown = (e: any) => {
+    if (!isFridge || fridgeDoorProgress >= 1) return;
+    e.stopPropagation();
+    isDraggingRef.current = true;
+    dragStartYRef.current = e.clientY ?? e.nativeEvent?.clientY ?? 0;
+    dragStartProgressRef.current = fridgeDoorProgress;
+    (e.target as HTMLElement)?.setPointerCapture?.(e.pointerId);
+  };
+  const onFridgePointerMove = (e: any) => {
+    if (!isDraggingRef.current) return;
+    e.stopPropagation();
+    const clientY = e.clientY ?? e.nativeEvent?.clientY ?? 0;
+    const deltaY = dragStartYRef.current - clientY; // drag up = positive
+    const dragSensitivity = 0.005; // pixels to progress
+    const newProgress = dragStartProgressRef.current + deltaY * dragSensitivity;
+    setFridgeDoorProgress(newProgress);
+  };
+  const onFridgePointerUp = (e: any) => {
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
+    (e.target as HTMLElement)?.releasePointerCapture?.(e.pointerId);
+  };
 
   // Grinder crank animation
   const isGrinder = rule.glb === 'meat_grinder.glb';
@@ -110,6 +148,19 @@ function FurniturePiece({
   return (
     <group ref={groupRef} position={target.position} rotation={[0, target.rotationY, 0]}>
       <primitive object={scene} />
+      {/* Fridge door drag handle — invisible hitbox mesh for pull gesture */}
+      {isFridge && fridgeDoorProgress < 1 && (
+        <mesh
+          position={[0.45, 0.8, 0.35]}
+          visible={false}
+          onPointerDown={onFridgePointerDown}
+          onPointerMove={onFridgePointerMove}
+          onPointerUp={onFridgePointerUp}
+        >
+          <boxGeometry args={[0.15, 0.6, 0.1]} />
+          <meshBasicMaterial transparent opacity={0} />
+        </mesh>
+      )}
     </group>
   );
 }
@@ -124,10 +175,16 @@ function FurniturePiece({
  */
 export function FurnitureLoader({
   room = DEFAULT_ROOM,
-  fridgeDoorOpen = false,
   grinderCranking = false,
 }: FurnitureLoaderProps) {
-  const targets = useMemo(() => resolveTargets(room), [room]);
+  const targets = useMemo(() => {
+    const layoutConfig = mergeLayoutConfigs(
+      config.layout.room,
+      config.layout.rails,
+      config.layout.placements,
+    );
+    return resolveLayout(layoutConfig, room).targets;
+  }, [room]);
 
   return (
     <group>
@@ -143,7 +200,6 @@ export function FurnitureLoader({
             key={rule.glb}
             rule={rule}
             target={target}
-            fridgeDoorOpen={fridgeDoorOpen}
             grinderCranking={grinderCranking}
           />
         );

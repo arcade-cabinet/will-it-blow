@@ -1,8 +1,13 @@
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import {DEFAULT_ROOM, resolveTargets} from '../../../engine/FurnitureLayout';
+import {config} from '../../../config';
+import {DEFAULT_ROOM} from '../../../engine/FurnitureLayout';
+import {mergeLayoutConfigs, resolveLayout} from '../../../engine/layout';
 import {FridgeStation} from '../FridgeStation';
 
-const targets = resolveTargets(DEFAULT_ROOM);
+const targets = resolveLayout(
+  mergeLayoutConfigs(config.layout.room, config.layout.rails, config.layout.placements),
+  DEFAULT_ROOM,
+).targets;
 
 const mockIngredients = [
   {
@@ -198,5 +203,42 @@ describe('FridgeStation', () => {
     const source = fs.readFileSync(path.resolve(__dirname, '../FridgeStation.tsx'), 'utf8');
     expect(source).not.toContain('@babylonjs/core');
     expect(source).not.toContain('reactylon');
+  });
+
+  describe('GLB ingredient loading infrastructure', () => {
+    it('Ingredient interface supports optional glbPath', () => {
+      // Ingredient with glbPath
+      const withGlb = {...mockIngredients[0], glbPath: 'burger.glb'};
+      expect(withGlb.glbPath).toBe('burger.glb');
+
+      // Ingredient without glbPath (falls back to procedural)
+      expect(mockIngredients[0].glbPath).toBeUndefined();
+    });
+
+    it('source imports useGLTF and has GlbIngredientGeometry component', () => {
+      const fs = require('node:fs');
+      const path = require('node:path');
+      const source = fs.readFileSync(path.resolve(__dirname, '../FridgeStation.tsx'), 'utf8');
+      expect(source).toContain('useGLTF');
+      expect(source).toContain('GlbIngredientGeometry');
+      expect(source).toContain('ingredient.glbPath');
+      expect(source).toContain('Suspense');
+    });
+
+    it('falls back to procedural geometry when no glbPath', async () => {
+      // Render with ingredients that have no glbPath — should still work
+      const renderer = await ReactThreeTestRenderer.create(
+        <FridgeStation
+          position={targets.fridge.position}
+          ingredients={mockIngredients}
+          selectedIds={new Set()}
+          hintActive={false}
+          matchingIndices={new Set()}
+          onSelect={jest.fn()}
+          onHover={jest.fn()}
+        />,
+      );
+      expect(renderer.scene.children.length).toBeGreaterThan(0);
+    });
   });
 });

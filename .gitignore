@@ -3,6 +3,9 @@
 *.blend
 *.blend1
 *.zip
+*.rar
+*.7z
+*.unitypackage
 /meat_grinder.glb
 
 # OSX

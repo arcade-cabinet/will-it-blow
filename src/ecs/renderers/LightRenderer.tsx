@@ -15,6 +15,7 @@ export function LightRenderer() {
           intensity={entity.lightDef!.intensity}
           distance={entity.lightDef!.distance}
           color={entity.lightDef!.color}
+          decay={entity.lightDef!.decay ?? 2}
         />
       ))}
     </>

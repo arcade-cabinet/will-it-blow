@@ -22,8 +22,8 @@
  */
 
 import {useFrame} from '@react-three/fiber';
-import {useEffect, useRef} from 'react';
-import type * as THREE from 'three/webgpu';
+import {useEffect, useMemo, useRef} from 'react';
+import * as THREE from 'three/webgpu';
 import {config} from '../../config';
 import type {CookingVariant} from '../../config/types';
 import {audioEngine} from '../../engine/AudioEngine';
@@ -67,6 +67,9 @@ const {
   scoreBonusNoOverheat: SCORE_BONUS_NO_OVERHEAT,
   completeDelaySec: COMPLETE_DELAY_SEC,
   sizzleThrottleMs: SIZZLE_THROTTLE_MS,
+  maxFlips: MAX_FLIPS,
+  flipFlairPoints: FLIP_FLAIR_POINTS,
+  flipHoldTimerPenalty: FLIP_HOLD_TIMER_PENALTY,
 } = config.gameplay.cooking;
 
 const COLOR_RAW = config.gameplay.cooking.colorRaw as [number, number, number];
@@ -152,6 +155,7 @@ export function CookingOrchestrator({position, visible}: CookingOrchestratorProp
   const addStrike = useGameStore(s => s.addStrike);
   const completeChallenge = useGameStore(s => s.completeChallenge);
   const setMrSausageReaction = useGameStore(s => s.setMrSausageReaction);
+  const recordFlairPoint = useGameStore(s => s.recordFlairPoint);
 
   // Derive cook level from challenge progress (0-100 -> 0-1)
   const cookLevel = challengeProgress / 100;
@@ -216,8 +220,46 @@ export function CookingOrchestrator({position, visible}: CookingOrchestratorProp
   );
   const smokeTimerRef = useRef(0);
 
+  // ---- Pan handle materials (normal + hover highlight) ----
+  const panHandleHoverMat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: new THREE.Color(0.25, 0.25, 0.3),
+        emissive: new THREE.Color(0.05, 0.05, 0.1),
+      }),
+    [],
+  );
+  let panHandleMat: THREE.MeshStandardMaterial | null = null;
+
   // ---- Flip animation state ----
   const flipProgressRef = useRef(-1); // -1 = not flipping
+  const flipCountRef = useRef(0);
+
+  /** Trigger a pan flip — called by pan handle click handler */
+  const triggerFlip = () => {
+    // Guard: only during active phase, not already flipping, under max flips
+    if (phaseRef.current !== 'active' || flipProgressRef.current >= 0) return;
+    if (flipCountRef.current >= MAX_FLIPS) return;
+
+    flipCountRef.current += 1;
+    flipProgressRef.current = 0; // start flip animation
+
+    fireHaptic('toggle_click');
+
+    // Check if temperature is in the target zone
+    const v = variantRef.current;
+    if (v) {
+      const inZone = Math.abs(tempRef.current - v.targetTemp) <= v.tempTolerance;
+      if (inZone) {
+        recordFlairPoint('pan-flip', FLIP_FLAIR_POINTS);
+        setMrSausageReaction('excitement');
+      } else {
+        // Penalty: reduce hold timer progress
+        holdTimerRef.current = Math.max(0, holdTimerRef.current - FLIP_HOLD_TIMER_PENALTY);
+        setMrSausageReaction('nervous');
+      }
+    }
+  };
 
   // ---- Enable/disable ECS input primitives based on visibility ----
   useEffect(() => {
@@ -242,6 +284,7 @@ export function CookingOrchestrator({position, visible}: CookingOrchestratorProp
     const v = pickVariant('cooking', variantSeed) as CookingVariant;
     variantRef.current = v;
     timerRef.current = v.timerSeconds;
+    flipCountRef.current = 0;
   }, [variantSeed]);
 
   // ---- Phase: idle -> dialogue when visible + triggered ----
@@ -582,10 +625,26 @@ export function CookingOrchestrator({position, visible}: CookingOrchestratorProp
           <meshStandardMaterial color={[0.2, 0.2, 0.22]} metalness={0.7} roughness={0.3} />
         </mesh>
 
-        {/* Pan handle */}
-        <mesh position={[0, 0, 0.65]}>
+        {/* Pan handle — click to trigger flip */}
+        <mesh
+          position={[0, 0, 0.65]}
+          onClick={triggerFlip}
+          onPointerOver={e => {
+            e.stopPropagation();
+            (e.object as THREE.Mesh).material = panHandleHoverMat;
+          }}
+          onPointerOut={e => {
+            e.stopPropagation();
+            if (panHandleMat) (e.object as THREE.Mesh).material = panHandleMat;
+          }}
+        >
           <boxGeometry args={[0.06, 0.04, 0.5]} />
-          <meshStandardMaterial color={[0.12, 0.12, 0.14]} />
+          <meshStandardMaterial
+            ref={el => {
+              panHandleMat = el;
+            }}
+            color={[0.12, 0.12, 0.14]}
+          />
         </mesh>
 
         {/* Sausage group (flip rotation target) */}

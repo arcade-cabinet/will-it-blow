@@ -3,6 +3,7 @@ import {CookingColorSystem} from './CookingColorSystem';
 import {CrankSystem} from './CrankSystem';
 import {DialSystem} from './DialSystem';
 import {FillDrivenSystem} from './FillDrivenSystem';
+import {FlickerSystem} from './FlickerSystem';
 import {InflationSystem} from './InflationSystem';
 import {InputContractSystem} from './InputContractSystem';
 import {OrbitSystem} from './OrbitSystem';
@@ -29,6 +30,7 @@ export function SystemsProvider() {
       <CookingColorSystem />
       <InflationSystem />
       <FillDrivenSystem />
+      <FlickerSystem />
       <ParticlePhysicsSystem />
     </>
   );

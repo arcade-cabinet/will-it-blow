@@ -36,6 +36,11 @@
       "mrSausageDemand": "Something sweet..."
     }
   ],
+  "chopping": [
+    { "chopCount": 10, "knifeSpeed": 2.5, "sweetSpotSize": 0.3, "timerSeconds": 25 },
+    { "chopCount": 12, "knifeSpeed": 3.0, "sweetSpotSize": 0.25, "timerSeconds": 22 },
+    { "chopCount": 8, "knifeSpeed": 2.0, "sweetSpotSize": 0.35, "timerSeconds": 28 }
+  ],
   "grinding": [
     { "targetSpeed": 3.0, "tolerance": 1.5, "targetProgress": 100, "timerSeconds": 30 },
     { "targetSpeed": 4.0, "tolerance": 1.0, "targetProgress": 100, "timerSeconds": 25 },

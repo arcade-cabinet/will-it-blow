@@ -52,6 +52,8 @@ export interface Ingredient {
   color: string;
   /** 3D shape descriptor used by Ingredient3D to select the mesh geometry */
   shape: IngredientShape;
+  /** Optional path to a GLB model (relative to public/models/ingredients/). Falls back to procedural shape if absent. */
+  glbPath?: string;
   /** Whether this ingredient works better as coil, link, or either */
   formAffinity: 'coil' | 'link' | 'neutral';
   /** How the ingredient decomposes when ground */

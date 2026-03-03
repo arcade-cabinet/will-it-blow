@@ -7,9 +7,16 @@ import {
 } from '../src/engine/ChallengeRegistry';
 
 describe('ChallengeRegistry', () => {
-  it('CHALLENGE_ORDER has 5 entries in correct sequence', () => {
-    expect(CHALLENGE_ORDER).toEqual(['ingredients', 'grinding', 'stuffing', 'cooking', 'tasting']);
-    expect(CHALLENGE_ORDER).toHaveLength(5);
+  it('CHALLENGE_ORDER has 6 entries in correct sequence', () => {
+    expect(CHALLENGE_ORDER).toEqual([
+      'ingredients',
+      'chopping',
+      'grinding',
+      'stuffing',
+      'cooking',
+      'tasting',
+    ]);
+    expect(CHALLENGE_ORDER).toHaveLength(6);
   });
 
   it('getChallengeConfig returns config for each valid id', () => {
@@ -27,6 +34,15 @@ describe('ChallengeRegistry', () => {
     expect(() => getChallengeConfig('invalid' as ChallengeId)).toThrow(
       'Invalid challenge id: invalid',
     );
+  });
+
+  it('pickVariant returns a variant for chopping', () => {
+    const variant = pickVariant('chopping', 42);
+    expect(variant).not.toBeNull();
+    expect(variant).toHaveProperty('chopCount');
+    expect(variant).toHaveProperty('knifeSpeed');
+    expect(variant).toHaveProperty('sweetSpotSize');
+    expect(variant).toHaveProperty('timerSeconds');
   });
 
   it('pickVariant returns a variant for ingredients', () => {

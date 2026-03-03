@@ -4,6 +4,34 @@ import {despawnMachine, spawnMachine} from '../../archetypes/spawnMachine';
 import type {Entity} from '../../types';
 import {world} from '../../world';
 
+describe('GrinderOrchestrator — hopper tray config', () => {
+  it('grinding config includes hopper chunk parameters', () => {
+    const g = config.gameplay.grinding;
+    expect(g.hopperChunkCount).toBeGreaterThan(0);
+    expect(g.hopperTopY).toBeGreaterThan(g.hopperBottomY);
+    expect(g.hopperSpreadX).toBeGreaterThan(0);
+    expect(g.hopperSpreadZ).toBeGreaterThan(0);
+    expect(g.hopperChunkScale).toBeGreaterThan(0);
+  });
+
+  it('grinder archetype includes tray slot', () => {
+    const tray = config.machines.grinder.extras.find((e: {slot: string}) => e.slot === 'tray');
+    expect(tray).toBeDefined();
+    expect(tray!.position[1]).toBeCloseTo(5.6, 0);
+  });
+
+  it('hopper tray source uses ingredient decomposition colors', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../GrinderOrchestrator.tsx'), 'utf8');
+    expect(source).toContain('hopperMats');
+    expect(source).toContain('HOPPER_CHUNK_COUNT');
+    expect(source).toContain('HOPPER_TOP_Y');
+    expect(source).toContain('HOPPER_BOTTOM_Y');
+    expect(source).toContain('hopperRefs');
+  });
+});
+
 describe('GrinderOrchestrator — ECS lifecycle', () => {
   let entities: Entity[];
 
@@ -91,7 +119,7 @@ describe('GrinderOrchestrator — ECS lifecycle', () => {
   describe('entity naming', () => {
     it('all entities have "grinder/" prefixed names', () => {
       for (const entity of entities) {
-        expect(entity.name).toMatch(/^grinder\//);
+        expect(entity.name).toMatch(/^grinder#\d+\//);
       }
     });
 

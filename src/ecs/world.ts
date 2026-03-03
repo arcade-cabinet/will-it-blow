@@ -18,6 +18,7 @@ export const nonMachineRenderable = world
 export const lights = world.with('lightDef', 'transform');
 export const particles = world.with('particle', 'three');
 export const fillDriven = world.with('fillDriven', 'three');
+export const flickerLights = world.with('flicker', 'lightDef', 'three');
 
 // Input primitive queries
 export const dials = world.with('dial', 'three');

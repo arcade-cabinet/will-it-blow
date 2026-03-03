@@ -1,14 +1,16 @@
 /**
  * @module BasementStructure
  * Procedural atmospheric basement elements — ceiling pipes, barred window,
- * locked door, and floor drain — rendered as primitive Three.js geometry
- * (no GLBs). All positions use proportional fractions of room dimensions
- * so they scale correctly for any aspect ratio derived by computeRoom().
+ * and floor drain — rendered as primitive Three.js geometry (no GLBs).
+ * All positions use proportional fractions of room dimensions so they
+ * scale correctly for any aspect ratio derived by computeRoom().
+ *
+ * The room is sealed — accessible only through the ceiling trap door
+ * (rendered by TrapDoorMount). No doors.
  *
  * Elements:
  * - 3 ceiling pipe runs along Z-axis, one with a 90° elbow and a water drip
  * - Barred window high on the right wall (too small to escape through)
- * - Locked door on the front wall, right side, with red deadbolt
  * - Floor drain with grate cross-bars and dark hole beneath
  */
 
@@ -179,54 +181,6 @@ function BarredWindow({
 }
 
 // ---------------------------------------------------------------------------
-// LockedDoor — closed, locked door on front wall, right side
-// ---------------------------------------------------------------------------
-
-/**
- * A closed, locked metal door on the front wall (+Z side), right area.
- * Non-interactive — pure atmosphere. Includes a red deadbolt on the left edge.
- * The bear-trap GLB is placed nearby (front-right corner) in FurnitureLayout.
- */
-function LockedDoor({room}: {room: BasementStructureProps['room']}) {
-  const halfW = room.w / 2;
-  const halfD = room.d / 2;
-
-  const doorX = halfW * bc.door.xFraction;
-  const doorZ = halfD - 0.01;
-  const doorW = bc.door.width;
-  const doorH = bc.door.height;
-  const doorY = doorH / 2; // bottom of door flush with floor
-
-  return (
-    <group position={[doorX, doorY, doorZ]} rotation={[0, Math.PI, 0]}>
-      {/* Door frame — dark metal outer shell */}
-      <mesh>
-        <boxGeometry args={[doorW, doorH, 0.08]} />
-        <meshStandardMaterial color="#333333" roughness={0.7} metalness={0.5} />
-      </mesh>
-
-      {/* Door surface — slightly recessed panel, darker */}
-      <mesh position={[0, 0, -0.035]}>
-        <boxGeometry args={[doorW - 0.08, doorH - 0.08, 0.04]} />
-        <meshStandardMaterial color="#222222" roughness={0.8} metalness={0.6} />
-      </mesh>
-
-      {/* Deadbolt on left edge — blood red, locked shut */}
-      <mesh position={[-(doorW / 2) + 0.08, 0.1, -0.02]}>
-        <boxGeometry args={[0.15, 0.05, 0.08]} />
-        <meshStandardMaterial
-          color={bc.door.deadboltColor}
-          roughness={0.5}
-          metalness={0.3}
-          emissive={new THREE.Color('#3a0000')}
-          emissiveIntensity={0.3}
-        />
-      </mesh>
-    </group>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // FloorDrain — circular grate with cross-bars and dark hole beneath
 // ---------------------------------------------------------------------------
 
@@ -280,9 +234,10 @@ function FloorDrain({
  * Atmospheric basement elements rendered as procedural geometry (no GLBs).
  * Renders inside the `<group>` in GameWorld's SceneContent.
  *
- * Includes ceiling pipe runs, a barred window on the right wall, a locked
- * door on the front wall, and a floor drain. All positions are derived from
- * the room dimensions so they scale proportionally with viewport aspect ratio.
+ * Includes ceiling pipe runs, a barred window on the right wall, and a
+ * floor drain. The room is sealed — only accessible through the ceiling
+ * trap door (rendered separately by TrapDoorMount). All positions are
+ * derived from room dimensions so they scale proportionally.
  */
 export function BasementStructure({room}: BasementStructureProps): React.ReactElement {
   // Shared dark metal material — created once, reused across all elements
@@ -303,9 +258,6 @@ export function BasementStructure({room}: BasementStructureProps): React.ReactEl
 
       {/* Barred window — high on right wall, dim moonlight glow */}
       <BarredWindow room={room} darkMetal={darkMetal} />
-
-      {/* Locked door — front wall right side, near bear-trap */}
-      <LockedDoor room={room} />
 
       {/* Floor drain — center-right of room */}
       <FloorDrain room={room} darkMetal={darkMetal} />

@@ -13,7 +13,13 @@ export type GeometryType =
   | 'cone'
   | 'dodecahedron';
 
-export type MachineId = 'grinder' | 'stuffer' | 'stove';
+export type MachineId =
+  | 'grinder'
+  | 'stuffer'
+  | 'stove'
+  | 'fluorescent-panel'
+  | 'crt-tv'
+  | 'trap-door';
 
 export type RGB = [number, number, number];
 
@@ -32,6 +38,7 @@ export interface Entity {
     transparent?: boolean;
     side?: Side;
     visible?: boolean;
+    emissive?: number | string | [number, number, number];
     emissiveIntensity?: number;
     clearcoat?: number;
   };
@@ -93,6 +100,17 @@ export interface Entity {
     spawnRate: number;
     active: boolean;
   };
+  flicker?: {
+    baseIntensity: number;
+    dimIntensity: number;
+    intervalMin: number;
+    intervalMax: number;
+    duration: number;
+    active: boolean;
+    nextAt: number;
+    endAt: number;
+    flickering: boolean;
+  };
 
   // Interaction
   /** @deprecated Use `dial`, `toggle`, or `button` input primitives instead. Will be removed after orchestrator migration (Tasks 6-8). */
@@ -107,7 +125,7 @@ export interface Entity {
   };
 
   // Lighting
-  lightDef?: {type: 'point'; intensity: number; distance: number; color: number};
+  lightDef?: {type: 'point'; intensity: number; distance: number; color: number; decay?: number};
 
   // --- Input primitives ---
 
