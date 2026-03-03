@@ -98,6 +98,7 @@ export const ChoppingOrchestrator = ({position, visible}: ChoppingOrchestratorPr
   // ---- Knife animation refs ----
   const knifeRef = useRef<THREE.Group>(null);
   const knifePhaseRef = useRef(0); // 0-1 cycle position for sweet spot calculation
+  const sweetSpotLightRef = useRef<THREE.PointLight>(null);
 
   // ---- Ingredient chunk visuals ----
   const bowlContents = useGameStore(s => s.bowlContents);
@@ -258,6 +259,15 @@ export const ChoppingOrchestrator = ({position, visible}: ChoppingOrchestratorPr
       knife.position.y = KNIFE_REST_Y + KNIFE_AMPLITUDE + yOffset;
     }
 
+    // Sweet spot light — update imperatively so ref changes are reflected each frame
+    const light = sweetSpotLightRef.current;
+    if (light) {
+      light.intensity =
+        phaseRef.current === 'active'
+          ? CHOP_VIS.sweetSpotLight.intensityActive
+          : CHOP_VIS.sweetSpotLight.intensityInactive;
+    }
+
     // Timer countdown (only in active phase)
     if (phaseRef.current === 'active' && variantRef.current && !completedRef.current) {
       timerRef.current = Math.max(0, timerRef.current - dt);
@@ -365,13 +375,10 @@ export const ChoppingOrchestrator = ({position, visible}: ChoppingOrchestratorPr
 
       {/* Sweet spot indicator light — glows green when knife is in sweet zone */}
       <pointLight
+        ref={sweetSpotLightRef}
         position={CHOP_VIS.sweetSpotLight.position}
         color={CHOP_VIS.sweetSpotLight.color}
-        intensity={
-          phaseRef.current === 'active'
-            ? CHOP_VIS.sweetSpotLight.intensityActive
-            : CHOP_VIS.sweetSpotLight.intensityInactive
-        }
+        intensity={CHOP_VIS.sweetSpotLight.intensityInactive}
         distance={CHOP_VIS.sweetSpotLight.distance}
         decay={CHOP_VIS.sweetSpotLight.decay}
       />

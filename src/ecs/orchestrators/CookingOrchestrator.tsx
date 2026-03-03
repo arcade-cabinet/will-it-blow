@@ -518,7 +518,7 @@ export function CookingOrchestrator({position, visible}: CookingOrchestratorProp
     if (isActive && powerLevel > 0) {
       steamTimerRef.current += dt;
       const heatMultiplier = powerLevel >= 0.9 ? 3 : powerLevel >= 0.5 ? 2 : 1;
-      const spawnInterval = 0.12 / heatMultiplier;
+      const spawnInterval = cookingVis.steam.spawnIntervalBase / heatMultiplier;
 
       if (steamTimerRef.current >= spawnInterval) {
         steamTimerRef.current = 0;
@@ -602,7 +602,7 @@ export function CookingOrchestrator({position, visible}: CookingOrchestratorProp
         mesh.scale.setScalar(expandScale);
         mesh.visible = true;
         const mat = mesh.material as THREE.MeshBasicMaterial;
-        if (mat) mat.opacity = Math.max(0, (1 - lifeNorm) * 0.5);
+        if (mat) mat.opacity = Math.max(0, (1 - lifeNorm) * cookingVis.smoke.opacity);
         if (s.life >= s.maxLife) {
           s.active = false;
           mesh.visible = false;
