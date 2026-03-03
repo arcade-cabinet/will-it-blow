@@ -191,7 +191,12 @@ function FurniturePiece({
   }, [isGrinder, grinderCranking, actions]);
 
   return (
-    <group ref={groupRef} position={target.position} rotation={[0, target.rotationY, 0]}>
+    <group
+      ref={groupRef}
+      name={rule.target}
+      position={target.position}
+      rotation={[0, target.rotationY, 0]}
+    >
       <primitive object={scene} />
       {/* Fridge door handle — visible metallic bar for pull gesture */}
       {isFridge && fridgeDoorProgress < 1 && (

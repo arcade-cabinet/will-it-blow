@@ -28,6 +28,9 @@ export function FPSController({
 }) {
   const {camera, gl} = useThree();
   const setPlayerPosition = useGameStore(s => s.setPlayerPosition);
+  const clearTeleport = useGameStore(s => s.clearTeleport);
+  // getState() gives the freshest value without re-rendering on every change
+  const getStore = useGameStore.getState;
 
   const yawRef = useRef(Math.PI); // Start facing -Z (toward CRT TV)
   const pitchRef = useRef(0);
@@ -62,6 +65,14 @@ export function FPSController({
   useFrame((_, delta) => {
     const dt = Math.min(delta, 0.1);
     const input = InputManager.getInstance();
+
+    // --- Teleport (one-shot, set by GameGovernor / E2E tests) ---
+    const teleport = getStore().pendingTeleport;
+    if (teleport !== null) {
+      posRef.current.set(teleport[0], INPUT_TUNING.eyeHeight, teleport[2]);
+      camera.position.copy(posRef.current);
+      clearTeleport();
+    }
 
     // --- Look ---
     const look = input.getLookDelta();

@@ -22,6 +22,33 @@ const KITCHEN_LAYOUT = mergeLayoutConfigs(
 const TARGETS = resolveLayout(KITCHEN_LAYOUT, DEFAULT_ROOM).targets;
 const CHALLENGE_STATIONS = config.scene.challengeSequence.stations;
 
+/**
+ * Compute a player standing position in front of a station for E2E screenshots.
+ * Moves from the station toward the room center by a minimum of MIN_STANDOFF metres,
+ * so the camera clears the station's furniture mesh and counter depth.
+ *
+ * MIN_STANDOFF (2.0m) accounts for:
+ * - counter depth (~0.6m from wall)
+ * - machine depth (~0.5m)
+ * - personal-space clearance (~0.9m)
+ */
+const MIN_STANDOFF = 2.0;
+function playerStandPos(stationName: string): [number, number, number] {
+  const target = TARGETS[stationName];
+  if (!target) return [0, 1.6, 0];
+  const [sx, , sz] = target.position;
+  // Direction from station toward room center (XZ plane only)
+  const dx = 0 - sx;
+  const dz = 0 - sz;
+  const len = Math.sqrt(dx * dx + dz * dz) || 1;
+  const dist = Math.max(MIN_STANDOFF, target.triggerRadius * 0.75);
+  return [
+    sx + (dx / len) * dist,
+    1.6, // always eye height
+    sz + (dz / len) * dist,
+  ];
+}
+
 export interface GameGov {
   /** True once the 3D scene + GLB meshes are fully loaded and rendered */
   sceneReady: boolean;
@@ -176,10 +203,7 @@ function createGovernor(): GameGov {
         const nextIdx = store.getState().currentChallenge;
         const nextStation = CHALLENGE_STATIONS[nextIdx];
         if (nextStation) {
-          const target = TARGETS[nextStation.stationName];
-          if (target) {
-            store.getState().setPlayerPosition(target.position);
-          }
+          store.getState().requestTeleport(playerStandPos(nextStation.stationName));
         }
         store.getState().triggerChallenge();
       }
@@ -195,10 +219,7 @@ function createGovernor(): GameGov {
       }
       const station = CHALLENGE_STATIONS[index];
       if (station) {
-        const target = TARGETS[station.stationName];
-        if (target) {
-          store.getState().setPlayerPosition(target.position);
-        }
+        store.getState().requestTeleport(playerStandPos(station.stationName));
       }
       store.getState().triggerChallenge();
     },
@@ -213,10 +234,7 @@ function createGovernor(): GameGov {
       }
       const station = CHALLENGE_STATIONS[index];
       if (station) {
-        const target = TARGETS[station.stationName];
-        if (target) {
-          store.getState().setPlayerPosition(target.position);
-        }
+        store.getState().requestTeleport(playerStandPos(station.stationName));
       }
       store.getState().triggerChallenge();
     },
@@ -256,7 +274,8 @@ function createGovernor(): GameGov {
       if (state.appPhase !== 'playing') {
         state.startNewGame();
       }
-      for (let i = 0; i < 5; i++) {
+      const totalChallenges = CHALLENGE_STATIONS.length;
+      for (let i = 0; i < totalChallenges; i++) {
         store.getState().completeChallenge(scores[i] ?? 75);
       }
     },
@@ -317,7 +336,9 @@ function createGovernor(): GameGov {
     },
 
     movePlayerTo(x: number, y: number, z: number) {
-      store.getState().setPlayerPosition([x, y, z]);
+      // requestTeleport is consumed by FPSController on the next frame, moving both
+      // posRef and camera. setPlayerPosition alone only updates the store, not the camera.
+      store.getState().requestTeleport([x, y, z]);
     },
 
     triggerCurrentChallenge() {

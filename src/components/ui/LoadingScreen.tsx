@@ -210,6 +210,9 @@ const connectorStyles = StyleSheet.create({
   },
 });
 
+/** Minimum milliseconds the loading screen must remain visible before transitioning. */
+const MIN_DISPLAY_MS = 1500;
+
 export function LoadingScreen() {
   const startNewGame = useGameStore(s => s.startNewGame);
   const gameStatus = useGameStore(s => s.gameStatus);
@@ -217,6 +220,9 @@ export function LoadingScreen() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [quoteIndex, setQuoteIndex] = useState(0);
   const [retryCount, setRetryCount] = useState(0);
+
+  // Track when the loading screen first mounted so we can enforce a minimum display time.
+  const mountTimeRef = useRef(Date.now());
 
   // Fade-in animation
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -307,9 +313,14 @@ export function LoadingScreen() {
     };
   }, [retryCount]);
 
-  // When loading completes, transition to playing
+  // When loading completes, transition to playing — but honour MIN_DISPLAY_MS so the
+  // loading screen is never invisible (assets load instantly on localhost / fast connections).
   useEffect(() => {
     if (progress < 100) return;
+
+    const elapsed = Date.now() - mountTimeRef.current;
+    // Wait at least MIN_DISPLAY_MS from mount, plus a brief 400ms "100%" pause.
+    const remainingWait = Math.max(0, MIN_DISPLAY_MS - elapsed) + 400;
 
     const timeout = setTimeout(() => {
       // If continuing a saved game, gameStatus is already 'playing' (set by continueGame())
@@ -319,7 +330,7 @@ export function LoadingScreen() {
         // CONTINUE flow — game state already restored, just enter the 3D scene
         useGameStore.getState().setAppPhase('playing');
       }
-    }, 400); // Brief pause so user sees 100%
+    }, remainingWait);
 
     return () => clearTimeout(timeout);
   }, [progress, startNewGame, gameStatus]);
@@ -347,6 +358,7 @@ export function LoadingScreen() {
     setLoadError(null);
     setProgress(0);
     activatedRef.current = Array(LINK_COUNT).fill(false);
+    mountTimeRef.current = Date.now();
     for (const scale of linkScales) {
       scale.setValue(0);
     }

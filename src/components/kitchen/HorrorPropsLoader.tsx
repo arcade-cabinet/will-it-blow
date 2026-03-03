@@ -43,6 +43,7 @@ function HorrorProp({prop}: {prop: HorrorPropDef}) {
 
   return (
     <group
+      name={prop.id}
       position={prop.position}
       rotation={[prop.rotation[0], prop.rotation[1], prop.rotation[2]]}
       scale={prop.scale}
