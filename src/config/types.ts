@@ -596,3 +596,19 @@ export interface EnemiesConfig {
   weapons: WeaponDef[];
   spawnCabinets: SpawnCabinetDef[];
 }
+
+// ---------------------------------------------------------------------------
+// Audio Config
+// ---------------------------------------------------------------------------
+
+export interface ChallengeTrackDef {
+  file: string;
+  volume: number;
+}
+
+export interface AudioConfig {
+  challengeTracks: Record<string, ChallengeTrackDef>;
+  enemyTrack: ChallengeTrackDef;
+  defeatTrack: ChallengeTrackDef;
+  crossfadeDuration: number;
+}

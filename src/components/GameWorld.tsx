@@ -59,6 +59,7 @@ import {BasementStructure} from './kitchen/BasementStructure';
 import {CrtTelevision} from './kitchen/CrtTelevision';
 import {FridgeStation} from './kitchen/FridgeStation';
 import {KitchenEnvironment} from './kitchen/KitchenEnvironment';
+import {SausagePhysics} from './kitchen/SausagePhysics';
 import {StationMarker} from './kitchen/StationMarker';
 import {TransferBowl} from './kitchen/TransferBowl';
 import {SceneIntrospector} from './SceneIntrospector';
@@ -278,6 +279,7 @@ const SceneContent = ({
   const setFridgeHovered = useGameStore(s => s.setFridgeHovered);
   const assembledParts = useGameStore(s => s.assembledParts);
   const difficulty = useGameStore(s => s.difficulty);
+  const sausagePlaced = useGameStore(s => s.sausagePlaced);
 
   // Assembly gate: at Medium+ difficulty, stations require parts to be found first
   const assemblyEnabled = (difficulty as any).assembly === true;
@@ -367,6 +369,9 @@ const SceneContent = ({
       <StufferOrchestrator position={STATIONS[3].position} visible={isStufferActive} />
       <CookingOrchestrator position={STATIONS[4].position} visible={isStoveActive} />
       <BlowoutOrchestrator position={STATIONS[5].position} visible={isBlowoutActive} />
+
+      {/* Sausage coil physics — Rapier rigid body segments, active after stuffing */}
+      {sausagePlaced && <SausagePhysics position={STATIONS[3].position} />}
 
       {/* Procedural transfer bowl — follows bowlPosition through the pipeline */}
       <TransferBowl />

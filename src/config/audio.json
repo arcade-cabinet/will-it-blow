@@ -1,0 +1,14 @@
+{
+  "challengeTracks": {
+    "ingredients": { "file": "track_exploration.ogg", "volume": -8 },
+    "chopping": { "file": "track_violence.ogg", "volume": -6 },
+    "grinding": { "file": "track_violence.ogg", "volume": -6 },
+    "stuffing": { "file": "track_death_metal.ogg", "volume": -8 },
+    "cooking": { "file": "track_revenge.ogg", "volume": -8 },
+    "blowout": { "file": "track_revenge.ogg", "volume": -6 },
+    "tasting": { "file": "track_dark.ogg", "volume": -10 }
+  },
+  "enemyTrack": { "file": "track_kick_harder.ogg", "volume": -6 },
+  "defeatTrack": { "file": "track_boss_horror.ogg", "volume": -8 },
+  "crossfadeDuration": 2.0
+}

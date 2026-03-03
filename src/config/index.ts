@@ -9,6 +9,8 @@
  */
 
 import type {PlacementsConfig, RailsConfig, RoomConfig} from '../engine/layout/types';
+// --- Audio ---
+import audioData from './audio.json';
 // --- Enemies / Combat ---
 import enemiesData from './enemies.json';
 // --- Fixture housings ---
@@ -46,6 +48,7 @@ import lightingScene from './scene/lighting.json';
 // --- Scoring ---
 import scoringData from './scoring.json';
 import type {
+  AudioConfig,
   BasementSceneConfig,
   BlowoutGameplayConfig,
   CasingSceneConfig,
@@ -105,6 +108,7 @@ export const config = {
     lighting: lightingScene as unknown as LightingSceneConfig,
     challengeSequence: challengeSequence as unknown as ChallengeSequenceConfig,
   },
+  audio: audioData as unknown as AudioConfig,
   enemies: enemiesData as unknown as EnemiesConfig,
   variants: variantsData as unknown as VariantsConfig,
   layout: {
@@ -116,6 +120,7 @@ export const config = {
 
 // Re-export types for consumers
 export type {
+  AudioConfig,
   BasementSceneConfig,
   BlowoutGameplayConfig,
   CasingSceneConfig,

@@ -1,4 +1,5 @@
 import * as Tone from 'tone';
+import {config} from '../config';
 import {useGameStore} from '../store/gameStore';
 import {getAssetUrl} from './assetUrl';
 
@@ -255,6 +256,13 @@ class AudioEngine {
   /** Store subscription disposer for volume/mute reactivity. */
   private ambientUnsub: (() => void) | null = null;
 
+  /** Looping player for the current challenge music track. */
+  private challengeTrack: Tone.Player | null = null;
+  /** Gain node for challenge track — respects musicVolume / musicMuted. */
+  private challengeGain: Tone.Gain | null = null;
+  /** Store subscription disposer for challenge track volume reactivity. */
+  private challengeUnsub: (() => void) | null = null;
+
   /** Start the ambient horror loop, respecting musicVolume & musicMuted. */
   startAmbientDrone() {
     if (!this.isInitialized) return;
@@ -304,6 +312,136 @@ class AudioEngine {
       this.ambientGain.dispose();
       this.ambientGain = null;
     }
+  }
+
+  /** Start a music track for the current challenge, crossfading from ambient. */
+  startChallengeTrack(challengeType: string): void {
+    if (!this.isInitialized) return;
+    const trackDef = config.audio.challengeTracks[challengeType];
+    if (!trackDef) return;
+
+    // Stop any previous challenge track first
+    this.stopChallengeTrack();
+
+    const {musicVolume, musicMuted} = useGameStore.getState();
+    const crossfade = config.audio.crossfadeDuration;
+
+    // Fade ambient out over crossfade duration
+    if (this.ambientGain) {
+      this.ambientGain.gain.rampTo(0, crossfade);
+    }
+
+    const gain = new Tone.Gain(0).toDestination();
+    this.challengeGain = gain;
+
+    const url = getAssetUrl('audio', trackDef.file);
+    const player = new Tone.Player({
+      url,
+      loop: true,
+      volume: trackDef.volume,
+      onload: () => {
+        if (this.challengeTrack === player) {
+          player.start();
+          // Fade in over crossfade duration, respecting mute/volume
+          const targetGain = musicMuted ? 0 : musicVolume;
+          gain.gain.rampTo(targetGain, crossfade);
+        }
+      },
+      onerror: err => console.warn(`Failed to load challenge track ${trackDef.file}:`, err),
+    }).connect(gain);
+    this.challengeTrack = player;
+
+    // Subscribe to store changes for live volume/mute reactivity
+    this.challengeUnsub = useGameStore.subscribe(state => {
+      if (this.challengeGain) {
+        this.challengeGain.gain.rampTo(state.musicMuted ? 0 : state.musicVolume, 0.3);
+      }
+    });
+  }
+
+  /** Stop challenge track and resume ambient. */
+  stopChallengeTrack(): void {
+    if (this.challengeUnsub) {
+      this.challengeUnsub();
+      this.challengeUnsub = null;
+    }
+    if (this.challengeTrack) {
+      this.challengeTrack.stop();
+      this.challengeTrack.dispose();
+      this.challengeTrack = null;
+    }
+    if (this.challengeGain) {
+      this.challengeGain.dispose();
+      this.challengeGain = null;
+    }
+
+    // Fade ambient back in
+    if (this.ambientGain) {
+      const {musicVolume, musicMuted} = useGameStore.getState();
+      const crossfade = config.audio.crossfadeDuration;
+      this.ambientGain.gain.rampTo(musicMuted ? 0 : musicVolume, crossfade);
+    }
+  }
+
+  /** Sharp crack + wood creak — NoiseSynth burst + MembraneSynth for cabinet burst. */
+  playCabinetBurst(): void {
+    if (!this.isInitialized) return;
+    // White noise burst (fast attack, short decay)
+    const burst = new Tone.NoiseSynth({
+      noise: {type: 'white'},
+      envelope: {attack: 0.005, decay: 0.15, sustain: 0, release: 0.05},
+      volume: -4,
+    }).toDestination();
+    burst.triggerAttackRelease('16n');
+    // Membrane synth for wood crack thump
+    const crack = new Tone.MembraneSynth({
+      pitchDecay: 0.04,
+      octaves: 5,
+      envelope: {attack: 0.001, decay: 0.25, sustain: 0, release: 0.1},
+      volume: -6,
+    }).toDestination();
+    crack.triggerAttackRelease('A1', '8n');
+    setTimeout(() => {
+      burst.dispose();
+      crack.dispose();
+    }, 1000);
+  }
+
+  /** Low growl — FM synth with carrier 80Hz, modulator 3Hz, long sustain. */
+  playCreatureVocal(): void {
+    if (!this.isInitialized) return;
+    const fm = new Tone.FMSynth({
+      harmonicity: 3 / 80,
+      modulationIndex: 10,
+      oscillator: {type: 'sine'},
+      envelope: {attack: 0.2, decay: 0.3, sustain: 0.8, release: 1.5},
+      modulation: {type: 'sine'},
+      modulationEnvelope: {attack: 0.5, decay: 0.1, sustain: 1, release: 1.5},
+      volume: -8,
+    }).toDestination();
+    fm.triggerAttack('A1');
+    setTimeout(() => {
+      fm.triggerRelease();
+      setTimeout(() => fm.dispose(), 2000);
+    }, 1200);
+  }
+
+  /** Metal clang from pots_and_pans sample at higher volume. */
+  playWeaponImpact(): void {
+    this.playSample('pots_and_pans', -2);
+  }
+
+  /** Descending sine sweep 400Hz → 80Hz over 0.3s. */
+  playEnemyDeath(): void {
+    if (!this.isInitialized) return;
+    const osc = new Tone.Oscillator(400, 'sine').toDestination();
+    osc.volume.value = -8;
+    osc.start();
+    osc.frequency.rampTo(80, 0.3);
+    setTimeout(() => {
+      osc.stop();
+      osc.dispose();
+    }, 400);
   }
 
   /** Load all OGG samples as Tone.Players (non-blocking). */
@@ -420,6 +558,7 @@ class AudioEngine {
     }
     this.synths = [];
     this.stopAmbientDrone();
+    this.stopChallengeTrack();
     this.stopSampleLoop();
     for (const player of this.samples.values()) {
       player.dispose();

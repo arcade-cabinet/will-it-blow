@@ -180,6 +180,12 @@ class AudioEngine {
   stopCookingSizzle() {}
   playSizzleHit() {}
   playBoiling() {}
+  startChallengeTrack(_challengeType: string) {}
+  stopChallengeTrack() {}
+  playCabinetBurst() {}
+  playCreatureVocal() {}
+  playWeaponImpact() {}
+  playEnemyDeath() {}
 
   stopEngine() {
     // Nothing persistent to clean up
