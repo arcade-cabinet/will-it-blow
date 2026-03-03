@@ -10,10 +10,13 @@
  * 1. `title` — "THE TASTING" fades in with dark overlay
  * 2. `eating` — Mr. Sausage "eats" (talk reaction, 2s)
  * 3. `judging` — Dramatic pause (nervous reaction, 2s)
- * 4. `scores` — Individual challenge scores reveal one by one with animations
- * 5. `rank` — Rank badge (S/A/B/F) appears with spring animation
- * 6. `dialogue` — Verdict dialogue plays (rank-specific lines)
- * 7. `complete` — Records score and sets game outcome
+ * 4. `reveal-form` — "I wanted {preferredForm}!" + match/mismatch indicator
+ * 5. `reveal-ingredients` — "I was CRAVING {desired}..." + hit/miss
+ * 6. `reveal-cook` — "I said {cookPreference}!" + match indicator
+ * 7. `scores` — Individual challenge scores + demand breakdown reveal
+ * 8. `rank` — Rank badge (S/A/B/F) appears with spring animation
+ * 9. `dialogue` — Verdict dialogue plays (rank-specific lines)
+ * 10. `complete` — Records score and sets game outcome
  *
  * **Verdict system:**
  * - S-rank (>= 92): THE SAUSAGE KING — only true victory
@@ -25,8 +28,10 @@
 
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {Animated, StyleSheet, Text, View} from 'react-native';
+import {config} from '../../config';
 import {VERDICT_A, VERDICT_B, VERDICT_F, VERDICT_S} from '../../data/dialogue/verdict';
 import {calculateFinalVerdict, type Verdict} from '../../engine/ChallengeRegistry';
+import {calculateDemandBonus, type DemandBreakdown} from '../../engine/DemandScoring';
 import {useGameStore} from '../../store/gameStore';
 import type {Reaction} from '../characters/reactions';
 import {DialogueOverlay} from '../ui/DialogueOverlay';
@@ -44,12 +49,17 @@ type TastingPhase =
   | 'title' // "THE TASTING" fades in
   | 'eating' // Mr. Sausage eating animation
   | 'judging' // Dramatic pause
-  | 'scores' // Score summary reveals one by one
+  | 'reveal-form' // Mr. Sausage reveals preferred form
+  | 'reveal-ingredients' // Mr. Sausage reveals desired/hated ingredients
+  | 'reveal-cook' // Mr. Sausage reveals cook preference
+  | 'scores' // Score summary + demand breakdown reveals one by one
   | 'rank' // Rank badge appears
   | 'dialogue' // Verdict dialogue plays
   | 'complete'; // Outcome applied
 
-const CHALLENGE_LABELS = ['Ingredients', 'Grinding', 'Stuffing', 'Cooking'];
+const CHALLENGE_LABELS = config.scene.challengeSequence.stations
+  .slice(0, -1) // All stations except tasting (last)
+  .map(s => s.challengeType.charAt(0).toUpperCase() + s.challengeType.slice(1));
 
 const RANK_COLORS: Record<string, string> = {
   S: '#FFD700',
@@ -58,8 +68,19 @@ const RANK_COLORS: Record<string, string> = {
   F: '#FF1744',
 };
 
+/** Human-readable labels for cook preferences. */
+const COOK_LABELS: Record<string, string> = {
+  rare: 'RARE',
+  medium: 'MEDIUM',
+  'well-done': 'WELL-DONE',
+  charred: 'CHARRED',
+};
+
 export function TastingChallenge({onComplete: _onComplete, onReaction}: TastingChallengeProps) {
-  const {challengeScores, completeChallenge} = useGameStore();
+  const challengeScores = useGameStore(s => s.challengeScores);
+  const completeChallenge = useGameStore(s => s.completeChallenge);
+  const mrSausageDemands = useGameStore(s => s.mrSausageDemands);
+  const playerDecisions = useGameStore(s => s.playerDecisions);
 
   const [phase, setPhase] = useState<TastingPhase>('title');
   const [_revealedScoreCount, setRevealedScoreCount] = useState(0);
@@ -68,12 +89,23 @@ export function TastingChallenge({onComplete: _onComplete, onReaction}: TastingC
   const titleOpacity = useRef(new Animated.Value(0)).current;
   const scoreOpacities = useRef(CHALLENGE_LABELS.map(() => new Animated.Value(0))).current;
   const averageOpacity = useRef(new Animated.Value(0)).current;
+  const demandOpacity = useRef(new Animated.Value(0)).current;
   const rankScale = useRef(new Animated.Value(0)).current;
   const rankOpacity = useRef(new Animated.Value(0)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
+  const revealOpacity = useRef(new Animated.Value(0)).current;
 
-  // Calculate verdict once on mount
-  const verdict: Verdict = useMemo(() => calculateFinalVerdict(challengeScores), [challengeScores]);
+  // Calculate demand breakdown
+  const demandBreakdown: DemandBreakdown | null = useMemo(() => {
+    if (!mrSausageDemands) return null;
+    return calculateDemandBonus(mrSausageDemands, playerDecisions);
+  }, [mrSausageDemands, playerDecisions]);
+
+  // Calculate verdict once on mount (with demand bonus if available)
+  const verdict: Verdict = useMemo(
+    () => calculateFinalVerdict(challengeScores, demandBreakdown?.totalDemandBonus),
+    [challengeScores, demandBreakdown],
+  );
 
   // Get the right dialogue lines for the rank
   const verdictDialogue = useMemo(() => {
@@ -93,6 +125,9 @@ export function TastingChallenge({onComplete: _onComplete, onReaction}: TastingC
   const phaseRef = useRef(phase);
   phaseRef.current = phase;
 
+  // Track all scheduled timeouts for cleanup
+  const timerRefs = useRef<ReturnType<typeof setTimeout>[]>([]);
+
   // Phase 1: Title fade-in
   useEffect(() => {
     // Fade in overlay background
@@ -109,7 +144,7 @@ export function TastingChallenge({onComplete: _onComplete, onReaction}: TastingC
       useNativeDriver: true,
     }).start();
 
-    // After 1s: move to eating phase
+    // After 1.2s: move to eating phase
     const timer = setTimeout(() => {
       setPhase('eating');
     }, 1200);
@@ -134,16 +169,89 @@ export function TastingChallenge({onComplete: _onComplete, onReaction}: TastingC
     if (phase !== 'judging') return;
     onReaction?.('nervous');
 
+    const nextPhase = mrSausageDemands ? 'reveal-form' : 'scores';
+    const timer = setTimeout(() => {
+      setPhase(nextPhase);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [phase, onReaction, mrSausageDemands]);
+
+  // Phase 4: Reveal form preference
+  useEffect(() => {
+    if (phase !== 'reveal-form') return;
+
+    revealOpacity.setValue(0);
+    Animated.timing(revealOpacity, {
+      toValue: 1,
+      duration: 400,
+      useNativeDriver: true,
+    }).start();
+
+    onReaction?.(demandBreakdown?.formMatch.matched ? 'nod' : 'disgust');
+
+    const timer = setTimeout(() => {
+      setPhase('reveal-ingredients');
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [phase, revealOpacity, onReaction, demandBreakdown]);
+
+  // Phase 5: Reveal ingredient preferences
+  useEffect(() => {
+    if (phase !== 'reveal-ingredients') return;
+
+    revealOpacity.setValue(0);
+    Animated.timing(revealOpacity, {
+      toValue: 1,
+      duration: 400,
+      useNativeDriver: true,
+    }).start();
+
+    const hasHated = (demandBreakdown?.ingredientMatch.hatedHits.length ?? 0) > 0;
+    const hasDesired = (demandBreakdown?.ingredientMatch.desiredHits.length ?? 0) > 0;
+    onReaction?.(hasHated ? 'disgust' : hasDesired ? 'excitement' : 'nervous');
+
+    const timer = setTimeout(() => {
+      setPhase('reveal-cook');
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [phase, revealOpacity, onReaction, demandBreakdown]);
+
+  // Phase 6: Reveal cook preference
+  useEffect(() => {
+    if (phase !== 'reveal-cook') return;
+
+    revealOpacity.setValue(0);
+    Animated.timing(revealOpacity, {
+      toValue: 1,
+      duration: 400,
+      useNativeDriver: true,
+    }).start();
+
+    onReaction?.(demandBreakdown?.cookMatch.matched ? 'nod' : 'disgust');
+
     const timer = setTimeout(() => {
       setPhase('scores');
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [phase, onReaction]);
+  }, [phase, revealOpacity, onReaction, demandBreakdown]);
 
-  // Phase 4: Score reveal one by one
+  // Phase 7: Score reveal one by one
   useEffect(() => {
     if (phase !== 'scores') return;
+
+    // Clear any previously scheduled timers from this chain
+    timerRefs.current.forEach(clearTimeout);
+    timerRefs.current = [];
+
+    const scheduleTimeout = (fn: () => void, delay: number) => {
+      const id = setTimeout(fn, delay);
+      timerRefs.current.push(id);
+      return id;
+    };
 
     const totalToReveal = CHALLENGE_LABELS.length;
     let count = 0;
@@ -160,30 +268,49 @@ export function TastingChallenge({onComplete: _onComplete, onReaction}: TastingC
       }
 
       if (count < totalToReveal) {
-        timer = setTimeout(revealNext, 500);
+        scheduleTimeout(revealNext, 500);
       } else {
         // Reveal average after last score
-        timer = setTimeout(() => {
+        scheduleTimeout(() => {
           Animated.timing(averageOpacity, {
             toValue: 1,
             duration: 400,
             useNativeDriver: true,
           }).start();
 
-          // Then move to rank phase
-          setTimeout(() => {
-            setPhase('rank');
-          }, 1200);
+          // Then reveal demand breakdown (if present)
+          if (demandBreakdown) {
+            scheduleTimeout(() => {
+              Animated.timing(demandOpacity, {
+                toValue: 1,
+                duration: 400,
+                useNativeDriver: true,
+              }).start();
+
+              // Then move to rank phase
+              scheduleTimeout(() => {
+                setPhase('rank');
+              }, 1500);
+            }, 600);
+          } else {
+            // No demand breakdown — go straight to rank
+            scheduleTimeout(() => {
+              setPhase('rank');
+            }, 1200);
+          }
         }, 600);
       }
     };
 
-    let timer = setTimeout(revealNext, 300);
+    scheduleTimeout(revealNext, 300);
 
-    return () => clearTimeout(timer);
-  }, [phase, scoreOpacities, averageOpacity]);
+    return () => {
+      timerRefs.current.forEach(clearTimeout);
+      timerRefs.current = [];
+    };
+  }, [phase, scoreOpacities, averageOpacity, demandOpacity, demandBreakdown]);
 
-  // Phase 5: Rank badge reveal
+  // Phase 8: Rank badge reveal
   useEffect(() => {
     if (phase !== 'rank') return;
 
@@ -240,6 +367,13 @@ export function TastingChallenge({onComplete: _onComplete, onReaction}: TastingC
 
   const rankColor = RANK_COLORS[verdict.rank] ?? '#FF1744';
 
+  /** Format a bonus/penalty number with sign and color. */
+  const formatBonus = (points: number) => {
+    const sign = points >= 0 ? '+' : '';
+    const color = points >= 0 ? '#4CAF50' : '#FF1744';
+    return {text: `${sign}${points}`, color};
+  };
+
   return (
     <Animated.View style={[styles.container, {opacity: overlayOpacity}]} pointerEvents="box-none">
       {/* Dark overlay background */}
@@ -263,6 +397,67 @@ export function TastingChallenge({onComplete: _onComplete, onReaction}: TastingC
         </View>
       )}
 
+      {/* Reveal: Form preference */}
+      {phase === 'reveal-form' && demandBreakdown && (
+        <Animated.View style={[styles.revealContainer, {opacity: revealOpacity}]}>
+          <Text style={styles.revealQuote}>
+            {`"I wanted ${mrSausageDemands?.preferredForm?.toUpperCase()}!"`}
+          </Text>
+          <Text
+            style={[
+              styles.revealIndicator,
+              {color: demandBreakdown.formMatch.matched ? '#4CAF50' : '#FF1744'},
+            ]}
+          >
+            {demandBreakdown.formMatch.matched
+              ? `MATCH — You made ${demandBreakdown.formMatch.got}`
+              : `MISMATCH — You made ${demandBreakdown.formMatch.got ?? 'nothing'}`}
+          </Text>
+        </Animated.View>
+      )}
+
+      {/* Reveal: Ingredient preferences */}
+      {phase === 'reveal-ingredients' && demandBreakdown && mrSausageDemands && (
+        <Animated.View style={[styles.revealContainer, {opacity: revealOpacity}]}>
+          <Text style={styles.revealQuote}>
+            {`"I was CRAVING ${mrSausageDemands.desiredIngredients.join(', ')}..."`}
+          </Text>
+          {demandBreakdown.ingredientMatch.desiredHits.length > 0 && (
+            <Text style={[styles.revealDetail, {color: '#4CAF50'}]}>
+              {`HIT: ${demandBreakdown.ingredientMatch.desiredHits.join(', ')}`}
+            </Text>
+          )}
+          {mrSausageDemands.hatedIngredients.length > 0 && (
+            <Text style={styles.revealQuoteSmall}>
+              {`"And I HATE ${mrSausageDemands.hatedIngredients.join(', ')}!"`}
+            </Text>
+          )}
+          {demandBreakdown.ingredientMatch.hatedHits.length > 0 && (
+            <Text style={[styles.revealDetail, {color: '#FF1744'}]}>
+              {`INCLUDED HATED: ${demandBreakdown.ingredientMatch.hatedHits.join(', ')}`}
+            </Text>
+          )}
+        </Animated.View>
+      )}
+
+      {/* Reveal: Cook preference */}
+      {phase === 'reveal-cook' && demandBreakdown && mrSausageDemands && (
+        <Animated.View style={[styles.revealContainer, {opacity: revealOpacity}]}>
+          <Text style={styles.revealQuote}>
+            {`"I said ${COOK_LABELS[mrSausageDemands.cookPreference] ?? mrSausageDemands.cookPreference}!"`}
+          </Text>
+          <Text
+            style={[
+              styles.revealIndicator,
+              {color: demandBreakdown.cookMatch.matched ? '#4CAF50' : '#FF1744'},
+            ]}
+          >
+            {demandBreakdown.cookMatch.matched ? 'MATCH' : 'MISMATCH'}
+            {` — Cook level: ${(demandBreakdown.cookMatch.actual * 100).toFixed(0)}%`}
+          </Text>
+        </Animated.View>
+      )}
+
       {/* Score summary panel */}
       {(phase === 'scores' || phase === 'rank' || phase === 'dialogue' || phase === 'complete') && (
         <View style={styles.scoreSummaryPanel}>
@@ -284,9 +479,72 @@ export function TastingChallenge({onComplete: _onComplete, onReaction}: TastingC
             <View style={styles.averageDivider} />
             <View style={styles.scoreRow}>
               <Text style={styles.averageLabel}>Average</Text>
-              <Text style={styles.averageValue}>{verdict.averageScore.toFixed(1)}</Text>
+              <Text style={styles.averageValue}>
+                {(
+                  challengeScores.reduce((s, v) => s + v, 0) / (challengeScores.length || 1)
+                ).toFixed(1)}
+              </Text>
             </View>
           </Animated.View>
+
+          {/* Demand breakdown */}
+          {demandBreakdown && (
+            <Animated.View style={[styles.demandSection, {opacity: demandOpacity}]}>
+              <View style={styles.averageDivider} />
+              <Text style={styles.demandHeader}>Mr. Sausage's Demands</Text>
+
+              <View style={styles.scoreRow}>
+                <Text style={styles.demandLabel}>Form</Text>
+                <Text
+                  style={[
+                    styles.demandValue,
+                    {color: formatBonus(demandBreakdown.formMatch.points).color},
+                  ]}
+                >
+                  {formatBonus(demandBreakdown.formMatch.points).text}
+                </Text>
+              </View>
+
+              <View style={styles.scoreRow}>
+                <Text style={styles.demandLabel}>Ingredients</Text>
+                <Text
+                  style={[
+                    styles.demandValue,
+                    {color: formatBonus(demandBreakdown.ingredientMatch.points).color},
+                  ]}
+                >
+                  {formatBonus(demandBreakdown.ingredientMatch.points).text}
+                </Text>
+              </View>
+
+              <View style={styles.scoreRow}>
+                <Text style={styles.demandLabel}>Cook</Text>
+                <Text
+                  style={[
+                    styles.demandValue,
+                    {color: formatBonus(demandBreakdown.cookMatch.points).color},
+                  ]}
+                >
+                  {formatBonus(demandBreakdown.cookMatch.points).text}
+                </Text>
+              </View>
+
+              {demandBreakdown.flairBonus > 0 && (
+                <View style={styles.scoreRow}>
+                  <Text style={styles.demandLabel}>Flair</Text>
+                  <Text style={[styles.demandValue, {color: '#4CAF50'}]}>
+                    {formatBonus(demandBreakdown.flairBonus).text}
+                  </Text>
+                </View>
+              )}
+
+              <View style={styles.averageDivider} />
+              <View style={styles.scoreRow}>
+                <Text style={styles.adjustedLabel}>Adjusted Total</Text>
+                <Text style={styles.adjustedValue}>{verdict.averageScore.toFixed(1)}</Text>
+              </View>
+            </Animated.View>
+          )}
         </View>
       )}
 
@@ -385,6 +643,58 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(255, 23, 68, 0.6)',
   },
 
+  // Reveal phases
+  revealContainer: {
+    position: 'absolute',
+    top: '30%',
+    left: '10%',
+    right: '10%',
+    alignItems: 'center',
+    zIndex: 55,
+    backgroundColor: 'rgba(10, 10, 10, 0.92)',
+    borderWidth: 2,
+    borderColor: '#555',
+    borderRadius: 12,
+    padding: 20,
+  },
+  revealQuote: {
+    fontSize: 22,
+    fontWeight: '900',
+    fontFamily: 'Bangers',
+    color: '#FFC832',
+    letterSpacing: 2,
+    textAlign: 'center',
+    marginBottom: 12,
+    textShadowColor: 'rgba(255, 200, 50, 0.3)',
+    textShadowOffset: {width: 0, height: 0},
+    textShadowRadius: 8,
+  },
+  revealQuoteSmall: {
+    fontSize: 18,
+    fontWeight: '900',
+    fontFamily: 'Bangers',
+    color: '#FFC832',
+    letterSpacing: 1,
+    textAlign: 'center',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  revealIndicator: {
+    fontSize: 18,
+    fontWeight: '900',
+    fontFamily: 'Bangers',
+    letterSpacing: 2,
+    textAlign: 'center',
+  },
+  revealDetail: {
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: 'Bangers',
+    letterSpacing: 1,
+    textAlign: 'center',
+    marginTop: 4,
+  },
+
   // Score summary
   scoreSummaryPanel: {
     position: 'absolute',
@@ -440,6 +750,51 @@ const styles = StyleSheet.create({
     color: '#FF1744',
     letterSpacing: 2,
     textShadowColor: 'rgba(255, 23, 68, 0.4)',
+    textShadowOffset: {width: 0, height: 0},
+    textShadowRadius: 8,
+  },
+
+  // Demand breakdown
+  demandSection: {
+    marginTop: 8,
+  },
+  demandHeader: {
+    fontSize: 16,
+    fontWeight: '900',
+    fontFamily: 'Bangers',
+    color: '#FFC832',
+    letterSpacing: 2,
+    textAlign: 'center',
+    marginBottom: 4,
+    marginTop: 4,
+  },
+  demandLabel: {
+    fontSize: 16,
+    fontWeight: '900',
+    fontFamily: 'Bangers',
+    color: '#9E9E9E',
+    letterSpacing: 1,
+  },
+  demandValue: {
+    fontSize: 18,
+    fontWeight: '900',
+    fontFamily: 'Bangers',
+    letterSpacing: 1,
+  },
+  adjustedLabel: {
+    fontSize: 18,
+    fontWeight: '900',
+    fontFamily: 'Bangers',
+    color: '#E0E0E0',
+    letterSpacing: 2,
+  },
+  adjustedValue: {
+    fontSize: 24,
+    fontWeight: '900',
+    fontFamily: 'Bangers',
+    color: '#FFD700',
+    letterSpacing: 2,
+    textShadowColor: 'rgba(255, 215, 0, 0.4)',
     textShadowOffset: {width: 0, height: 0},
     textShadowRadius: 8,
   },

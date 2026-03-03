@@ -1,47 +1,50 @@
 # CLAUDE.md — Will It Blow?
 
-Project-specific instructions for Claude Code when working in this repository.
+Claude Code-specific instructions. For shared project knowledge, read the cross-agent docs below.
 
-## What This Is
+## Required Reading (in order)
 
-A first-person horror sausage-making mini-game (SAW meets cooking show). React Native 0.83 + React Three Fiber 9.5 + Expo SDK 55. Cross-platform: web, iOS, Android.
+1. **`AGENTS.md`** — Project overview, architecture, key files, commands, critical rules
+2. **`memory-bank/activeContext.md`** — Current session state and recent changes
+3. **`memory-bank/systemPatterns.md`** — Architecture patterns and conventions
+4. **`memory-bank/techContext.md`** — Tech stack, dependencies, CI/CD, and **common pitfalls**
+5. **`docs/AGENTS.md`** — Documentation index (frontmatter schema, agent routing)
 
-For full codebase knowledge, see `AGENTS.md`. For persistent context, see `memory-bank/`.
+Read these before doing any substantive work. All project knowledge lives there, not here.
 
-## Commands
+## Claude Code Tools
+
+### Slash Commands (`.claude/commands/`)
+
+| Command | Purpose |
+|---------|---------|
+| `/playtest` | Launch dev server + open Playwright for playtesting |
+| `/lint-and-test` | Run full Biome lint + Jest test suite |
+| `/update-docs` | Regenerate TypeDoc and update status.md |
+
+### Specialized Agents (`.claude/agents/`)
+
+| Agent | Role |
+|-------|------|
+| `scene-architect` | 3D scene, R3F components, furniture layout, lighting, materials |
+| `challenge-dev` | Challenge overlays, 3D stations, scoring, gameplay mechanics |
+| `store-warden` | Zustand store integrity, state machine transitions, action correctness |
+| `asset-pipeline` | GLB models, textures, Blender MCP, model optimization, asset URLs |
+| `doc-keeper` | Documentation maintenance, JSDoc, frontmatter, AGENTS.md, TypeDoc |
+
+### Quick Commands
 
 ```bash
-# Development
-npx expo start --web          # Web dev server (primary dev target)
-
-# Testing
-pnpm test                     # Run all Jest tests
-pnpm test:ci                  # CI mode (--ci --forceExit)
-
-# Linting & formatting (Biome)
-pnpm lint                     # Check lint + format errors
-pnpm format                   # Auto-fix lint + format errors
-
-# Type checking (needs increased stack for Three.js recursive types)
-pnpm typecheck
+pnpm test                     # Jest tests
+pnpm lint                     # Biome lint + format check
+pnpm format                   # Biome auto-fix
+pnpm typecheck                # TypeScript (needs --stack-size=8192)
+npx expo start --web          # Dev server
 ```
 
-## CI/CD
+## Claude Code-Specific Behavior
 
-- `.github/workflows/ci.yml` — Tests on push (main + feat/**)
-- `.github/workflows/cd.yml` — Web export → GitHub Pages deploy (push to main)
-- **Live:** https://arcade-cabinet.github.io/will-it-blow/
-
-## Common Pitfalls
-
-- **import.meta in Metro**: Zustand ESM uses `import.meta.env.MODE`. Must have `unstable_transformImportMeta: true` in babel.config.js or you get a white screen.
-- **useGLTF mocking in tests**: `@react-three/drei`'s `useGLTF` must be mocked in Jest — it depends on file loading that doesn't work in Node.js.
-- **Stale closure in useFrame**: Use `useRef` for values read inside `useFrame` callbacks. React state captured at mount time would be stale.
-- **sphereGeometry takes radius, not diameter**: Babylon.js used `diameter: 3.6` → R3F uses `args={[1.8, 24, 24]}` (radius, widthSegments, heightSegments).
-- **Camera inside mesh**: Check STATION_CAMERAS values. Camera needs ≥0.5 units clearance from solid meshes.
-- **MrSausage3D overlap**: The character is ~3.5 units tall at scale 1.0. Verify position in each scene doesn't clip animated geometry.
-- **Three.js transform allowlist**: `jest.config.js` must include `three` and `@react-three` in `transformIgnorePatterns` or tests fail with ESM syntax errors.
-- **TSL vs GLSL**: WebGPU renderer does not support raw GLSL `ShaderMaterial`. Use TSL (Three Shading Language) `NodeMaterial` instead — it compiles to WGSL for WebGPU or GLSL for WebGL2 fallback. Import node functions from `'three/tsl'`.
-- **Metro WebGPU resolver**: On native, bare `'three'` imports are remapped to `'three/webgpu'` by `metro.config.js`. On web, the browser build already uses WebGPU. Direct `'three/webgpu'` imports work on all platforms.
-- **TypeScript stack overflow**: `npx tsc --noEmit` crashes with Three.js recursive types. Use `pnpm typecheck` which runs with `node --stack-size=8192`. `skipLibCheck: true` is set in tsconfig but doesn't prevent the overflow alone (the recursion happens in our source code referencing Three.js types, not in `.d.ts` files).
-- **`let` + closure = `never` type**: TypeScript can't track mutations inside callbacks (e.g., `scene.traverse()`). If a `let` variable is assigned inside a callback then narrowed after, TS may infer `never`. Fix by assigning to a `const` after the null guard.
+- **Do not run** `npx tsc --noEmit` directly — always use `pnpm typecheck` (increased stack size for Three.js types)
+- **Mock `useGLTF`** in any new test file that touches R3F components loading GLBs
+- **Use `pnpm`** for all package operations (not npm/yarn)
+- **Use `pnpm format`** before committing to satisfy Biome checks

@@ -39,6 +39,10 @@ export function HintButton({onHint}: HintButtonProps) {
       onPress={handlePress}
       activeOpacity={isDisabled ? 1 : 0.7}
       disabled={isDisabled}
+      accessibilityRole="button"
+      accessibilityLabel={`Hint, ${hintsRemaining} remaining`}
+      accessibilityState={{disabled: isDisabled}}
+      accessibilityHint="Reveals matching ingredients"
     >
       <Text style={styles.emoji}>💡</Text>
       <Text style={[styles.countText, isDisabled && styles.countDisabled]}>{hintsRemaining}</Text>

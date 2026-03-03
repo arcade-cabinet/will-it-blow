@@ -3,7 +3,13 @@
 *.blend
 *.blend1
 *.zip
+*.rar
+*.7z
+*.unitypackage
 /meat_grinder.glb
+
+# Audio assets (converted OGG files, too large for git)
+public/audio/
 
 # OSX
 #
@@ -40,6 +46,11 @@ local.properties
 .cxx/
 *.keystore
 !debug.keystore
+
+# Environment variables
+.env
+.env.*
+!.env.example
 
 # node.js
 #

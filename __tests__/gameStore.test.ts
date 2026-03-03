@@ -22,8 +22,8 @@ describe('gameStore initial state', () => {
     expect(store().strikes).toBe(0);
   });
 
-  it('starts with 3 hints', () => {
-    expect(store().hintsRemaining).toBe(3);
+  it('starts with hints matching default difficulty tier', () => {
+    expect(store().hintsRemaining).toBe(store().difficulty.hints);
   });
 
   it('starts with empty challenge scores', () => {
@@ -74,10 +74,10 @@ describe('startNewGame', () => {
     expect(store().challengeScores).toEqual([]);
   });
 
-  it('resets hints to 3', () => {
+  it('resets hints to difficulty tier value', () => {
     useGameStore.setState({hintsRemaining: 0});
     store().startNewGame();
-    expect(store().hintsRemaining).toBe(3);
+    expect(store().hintsRemaining).toBe(store().difficulty.hints);
   });
 
   it('increments totalGamesPlayed', () => {
@@ -119,15 +119,15 @@ describe('completeChallenge', () => {
     expect(store().currentChallenge).toBe(1);
   });
 
-  it('sets victory when completing challenge 4 (the last)', () => {
+  it('sets victory when completing challenge 6 (the last)', () => {
     useGameStore.setState({
       gameStatus: 'playing',
-      currentChallenge: 4,
-      challengeScores: [80, 90, 70, 85],
+      currentChallenge: 6,
+      challengeScores: [80, 85, 90, 70, 85, 75],
     });
     store().completeChallenge(95);
     expect(store().gameStatus).toBe('victory');
-    expect(store().challengeScores).toEqual([80, 90, 70, 85, 95]);
+    expect(store().challengeScores).toEqual([80, 85, 90, 70, 85, 75, 95]);
   });
 
   it('resets strikes on challenge completion', () => {
@@ -136,20 +136,20 @@ describe('completeChallenge', () => {
     expect(store().strikes).toBe(0);
   });
 
-  it('transitions bowlPosition to grinder-output after challenge 1', () => {
+  it('transitions bowlPosition to grinder-output after challenge 2 (grinding)', () => {
     useGameStore.setState({
       gameStatus: 'playing',
-      currentChallenge: 1,
+      currentChallenge: 2,
       bowlPosition: 'grinder',
     });
     store().completeChallenge(80);
     expect(store().bowlPosition).toBe('grinder-output');
   });
 
-  it('transitions bowlPosition to done after challenge 2 and resets sausagePlaced', () => {
+  it('transitions bowlPosition to done after challenge 3 (stuffing) and resets sausagePlaced', () => {
     useGameStore.setState({
       gameStatus: 'playing',
-      currentChallenge: 2,
+      currentChallenge: 3,
       bowlPosition: 'stuffer',
       sausagePlaced: true,
     });
@@ -213,13 +213,354 @@ describe('returnToMenu', () => {
 describe('useHint', () => {
   it('decrements hints', () => {
     store().startNewGame();
+    const initialHints = store().hintsRemaining;
     store().useHint();
-    expect(store().hintsRemaining).toBe(2);
+    expect(store().hintsRemaining).toBe(initialHints - 1);
   });
 
   it('does not go below 0', () => {
     useGameStore.setState({hintsRemaining: 0});
     store().useHint();
     expect(store().hintsRemaining).toBe(0);
+  });
+});
+
+describe('generateDemands', () => {
+  it('creates valid demands with all required fields', () => {
+    const pool = ['Big Mac', 'Lobster', 'Water', 'Pizza', 'Candy Cane', 'Dirt'];
+    store().generateDemands(pool);
+    const demands = store().mrSausageDemands;
+    expect(demands).not.toBeNull();
+    expect(['coil', 'link']).toContain(demands!.preferredForm);
+    expect(demands!.desiredLinkCount).toBeGreaterThanOrEqual(2);
+    expect(demands!.desiredLinkCount).toBeLessThanOrEqual(5);
+    expect(['even', 'any']).toContain(demands!.uniformity);
+    expect(demands!.desiredIngredients.length).toBeGreaterThanOrEqual(2);
+    expect(demands!.desiredIngredients.length).toBeLessThanOrEqual(3);
+    expect(demands!.hatedIngredients.length).toBeGreaterThanOrEqual(1);
+    expect(demands!.hatedIngredients.length).toBeLessThanOrEqual(2);
+    expect(['rare', 'medium', 'well-done', 'charred']).toContain(demands!.cookPreference);
+    expect(['cryptic', 'passive-aggressive', 'manic']).toContain(demands!.moodProfile);
+  });
+
+  it('picks desired and hated ingredients from the pool', () => {
+    const pool = ['Big Mac', 'Lobster', 'Water', 'Pizza', 'Candy Cane', 'Dirt'];
+    store().generateDemands(pool);
+    const demands = store().mrSausageDemands!;
+    for (const ing of demands.desiredIngredients) {
+      expect(pool).toContain(ing);
+    }
+    for (const ing of demands.hatedIngredients) {
+      expect(pool).toContain(ing);
+    }
+  });
+
+  it('does not overlap desired and hated ingredients', () => {
+    const pool = ['Big Mac', 'Lobster', 'Water', 'Pizza', 'Candy Cane', 'Dirt'];
+    store().generateDemands(pool);
+    const demands = store().mrSausageDemands!;
+    const overlap = demands.desiredIngredients.filter(i => demands.hatedIngredients.includes(i));
+    expect(overlap).toEqual([]);
+  });
+});
+
+describe('recordTwist', () => {
+  it('adds to twistPoints', () => {
+    store().recordTwist(0.25);
+    store().recordTwist(0.75);
+    expect(store().playerDecisions.twistPoints).toEqual([0.25, 0.75]);
+  });
+});
+
+describe('recordFormChoice', () => {
+  it('derives coil with 0 twists', () => {
+    store().recordFormChoice();
+    expect(store().playerDecisions.chosenForm).toBe('coil');
+  });
+
+  it('derives link with 1+ twists', () => {
+    store().recordTwist(0.5);
+    store().recordFormChoice();
+    expect(store().playerDecisions.chosenForm).toBe('link');
+  });
+});
+
+describe('recordFlairTwist', () => {
+  it('increments flair twist counter', () => {
+    expect(store().playerDecisions.flairTwists).toBe(0);
+    store().recordFlairTwist();
+    expect(store().playerDecisions.flairTwists).toBe(1);
+    store().recordFlairTwist();
+    expect(store().playerDecisions.flairTwists).toBe(2);
+  });
+});
+
+describe('recordCookLevel', () => {
+  it('records final cook level', () => {
+    store().recordCookLevel(0.72);
+    expect(store().playerDecisions.finalCookLevel).toBe(0.72);
+  });
+});
+
+describe('recordHintViewed', () => {
+  it('tracks viewed hint IDs', () => {
+    store().recordHintViewed('hint-1');
+    store().recordHintViewed('hint-2');
+    expect(store().playerDecisions.hintsViewed).toEqual(['hint-1', 'hint-2']);
+  });
+});
+
+describe('recordStageTiming', () => {
+  it('records stage duration', () => {
+    store().recordStageTiming('fridge', 45.2);
+    store().recordStageTiming('grinder', 30.0);
+    expect(store().playerDecisions.stageTimings).toEqual({fridge: 45.2, grinder: 30.0});
+  });
+});
+
+describe('recordFlairPoint', () => {
+  it('appends flair bonus entries', () => {
+    expect(store().playerDecisions.flairPoints).toEqual([]);
+    store().recordFlairPoint('confidence', 5);
+    store().recordFlairPoint('showmanship', 3);
+    expect(store().playerDecisions.flairPoints).toEqual([
+      {reason: 'confidence', points: 5},
+      {reason: 'showmanship', points: 3},
+    ]);
+  });
+
+  it('starts empty and accumulates additively', () => {
+    store().recordFlairPoint('precision', 2);
+    store().recordFlairPoint('precision', 4);
+    const fp = store().playerDecisions.flairPoints;
+    expect(fp).toHaveLength(2);
+    expect(fp[0]).toEqual({reason: 'precision', points: 2});
+    expect(fp[1]).toEqual({reason: 'precision', points: 4});
+  });
+});
+
+describe('addFridgeSelected', () => {
+  it('populates selectedIngredients from fridgePool', () => {
+    const pool = [
+      {
+        name: 'Lobster',
+        emoji: '🦞',
+        category: 'protein' as const,
+        chunkColor: '#cc3333',
+        chunkScale: 1,
+        fatRatio: 0.2,
+        shape: {base: 'elongated' as const, detail: 'claws' as const},
+      },
+      {
+        name: 'Candy Cane',
+        emoji: '🍬',
+        category: 'wild-card' as const,
+        chunkColor: '#ff6666',
+        chunkScale: 0.6,
+        fatRatio: 0.1,
+        shape: {base: 'cylinder' as const},
+      },
+    ];
+    store().setFridgePool(pool, [0]);
+    store().addFridgeSelected(0);
+    expect(store().playerDecisions.selectedIngredients).toEqual(['Lobster']);
+  });
+
+  it('does not add empty name for out-of-bounds index', () => {
+    const pool = [
+      {
+        name: 'Lobster',
+        emoji: '🦞',
+        category: 'protein' as const,
+        chunkColor: '#cc3333',
+        chunkScale: 1,
+        fatRatio: 0.2,
+        shape: {base: 'elongated' as const, detail: 'claws' as const},
+      },
+    ];
+    store().setFridgePool(pool, [0]);
+    store().addFridgeSelected(99);
+    expect(store().playerDecisions.selectedIngredients).toEqual([]);
+  });
+});
+
+describe('combat actions', () => {
+  const mockEnemy = {id: 'giant-rat', type: 'giant-rat', hp: 2, maxHp: 2};
+
+  it('startCombat activates combat and sets enemy', () => {
+    store().startCombat(mockEnemy);
+    expect(store().combatActive).toBe(true);
+    expect(store().activeEnemy).toEqual(mockEnemy);
+  });
+
+  it('damageEnemy decrements HP and returns remaining', () => {
+    store().startCombat(mockEnemy);
+    const remaining = store().damageEnemy(1);
+    expect(remaining).toBe(1);
+    expect(store().activeEnemy!.hp).toBe(1);
+  });
+
+  it('damageEnemy does not go below 0', () => {
+    store().startCombat({...mockEnemy, hp: 1, maxHp: 1});
+    const remaining = store().damageEnemy(5);
+    expect(remaining).toBe(0);
+    expect(store().activeEnemy!.hp).toBe(0);
+  });
+
+  it('damageEnemy returns 0 with no active enemy', () => {
+    const remaining = store().damageEnemy(1);
+    expect(remaining).toBe(0);
+  });
+
+  it('endCombat clears combat state and increments enemiesDefeated', () => {
+    store().startCombat(mockEnemy);
+    store().endCombat();
+    expect(store().combatActive).toBe(false);
+    expect(store().activeEnemy).toBeNull();
+    expect(store().playerDecisions.enemiesDefeated).toBe(1);
+  });
+
+  it('endCombat accumulates across multiple encounters', () => {
+    store().startCombat(mockEnemy);
+    store().endCombat();
+    store().startCombat(mockEnemy);
+    store().endCombat();
+    expect(store().playerDecisions.enemiesDefeated).toBe(2);
+  });
+
+  it('recordEnemyIngredient increments counter', () => {
+    store().recordEnemyIngredient();
+    expect(store().playerDecisions.enemyIngredientsUsed).toBe(1);
+    store().recordEnemyIngredient();
+    expect(store().playerDecisions.enemyIngredientsUsed).toBe(2);
+  });
+
+  it('startNewGame resets combat state', () => {
+    store().startCombat(mockEnemy);
+    store().endCombat();
+    store().recordEnemyIngredient();
+    store().startNewGame();
+    expect(store().combatActive).toBe(false);
+    expect(store().activeEnemy).toBeNull();
+    expect(store().playerDecisions.enemiesDefeated).toBe(0);
+    expect(store().playerDecisions.enemyIngredientsUsed).toBe(0);
+  });
+});
+
+describe('advanceRound', () => {
+  it('increments currentRound', () => {
+    useGameStore.setState({currentRound: 1});
+    store().advanceRound();
+    expect(store().currentRound).toBe(2);
+  });
+
+  it('stores the current ingredient combo in usedIngredientCombos (sorted)', () => {
+    useGameStore.setState({
+      playerDecisions: {
+        ...INITIAL_GAME_STATE.playerDecisions,
+        selectedIngredients: ['Lobster', 'Candy Cane'],
+      },
+      usedIngredientCombos: [],
+    });
+    store().advanceRound();
+    expect(store().usedIngredientCombos).toEqual([['Candy Cane', 'Lobster']]);
+  });
+
+  it('accumulates combos across multiple rounds', () => {
+    useGameStore.setState({
+      playerDecisions: {
+        ...INITIAL_GAME_STATE.playerDecisions,
+        selectedIngredients: ['Apple', 'Bacon'],
+      },
+      usedIngredientCombos: [],
+    });
+    store().advanceRound();
+    useGameStore.setState({
+      playerDecisions: {
+        ...INITIAL_GAME_STATE.playerDecisions,
+        selectedIngredients: ['Carrot'],
+      },
+    });
+    store().advanceRound();
+    expect(store().usedIngredientCombos).toHaveLength(2);
+    expect(store().usedIngredientCombos[0]).toEqual(['Apple', 'Bacon']);
+    expect(store().usedIngredientCombos[1]).toEqual(['Carrot']);
+  });
+
+  it('resets casingTied and blowoutScore', () => {
+    useGameStore.setState({casingTied: true, blowoutScore: 75});
+    store().advanceRound();
+    expect(store().casingTied).toBe(false);
+    expect(store().blowoutScore).toBe(0);
+  });
+});
+
+describe('continueGame round progress', () => {
+  it('preserves currentRound', () => {
+    useGameStore.setState({currentRound: 3, challengeScores: [80, 90, 70]});
+    store().continueGame();
+    expect(store().currentRound).toBe(3);
+  });
+
+  it('preserves usedIngredientCombos', () => {
+    const combos = [['Apple', 'Bacon'], ['Carrot']];
+    useGameStore.setState({usedIngredientCombos: combos, challengeScores: [80]});
+    store().continueGame();
+    expect(store().usedIngredientCombos).toEqual(combos);
+  });
+
+  it('preserves currentChallenge and challengeScores', () => {
+    useGameStore.setState({currentChallenge: 2, challengeScores: [80, 90]});
+    store().continueGame();
+    expect(store().currentChallenge).toBe(2);
+    expect(store().challengeScores).toEqual([80, 90]);
+  });
+});
+
+describe('returnToMenu round state', () => {
+  it('resets currentRound to 1', () => {
+    useGameStore.setState({currentRound: 4});
+    store().returnToMenu();
+    expect(store().currentRound).toBe(1);
+  });
+
+  it('clears usedIngredientCombos', () => {
+    useGameStore.setState({usedIngredientCombos: [['Apple', 'Bacon']]});
+    store().returnToMenu();
+    expect(store().usedIngredientCombos).toEqual([]);
+  });
+
+  it('resets currentChallenge to 0 and clears challengeScores', () => {
+    useGameStore.setState({currentChallenge: 3, challengeScores: [80, 90, 70]});
+    store().returnToMenu();
+    expect(store().currentChallenge).toBe(0);
+    expect(store().challengeScores).toEqual([]);
+  });
+});
+
+describe('startNewGame demand integration', () => {
+  it('resets playerDecisions and generates fresh demands', () => {
+    // Dirty the state
+    store().recordTwist(0.5);
+    store().recordFlairTwist();
+    store().recordCookLevel(0.8);
+    store().recordHintViewed('hint-1');
+    store().recordFlairPoint('patience', 7);
+
+    store().startNewGame();
+
+    // playerDecisions should be reset
+    const pd = store().playerDecisions;
+    expect(pd.twistPoints).toEqual([]);
+    expect(pd.flairTwists).toBe(0);
+    expect(pd.finalCookLevel).toBe(0);
+    expect(pd.hintsViewed).toEqual([]);
+    expect(pd.chosenForm).toBeNull();
+    expect(pd.stageTimings).toEqual({});
+    expect(pd.flairPoints).toEqual([]);
+
+    // demands should be generated
+    expect(store().mrSausageDemands).not.toBeNull();
+    expect(store().mrSausageDemands!.desiredIngredients.length).toBeGreaterThanOrEqual(2);
   });
 });

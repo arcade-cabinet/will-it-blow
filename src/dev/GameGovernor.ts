@@ -9,7 +9,45 @@
  *   await page.evaluate(() => window.__gov.getState());
  */
 
+import {config} from '../config';
+import {DEFAULT_ROOM} from '../engine/FurnitureLayout';
+import {mergeLayoutConfigs, resolveLayout} from '../engine/layout';
 import {useGameStore} from '../store/gameStore';
+
+const KITCHEN_LAYOUT = mergeLayoutConfigs(
+  config.layout.room,
+  config.layout.rails,
+  config.layout.placements,
+);
+const TARGETS = resolveLayout(KITCHEN_LAYOUT, DEFAULT_ROOM).targets;
+const CHALLENGE_STATIONS = config.scene.challengeSequence.stations;
+
+/**
+ * Compute a player standing position in front of a station for E2E screenshots.
+ * Moves from the station toward the room center by a minimum of MIN_STANDOFF metres,
+ * so the camera clears the station's furniture mesh and counter depth.
+ *
+ * MIN_STANDOFF (2.0m) accounts for:
+ * - counter depth (~0.6m from wall)
+ * - machine depth (~0.5m)
+ * - personal-space clearance (~0.9m)
+ */
+const MIN_STANDOFF = 2.0;
+function playerStandPos(stationName: string): [number, number, number] {
+  const target = TARGETS[stationName];
+  if (!target) return [0, 1.6, 0];
+  const [sx, , sz] = target.position;
+  // Direction from station toward room center (XZ plane only)
+  const dx = 0 - sx;
+  const dz = 0 - sz;
+  const len = Math.sqrt(dx * dx + dz * dz) || 1;
+  const dist = Math.max(MIN_STANDOFF, target.triggerRadius * 0.75);
+  return [
+    sx + (dx / len) * dist,
+    1.6, // always eye height
+    sz + (dz / len) * dist,
+  ];
+}
 
 export interface GameGov {
   /** True once the 3D scene + GLB meshes are fully loaded and rendered */
@@ -27,7 +65,7 @@ export interface GameGov {
   /** Complete the current challenge with a given score and advance */
   completeCurrentChallenge: (score: number) => void;
 
-  /** Skip directly to a specific challenge index (0-4) */
+  /** Skip directly to a specific challenge index (0-5) */
   skipToChallenge: (index: number) => void;
 
   /** Skip to a specific challenge with custom scores for preceding challenges */
@@ -143,6 +181,9 @@ function createGovernor(): GameGov {
         sfxVolume: s.sfxVolume,
         musicMuted: s.musicMuted,
         sfxMuted: s.sfxMuted,
+        bowlPosition: s.bowlPosition,
+        sausagePlaced: s.sausagePlaced,
+        blendColor: s.blendColor,
       };
     },
 
@@ -159,6 +200,11 @@ function createGovernor(): GameGov {
       store.getState().completeChallenge(score);
       // Auto-trigger the next challenge (simulates player walking to next station)
       if (store.getState().gameStatus === 'playing') {
+        const nextIdx = store.getState().currentChallenge;
+        const nextStation = CHALLENGE_STATIONS[nextIdx];
+        if (nextStation) {
+          store.getState().requestTeleport(playerStandPos(nextStation.stationName));
+        }
         store.getState().triggerChallenge();
       }
     },
@@ -171,6 +217,10 @@ function createGovernor(): GameGov {
       while (store.getState().currentChallenge < index) {
         store.getState().completeChallenge(75);
       }
+      const station = CHALLENGE_STATIONS[index];
+      if (station) {
+        store.getState().requestTeleport(playerStandPos(station.stationName));
+      }
       store.getState().triggerChallenge();
     },
 
@@ -181,6 +231,10 @@ function createGovernor(): GameGov {
       }
       for (let i = 0; i < index; i++) {
         store.getState().completeChallenge(scores[i] ?? 75);
+      }
+      const station = CHALLENGE_STATIONS[index];
+      if (station) {
+        store.getState().requestTeleport(playerStandPos(station.stationName));
       }
       store.getState().triggerChallenge();
     },
@@ -220,7 +274,8 @@ function createGovernor(): GameGov {
       if (state.appPhase !== 'playing') {
         state.startNewGame();
       }
-      for (let i = 0; i < 5; i++) {
+      const totalChallenges = CHALLENGE_STATIONS.length;
+      for (let i = 0; i < totalChallenges; i++) {
         store.getState().completeChallenge(scores[i] ?? 75);
       }
     },
@@ -281,7 +336,9 @@ function createGovernor(): GameGov {
     },
 
     movePlayerTo(x: number, y: number, z: number) {
-      store.getState().setPlayerPosition([x, y, z]);
+      // requestTeleport is consumed by FPSController on the next frame, moving both
+      // posRef and camera. setPlayerPosition alone only updates the store, not the camera.
+      store.getState().requestTeleport([x, y, z]);
     },
 
     triggerCurrentChallenge() {

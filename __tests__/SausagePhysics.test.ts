@@ -19,6 +19,7 @@ function makeIngredient(overrides: Partial<Ingredient> = {}): Ingredient {
     blowPower: 3,
     color: '#FF0000',
     shape: {base: 'sphere'},
+    formAffinity: 'neutral',
     ...overrides,
   };
 }

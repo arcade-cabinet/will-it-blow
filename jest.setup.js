@@ -1,3 +1,8 @@
+// Mock navigator.userAgent for detect-gpu (used by @react-three/drei in CI)
+if (typeof globalThis.navigator === 'undefined') {
+  globalThis.navigator = {userAgent: 'node'};
+}
+
 // Mock AsyncStorage for tests
 jest.mock('@react-native-async-storage/async-storage', () => {
   const store = {};

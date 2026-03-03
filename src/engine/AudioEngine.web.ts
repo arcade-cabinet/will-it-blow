@@ -1,4 +1,6 @@
 import * as Tone from 'tone';
+import {config} from '../config';
+import {useGameStore} from '../store/gameStore';
 import {getAssetUrl} from './assetUrl';
 
 /** Sample categories mapped to their OGG file variants. */
@@ -19,6 +21,12 @@ const SAMPLE_VARIANTS: Record<string, string[]> = {
   sizzle_loop: ['sizzle_loop_1.ogg', 'sizzle_loop_2.ogg'],
 };
 
+/** Spatial sound instance: player + panner, managed by the engine. */
+interface SpatialSource {
+  player: Tone.Player;
+  panner: Tone.Panner3D;
+}
+
 class AudioEngine {
   private synths: Tone.PolySynth[] = [];
   private currentSong: Tone.Part | null = null;
@@ -29,6 +37,9 @@ class AudioEngine {
   private samples: Map<string, Tone.Player> = new Map();
   /** Currently playing looped sample. */
   private loopingSample: Tone.Player | null = null;
+
+  /** Active spatial (3D-positioned) sound sources keyed by sound ID. */
+  private spatialSources: Map<string, SpatialSource> = new Map();
 
   async initTone() {
     if (this.isInitialized) return;
@@ -247,49 +258,199 @@ class AudioEngine {
     Tone.getTransport().start();
   }
 
-  /** Start an eerie ambient drone for the horror atmosphere */
+  /** Gain node for ambient music — respects musicVolume / musicMuted. */
+  private ambientGain: Tone.Gain | null = null;
+  /** Looping player for the ambient horror track. */
+  private ambientPlayer: Tone.Player | null = null;
+  /** Store subscription disposer for volume/mute reactivity. */
+  private ambientUnsub: (() => void) | null = null;
+
+  /** Looping player for the current challenge music track. */
+  private challengeTrack: Tone.Player | null = null;
+  /** Gain node for challenge track — respects musicVolume / musicMuted. */
+  private challengeGain: Tone.Gain | null = null;
+  /** Store subscription disposer for challenge track volume reactivity. */
+  private challengeUnsub: (() => void) | null = null;
+
+  /** Start the ambient horror loop, respecting musicVolume & musicMuted. */
   startAmbientDrone() {
     if (!this.isInitialized) return;
     this.stopAmbientDrone();
 
-    // Low rumble
-    const drone = new Tone.Oscillator(55, 'sawtooth').toDestination();
-    drone.volume.value = -28;
-    drone.start();
-    this.sfxSynths.ambientDrone = drone;
+    const {musicVolume, musicMuted} = useGameStore.getState();
 
-    // Slow LFO on drone pitch for unease
-    const lfo = new Tone.LFO(0.1, 50, 60).start();
-    lfo.connect(drone.frequency);
-    this.sfxSynths.ambientDroneLfo = lfo;
+    // Gain node so we can adjust volume without touching the player
+    const gain = new Tone.Gain(musicMuted ? 0 : musicVolume).toDestination();
+    this.ambientGain = gain;
 
-    // Subtle high-frequency whisper noise
-    const hiss = new Tone.NoiseSynth({
-      noise: {type: 'pink'},
-      envelope: {attack: 2, decay: 0, sustain: 1, release: 2},
-      volume: -32,
-    }).toDestination();
-    hiss.triggerAttack();
-    this.sfxSynths.ambientHiss = hiss;
+    const url = getAssetUrl('audio', 'ambient-horror.ogg');
+    const player = new Tone.Player({
+      url,
+      loop: true,
+      fadeIn: 2,
+      volume: -6,
+      onload: () => {
+        // Only start if we haven't been stopped while loading
+        if (this.ambientPlayer === player) {
+          player.start();
+        }
+      },
+      onerror: err => console.warn('Failed to load ambient-horror.ogg:', err),
+    }).connect(gain);
+    this.ambientPlayer = player;
+
+    // Subscribe to store changes for live volume/mute reactivity
+    this.ambientUnsub = useGameStore.subscribe(state => {
+      if (this.ambientGain) {
+        this.ambientGain.gain.rampTo(state.musicMuted ? 0 : state.musicVolume, 0.3);
+      }
+    });
   }
 
   stopAmbientDrone() {
-    if (this.sfxSynths.ambientDrone) {
-      this.sfxSynths.ambientDrone.stop();
-      this.sfxSynths.ambientDrone.dispose();
-      delete this.sfxSynths.ambientDrone;
+    if (this.ambientUnsub) {
+      this.ambientUnsub();
+      this.ambientUnsub = null;
     }
-    if (this.sfxSynths.ambientDroneLfo) {
-      this.sfxSynths.ambientDroneLfo.dispose();
-      delete this.sfxSynths.ambientDroneLfo;
+    if (this.ambientPlayer) {
+      this.ambientPlayer.stop();
+      this.ambientPlayer.dispose();
+      this.ambientPlayer = null;
     }
-    if (this.sfxSynths.ambientHiss) {
-      this.sfxSynths.ambientHiss.triggerRelease();
-      setTimeout(() => {
-        this.sfxSynths.ambientHiss?.dispose();
-        delete this.sfxSynths.ambientHiss;
-      }, 2500);
+    if (this.ambientGain) {
+      this.ambientGain.dispose();
+      this.ambientGain = null;
     }
+  }
+
+  /** Start a music track for the current challenge, crossfading from ambient. */
+  startChallengeTrack(challengeType: string): void {
+    if (!this.isInitialized) return;
+    const trackDef = config.audio.challengeTracks[challengeType];
+    if (!trackDef) return;
+
+    // Stop any previous challenge track first
+    this.stopChallengeTrack();
+
+    const {musicVolume, musicMuted} = useGameStore.getState();
+    const crossfade = config.audio.crossfadeDuration;
+
+    // Fade ambient out over crossfade duration
+    if (this.ambientGain) {
+      this.ambientGain.gain.rampTo(0, crossfade);
+    }
+
+    const gain = new Tone.Gain(0).toDestination();
+    this.challengeGain = gain;
+
+    const url = getAssetUrl('audio', trackDef.file);
+    const player = new Tone.Player({
+      url,
+      loop: true,
+      volume: trackDef.volume,
+      onload: () => {
+        if (this.challengeTrack === player) {
+          player.start();
+          // Fade in over crossfade duration, respecting mute/volume
+          const targetGain = musicMuted ? 0 : musicVolume;
+          gain.gain.rampTo(targetGain, crossfade);
+        }
+      },
+      onerror: err => console.warn(`Failed to load challenge track ${trackDef.file}:`, err),
+    }).connect(gain);
+    this.challengeTrack = player;
+
+    // Subscribe to store changes for live volume/mute reactivity
+    this.challengeUnsub = useGameStore.subscribe(state => {
+      if (this.challengeGain) {
+        this.challengeGain.gain.rampTo(state.musicMuted ? 0 : state.musicVolume, 0.3);
+      }
+    });
+  }
+
+  /** Stop challenge track and resume ambient. */
+  stopChallengeTrack(): void {
+    if (this.challengeUnsub) {
+      this.challengeUnsub();
+      this.challengeUnsub = null;
+    }
+    if (this.challengeTrack) {
+      this.challengeTrack.stop();
+      this.challengeTrack.dispose();
+      this.challengeTrack = null;
+    }
+    if (this.challengeGain) {
+      this.challengeGain.dispose();
+      this.challengeGain = null;
+    }
+
+    // Fade ambient back in
+    if (this.ambientGain) {
+      const {musicVolume, musicMuted} = useGameStore.getState();
+      const crossfade = config.audio.crossfadeDuration;
+      this.ambientGain.gain.rampTo(musicMuted ? 0 : musicVolume, crossfade);
+    }
+  }
+
+  /** Sharp crack + wood creak — NoiseSynth burst + MembraneSynth for cabinet burst. */
+  playCabinetBurst(): void {
+    if (!this.isInitialized) return;
+    // White noise burst (fast attack, short decay)
+    const burst = new Tone.NoiseSynth({
+      noise: {type: 'white'},
+      envelope: {attack: 0.005, decay: 0.15, sustain: 0, release: 0.05},
+      volume: -4,
+    }).toDestination();
+    burst.triggerAttackRelease('16n');
+    // Membrane synth for wood crack thump
+    const crack = new Tone.MembraneSynth({
+      pitchDecay: 0.04,
+      octaves: 5,
+      envelope: {attack: 0.001, decay: 0.25, sustain: 0, release: 0.1},
+      volume: -6,
+    }).toDestination();
+    crack.triggerAttackRelease('A1', '8n');
+    setTimeout(() => {
+      burst.dispose();
+      crack.dispose();
+    }, 1000);
+  }
+
+  /** Low growl — FM synth with carrier 80Hz, modulator 3Hz, long sustain. */
+  playCreatureVocal(): void {
+    if (!this.isInitialized) return;
+    const fm = new Tone.FMSynth({
+      harmonicity: 3 / 80,
+      modulationIndex: 10,
+      oscillator: {type: 'sine'},
+      envelope: {attack: 0.2, decay: 0.3, sustain: 0.8, release: 1.5},
+      modulation: {type: 'sine'},
+      modulationEnvelope: {attack: 0.5, decay: 0.1, sustain: 1, release: 1.5},
+      volume: -8,
+    }).toDestination();
+    fm.triggerAttack('A1');
+    setTimeout(() => {
+      fm.triggerRelease();
+      setTimeout(() => fm.dispose(), 2000);
+    }, 1200);
+  }
+
+  /** Metal clang from pots_and_pans sample at higher volume. */
+  playWeaponImpact(): void {
+    this.playSample('pots_and_pans', -2);
+  }
+
+  /** Descending sine sweep 400Hz → 80Hz over 0.3s. */
+  playEnemyDeath(): void {
+    if (!this.isInitialized) return;
+    const osc = new Tone.Oscillator(400, 'sine').toDestination();
+    osc.volume.value = -8;
+    osc.start();
+    osc.frequency.rampTo(80, 0.3);
+    setTimeout(() => {
+      osc.stop();
+      osc.dispose();
+    }, 400);
   }
 
   /** Load all OGG samples as Tone.Players (non-blocking). */
@@ -396,6 +557,144 @@ class AudioEngine {
     this.playSample('boiling', -10);
   }
 
+  // ---------------------------------------------------------------------------
+  // Spatial Audio — 3D positional sounds via Tone.Panner3D
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Update the audio listener position (typically called from FPSController).
+   * Maps to the Web Audio API AudioListener position.
+   */
+  setListenerPosition(x: number, y: number, z: number): void {
+    if (!this.isInitialized) return;
+    const listener = Tone.getContext().rawContext.listener;
+    if (listener.positionX) {
+      listener.positionX.value = x;
+      listener.positionY.value = y;
+      listener.positionZ.value = z;
+    }
+  }
+
+  /**
+   * Update the audio listener orientation (forward + up vectors).
+   * Called from FPSController or XR head pose.
+   */
+  setListenerOrientation(
+    forwardX: number,
+    forwardY: number,
+    forwardZ: number,
+    upX: number,
+    upY: number,
+    upZ: number,
+  ): void {
+    if (!this.isInitialized) return;
+    const listener = Tone.getContext().rawContext.listener;
+    if (listener.forwardX) {
+      listener.forwardX.value = forwardX;
+      listener.forwardY.value = forwardY;
+      listener.forwardZ.value = forwardZ;
+      listener.upX.value = upX;
+      listener.upY.value = upY;
+      listener.upZ.value = upZ;
+    }
+  }
+
+  /**
+   * Play a sound at a 3D position using Panner3D.
+   * If the soundId already has an active source, it is stopped first.
+   */
+  playSpatial(
+    soundId: string,
+    position: [number, number, number],
+    options?: {
+      file?: string;
+      volume?: number;
+      loop?: boolean;
+      refDistance?: number;
+      maxDistance?: number;
+      rolloffFactor?: number;
+    },
+  ): void {
+    if (!this.isInitialized) return;
+    if (!useGameStore.getState().spatialAudioEnabled) return;
+
+    // Stop existing source for this ID
+    this.stopSpatial(soundId);
+
+    const file = options?.file;
+    if (!file) return;
+
+    const panner = new Tone.Panner3D({
+      positionX: position[0],
+      positionY: position[1],
+      positionZ: position[2],
+      refDistance: options?.refDistance ?? 1,
+      maxDistance: options?.maxDistance ?? 10,
+      rolloffFactor: options?.rolloffFactor ?? 1,
+      distanceModel: 'inverse',
+      panningModel: 'HRTF',
+    }).toDestination();
+
+    const url = getAssetUrl('audio', file);
+    const player = new Tone.Player({
+      url,
+      loop: options?.loop ?? false,
+      volume: options?.volume ?? -12,
+      onload: () => {
+        // Only start if still active
+        const current = this.spatialSources.get(soundId);
+        if (current?.player === player) {
+          player.start();
+        }
+      },
+      onerror: err => console.warn(`Failed to load spatial sound ${file}:`, err),
+    }).connect(panner);
+
+    this.spatialSources.set(soundId, {player, panner});
+  }
+
+  /** Stop and dispose a specific spatial sound source. */
+  stopSpatial(soundId: string): void {
+    const source = this.spatialSources.get(soundId);
+    if (source) {
+      try {
+        source.player.stop();
+      } catch {
+        // Player may not be started
+      }
+      source.player.dispose();
+      source.panner.dispose();
+      this.spatialSources.delete(soundId);
+    }
+  }
+
+  /** Start all configured spatial ambient sounds from audio.json. */
+  startSpatialAmbient(): void {
+    if (!this.isInitialized) return;
+    if (!useGameStore.getState().spatialAudioEnabled) return;
+
+    const spatialSounds = config.audio.spatialSounds;
+    if (!spatialSounds) return;
+
+    for (const [id, def] of Object.entries(spatialSounds)) {
+      this.playSpatial(id, def.position, {
+        file: def.file,
+        volume: def.volume,
+        loop: def.loop,
+        refDistance: def.refDistance,
+        maxDistance: def.maxDistance,
+        rolloffFactor: def.rolloffFactor,
+      });
+    }
+  }
+
+  /** Stop all spatial ambient sounds. */
+  stopSpatialAmbient(): void {
+    for (const id of this.spatialSources.keys()) {
+      this.stopSpatial(id);
+    }
+  }
+
   stopEngine() {
     if (this.currentSong) {
       this.currentSong.dispose();
@@ -406,7 +705,9 @@ class AudioEngine {
     }
     this.synths = [];
     this.stopAmbientDrone();
+    this.stopChallengeTrack();
     this.stopSampleLoop();
+    this.stopSpatialAmbient();
     for (const player of this.samples.values()) {
       player.dispose();
     }

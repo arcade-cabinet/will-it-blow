@@ -2,28 +2,44 @@
  * @module TitleScreen
  * Main menu screen styled as a hanging butcher shop sign.
  *
- * Displays the game title with a swinging sign animation, three menu options
- * (New Game, Continue, Settings), and a footer. The sign subtly sways on a
- * looped Animated timing sequence.
+ * Displays the game title with a swinging sign animation, three procedural
+ * sausage-shaped buttons (New Game, Load, Settings), and a footer. The sign
+ * subtly sways on a looped Animated timing sequence.
+ *
+ * Buttons are pure React Native components (no PNGs) — pill-shaped sausage
+ * bodies with googly eyes, a tiny mouth, and Bangers font labels. Hover/press
+ * state swaps to darker body tones.
  *
  * - **New Game**: Transitions to the loading phase (resets all state).
- * - **Continue**: Restores saved progress via `continueGame()` then loads.
- *   Disabled (grayed out) when no save data exists.
- * - **Settings**: Renders SettingsScreen in-place (replaces this component).
+ * - **Load**: Restores saved progress via `continueGame()` then loads.
+ *   Disabled (dimmed) when no save data exists.
+ * - **Settings**: Opens SettingsScreen in-place.
  */
 
 import {useCallback, useEffect, useRef, useState} from 'react';
-import {Animated, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {Animated, StyleSheet, Text, View} from 'react-native';
+import {useKeyboardNav} from '../../hooks/useKeyboardNav';
+import {useReducedMotion} from '../../hooks/useReducedMotion';
 import {useGameStore} from '../../store/gameStore';
+import {DifficultySelector} from './DifficultySelector';
+import {SausageButton} from './SausageButton';
 import {SettingsScreen} from './SettingsScreen';
 
-const MENU_ITEMS = ['NEW GAME', 'CONTINUE', 'SETTINGS'] as const;
-
 export function TitleScreen() {
-  const {setAppPhase, continueGame, currentChallenge, challengeScores} = useGameStore();
+  const setAppPhase = useGameStore(s => s.setAppPhase);
+  const continueGame = useGameStore(s => s.continueGame);
+  const startNewGame = useGameStore(s => s.startNewGame);
+  const setDifficulty = useGameStore(s => s.setDifficulty);
+  const currentChallenge = useGameStore(s => s.currentChallenge);
+  const challengeScores = useGameStore(s => s.challengeScores);
+  const currentRound = useGameStore(s => s.currentRound);
   const hasSaveData = challengeScores.length > 0 && currentChallenge < 5;
-  const [selectedIndex, setSelectedIndex] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
+  const [showDifficulty, setShowDifficulty] = useState(false);
+  const reducedMotion = useReducedMotion();
+
+  // Keyboard navigation — no Escape handler on the main menu
+  useKeyboardNav();
 
   // Fade-in animation
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -33,6 +49,12 @@ export function TitleScreen() {
   const swingAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    if (reducedMotion) {
+      fadeAnim.setValue(1);
+      slideAnim.setValue(0);
+      return;
+    }
+
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -61,7 +83,7 @@ export function TitleScreen() {
         }),
       ]),
     ).start();
-  }, [fadeAnim, slideAnim, swingAnim]);
+  }, [fadeAnim, slideAnim, swingAnim, reducedMotion]);
 
   const rotate = swingAnim.interpolate({
     inputRange: [-1, 1],
@@ -69,21 +91,31 @@ export function TitleScreen() {
   });
 
   const handleMenuPress = (index: number) => {
-    setSelectedIndex(index);
-    const item = MENU_ITEMS[index];
-    if (item === 'NEW GAME') {
-      setAppPhase('loading');
-    } else if (item === 'CONTINUE' && hasSaveData) {
+    if (index === 0) {
+      setShowDifficulty(true);
+    } else if (index === 1 && hasSaveData) {
       // Restore saved progress before entering loading phase.
       // LoadingScreen only handles asset preloading — it doesn't touch game state.
       continueGame();
       setAppPhase('loading');
-    } else if (item === 'SETTINGS') {
-      setShowSettings(true);
     }
+    // index === 2 (quit/settings) is handled inline via setShowSettings
   };
 
+  const handleDifficultySelect = useCallback(
+    (tierId: string) => {
+      setDifficulty(tierId);
+      startNewGame();
+      setAppPhase('loading');
+    },
+    [setDifficulty, startNewGame, setAppPhase],
+  );
+  const handleDifficultyBack = useCallback(() => setShowDifficulty(false), []);
   const handleSettingsBack = useCallback(() => setShowSettings(false), []);
+
+  if (showDifficulty) {
+    return <DifficultySelector onSelect={handleDifficultySelect} onBack={handleDifficultyBack} />;
+  }
 
   if (showSettings) {
     return <SettingsScreen onBack={handleSettingsBack} />;
@@ -98,9 +130,11 @@ export function TitleScreen() {
           transform: [{translateY: slideAnim}],
         },
       ]}
+      accessibilityRole="summary"
+      accessibilityLabel="Will It Blow main menu"
     >
       {/* Butcher shop sign */}
-      <Animated.View style={[styles.sign, {transform: [{rotate}]}]}>
+      <Animated.View style={[styles.sign, reducedMotion ? undefined : {transform: [{rotate}]}]}>
         {/* Hanging chains */}
         <View style={styles.chainRow}>
           <View style={styles.chain} />
@@ -110,49 +144,41 @@ export function TitleScreen() {
         <View style={styles.signBoard}>
           {/* Outer border */}
           <View style={styles.signInner}>
-            <Text style={styles.established}>Est. 1974</Text>
-            <Text style={styles.title}>WILL IT{'\n'}BLOW?</Text>
+            <Text style={styles.established} accessibilityRole="text">
+              Est. 1974
+            </Text>
+            <Text style={styles.title} accessibilityRole="header">
+              WILL IT{'\n'}BLOW?
+            </Text>
             <View style={styles.divider} />
-            <Text style={styles.tagline}>Fine Meats & Sausages</Text>
+            <Text style={styles.tagline} accessibilityRole="text">
+              Fine Meats & Sausages
+            </Text>
           </View>
         </View>
       </Animated.View>
 
-      {/* Menu items */}
-      <View style={styles.menuContainer}>
-        {MENU_ITEMS.map((item, index) => {
-          const isDisabled = item === 'CONTINUE' && !hasSaveData;
-          const isSelected = selectedIndex === index;
-
-          return (
-            <TouchableOpacity
-              key={item}
-              style={styles.menuItem}
-              onPress={() => handleMenuPress(index)}
-              onPressIn={() => {
-                if (!isDisabled) setSelectedIndex(index);
-              }}
-              disabled={isDisabled}
-              activeOpacity={0.7}
+      {/* Menu buttons — procedural sausage-shaped RN components */}
+      <View style={styles.menuContainer} accessibilityRole="menu">
+        <SausageButton label="NEW GAME" onPress={() => handleMenuPress(0)} />
+        <View style={styles.loadButtonGroup}>
+          <SausageButton label="LOAD" onPress={() => handleMenuPress(1)} disabled={!hasSaveData} />
+          {hasSaveData && (
+            <Text
+              style={styles.roundSubtitle}
+              accessibilityLabel={`Last played round ${currentRound}`}
             >
-              <Text style={styles.marker}>{isSelected && !isDisabled ? '\u25B8 ' : '  '}</Text>
-              <Text
-                style={[
-                  styles.menuText,
-                  isDisabled && styles.menuTextDisabled,
-                  isSelected && !isDisabled && styles.menuTextSelected,
-                ]}
-              >
-                {item}
-                {item === 'CONTINUE' && hasSaveData ? ` (${currentChallenge + 1}/5)` : ''}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+              Last played: Round {currentRound}
+            </Text>
+          )}
+        </View>
+        <SausageButton label="SETTINGS" onPress={() => setShowSettings(true)} />
       </View>
 
       {/* Footer */}
-      <Text style={styles.footer}>Mr. Sausage's Fine Meats & Sausages</Text>
+      <Text style={styles.footer} accessibilityRole="text">
+        Mr. Sausage's Fine Meats & Sausages
+      </Text>
     </Animated.View>
   );
 }
@@ -231,36 +257,18 @@ const styles = StyleSheet.create({
     letterSpacing: 3,
   },
   menuContainer: {
-    width: '100%',
-    maxWidth: 280,
-    gap: 8,
-  },
-  menuItem: {
-    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
   },
-  marker: {
-    fontFamily: 'Bangers',
-    fontSize: 22,
-    color: '#FF1744',
-    width: 28,
+  loadButtonGroup: {
+    alignItems: 'center',
   },
-  menuText: {
+  roundSubtitle: {
     fontFamily: 'Bangers',
-    fontSize: 24,
-    color: '#CCBBAA',
+    fontSize: 13,
+    color: '#8a6a3a',
     letterSpacing: 2,
-  },
-  menuTextDisabled: {
-    color: '#444',
-  },
-  menuTextSelected: {
-    color: '#FFFFFF',
-    textShadowColor: 'rgba(255, 255, 255, 0.15)',
-    textShadowOffset: {width: 0, height: 0},
-    textShadowRadius: 8,
+    marginTop: -4,
+    marginBottom: 4,
   },
   footer: {
     fontFamily: 'Bangers',

@@ -1,0 +1,11 @@
+{
+  "stations": [
+    { "stationName": "fridge", "challengeType": "ingredients" },
+    { "stationName": "cutting-board", "challengeType": "chopping" },
+    { "stationName": "grinder", "challengeType": "grinding" },
+    { "stationName": "stuffer", "challengeType": "stuffing" },
+    { "stationName": "stove", "challengeType": "cooking" },
+    { "stationName": "dining-table", "challengeType": "blowout" },
+    { "stationName": "crt-tv", "challengeType": "tasting" }
+  ]
+}

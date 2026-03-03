@@ -1,4 +1,4 @@
-name: CI — Lint & Test
+name: CI
 
 on:
   push:
@@ -6,13 +6,16 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  test:
-    name: Lint & Test
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,7 +26,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 20
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
@@ -31,8 +34,62 @@ jobs:
       - name: Biome lint & format check
         run: pnpm lint
 
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
       - name: Type check
         run: pnpm typecheck
 
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
       - name: Run tests
         run: pnpm test:ci
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Export static web build
+        run: npx expo export --platform web

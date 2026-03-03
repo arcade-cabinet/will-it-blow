@@ -52,6 +52,23 @@ export interface Ingredient {
   color: string;
   /** 3D shape descriptor used by Ingredient3D to select the mesh geometry */
   shape: IngredientShape;
+  /** Optional path to a GLB model (relative to public/models/ingredients/). Falls back to procedural shape if absent. */
+  glbPath?: string;
+  /** Whether this ingredient works better as coil, link, or either */
+  formAffinity: 'coil' | 'link' | 'neutral';
+  /** How the ingredient decomposes when ground */
+  decomposition: {
+    /** Color of chunks when broken apart in the grinder */
+    chunkColor: string;
+    /** Size multiplier for chunks (1.0 = standard) */
+    chunkScale: number;
+    /** How many chunks the ingredient breaks into (4-12) */
+    chunkCount: number;
+    /** Color contribution to the ground meat blend */
+    groundColor: string;
+    /** Fat ratio (0-1) for ground meat texture appearance */
+    fatRatio: number;
+  };
 }
 
 /**
@@ -75,6 +92,15 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 2,
     color: '#D4A017',
     shape: {base: 'box', detail: 'rounded'},
+    glbPath: 'burger.glb',
+    formAffinity: 'link',
+    decomposition: {
+      chunkColor: '#D4A017',
+      chunkScale: 1.0,
+      chunkCount: 8,
+      groundColor: '#B8860B',
+      fatRatio: 0.6,
+    },
   },
   {
     name: 'SpaghettiOs',
@@ -86,6 +112,14 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 4,
     color: '#E85D2C',
     shape: {base: 'sphere', detail: 'wobbly'},
+    formAffinity: 'neutral',
+    decomposition: {
+      chunkColor: '#E85D2C',
+      chunkScale: 0.5,
+      chunkCount: 10,
+      groundColor: '#D4654A',
+      fatRatio: 0.3,
+    },
   },
   {
     name: 'Lobster',
@@ -97,6 +131,15 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 1,
     color: '#C41E3A',
     shape: {base: 'elongated', detail: 'claws'},
+    glbPath: 'fish.glb',
+    formAffinity: 'coil',
+    decomposition: {
+      chunkColor: '#C41E3A',
+      chunkScale: 1.5,
+      chunkCount: 6,
+      groundColor: '#D4796B',
+      fatRatio: 0.2,
+    },
   },
   {
     name: 'Water',
@@ -108,6 +151,14 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 5,
     color: '#4FC3F7',
     shape: {base: 'sphere', detail: 'wobbly'},
+    formAffinity: 'neutral',
+    decomposition: {
+      chunkColor: '#4FC3F7',
+      chunkScale: 0.3,
+      chunkCount: 12,
+      groundColor: '#A0C4E0',
+      fatRatio: 0.0,
+    },
   },
   {
     name: 'Air',
@@ -119,6 +170,14 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 0,
     color: '#E0E0E0',
     shape: {base: 'sphere'},
+    formAffinity: 'neutral',
+    decomposition: {
+      chunkColor: '#E0E0E0',
+      chunkScale: 0.2,
+      chunkCount: 12,
+      groundColor: '#D0D0D0',
+      fatRatio: 0.0,
+    },
   },
   {
     name: 'Candy Cane',
@@ -130,6 +189,15 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 2,
     color: '#FF1744',
     shape: {base: 'cone'},
+    glbPath: 'donut.glb',
+    formAffinity: 'link',
+    decomposition: {
+      chunkColor: '#FF1744',
+      chunkScale: 0.8,
+      chunkCount: 6,
+      groundColor: '#E8A0A0',
+      fatRatio: 0.1,
+    },
   },
   {
     name: 'Carolina Reaper',
@@ -141,6 +209,15 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 3,
     color: '#B71C1C',
     shape: {base: 'small-sphere'},
+    glbPath: 'pepper_red.glb',
+    formAffinity: 'link',
+    decomposition: {
+      chunkColor: '#B71C1C',
+      chunkScale: 0.6,
+      chunkCount: 8,
+      groundColor: '#C43030',
+      fatRatio: 0.1,
+    },
   },
   {
     name: 'Chicken Soup',
@@ -152,6 +229,15 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 3,
     color: '#FFC107',
     shape: {base: 'sphere', detail: 'wobbly'},
+    glbPath: 'chickenleg.glb',
+    formAffinity: 'neutral',
+    decomposition: {
+      chunkColor: '#FFC107',
+      chunkScale: 0.7,
+      chunkCount: 10,
+      groundColor: '#D4A860',
+      fatRatio: 0.4,
+    },
   },
   {
     name: "Elmer's Glue",
@@ -163,6 +249,14 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 1,
     color: '#FAFAFA',
     shape: {base: 'cylinder'},
+    formAffinity: 'neutral',
+    decomposition: {
+      chunkColor: '#FAFAFA',
+      chunkScale: 0.5,
+      chunkCount: 10,
+      groundColor: '#E8E8E8',
+      fatRatio: 0.0,
+    },
   },
   {
     name: 'Beef Wellington',
@@ -174,6 +268,15 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 2,
     color: '#8D6E63',
     shape: {base: 'box', detail: 'rounded'},
+    glbPath: 'steak.glb',
+    formAffinity: 'coil',
+    decomposition: {
+      chunkColor: '#8D6E63',
+      chunkScale: 1.2,
+      chunkCount: 6,
+      groundColor: '#9C7A6E',
+      fatRatio: 0.5,
+    },
   },
   {
     name: 'Habanero',
@@ -185,6 +288,15 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 3,
     color: '#FF6D00',
     shape: {base: 'small-sphere'},
+    glbPath: 'pepper_green.glb',
+    formAffinity: 'link',
+    decomposition: {
+      chunkColor: '#FF6D00',
+      chunkScale: 0.5,
+      chunkCount: 8,
+      groundColor: '#D4800A',
+      fatRatio: 0.1,
+    },
   },
   {
     name: 'Jawbreaker',
@@ -196,6 +308,14 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 1,
     color: '#E040FB',
     shape: {base: 'small-sphere'},
+    formAffinity: 'link',
+    decomposition: {
+      chunkColor: '#E040FB',
+      chunkScale: 0.4,
+      chunkCount: 4,
+      groundColor: '#C070D0',
+      fatRatio: 0.0,
+    },
   },
   {
     name: 'Pad Thai',
@@ -207,6 +327,14 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 3,
     color: '#FF8A65',
     shape: {base: 'sphere', detail: 'wobbly'},
+    formAffinity: 'coil',
+    decomposition: {
+      chunkColor: '#FF8A65',
+      chunkScale: 0.8,
+      chunkCount: 8,
+      groundColor: '#D4946A',
+      fatRatio: 0.3,
+    },
   },
   {
     name: 'Taco Bell Crunchwrap',
@@ -218,6 +346,15 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 2,
     color: '#7B1FA2',
     shape: {base: 'cylinder', detail: 'flat'},
+    glbPath: 'banana.glb',
+    formAffinity: 'link',
+    decomposition: {
+      chunkColor: '#7B1FA2',
+      chunkScale: 1.0,
+      chunkCount: 8,
+      groundColor: '#8A5090',
+      fatRatio: 0.5,
+    },
   },
   {
     name: 'Cotton Candy',
@@ -229,6 +366,14 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 4,
     color: '#F48FB1',
     shape: {base: 'sphere'},
+    formAffinity: 'neutral',
+    decomposition: {
+      chunkColor: '#F48FB1',
+      chunkScale: 0.3,
+      chunkCount: 12,
+      groundColor: '#E8B0C0',
+      fatRatio: 0.0,
+    },
   },
   {
     name: 'Vanilla Cake',
@@ -240,6 +385,15 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 2,
     color: '#FFF9C4',
     shape: {base: 'cylinder'},
+    glbPath: 'cake.glb',
+    formAffinity: 'link',
+    decomposition: {
+      chunkColor: '#FFF9C4',
+      chunkScale: 0.8,
+      chunkCount: 8,
+      groundColor: '#E8D8A0',
+      fatRatio: 0.3,
+    },
   },
   {
     name: 'Pizza',
@@ -251,6 +405,15 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 3,
     color: '#F57C00',
     shape: {base: 'cylinder', detail: 'flat'},
+    glbPath: 'pizza_slice.glb',
+    formAffinity: 'link',
+    decomposition: {
+      chunkColor: '#F57C00',
+      chunkScale: 1.0,
+      chunkCount: 8,
+      groundColor: '#D48030',
+      fatRatio: 0.5,
+    },
   },
   {
     name: 'Dirt',
@@ -262,6 +425,14 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 1,
     color: '#5D4037',
     shape: {base: 'irregular'},
+    formAffinity: 'neutral',
+    decomposition: {
+      chunkColor: '#5D4037',
+      chunkScale: 2.0,
+      chunkCount: 4,
+      groundColor: '#555555',
+      fatRatio: 0.1,
+    },
   },
   {
     name: 'Rice Crispy Treat',
@@ -273,6 +444,14 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 2,
     color: '#FFE082',
     shape: {base: 'box'},
+    formAffinity: 'link',
+    decomposition: {
+      chunkColor: '#FFE082',
+      chunkScale: 0.6,
+      chunkCount: 10,
+      groundColor: '#D8C870',
+      fatRatio: 0.2,
+    },
   },
   {
     name: 'Sushi Party Tray',
@@ -284,6 +463,15 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 2,
     color: '#EF5350',
     shape: {base: 'box', detail: 'rounded'},
+    glbPath: 'fish.glb',
+    formAffinity: 'coil',
+    decomposition: {
+      chunkColor: '#EF5350',
+      chunkScale: 1.0,
+      chunkCount: 8,
+      groundColor: '#D06060',
+      fatRatio: 0.3,
+    },
   },
   {
     name: 'Hot Pocket',
@@ -295,6 +483,14 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 3,
     color: '#1565C0',
     shape: {base: 'box', detail: 'rounded'},
+    formAffinity: 'link',
+    decomposition: {
+      chunkColor: '#1565C0',
+      chunkScale: 1.0,
+      chunkCount: 6,
+      groundColor: '#6080B0',
+      fatRatio: 0.5,
+    },
   },
   {
     name: 'Menthol Cough Drop',
@@ -306,6 +502,14 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 2,
     color: '#00BFA5',
     shape: {base: 'small-sphere'},
+    formAffinity: 'link',
+    decomposition: {
+      chunkColor: '#00BFA5',
+      chunkScale: 0.3,
+      chunkCount: 6,
+      groundColor: '#60A090',
+      fatRatio: 0.0,
+    },
   },
   {
     name: 'Mac & Cheese',
@@ -317,6 +521,15 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 3,
     color: '#FFCA28',
     shape: {base: 'sphere', detail: 'wobbly'},
+    glbPath: 'cheese_singles.glb',
+    formAffinity: 'neutral',
+    decomposition: {
+      chunkColor: '#FFCA28',
+      chunkScale: 0.7,
+      chunkCount: 10,
+      groundColor: '#D4A830',
+      fatRatio: 0.5,
+    },
   },
   {
     name: 'Corn Dog',
@@ -328,6 +541,15 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 2,
     color: '#F9A825',
     shape: {base: 'elongated'},
+    glbPath: 'corndog.glb',
+    formAffinity: 'coil',
+    decomposition: {
+      chunkColor: '#F9A825',
+      chunkScale: 1.2,
+      chunkCount: 6,
+      groundColor: '#C89020',
+      fatRatio: 0.4,
+    },
   },
   {
     name: 'A Shoe',
@@ -339,6 +561,14 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 1,
     color: '#616161',
     shape: {base: 'irregular'},
+    formAffinity: 'neutral',
+    decomposition: {
+      chunkColor: '#616161',
+      chunkScale: 2.0,
+      chunkCount: 4,
+      groundColor: '#555555',
+      fatRatio: 0.1,
+    },
   },
   {
     name: 'Gummy Bears',
@@ -350,6 +580,14 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 3,
     color: '#E53935',
     shape: {base: 'small-sphere'},
+    formAffinity: 'link',
+    decomposition: {
+      chunkColor: '#E53935',
+      chunkScale: 0.4,
+      chunkCount: 10,
+      groundColor: '#D06060',
+      fatRatio: 0.1,
+    },
   },
 ];
 

@@ -65,12 +65,12 @@ describe('GameWorld', () => {
     // Manual ProximityTrigger replaced (native fallback renamed)
     expect(source).not.toContain('function ProximityTrigger');
     expect(source).not.toContain('STATION_TRIGGERS');
-    // Should reference all 5 station components
+    // Fridge + CRT are station-level components; all three machines use ECS orchestrators
     expect(source).toContain('FridgeStation');
-    expect(source).toContain('GrinderStation');
-    expect(source).toContain('StufferStation');
-    expect(source).toContain('StoveStation');
     expect(source).toContain('CrtTelevision');
+    expect(source).toContain('GrinderOrchestrator');
+    expect(source).toContain('StufferOrchestrator');
+    expect(source).toContain('CookingOrchestrator');
   });
 
   it('derives station positions from FurnitureLayout targets (not hardcoded)', () => {
@@ -79,7 +79,7 @@ describe('GameWorld', () => {
     const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
     // Should import from FurnitureLayout
     expect(source).toContain('FurnitureLayout');
-    expect(source).toContain('resolveTargets');
+    expect(source).toContain('resolveLayout');
     expect(source).toContain('STATION_TARGET_NAMES');
     // Uses RESOLVED_TARGETS / STATIONS instead of old STATION_TRIGGERS
     expect(source).toContain('RESOLVED_TARGETS');
@@ -87,16 +87,17 @@ describe('GameWorld', () => {
     expect(source).not.toMatch(/center:\s*\[\s*-?\d+\.\d+\s*,\s*-?\d+\.\d+\s*\]/);
   });
 
-  it('passes position props to station components from STATIONS array', () => {
+  it('passes position props to station/mechanics components from STATIONS array', () => {
     const fs = require('node:fs');
     const path = require('node:path');
     const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
-    // All stations should receive position from STATIONS (resolved targets)
+    // FridgeStation, ChoppingOrchestrator, GrinderOrchestrator, StufferOrchestrator, CookingOrchestrator, CrtTelevision
     expect(source).toContain('position={STATIONS[0].position}');
     expect(source).toContain('position={STATIONS[1].position}');
     expect(source).toContain('position={STATIONS[2].position}');
     expect(source).toContain('position={STATIONS[3].position}');
     expect(source).toContain('position={STATIONS[4].position}');
+    expect(source).toContain('position={STATIONS[5].position}');
   });
 
   it('keeps a ManualProximityTrigger fallback for native platforms', () => {
@@ -108,19 +109,100 @@ describe('GameWorld', () => {
     expect(source).toContain('Platform.OS');
   });
 
-  it('supports inter-station physics flow with dynamic bowl and sausage', () => {
+  it('orchestrators are visual-only (no completion callbacks) and GrabSystem is present', () => {
     const fs = require('node:fs');
     const path = require('node:path');
     const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
-    // Dynamic bowl positioning from store state (bowl loaded via FurnitureLoader)
-    expect(source).toContain('bowlPosition');
-    // Sausage spawning after stuffer challenge
-    expect(source).toContain('GrabbableSausage');
-    expect(source).toContain('sausagePlaced');
-    // StoveStation receives onSausagePlaced callback
-    expect(source).toContain('onSausagePlaced');
-    expect(source).toContain('handleSausagePlaced');
+    // Orchestrators should NOT have completion callback props — they are visual-only
+    expect(source).not.toContain('onGrindComplete');
+    expect(source).not.toContain('onStuffComplete');
+    expect(source).not.toContain('onCookComplete');
     // GrabSystem for carry mechanics
     expect(source).toContain('GrabSystem');
+    // TransferBowl reads bowl state from store directly
+    expect(source).toContain('TransferBowl');
+  });
+});
+
+describe('GameWorld VR head tracking + stereo rendering', () => {
+  it('imports useXR and XROrigin from @react-three/xr', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
+    expect(source).toContain('useXR');
+    expect(source).toContain('XROrigin');
+    expect(source).toContain("from '@react-three/xr'");
+  });
+
+  it('WebGLOnlyEffects checks XR mode and disables postprocessing in XR', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
+    // WebGLOnlyEffects should read xr.mode
+    expect(source).toContain('xr => xr.mode');
+    // Should check for immersive modes and return null
+    expect(source).toContain("'immersive-vr'");
+    expect(source).toContain("'immersive-ar'");
+  });
+
+  it('has XROriginWrapper component for seated mode support', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
+    expect(source).toContain('XROriginWrapper');
+    expect(source).toContain('xrSeatedMode');
+    // Should only render when XR is active
+    expect(source).toContain("xrMode !== 'immersive-vr'");
+  });
+
+  it('XROriginWrapper renders XROrigin with seated offset', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
+    // Seated mode applies a Y offset to the origin
+    expect(source).toContain('seatedOffset');
+    expect(source).toContain('<XROrigin position={seatedOffset}');
+  });
+
+  it('SceneContent includes XROriginWrapper', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
+    expect(source).toContain('<XROriginWrapper');
+  });
+});
+
+describe('GameWorld AR support', () => {
+  it('imports ARPlacement component', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
+    expect(source).toContain('ARPlacement');
+    expect(source).toContain("'./controls/ARPlacement'");
+  });
+
+  it('creates XR store with AR optional features', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
+    expect(source).toContain('hitTest: true');
+    expect(source).toContain('domOverlay: true');
+    expect(source).toContain('anchors: true');
+  });
+
+  it('XRAutoEntry handles both VR and AR modes', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
+    expect(source).toContain('arEnabled');
+    expect(source).toContain('xrStore.enterAR()');
+    expect(source).toContain('xrStore.enterVR()');
+  });
+
+  it('Canvas supports alpha for AR transparency', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
+    expect(source).toContain('alpha: arEnabled');
   });
 });

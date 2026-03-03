@@ -16,36 +16,54 @@
 
 import {useEffect, useRef} from 'react';
 import {Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {config} from '../../config';
 import {audioEngine} from '../../engine/AudioEngine';
 import {calculateFinalVerdict} from '../../engine/ChallengeRegistry';
+import {useKeyboardNav} from '../../hooks/useKeyboardNav';
+import {useOrientation} from '../../hooks/useOrientation';
+import {useReducedMotion} from '../../hooks/useReducedMotion';
 import {useGameStore} from '../../store/gameStore';
 
-const CHALLENGE_NAMES = ['Ingredients', 'Grinding', 'Stuffing', 'Cooking', 'Tasting'];
+const CHALLENGE_NAMES = config.scene.challengeSequence.stations.map(
+  s => s.challengeType.charAt(0).toUpperCase() + s.challengeType.slice(1),
+);
 
 export function GameOverScreen() {
   const {gameStatus, challengeScores, returnToMenu, setAppPhase} = useGameStore();
+  const {width, isLandscape} = useOrientation();
+  const isTablet = width >= 768;
+  const contentMaxWidth = isTablet ? 560 : 420;
   const isVictory = gameStatus === 'victory';
   const verdict = isVictory ? calculateFinalVerdict(challengeScores) : null;
+  const reducedMotion = useReducedMotion();
+
+  // Escape returns to menu
+  useKeyboardNav({onEscape: returnToMenu});
 
   // Rank scale-in animation
   const rankScale = useRef(new Animated.Value(0.3)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.spring(rankScale, {
-        toValue: 1,
-        friction: 5,
-        tension: 60,
-        useNativeDriver: true,
-        delay: 300,
-      }),
-    ]).start();
+    if (reducedMotion) {
+      fadeAnim.setValue(1);
+      rankScale.setValue(1);
+    } else {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.spring(rankScale, {
+          toValue: 1,
+          friction: 5,
+          tension: 60,
+          useNativeDriver: true,
+          delay: 300,
+        }),
+      ]).start();
+    }
 
     // Play rating song based on outcome
     const ratingMap: Record<string, number> = {S: 5, A: 3, B: 2, F: 0};
@@ -55,7 +73,7 @@ export function GameOverScreen() {
     } else {
       audioEngine.playRatingSong(0);
     }
-  }, [fadeAnim, rankScale, isVictory, challengeScores]);
+  }, [fadeAnim, rankScale, isVictory, challengeScores, reducedMotion]);
 
   const rankColor =
     verdict?.rank === 'S'
@@ -68,8 +86,11 @@ export function GameOverScreen() {
 
   return (
     <Animated.View style={[styles.overlay, {opacity: fadeAnim}]}>
-      <ScrollView contentContainerStyle={styles.scrollContent} style={styles.scrollView}>
-        <View style={styles.content}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, isLandscape && styles.scrollContentLandscape]}
+        style={styles.scrollView}
+      >
+        <View style={[styles.content, {maxWidth: contentMaxWidth}]}>
           {isVictory && verdict ? (
             <>
               {/* Rank letter */}
@@ -82,18 +103,25 @@ export function GameOverScreen() {
                     textShadowColor: rankColor,
                   },
                 ]}
+                accessibilityRole="text"
+                accessibilityLabel={`Rank ${verdict.rank}`}
               >
                 {verdict.rank}
               </Animated.Text>
 
               {/* Title */}
-              <Text style={styles.verdictTitle}>{verdict.title}</Text>
+              <Text style={styles.verdictTitle} accessibilityRole="header">
+                {verdict.title}
+              </Text>
 
               {/* Message */}
               <Text style={styles.verdictMessage}>{verdict.message}</Text>
 
               {/* Average score */}
-              <View style={styles.scoreCard}>
+              <View
+                style={styles.scoreCard}
+                accessibilityLabel={`Average score ${Math.round(verdict.averageScore)}`}
+              >
                 <Text style={styles.scoreLabel}>AVERAGE SCORE</Text>
                 <Text style={[styles.scoreValue, {color: rankColor}]}>
                   {Math.round(verdict.averageScore)}
@@ -115,7 +143,9 @@ export function GameOverScreen() {
           ) : (
             <>
               {/* Defeat — show rank if we have scores (A/B/F) */}
-              <Text style={styles.gameOverTitle}>GAME OVER</Text>
+              <Text style={styles.gameOverTitle} accessibilityRole="header">
+                GAME OVER
+              </Text>
               {challengeScores.length > 0 &&
                 (() => {
                   const defeatVerdict = calculateFinalVerdict(challengeScores);
@@ -156,11 +186,19 @@ export function GameOverScreen() {
               style={styles.newGameButton}
               onPress={() => setAppPhase('loading')}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Start new game"
             >
               <Text style={styles.buttonText}>NEW GAME</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.menuButton} onPress={returnToMenu} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.menuButton}
+              onPress={returnToMenu}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Return to main menu"
+            >
               <Text style={styles.menuButtonText}>MENU</Text>
             </TouchableOpacity>
           </View>
@@ -184,6 +222,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 40,
+  },
+  scrollContentLandscape: {
+    paddingVertical: 20,
   },
   content: {
     alignItems: 'center',

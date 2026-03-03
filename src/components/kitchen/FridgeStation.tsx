@@ -18,12 +18,15 @@
  * - Native: Manual position animation in useFrame
  */
 
+import {useGLTF} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
 import type {RapierRigidBody} from '@react-three/rapier';
 import {BallCollider, CuboidCollider, RigidBody} from '@react-three/rapier';
-import {useRef} from 'react';
+import {Suspense, useMemo, useRef} from 'react';
 import {Platform} from 'react-native';
 import * as THREE from 'three/webgpu';
+import {config} from '../../config';
+import {getAssetUrl} from '../../engine/assetUrl';
 import type {Ingredient} from '../../engine/Ingredients';
 
 /**
@@ -45,16 +48,19 @@ interface FridgeStationProps {
   onHover: (index: number | null) => void;
 }
 
-const FRIDGE_W = 1.01; // x
-const FRIDGE_H = 2.92; // y
-const FRIDGE_D = 1.42; // z
+// Constants from centralized config
+const {
+  fridgeWidth: FRIDGE_W,
+  fridgeHeight: FRIDGE_H,
+  fridgeDepth: FRIDGE_D,
+  shelfYPositions: SHELF_Y_POSITIONS,
+  ingredientDiameter: INGREDIENT_DIAMETER,
+  ingredientColliderPadding,
+  shelfTiers: SHELF_TIER,
+  maxSpacing: MAX_SPACING,
+  zOffset: Z_OFFSET,
+} = config.scene.fridge;
 const HALF_D = FRIDGE_D / 2;
-
-const SHELF_COUNT = 3;
-// Shelf Y offsets from fridge center (spread across the 2.92-unit height)
-const SHELF_Y_POSITIONS = [-0.8, 0.0, 0.8];
-const ITEMS_PER_SHELF = 4;
-const INGREDIENT_DIAMETER = 0.28;
 
 /** Converts a hex color string to a THREE.Color. */
 function hexToThreeColor(hex: string): THREE.Color {
@@ -97,6 +103,33 @@ function FridgeShelf({y}: {y: number}) {
 }
 
 // -------------------------------------------------------
+// GlbIngredientGeometry — loads a GLB model and scales it to fit INGREDIENT_DIAMETER
+// -------------------------------------------------------
+
+function GlbIngredientGeometry({glbPath}: {glbPath: string}) {
+  const url = getAssetUrl('models', `ingredients/${glbPath}`);
+  const {scene} = useGLTF(url);
+  const cloned = useMemo(() => {
+    const c = scene.clone(true);
+    // Normalize scale to fit within INGREDIENT_DIAMETER bounding sphere
+    const box = new THREE.Box3().setFromObject(c);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    const maxDim = Math.max(size.x, size.y, size.z);
+    if (maxDim > 0) {
+      const scale = INGREDIENT_DIAMETER / maxDim;
+      c.scale.multiplyScalar(scale);
+    }
+    // Center the model
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+    c.position.sub(center.multiplyScalar(c.scale.x));
+    return c;
+  }, [scene]);
+
+  return <primitive object={cloned} />;
+}
+
 // IngredientMesh — PBR clickable ingredient on shelf
 // -------------------------------------------------------
 
@@ -111,7 +144,7 @@ interface IngredientMeshProps {
 }
 
 /** Radius for the BallCollider wrapping each ingredient (slightly larger than visual). */
-const INGREDIENT_COLLIDER_RADIUS = INGREDIENT_DIAMETER / 2 + 0.02;
+const INGREDIENT_COLLIDER_RADIUS = INGREDIENT_DIAMETER / 2 + ingredientColliderPadding;
 
 function IngredientMesh({
   index,
@@ -278,6 +311,13 @@ function IngredientMesh({
         emissive={ingredient.color}
         emissiveIntensity={0.15}
       />
+      {/* GLB model overlay — when glbPath exists, render the loaded model as a child.
+          The procedural geometry stays as the collision/click target + material host. */}
+      {ingredient.glbPath && (
+        <Suspense fallback={null}>
+          <GlbIngredientGeometry glbPath={ingredient.glbPath} />
+        </Suspense>
+      )}
     </mesh>
   );
 
@@ -311,6 +351,16 @@ export const FridgeStation = ({
   onSelect,
   onHover,
 }: FridgeStationProps) => {
+  // Group ingredients by category into shelf tiers, preserving original indices
+  const shelfGroups = useMemo(() => {
+    const tiers: Array<Array<{ingredient: Ingredient; originalIndex: number}>> = [[], [], []];
+    for (let i = 0; i < ingredients.length; i++) {
+      const tier = SHELF_TIER[ingredients[i].category] ?? 2;
+      tiers[tier].push({ingredient: ingredients[i], originalIndex: i});
+    }
+    return tiers;
+  }, [ingredients]);
+
   return (
     <group position={position}>
       {/* Interior fridge lighting — cool white glow from top and middle shelf */}
@@ -340,31 +390,28 @@ export const FridgeStation = ({
         <meshStandardMaterial color="#eae8e0" roughness={0.8} metalness={0.0} />
       </mesh>
 
-      {/* Ingredients on shelves */}
-      {ingredients.map((ingredient, i) => {
-        const shelfIndex = Math.floor(i / ITEMS_PER_SHELF) % SHELF_COUNT;
-        const slotIndex = i % ITEMS_PER_SHELF;
+      {/* Ingredients on shelves — grouped by category tier */}
+      {shelfGroups.map((group, shelfIndex) =>
+        group.map((entry, slotIndex) => {
+          const availableWidth = FRIDGE_W - 0.16;
+          const spacing = Math.min(MAX_SPACING, availableWidth / Math.max(group.length, 1));
+          const xOffset = (slotIndex - (group.length - 1) / 2) * spacing;
+          const shelfY = SHELF_Y_POSITIONS[shelfIndex] + INGREDIENT_DIAMETER / 2 + 0.012;
 
-        // Spread items across the fridge width (~1.0 unit wide)
-        const xOffset = (slotIndex - (ITEMS_PER_SHELF - 1) / 2) * 0.24;
-        // Place on shelf + half diameter clearance above shelf surface
-        const shelfY = SHELF_Y_POSITIONS[shelfIndex] + INGREDIENT_DIAMETER / 2 + 0.012;
-        // Push forward toward fridge opening so they're visible
-        const zOffset = 0.25;
-
-        return (
-          <IngredientMesh
-            key={i}
-            index={i}
-            ingredient={ingredient}
-            position={[xOffset, shelfY, zOffset]}
-            isSelected={selectedIds.has(i)}
-            isHinted={hintActive && matchingIndices.has(i)}
-            onSelect={onSelect}
-            onHover={onHover}
-          />
-        );
-      })}
+          return (
+            <IngredientMesh
+              key={entry.originalIndex}
+              index={entry.originalIndex}
+              ingredient={entry.ingredient}
+              position={[xOffset, shelfY, Z_OFFSET]}
+              isSelected={selectedIds.has(entry.originalIndex)}
+              isHinted={hintActive && matchingIndices.has(entry.originalIndex)}
+              onSelect={onSelect}
+              onHover={onHover}
+            />
+          );
+        }),
+      )}
     </group>
   );
 };

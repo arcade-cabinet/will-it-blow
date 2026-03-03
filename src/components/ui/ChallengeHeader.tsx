@@ -25,11 +25,16 @@ export function ChallengeHeader() {
   const config = getChallengeConfig(challengeId);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.challengeNumber}>
+    <View
+      style={styles.container}
+      accessibilityLabel={`Challenge ${currentChallenge + 1} of ${CHALLENGE_ORDER.length}: ${config.name}`}
+    >
+      <Text style={styles.challengeNumber} accessibilityRole="text">
         CHALLENGE {currentChallenge + 1}/{CHALLENGE_ORDER.length}
       </Text>
-      <Text style={styles.challengeName}>{config.name}</Text>
+      <Text style={styles.challengeName} accessibilityRole="header">
+        {config.name}
+      </Text>
     </View>
   );
 }

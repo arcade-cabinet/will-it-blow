@@ -1,0 +1,10 @@
+export type {ButtonConfig} from './buttonSlots';
+export {buttonSlots} from './buttonSlots';
+export type {CrankConfig} from './crankSlots';
+export {crankSlots} from './crankSlots';
+export type {DialConfig} from './dialSlots';
+export {dialSlots} from './dialSlots';
+export type {PlungerConfig} from './plungerSlots';
+export {plungerSlots} from './plungerSlots';
+export type {SwitchConfig} from './switchSlots';
+export {switchSlots} from './switchSlots';

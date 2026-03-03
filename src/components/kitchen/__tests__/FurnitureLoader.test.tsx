@@ -1,6 +1,17 @@
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import {DEFAULT_ROOM, FURNITURE_RULES, resolveTargets} from '../../../engine/FurnitureLayout';
+import {config} from '../../../config';
+import type {RoomDimensions} from '../../../engine/FurnitureLayout';
+import {DEFAULT_ROOM, FURNITURE_RULES} from '../../../engine/FurnitureLayout';
+import {mergeLayoutConfigs, resolveLayout} from '../../../engine/layout';
 import {FurnitureLoader} from '../FurnitureLoader';
+
+/** Helper — replaces deleted resolveTargets() for tests */
+function resolve(room: RoomDimensions = DEFAULT_ROOM) {
+  return resolveLayout(
+    mergeLayoutConfigs(config.layout.room, config.layout.rails, config.layout.placements),
+    room,
+  ).targets;
+}
 
 // Mock useGLTF and useAnimations — no real GLBs in tests
 const mockPlay = jest.fn();
@@ -37,8 +48,8 @@ beforeEach(() => {
   mockActions = {};
 });
 
-// Rules that render without bowlPosition (bowl is conditionally excluded)
-const RENDERED_RULES = FURNITURE_RULES.filter(r => r.glb !== 'mixing_bowl.glb');
+// Rules that render: ecsManaged pieces are skipped, bowl is conditionally excluded
+const RENDERED_RULES = FURNITURE_RULES.filter(r => !r.ecsManaged);
 
 describe('FurnitureLoader', () => {
   it('renders without crashing', async () => {
@@ -46,15 +57,15 @@ describe('FurnitureLoader', () => {
     expect(renderer.scene.children.length).toBeGreaterThan(0);
   });
 
-  it('renders one group per furniture rule (bowl excluded without bowlPosition)', async () => {
+  it('renders one group per non-ecsManaged furniture rule', async () => {
     const renderer = await ReactThreeTestRenderer.create(<FurnitureLoader />);
-    // Root group — bowl skipped when bowlPosition is null
+    // Root group — ecsManaged pieces (meat_grinder, mixing_bowl) are skipped
     const root = renderer.scene.children[0];
     expect(root.children.length).toBe(RENDERED_RULES.length);
   });
 
   it('positions each piece at its resolved target', async () => {
-    const targets = resolveTargets(DEFAULT_ROOM);
+    const targets = resolve(DEFAULT_ROOM);
     const renderer = await ReactThreeTestRenderer.create(<FurnitureLoader />);
     const root = renderer.scene.children[0];
 
@@ -71,7 +82,7 @@ describe('FurnitureLoader', () => {
   });
 
   it('applies rotationY from target', async () => {
-    const targets = resolveTargets(DEFAULT_ROOM);
+    const targets = resolve(DEFAULT_ROOM);
     const renderer = await ReactThreeTestRenderer.create(<FurnitureLoader />);
     const root = renderer.scene.children[0];
 
@@ -94,12 +105,12 @@ describe('FurnitureLoader', () => {
 
   it('uses custom room dimensions when provided', async () => {
     const customRoom = {w: 20, d: 20, h: 8};
-    const targets = resolveTargets(customRoom);
+    const targets = resolve(customRoom);
     const renderer = await ReactThreeTestRenderer.create(<FurnitureLoader room={customRoom} />);
     const root = renderer.scene.children[0];
 
     // Check fridge position matches custom room targets
-    const fridgeIndex = FURNITURE_RULES.findIndex(r => r.glb === 'fridge.glb');
+    const fridgeIndex = RENDERED_RULES.findIndex(r => r.glb === 'fridge.glb');
     const fridgeGroup = root.children[fridgeIndex];
     const fridgeTarget = targets.fridge;
 
@@ -108,71 +119,49 @@ describe('FurnitureLoader', () => {
     expect(fridgeGroup.instance.position.z).toBeCloseTo(fridgeTarget.position[2], 2);
   });
 
-  describe('fridge door animation', () => {
-    it('plays door open animation when fridgeDoorOpen is true', async () => {
+  describe('fridge door pull gesture', () => {
+    it('door animation is paused on mount (driven by store progress)', async () => {
       const doorAction = {
         clampWhenFinished: false,
         timeScale: 1,
         paused: false,
+        time: 0,
         setLoop: mockSetLoop,
         reset: mockReset,
         stop: mockStop,
+        play: mockPlay,
+        getClip: () => ({duration: 1.0}),
       };
       mockActions = {FridgeArmatureAction: doorAction};
 
-      await ReactThreeTestRenderer.create(<FurnitureLoader fridgeDoorOpen />);
+      await ReactThreeTestRenderer.create(<FurnitureLoader />);
 
       expect(mockSetLoop).toHaveBeenCalled();
-      expect(mockReset).toHaveBeenCalled();
       expect(mockPlay).toHaveBeenCalled();
-      expect(doorAction.timeScale).toBe(1);
+      // Animation is paused — time driven by store progress in useFrame
+      expect(doorAction.paused).toBe(true);
     });
 
-    it('reverses animation when fridgeDoorOpen is false', async () => {
-      const doorAction = {
-        clampWhenFinished: false,
-        timeScale: 1,
-        paused: true,
-        setLoop: mockSetLoop,
-        reset: jest.fn(() => ({play: jest.fn()})),
-        stop: mockStop,
-      };
-      mockActions = {FridgeArmatureAction: doorAction};
+    it('source reads fridgeDoorProgress from store', () => {
+      const fs = require('node:fs');
+      const path = require('node:path');
+      const source = fs.readFileSync(path.resolve(__dirname, '../FurnitureLoader.tsx'), 'utf8');
+      expect(source).toContain('fridgeDoorProgress');
+      expect(source).toContain('setFridgeDoorProgress');
+      expect(source).toContain('springBackRef');
+    });
 
-      await ReactThreeTestRenderer.create(<FurnitureLoader fridgeDoorOpen={false} />);
-
-      expect(doorAction.timeScale).toBe(-1);
-      expect(doorAction.paused).toBe(false);
+    it('source has pointer drag handlers for fridge door', () => {
+      const fs = require('node:fs');
+      const path = require('node:path');
+      const source = fs.readFileSync(path.resolve(__dirname, '../FurnitureLoader.tsx'), 'utf8');
+      expect(source).toContain('onFridgePointerDown');
+      expect(source).toContain('onFridgePointerMove');
+      expect(source).toContain('onFridgePointerUp');
+      expect(source).toContain('isDraggingRef');
     });
   });
 
-  describe('grinder crank animation', () => {
-    it('plays crank animation when grinderCranking is true', async () => {
-      const crankAction = {
-        setLoop: mockSetLoop,
-        reset: mockReset,
-        stop: mockStop,
-      };
-      mockActions = {CrankPivotAction: crankAction};
-
-      await ReactThreeTestRenderer.create(<FurnitureLoader grinderCranking />);
-
-      expect(mockSetLoop).toHaveBeenCalled();
-      expect(mockReset).toHaveBeenCalled();
-      expect(mockPlay).toHaveBeenCalled();
-    });
-
-    it('stops crank animation when grinderCranking is false', async () => {
-      const crankAction = {
-        setLoop: mockSetLoop,
-        reset: mockReset,
-        stop: mockStop,
-      };
-      mockActions = {CrankPivotAction: crankAction};
-
-      await ReactThreeTestRenderer.create(<FurnitureLoader grinderCranking={false} />);
-
-      expect(mockStop).toHaveBeenCalled();
-    });
-  });
+  // Grinder crank animation tests removed — meat_grinder.glb is now ecsManaged
+  // and rendered by GrinderOrchestrator, not FurnitureLoader.
 });

@@ -18,6 +18,13 @@ import * as Haptics from 'expo-haptics';
  * Each maps to a physical haptic pattern in {@link HAPTIC_MAP}.
  */
 export type HapticEvent =
+  // Universal input primitive events
+  | 'dial_click'
+  | 'toggle_click'
+  | 'button_press'
+  | 'rotary_feedback'
+  | 'pressure_feedback'
+  // Challenge-specific events
   | 'ingredient_tap'
   | 'grinding_pulse'
   | 'stuffing_pressure'
@@ -38,6 +45,13 @@ export type HapticPattern =
 
 /** Lookup table from semantic game events to physical haptic patterns. */
 const HAPTIC_MAP: Record<HapticEvent, HapticPattern> = {
+  // Universal input primitive events
+  dial_click: {type: 'selection'},
+  toggle_click: {type: 'impact', style: 'light'},
+  button_press: {type: 'impact', style: 'medium'},
+  rotary_feedback: {type: 'impact', style: 'medium'},
+  pressure_feedback: {type: 'impact', style: 'medium'},
+  // Challenge-specific events
   ingredient_tap: {type: 'impact', style: 'light'},
   grinding_pulse: {type: 'impact', style: 'medium'},
   stuffing_pressure: {type: 'impact', style: 'medium'},

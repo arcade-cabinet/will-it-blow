@@ -1,0 +1,15 @@
+{
+  "cookTargets": {
+    "rare": 0.15,
+    "medium": 0.45,
+    "well-done": 0.75,
+    "charred": 0.95
+  },
+  "cookTolerance": 0.15,
+  "formMatch": 15,
+  "formMismatch": -10,
+  "cookMatch": 10,
+  "cookMismatch": -5,
+  "ingredientDesired": 8,
+  "ingredientHated": -12
+}

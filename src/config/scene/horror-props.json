@@ -1,0 +1,202 @@
+{
+  "props": [
+    {
+      "id": "mask-wall-1",
+      "model": "horror/mask_mx_1.glb",
+      "position": [-2.0, 2.4, -6.35],
+      "rotation": [0, 0, 0],
+      "scale": 1.2,
+      "tier": 1
+    },
+    {
+      "id": "mask-wall-2",
+      "model": "horror/mask_mx_2.glb",
+      "position": [-1.0, 2.6, -6.35],
+      "rotation": [0, 0.15, 0],
+      "scale": 1.1,
+      "tier": 1
+    },
+    {
+      "id": "mask-wall-3",
+      "model": "horror/mask_mx_3.glb",
+      "position": [0.0, 2.8, -6.35],
+      "rotation": [0, 0, 0],
+      "scale": 1.3,
+      "tier": 1
+    },
+    {
+      "id": "mask-wall-4",
+      "model": "horror/mask_mx_4.glb",
+      "position": [1.0, 2.6, -6.35],
+      "rotation": [0, -0.15, 0],
+      "scale": 1.1,
+      "tier": 1
+    },
+    {
+      "id": "mask-wall-5",
+      "model": "horror/mask_mx_5.glb",
+      "position": [2.0, 2.4, -6.35],
+      "rotation": [0, -0.1, 0],
+      "scale": 1.2,
+      "tier": 1
+    },
+    {
+      "id": "saw-blade-back-wall",
+      "model": "horror/saw_blade_1.glb",
+      "position": [0.0, 3.6, -6.3],
+      "rotation": [0, 0, 0],
+      "scale": 1.5,
+      "tier": 1
+    },
+    {
+      "id": "cage-right-back",
+      "model": "horror/cage_mx_1.glb",
+      "position": [5.5, 0.0, -5.5],
+      "rotation": [0, -0.3, 0],
+      "scale": 1.0,
+      "tier": 1
+    },
+    {
+      "id": "hook-ceiling-1",
+      "model": "horror/fishing_hook_mx_1.glb",
+      "position": [-3.0, 4.8, -2.0],
+      "rotation": [0, 0.5, 0],
+      "scale": 1.4,
+      "tier": 1
+    },
+    {
+      "id": "hook-ceiling-2",
+      "model": "horror/fishing_hook_mx_2.glb",
+      "position": [-2.0, 4.6, -1.5],
+      "rotation": [0, -0.3, 0],
+      "scale": 1.3,
+      "tier": 1
+    },
+    {
+      "id": "machete-counter",
+      "model": "horror/machete_mx_1.glb",
+      "position": [-4.5, 1.05, -2.5],
+      "rotation": [0, 0.8, 0],
+      "scale": 1.0,
+      "tier": 1
+    },
+    {
+      "id": "barrel-left-1",
+      "model": "horror/metal_barrel_hr_1.glb",
+      "position": [-5.8, 0.0, 2.0],
+      "rotation": [0, 0.2, 0],
+      "scale": 1.0,
+      "tier": 1
+    },
+    {
+      "id": "barrel-left-2",
+      "model": "horror/metal_barrel_hr_2.glb",
+      "position": [-5.5, 0.0, 3.0],
+      "rotation": [0, -0.4, 0],
+      "scale": 1.0,
+      "tier": 1
+    },
+    {
+      "id": "psx-lamp-ceiling-1",
+      "model": "horror/lamp_mx_1_a_off.glb",
+      "modelOn": "horror/lamp_mx_1_a_on.glb",
+      "position": [0.0, 5.3, -2.0],
+      "rotation": [0, 0, 0],
+      "scale": 1.0,
+      "tier": 1,
+      "flickerInterval": [1.5, 4.0]
+    },
+    {
+      "id": "psx-lamp-ceiling-2",
+      "model": "horror/lamp_mx_3_off.glb",
+      "modelOn": "horror/lamp_mx_3_on.glb",
+      "position": [3.0, 5.3, 2.0],
+      "rotation": [0, 0.5, 0],
+      "scale": 1.0,
+      "tier": 1,
+      "flickerInterval": [2.0, 5.0]
+    },
+    {
+      "id": "psx-lamp-wall-1",
+      "model": "horror/lamp_mx_4_off.glb",
+      "modelOn": "horror/lamp_mx_4_on.glb",
+      "position": [-6.2, 2.8, -2.0],
+      "rotation": [0, 1.5708, 0],
+      "scale": 1.0,
+      "tier": 1,
+      "flickerInterval": [1.0, 3.5]
+    },
+    {
+      "id": "bricks-corner-1",
+      "model": "horror/brick_mx_1.glb",
+      "position": [5.8, 0.0, 5.5],
+      "rotation": [0, 0.7, 0],
+      "scale": 1.0,
+      "tier": 2
+    },
+    {
+      "id": "bricks-corner-2",
+      "model": "horror/brick_mx_2.glb",
+      "position": [-5.5, 0.0, -5.0],
+      "rotation": [0, 1.2, 0],
+      "scale": 1.0,
+      "tier": 2
+    },
+    {
+      "id": "graffiti-back-wall",
+      "model": "horror/graffiti_mx_1.glb",
+      "position": [4.0, 1.8, -6.3],
+      "rotation": [0, 0, 0],
+      "scale": 1.0,
+      "tier": 2
+    },
+    {
+      "id": "graffiti-left-wall",
+      "model": "horror/graffiti_mx_2.glb",
+      "position": [-6.3, 2.0, 0.5],
+      "rotation": [0, 1.5708, 0],
+      "scale": 1.0,
+      "tier": 2
+    },
+    {
+      "id": "poster-right-wall",
+      "model": "horror/poster_cx_4.glb",
+      "position": [6.3, 2.2, -1.0],
+      "rotation": [0, -1.5708, 0],
+      "scale": 1.2,
+      "tier": 2
+    },
+    {
+      "id": "wires-ceiling",
+      "model": "horror/wires_hr_1.glb",
+      "position": [2.0, 5.2, 0.0],
+      "rotation": [0, 0.3, 0],
+      "scale": 1.0,
+      "tier": 2
+    },
+    {
+      "id": "pipes-ceiling",
+      "model": "horror/pipes_hr_1.glb",
+      "position": [-2.5, 5.0, 1.5],
+      "rotation": [0, 1.5708, 0],
+      "scale": 1.0,
+      "tier": 2
+    },
+    {
+      "id": "plank-front-wall",
+      "model": "horror/wooden_plank_1.glb",
+      "position": [3.0, 1.5, 6.3],
+      "rotation": [0, 3.1416, 0.15],
+      "scale": 1.0,
+      "tier": 2
+    },
+    {
+      "id": "cardboard-right-corner",
+      "model": "horror/cardboard_box_1.glb",
+      "position": [5.5, 0.0, 4.5],
+      "rotation": [0, -0.6, 0],
+      "scale": 1.0,
+      "tier": 2
+    }
+  ]
+}

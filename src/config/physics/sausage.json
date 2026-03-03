@@ -1,0 +1,27 @@
+{
+  "coil": {
+    "defaultLoops": 4,
+    "defaultThickness": 0.5,
+    "defaultPathSegments": 300,
+    "defaultRadialSegments": 32,
+    "radiusStart": 0.5,
+    "radiusEnd": 3.3,
+    "taperThreshold": 0.02
+  },
+  "links": {
+    "defaultNumLinks": 5,
+    "defaultLinkLength": 0.8,
+    "pinchMinFactor": 0.3
+  },
+  "spring": {
+    "defaultK": 80,
+    "defaultDamping": 10
+  },
+  "cooking": {
+    "shrinkageYFactor": 0.25,
+    "edgeCurlFactor": 0.12,
+    "sizzleAmplitude": 0.02,
+    "sizzleFreqX": 15,
+    "sizzleFreqZ": 18
+  }
+}

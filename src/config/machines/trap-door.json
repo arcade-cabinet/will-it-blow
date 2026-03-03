@@ -1,0 +1,14 @@
+{
+  "machineId": "trap-door",
+  "template": "bare",
+  "housing": [
+    {
+      "slot": "panel",
+      "geometry": { "type": "plane", "args": [1.8, 1.8] },
+      "material": { "type": "standard", "color": "#6a6e73", "roughness": 0.35, "metalness": 0.85 },
+      "position": [0, -0.01, 0],
+      "rotation": [1.5708, 0, 0]
+    }
+  ],
+  "extras": []
+}

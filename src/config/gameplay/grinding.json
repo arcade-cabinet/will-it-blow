@@ -1,0 +1,21 @@
+{
+  "emaAlpha": 0.3,
+  "slowTimerMultiplier": 1.5,
+  "scorePenaltyPerStrike": 15,
+  "dialogueDurationMs": 3000,
+  "successDelayMs": 1200,
+  "maxParticles": 150,
+  "chunkCount": 15,
+  "chunkBowlAngleDivisor": 15,
+  "chunkBowlRadiusBase": 0.3,
+  "chunkBowlRadiusStep": 0.45,
+  "particleGravity": 15,
+  "velocityDecay": 0.95,
+  "hapticProgressInterval": 0.05,
+  "hopperChunkCount": 10,
+  "hopperTopY": 6.2,
+  "hopperBottomY": 4.5,
+  "hopperSpreadX": 1.8,
+  "hopperSpreadZ": 1.4,
+  "hopperChunkScale": 0.35
+}

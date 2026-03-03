@@ -93,8 +93,8 @@ describe('KitchenEnvironment', () => {
       }
     }
     findPointLights(renderer.scene.children[0]);
-    // At least 4: 1 center fill + 3 tube lights
-    expect(pointLights.length).toBeGreaterThanOrEqual(4);
+    // At least 3: 1 center fill + 2 accent lights (fluorescent tubes are now ECS-managed)
+    expect(pointLights.length).toBeGreaterThanOrEqual(3);
   });
 
   it('has no Babylon.js imports', async () => {

@@ -13,7 +13,8 @@
       "!!**/coverage",
       "!!**/test-results",
       "!!**/playwright-report",
-      "!!**/.playwright-mcp"
+      "!!**/.playwright-mcp",
+      "!!sausage_factory.html"
     ]
   },
   "formatter": {

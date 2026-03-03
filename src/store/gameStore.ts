@@ -20,10 +20,63 @@ import {create} from 'zustand';
 import {createJSONStorage, persist} from 'zustand/middleware';
 import type {Reaction} from '../components/characters/reactions';
 import {computeBlendProperties as computeBlend} from '../engine/BlendCalculator';
-import type {Ingredient} from '../engine/Ingredients';
+import {
+  DEFAULT_DIFFICULTY,
+  type DifficultyTier,
+  loadDifficultyTier,
+} from '../engine/DifficultyConfig';
+import {getRandomIngredientPool, type Ingredient} from '../engine/Ingredients';
 
 /** Top-level application phase controlling which screen is rendered. */
 export type AppPhase = 'menu' | 'loading' | 'playing';
+
+/** Speed zone classification for the grinding challenge HUD. */
+export type SpeedZone = 'slow' | 'good' | 'fast';
+
+/** Shared phase for orchestrator-driven challenges (shown by HUD). */
+export type ChallengePhase = 'dialogue' | 'active' | 'success' | 'complete';
+
+/** Mr. Sausage's hidden demands — generated at game start, revealed at tasting */
+export interface MrSausageDemands {
+  /** Does he want coil (no twists) or links (twisted)? */
+  preferredForm: 'coil' | 'link';
+  /** How many links he wants (only matters if preferredForm === 'link') */
+  desiredLinkCount: number;
+  /** Whether he wants uniform links or doesn't care */
+  uniformity: 'even' | 'any';
+  /** 2-3 ingredients he secretly craves (by name) */
+  desiredIngredients: string[];
+  /** 1-2 ingredients that disgust him (by name) */
+  hatedIngredients: string[];
+  /** How he wants it cooked */
+  cookPreference: 'rare' | 'medium' | 'well-done' | 'charred';
+  /** His mood affects hint style */
+  moodProfile: 'cryptic' | 'passive-aggressive' | 'manic';
+}
+
+/** Player's decisions tracked across stages */
+export interface PlayerDecisions {
+  /** Ingredients selected in the fridge (names, in order) */
+  selectedIngredients: string[];
+  /** Normalized positions where player twisted during stuffing (0-1 along extrusion) */
+  twistPoints: number[];
+  /** Derived: 'coil' if 0 twists, 'link' if 1+ twists */
+  chosenForm: 'coil' | 'link' | null;
+  /** Final cook level when cooking completed (0-1) */
+  finalCookLevel: number;
+  /** Hint IDs the player has seen */
+  hintsViewed: string[];
+  /** Whether a twist happened while cranking (style/flair bonus) */
+  flairTwists: number;
+  /** Time spent at each stage in seconds */
+  stageTimings: Record<string, number>;
+  /** Flair bonuses earned — ALWAYS additive, never negative */
+  flairPoints: {reason: string; points: number}[];
+  /** Number of enemies defeated during this run */
+  enemiesDefeated: number;
+  /** Number of defeated enemies used as bonus ingredients */
+  enemyIngredientsUsed: number;
+}
 
 /** The type of object the player is currently carrying, or null if hands are empty. */
 export type GrabbedObjectType = 'ingredient' | 'bowl' | 'sausage' | 'pan' | null;
@@ -73,6 +126,12 @@ export interface GameState {
   challengeTemperature: number;
   /** Player's chosen heat level in the cooking challenge (controls temp change rate). */
   challengeHeatLevel: number;
+  /** Countdown timer remaining in the current challenge (seconds). Written by orchestrator, read by HUD. */
+  challengeTimeRemaining: number;
+  /** Speed zone classification for the grinding challenge. Written by GrinderOrchestrator, read by GrindingHUD. */
+  challengeSpeedZone: SpeedZone | null;
+  /** Current phase of the active orchestrator-driven challenge. Written by orchestrator, read by HUD. */
+  challengePhase: ChallengePhase;
 
   // ---- Mr. Sausage ----
 
@@ -97,6 +156,8 @@ export interface GameState {
 
   /** Player's current [x, y, z] position in the kitchen (FPS controller writes this). */
   playerPosition: [number, number, number];
+  /** One-shot teleport target for FPSController. Set by GameGovernor, consumed + cleared by FPS. */
+  pendingTeleport: [number, number, number] | null;
   /** Flipped to `true` when the player enters the current challenge station's trigger radius. */
   challengeTriggered: boolean;
 
@@ -140,6 +201,51 @@ export interface GameState {
   pendingFridgeClick: number | null;
   /** Index of the ingredient the player is hovering over (for highlight). */
   fridgeHoveredIndex: number | null;
+  /** Fridge door pull progress (0=closed, 1=open). Snaps open at FRIDGE_SNAP_THRESHOLD. */
+  fridgeDoorProgress: number;
+
+  // ---- Demand / decision tracking ----
+
+  /** Mr. Sausage's secret demands for this session */
+  mrSausageDemands: MrSausageDemands | null;
+  /** Player's tracked decisions across all stages */
+  playerDecisions: PlayerDecisions;
+
+  // ---- Difficulty ----
+
+  /** Active difficulty tier for the current game session. */
+  difficulty: DifficultyTier;
+
+  // ---- Enemy / Combat ----
+
+  /** Whether a combat encounter is currently active. */
+  combatActive: boolean;
+  /** Active enemy info, or null when no encounter. */
+  activeEnemy: {id: string; type: string; hp: number; maxHp: number} | null;
+
+  // ---- Multi-round ----
+
+  /** Current round number (1-indexed). */
+  currentRound: number;
+  /** Total rounds in this game session. */
+  totalRounds: number;
+  /** Ingredient combos already used in previous rounds. */
+  usedIngredientCombos: string[][];
+  /** Whether the casing has been tied (post-stuffing). */
+  casingTied: boolean;
+  /** Blowout score for the current round (coverage + precision). */
+  blowoutScore: number;
+
+  // ---- Hidden objects / Kitchen state ----
+
+  /** Which cabinets are open (by furniture ID). */
+  openCabinets: string[];
+  /** Which drawers are open (by furniture ID). */
+  openDrawers: string[];
+  /** Equipment parts found and carried to stations. */
+  assembledParts: string[];
+  /** Equipment cleanliness tracking per station (0=dirty, 1=clean). */
+  stationCleanliness: Record<string, number>;
 
   // ---- Settings (persisted) ----
 
@@ -151,9 +257,27 @@ export interface GameState {
   musicMuted: boolean;
   /** Whether sound effects are muted */
   sfxMuted: boolean;
+  /** Whether to auto-enter VR when the game starts (requires WebXR support) */
+  xrEnabled: boolean;
+  /** Snap-turn angle in degrees. 0 = smooth turning. */
+  snapTurnAngle: 0 | 30 | 45 | 90;
+  /** Whether to show a comfort vignette during smooth movement in VR. */
+  comfortVignette: boolean;
+  /** Whether the player is in seated mode (lowers XR origin height). */
+  xrSeatedMode: boolean;
+  /** VR locomotion mode: smooth thumbstick or teleport. */
+  vrLocomotionMode: 'smooth' | 'teleport';
+  /** Whether spatial (3D positional) audio is enabled */
+  spatialAudioEnabled: boolean;
+  /** Whether AR mode is enabled (immersive-ar with camera passthrough) */
+  arEnabled: boolean;
+  /** Whether the kitchen has been placed in the real world via AR hit-test */
+  arPlaced: boolean;
 
   // ---- Actions ----
 
+  /** Change the difficulty tier by ID. Persisted across sessions. */
+  setDifficulty: (id: string) => void;
   /** Transition the app to a different phase (menu/loading/playing). */
   setAppPhase: (phase: AppPhase) => void;
   /** Reset all game state and start a fresh game. Increments totalGamesPlayed. */
@@ -176,12 +300,20 @@ export interface GameState {
   setChallengeTemperature: (temperature: number) => void;
   /** Set the player's chosen heat level in the cooking challenge. */
   setChallengeHeatLevel: (heatLevel: number) => void;
+  /** Set the countdown timer remaining (written by orchestrator each frame). */
+  setChallengeTimeRemaining: (t: number) => void;
+  /** Set the grinding speed zone classification (written by GrinderOrchestrator). */
+  setChallengeSpeedZone: (zone: SpeedZone | null) => void;
+  /** Set the current challenge phase (written by orchestrator on phase transitions). */
+  setChallengePhase: (phase: ChallengePhase) => void;
   /** Change Mr. Sausage's reaction on the CRT TV (idle, happy, angry, etc.). */
   setMrSausageReaction: (reaction: Reaction) => void;
   /** Show or hide the hint overlay. */
   setHintActive: (active: boolean) => void;
   /** Populate the fridge with a new ingredient pool and identify which indices match the demand. */
   setFridgePool: (pool: Ingredient[], matching: number[]) => void;
+  /** Set fridge door pull progress (0-1). Snaps to 1.0 when above threshold. */
+  setFridgeDoorProgress: (progress: number) => void;
   /** Signal from 3D FridgeStation that the player clicked ingredient at `index`. */
   triggerFridgeClick: (index: number) => void;
   /** Clear the pending fridge click after the 2D overlay has processed it. */
@@ -204,6 +336,10 @@ export interface GameState {
   updateBlendProperties: () => void;
   /** Update the player's world-space position (written by FPS controller every frame). */
   setPlayerPosition: (pos: [number, number, number]) => void;
+  /** Request a one-shot camera teleport (consumed and cleared by FPSController). */
+  requestTeleport: (pos: [number, number, number]) => void;
+  /** Clear the pending teleport after FPSController has applied it. */
+  clearTeleport: () => void;
   /** Signal that the player has entered the current challenge station's trigger zone. */
   triggerChallenge: () => void;
   /** Set music volume (clamped to 0-1). */
@@ -214,16 +350,69 @@ export interface GameState {
   setMusicMuted: (muted: boolean) => void;
   /** Toggle sound effects mute state. */
   setSfxMuted: (muted: boolean) => void;
+  /** Enable or disable VR auto-entry on game start. */
+  setXrEnabled: (enabled: boolean) => void;
+  /** Set snap-turn angle (0 = smooth). */
+  setSnapTurnAngle: (angle: 0 | 30 | 45 | 90) => void;
+  /** Enable or disable the comfort vignette during VR movement. */
+  setComfortVignette: (enabled: boolean) => void;
+  /** Toggle between standing and seated VR mode. */
+  setXrSeatedMode: (seated: boolean) => void;
+  /** Set VR locomotion mode. */
+  setVrLocomotionMode: (mode: 'smooth' | 'teleport') => void;
+  /** Enable or disable spatial (3D positional) audio. */
+  setSpatialAudioEnabled: (enabled: boolean) => void;
+  /** Enable or disable AR mode (immersive-ar with camera passthrough). */
+  setArEnabled: (enabled: boolean) => void;
+  /** Set whether the kitchen has been placed in AR via hit-test. */
+  setArPlaced: (placed: boolean) => void;
+  /** Generate Mr. Sausage's secret demands from the given ingredient pool. */
+  generateDemands: (ingredientPool: string[]) => void;
+  /** Record a twist at a normalized position (0-1) along the sausage extrusion. */
+  recordTwist: (normalizedPosition: number) => void;
+  /** Record a flair twist performed while cranking. */
+  recordFlairTwist: () => void;
+  /** Derive the chosen form (coil vs link) from twist points. */
+  recordFormChoice: () => void;
+  /** Record the final cook level (0-1) when cooking completes. */
+  recordCookLevel: (level: number) => void;
+  /** Record that a hint was viewed by the player. */
+  recordHintViewed: (hintId: string) => void;
+  /** Record how long the player spent at a given stage. */
+  recordStageTiming: (stage: string, duration: number) => void;
+  /** Record a flair bonus (always additive, never negative). */
+  recordFlairPoint: (reason: string, points: number) => void;
+  /** Start an enemy encounter. */
+  startCombat: (enemy: {id: string; type: string; hp: number; maxHp: number}) => void;
+  /** Apply damage to the active enemy. Returns remaining HP. */
+  damageEnemy: (amount: number) => number;
+  /** End the current combat encounter and record the defeat. */
+  endCombat: () => void;
+  /** Record that a defeated enemy was used as a bonus ingredient. */
+  recordEnemyIngredient: () => void;
+  /** Advance to the next round, recording the current ingredient combo as used. */
+  advanceRound: () => void;
+  /** Set the casing tied state. */
+  setCasingTied: (tied: boolean) => void;
+  /** Set the blowout score for the current round. */
+  setBlowoutScore: (score: number) => void;
+  /** Toggle a cabinet open/closed. */
+  toggleCabinet: (id: string) => void;
+  /** Toggle a drawer open/closed. */
+  toggleDrawer: (id: string) => void;
+  /** Record a part as assembled at its station. */
+  assemblePart: (partId: string) => void;
+  /** Set cleanliness level for a station. */
+  setStationCleanliness: (station: string, level: number) => void;
   /** Return to the main menu, resetting all ephemeral game state. */
   returnToMenu: () => void;
 }
 
-/** Number of sequential challenges in a full game (ingredients through tasting). */
-const TOTAL_CHALLENGES = 5;
-/** Hint tokens given at the start of each new game. */
-const INITIAL_HINTS = 3;
-/** Maximum strikes before the game ends in defeat. */
-const MAX_STRIKES = 3;
+/** Number of sequential challenges in a full game (ingredients through blowout through tasting). */
+const TOTAL_CHALLENGES = 7;
+
+/** The default difficulty tier, loaded once at module init. */
+const DEFAULT_TIER = loadDifficultyTier(DEFAULT_DIFFICULTY);
 
 /**
  * Adapts BlendCalculator output to the flat store shape.
@@ -261,9 +450,12 @@ export const INITIAL_GAME_STATE = {
   challengeIsPressing: false,
   challengeTemperature: 70,
   challengeHeatLevel: 0,
+  challengeTimeRemaining: 0,
+  challengeSpeedZone: null as SpeedZone | null,
+  challengePhase: 'dialogue' as ChallengePhase,
   mrSausageReaction: 'idle' as Reaction,
   hintActive: false,
-  hintsRemaining: INITIAL_HINTS,
+  hintsRemaining: DEFAULT_TIER.hints,
   totalGamesPlayed: 0,
   variantSeed: 0,
   grabbedObject: null as string | null,
@@ -279,12 +471,47 @@ export const INITIAL_GAME_STATE = {
   fridgeSelectedIndices: [] as number[],
   pendingFridgeClick: null as number | null,
   fridgeHoveredIndex: null as number | null,
+  fridgeDoorProgress: 0,
   playerPosition: [0, 1.6, 0] as [number, number, number],
+  pendingTeleport: null as [number, number, number] | null,
   challengeTriggered: false,
+  mrSausageDemands: null as MrSausageDemands | null,
+  playerDecisions: {
+    selectedIngredients: [],
+    twistPoints: [],
+    chosenForm: null,
+    finalCookLevel: 0,
+    hintsViewed: [],
+    flairTwists: 0,
+    stageTimings: {},
+    flairPoints: [],
+    enemiesDefeated: 0,
+    enemyIngredientsUsed: 0,
+  } as PlayerDecisions,
+  difficulty: DEFAULT_TIER,
+  combatActive: false,
+  activeEnemy: null as {id: string; type: string; hp: number; maxHp: number} | null,
+  currentRound: 1,
+  totalRounds: 1,
+  usedIngredientCombos: [] as string[][],
+  casingTied: false,
+  blowoutScore: 0,
+  openCabinets: [] as string[],
+  openDrawers: [] as string[],
+  assembledParts: [] as string[],
+  stationCleanliness: {} as Record<string, number>,
   musicVolume: 0.7,
   sfxVolume: 0.8,
   musicMuted: false,
   sfxMuted: false,
+  xrEnabled: false,
+  snapTurnAngle: 0 as 0 | 30 | 45 | 90,
+  comfortVignette: true,
+  xrSeatedMode: false,
+  vrLocomotionMode: 'smooth' as 'smooth' | 'teleport',
+  spatialAudioEnabled: true,
+  arEnabled: false,
+  arPlaced: false,
 };
 
 /**
@@ -297,9 +524,12 @@ export const useGameStore = create<GameState>()(
     (set, get) => ({
       ...INITIAL_GAME_STATE,
 
+      setDifficulty: (id: string) => set({difficulty: loadDifficultyTier(id)}),
+
       setAppPhase: (phase: AppPhase) => set({appPhase: phase}),
 
-      startNewGame: () =>
+      startNewGame: () => {
+        const pool = getRandomIngredientPool();
         set(state => ({
           appPhase: 'playing' as AppPhase,
           currentChallenge: 0,
@@ -311,8 +541,11 @@ export const useGameStore = create<GameState>()(
           challengeIsPressing: false,
           challengeTemperature: 70,
           challengeHeatLevel: 0,
+          challengeTimeRemaining: 0,
+          challengeSpeedZone: null,
+          challengePhase: 'dialogue' as ChallengePhase,
           mrSausageReaction: 'idle' as Reaction,
-          hintsRemaining: INITIAL_HINTS,
+          hintsRemaining: state.difficulty.hints,
           totalGamesPlayed: state.totalGamesPlayed + 1,
           variantSeed: Date.now(),
           grabbedObject: null,
@@ -328,9 +561,36 @@ export const useGameStore = create<GameState>()(
           fridgeSelectedIndices: [],
           pendingFridgeClick: null,
           fridgeHoveredIndex: null,
+          fridgeDoorProgress: 0,
           playerPosition: [0, 1.6, 0] as [number, number, number],
+          pendingTeleport: null,
           challengeTriggered: false,
-        })),
+          combatActive: false,
+          activeEnemy: null,
+          currentRound: 1,
+          totalRounds: 1,
+          usedIngredientCombos: [],
+          casingTied: false,
+          blowoutScore: 0,
+          openCabinets: [],
+          openDrawers: [],
+          assembledParts: [],
+          stationCleanliness: {},
+          playerDecisions: {
+            selectedIngredients: [],
+            twistPoints: [],
+            chosenForm: null,
+            finalCookLevel: 0,
+            hintsViewed: [],
+            flairTwists: 0,
+            stageTimings: {},
+            flairPoints: [],
+            enemiesDefeated: 0,
+            enemyIngredientsUsed: 0,
+          },
+        }));
+        get().generateDemands(pool.map(i => i.name));
+      },
 
       continueGame: () =>
         set({
@@ -342,6 +602,9 @@ export const useGameStore = create<GameState>()(
           challengeIsPressing: false,
           challengeTemperature: 70,
           challengeHeatLevel: 0,
+          challengeTimeRemaining: 0,
+          challengeSpeedZone: null,
+          challengePhase: 'dialogue' as ChallengePhase,
           grabbedObject: null,
           grabbedObjectType: null,
           bowlContents: [],
@@ -355,7 +618,9 @@ export const useGameStore = create<GameState>()(
           fridgeSelectedIndices: [],
           pendingFridgeClick: null,
           fridgeHoveredIndex: null,
+          fridgeDoorProgress: 0,
           playerPosition: [0, 1.6, 0] as [number, number, number],
+          pendingTeleport: null,
           challengeTriggered: false,
         }),
 
@@ -370,13 +635,14 @@ export const useGameStore = create<GameState>()(
 
           // Bowl/sausage transitions per challenge completion:
           // Challenge 0 (ingredients) → bowl stays at fridge, player carries to grinder
-          // Challenge 1 (grinding) → ground meat bowl appears at grinder output
-          // Challenge 2 (stuffing) → bowl done, sausage spawns at stuffer output
+          // Challenge 1 (chopping) → no bowl transition (prep station)
+          // Challenge 2 (grinding) → ground meat bowl appears at grinder output
+          // Challenge 3 (stuffing) → bowl done, sausage spawns at stuffer output
           let bowlPosition = state.bowlPosition;
           let sausagePlaced = state.sausagePlaced;
-          if (state.currentChallenge === 1) {
+          if (state.currentChallenge === 2) {
             bowlPosition = 'grinder-output';
-          } else if (state.currentChallenge === 2) {
+          } else if (state.currentChallenge === 3) {
             bowlPosition = 'done';
             sausagePlaced = false;
           }
@@ -390,6 +656,9 @@ export const useGameStore = create<GameState>()(
             challengeIsPressing: false,
             challengeTemperature: 70,
             challengeHeatLevel: 0,
+            challengeTimeRemaining: 0,
+            challengeSpeedZone: null,
+            challengePhase: 'dialogue' as ChallengePhase,
             hintActive: false,
             challengeTriggered: false,
             gameStatus: isLastChallenge ? 'victory' : state.gameStatus,
@@ -403,7 +672,7 @@ export const useGameStore = create<GameState>()(
           const newStrikes = state.strikes + 1;
           return {
             strikes: newStrikes,
-            gameStatus: newStrikes >= MAX_STRIKES ? 'defeat' : state.gameStatus,
+            gameStatus: newStrikes >= state.difficulty.maxStrikes ? 'defeat' : state.gameStatus,
           };
         }),
 
@@ -426,6 +695,12 @@ export const useGameStore = create<GameState>()(
 
       setChallengeHeatLevel: (heatLevel: number) => set({challengeHeatLevel: heatLevel}),
 
+      setChallengeTimeRemaining: (t: number) => set({challengeTimeRemaining: t}),
+
+      setChallengeSpeedZone: (zone: SpeedZone | null) => set({challengeSpeedZone: zone}),
+
+      setChallengePhase: (phase: ChallengePhase) => set({challengePhase: phase}),
+
       setMrSausageReaction: (reaction: Reaction) => set({mrSausageReaction: reaction}),
 
       setHintActive: (active: boolean) => set({hintActive: active}),
@@ -439,12 +714,29 @@ export const useGameStore = create<GameState>()(
           fridgeHoveredIndex: null,
         }),
 
+      setFridgeDoorProgress: (progress: number) => {
+        const SNAP_THRESHOLD = 0.7;
+        const clamped = Math.max(0, Math.min(1, progress));
+        set({fridgeDoorProgress: clamped >= SNAP_THRESHOLD ? 1 : clamped});
+      },
+
       triggerFridgeClick: (index: number) => set({pendingFridgeClick: index}),
 
       clearFridgeClick: () => set({pendingFridgeClick: null}),
 
       addFridgeSelected: (index: number) =>
-        set(state => ({fridgeSelectedIndices: [...state.fridgeSelectedIndices, index]})),
+        set(state => {
+          const ingredientName = state.fridgePool[index]?.name ?? '';
+          return {
+            fridgeSelectedIndices: [...state.fridgeSelectedIndices, index],
+            playerDecisions: {
+              ...state.playerDecisions,
+              selectedIngredients: ingredientName
+                ? [...state.playerDecisions.selectedIngredients, ingredientName]
+                : state.playerDecisions.selectedIngredients,
+            },
+          };
+        }),
 
       setFridgeHovered: (index: number | null) => set({fridgeHoveredIndex: index}),
 
@@ -474,23 +766,187 @@ export const useGameStore = create<GameState>()(
       updateBlendProperties: () => set(state => mapBlendToStore(state.bowlContents)),
 
       setPlayerPosition: (pos: [number, number, number]) => set({playerPosition: pos}),
+      requestTeleport: (pos: [number, number, number]) => set({pendingTeleport: pos}),
+      clearTeleport: () => set({pendingTeleport: null}),
       triggerChallenge: () => set({challengeTriggered: true}),
+
+      generateDemands: (ingredientPool: string[]) => {
+        const shuffled = [...ingredientPool].sort(() => Math.random() - 0.5);
+        const desiredCount = 2 + Math.floor(Math.random() * 2); // 2-3
+        const desiredIngredients = shuffled.slice(0, desiredCount);
+        const remaining = shuffled.slice(desiredCount);
+        const hatedCount = 1 + Math.floor(Math.random() * 2); // 1-2
+        const hatedIngredients = remaining.slice(0, hatedCount);
+
+        set({
+          mrSausageDemands: {
+            preferredForm: Math.random() > 0.5 ? 'coil' : 'link',
+            desiredLinkCount: 2 + Math.floor(Math.random() * 4), // 2-5
+            uniformity: Math.random() > 0.6 ? 'even' : 'any',
+            desiredIngredients,
+            hatedIngredients,
+            cookPreference: (['rare', 'medium', 'well-done', 'charred'] as const)[
+              Math.floor(Math.random() * 4)
+            ],
+            moodProfile: (['cryptic', 'passive-aggressive', 'manic'] as const)[
+              Math.floor(Math.random() * 3)
+            ],
+          },
+        });
+      },
+
+      recordTwist: (normalizedPosition: number) =>
+        set(state => ({
+          playerDecisions: {
+            ...state.playerDecisions,
+            twistPoints: [...state.playerDecisions.twistPoints, normalizedPosition],
+          },
+        })),
+
+      recordFlairTwist: () =>
+        set(state => ({
+          playerDecisions: {
+            ...state.playerDecisions,
+            flairTwists: state.playerDecisions.flairTwists + 1,
+          },
+        })),
+
+      recordFormChoice: () =>
+        set(state => ({
+          playerDecisions: {
+            ...state.playerDecisions,
+            chosenForm: state.playerDecisions.twistPoints.length > 0 ? 'link' : 'coil',
+          },
+        })),
+
+      recordCookLevel: (level: number) =>
+        set(state => ({
+          playerDecisions: {...state.playerDecisions, finalCookLevel: level},
+        })),
+
+      recordHintViewed: (hintId: string) =>
+        set(state => ({
+          playerDecisions: {
+            ...state.playerDecisions,
+            hintsViewed: [...state.playerDecisions.hintsViewed, hintId],
+          },
+        })),
+
+      recordStageTiming: (stage: string, duration: number) =>
+        set(state => ({
+          playerDecisions: {
+            ...state.playerDecisions,
+            stageTimings: {...state.playerDecisions.stageTimings, [stage]: duration},
+          },
+        })),
+
+      recordFlairPoint: (reason: string, points: number) =>
+        set(state => ({
+          playerDecisions: {
+            ...state.playerDecisions,
+            flairPoints: [...state.playerDecisions.flairPoints, {reason, points}],
+          },
+        })),
+
+      startCombat: (enemy: {id: string; type: string; hp: number; maxHp: number}) =>
+        set({combatActive: true, activeEnemy: enemy}),
+
+      damageEnemy: (amount: number) => {
+        const state = get();
+        if (!state.activeEnemy) return 0;
+        const newHp = Math.max(0, state.activeEnemy.hp - amount);
+        set({activeEnemy: {...state.activeEnemy, hp: newHp}});
+        return newHp;
+      },
+
+      endCombat: () =>
+        set(state => ({
+          combatActive: false,
+          activeEnemy: null,
+          playerDecisions: {
+            ...state.playerDecisions,
+            enemiesDefeated: state.playerDecisions.enemiesDefeated + 1,
+          },
+        })),
+
+      recordEnemyIngredient: () =>
+        set(state => ({
+          playerDecisions: {
+            ...state.playerDecisions,
+            enemyIngredientsUsed: state.playerDecisions.enemyIngredientsUsed + 1,
+          },
+        })),
+
+      advanceRound: () =>
+        set(state => {
+          const combo = state.playerDecisions.selectedIngredients.slice().sort();
+          return {
+            currentRound: state.currentRound + 1,
+            usedIngredientCombos: [...state.usedIngredientCombos, combo],
+            casingTied: false,
+            blowoutScore: 0,
+          };
+        }),
+
+      setCasingTied: (tied: boolean) => set({casingTied: tied}),
+      setBlowoutScore: (score: number) => set({blowoutScore: score}),
+
+      toggleCabinet: (id: string) =>
+        set(state => ({
+          openCabinets: state.openCabinets.includes(id)
+            ? state.openCabinets.filter(c => c !== id)
+            : [...state.openCabinets, id],
+        })),
+
+      toggleDrawer: (id: string) =>
+        set(state => ({
+          openDrawers: state.openDrawers.includes(id)
+            ? state.openDrawers.filter(d => d !== id)
+            : [...state.openDrawers, id],
+        })),
+
+      assemblePart: (partId: string) =>
+        set(state =>
+          state.assembledParts.includes(partId)
+            ? {}
+            : {assembledParts: [...state.assembledParts, partId]},
+        ),
+
+      setStationCleanliness: (station: string, level: number) =>
+        set(state => ({
+          stationCleanliness: {...state.stationCleanliness, [station]: level},
+        })),
 
       setMusicVolume: (volume: number) => set({musicVolume: Math.max(0, Math.min(1, volume))}),
       setSfxVolume: (volume: number) => set({sfxVolume: Math.max(0, Math.min(1, volume))}),
       setMusicMuted: (muted: boolean) => set({musicMuted: muted}),
       setSfxMuted: (muted: boolean) => set({sfxMuted: muted}),
+      setXrEnabled: (enabled: boolean) =>
+        set({xrEnabled: enabled, arEnabled: enabled ? false : undefined}),
+      setArEnabled: (enabled: boolean) =>
+        set({arEnabled: enabled, xrEnabled: enabled ? false : undefined}),
+      setArPlaced: (placed: boolean) => set({arPlaced: placed}),
+      setSnapTurnAngle: (angle: 0 | 30 | 45 | 90) => set({snapTurnAngle: angle}),
+      setComfortVignette: (enabled: boolean) => set({comfortVignette: enabled}),
+      setXrSeatedMode: (seated: boolean) => set({xrSeatedMode: seated}),
+      setVrLocomotionMode: (mode: 'smooth' | 'teleport') => set({vrLocomotionMode: mode}),
+      setSpatialAudioEnabled: (enabled: boolean) => set({spatialAudioEnabled: enabled}),
 
       returnToMenu: () =>
         set({
           appPhase: 'menu' as AppPhase,
           gameStatus: 'menu',
+          currentChallenge: 0,
+          challengeScores: [],
           strikes: 0,
           challengeProgress: 0,
           challengePressure: 0,
           challengeIsPressing: false,
           challengeTemperature: 70,
           challengeHeatLevel: 0,
+          challengeTimeRemaining: 0,
+          challengeSpeedZone: null,
+          challengePhase: 'dialogue' as ChallengePhase,
           mrSausageReaction: 'idle' as Reaction,
           hintActive: false,
           grabbedObject: null,
@@ -506,8 +962,34 @@ export const useGameStore = create<GameState>()(
           fridgeSelectedIndices: [],
           pendingFridgeClick: null,
           fridgeHoveredIndex: null,
+          fridgeDoorProgress: 0,
           playerPosition: [0, 1.6, 0] as [number, number, number],
+          pendingTeleport: null,
           challengeTriggered: false,
+          combatActive: false,
+          activeEnemy: null,
+          currentRound: 1,
+          totalRounds: 1,
+          usedIngredientCombos: [],
+          casingTied: false,
+          blowoutScore: 0,
+          openCabinets: [],
+          openDrawers: [],
+          assembledParts: [],
+          stationCleanliness: {},
+          mrSausageDemands: null,
+          playerDecisions: {
+            selectedIngredients: [],
+            twistPoints: [],
+            chosenForm: null,
+            finalCookLevel: 0,
+            hintsViewed: [],
+            flairTwists: 0,
+            stageTimings: {},
+            flairPoints: [],
+            enemiesDefeated: 0,
+            enemyIngredientsUsed: 0,
+          },
         }),
     }),
     {
@@ -520,10 +1002,21 @@ export const useGameStore = create<GameState>()(
         challengeScores: state.challengeScores,
         hintsRemaining: state.hintsRemaining,
         variantSeed: state.variantSeed,
+        difficulty: state.difficulty,
+        currentRound: state.currentRound,
+        totalRounds: state.totalRounds,
+        usedIngredientCombos: state.usedIngredientCombos,
         musicVolume: state.musicVolume,
         sfxVolume: state.sfxVolume,
         musicMuted: state.musicMuted,
         sfxMuted: state.sfxMuted,
+        xrEnabled: state.xrEnabled,
+        snapTurnAngle: state.snapTurnAngle,
+        comfortVignette: state.comfortVignette,
+        xrSeatedMode: state.xrSeatedMode,
+        vrLocomotionMode: state.vrLocomotionMode,
+        arEnabled: state.arEnabled,
+        spatialAudioEnabled: state.spatialAudioEnabled,
       }),
     },
   ),

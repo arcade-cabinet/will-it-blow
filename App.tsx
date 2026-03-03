@@ -7,6 +7,7 @@ import {StrikeCounter} from './src/components/ui/StrikeCounter';
 import {TitleScreen} from './src/components/ui/TitleScreen';
 import {installGovernor} from './src/dev/GameGovernor';
 import {audioEngine} from './src/engine/AudioEngine';
+import {useXRModeFromStore} from './src/hooks/useXRMode';
 import {useGameStore} from './src/store/gameStore';
 
 // ── Dynamic imports for code splitting ──────────────────────────
@@ -26,19 +27,29 @@ const IngredientChallenge = lazy(() =>
     default: m.IngredientChallenge,
   })),
 );
-const GrindingChallenge = lazy(() =>
-  import('./src/components/challenges/GrindingChallenge').then(m => ({
-    default: m.GrindingChallenge,
+const ChoppingHUD = lazy(() =>
+  import('./src/components/challenges/ChoppingHUD').then(m => ({
+    default: m.ChoppingHUD,
   })),
 );
-const StuffingChallenge = lazy(() =>
-  import('./src/components/challenges/StuffingChallenge').then(m => ({
-    default: m.StuffingChallenge,
+const GrindingHUD = lazy(() =>
+  import('./src/components/challenges/GrindingHUD').then(m => ({
+    default: m.GrindingHUD,
   })),
 );
-const CookingChallenge = lazy(() =>
-  import('./src/components/challenges/CookingChallenge').then(m => ({
-    default: m.CookingChallenge,
+const StuffingHUD = lazy(() =>
+  import('./src/components/challenges/StuffingHUD').then(m => ({
+    default: m.StuffingHUD,
+  })),
+);
+const CookingHUD = lazy(() =>
+  import('./src/components/challenges/CookingHUD').then(m => ({
+    default: m.CookingHUD,
+  })),
+);
+const BlowoutHUD = lazy(() =>
+  import('./src/components/challenges/BlowoutHUD').then(m => ({
+    default: m.BlowoutHUD,
   })),
 );
 const TastingChallenge = lazy(() =>
@@ -59,6 +70,7 @@ const GameUI = () => {
   const challengeTriggered = useGameStore(s => s.challengeTriggered);
   const completeChallenge = useGameStore(s => s.completeChallenge);
   const setMrSausageReaction = useGameStore(s => s.setMrSausageReaction);
+  const {isVR} = useXRModeFromStore();
 
   // Transition state: show title card between challenges
   const [transitioning, setTransitioning] = useState(false);
@@ -101,11 +113,17 @@ const GameUI = () => {
 
   const showChallenge = gameStatus === 'playing' && !transitioning && challengeTriggered;
   const isIngredientChallenge = showChallenge && currentChallenge === 0;
-  const isGrindingChallenge = showChallenge && currentChallenge === 1;
-  const isStuffingChallenge = showChallenge && currentChallenge === 2;
-  const isCookingChallenge = showChallenge && currentChallenge === 3;
-  const isTastingChallenge = showChallenge && currentChallenge === 4;
+  const isChoppingChallenge = showChallenge && currentChallenge === 1;
+  const isGrindingChallenge = showChallenge && currentChallenge === 2;
+  const isStuffingChallenge = showChallenge && currentChallenge === 3;
+  const isCookingChallenge = showChallenge && currentChallenge === 4;
+  const isBlowoutChallenge = showChallenge && currentChallenge === 5;
+  const isTastingChallenge = showChallenge && currentChallenge === 6;
 
+  // In VR mode, HUDs are rendered as world-space panels inside the Canvas
+  // by VRHUDLayer. Skip the 2D overlay to avoid duplicate UI.
+  // Transition cards and bridge-pattern challenges still render in 2D
+  // (they use full-screen interaction patterns that work in VR via dom-overlay).
   return (
     <View style={styles.overlay} pointerEvents="box-none" testID="game-overlay">
       {/* Challenge transition title card */}
@@ -116,7 +134,7 @@ const GameUI = () => {
         />
       )}
 
-      {showChallenge && (
+      {showChallenge && !isVR && (
         <Suspense fallback={<ChunkFallback />}>
           <ChallengeHeader />
           <StrikeCounter />
@@ -124,22 +142,18 @@ const GameUI = () => {
           {isIngredientChallenge && (
             <IngredientChallenge onComplete={completeChallenge} onReaction={handleReaction} />
           )}
-          {isGrindingChallenge && (
-            <GrindingChallenge onComplete={completeChallenge} onReaction={handleReaction} />
-          )}
-          {isStuffingChallenge && (
-            <StuffingChallenge onComplete={completeChallenge} onReaction={handleReaction} />
-          )}
-          {isCookingChallenge && (
-            <CookingChallenge onComplete={completeChallenge} onReaction={handleReaction} />
-          )}
+          {isChoppingChallenge && <ChoppingHUD />}
+          {isGrindingChallenge && <GrindingHUD />}
+          {isStuffingChallenge && <StuffingHUD />}
+          {isCookingChallenge && <CookingHUD />}
+          {isBlowoutChallenge && <BlowoutHUD />}
           {isTastingChallenge && (
             <TastingChallenge onComplete={completeChallenge} onReaction={handleReaction} />
           )}
         </Suspense>
       )}
 
-      {(gameStatus === 'victory' || gameStatus === 'defeat') && (
+      {(gameStatus === 'victory' || gameStatus === 'defeat') && !isVR && (
         <Suspense fallback={<ChunkFallback />}>
           <GameOverScreen />
         </Suspense>
@@ -158,14 +172,15 @@ export default function App() {
   // Shared refs for mobile FPS controls (joystick writes, FPSController reads)
   const joystickRef = useRef({x: 0, y: 0});
   const lookDeltaRef = useRef({dx: 0, dy: 0});
-  const isMobile = Platform.OS !== 'web';
+  // Detect touch-primary device (native app OR mobile web browser)
+  const isTouchDevice =
+    Platform.OS !== 'web' ||
+    (typeof window !== 'undefined' && 'ontouchstart' in window && navigator.maxTouchPoints > 0);
 
-  // Start/stop ambient horror drone based on game phase
+  // Start ambient horror loop when entering gameplay, stop on exit
   useEffect(() => {
     if (appPhase === 'playing') {
       audioEngine.startAmbientDrone();
-    } else {
-      audioEngine.stopAmbientDrone();
     }
     return () => {
       audioEngine.stopAmbientDrone();
@@ -189,11 +204,11 @@ export default function App() {
       {appPhase === 'playing' && (
         <Suspense fallback={<ChunkFallback />}>
           <GameWorld
-            joystickRef={isMobile ? joystickRef : undefined}
-            lookDeltaRef={isMobile ? lookDeltaRef : undefined}
+            joystickRef={isTouchDevice ? joystickRef : undefined}
+            lookDeltaRef={isTouchDevice ? lookDeltaRef : undefined}
           />
           <GameUI />
-          {isMobile && (
+          {isTouchDevice && (
             <MobileJoystick
               joystickRef={joystickRef}
               onLookDrag={(dx, dy) => {

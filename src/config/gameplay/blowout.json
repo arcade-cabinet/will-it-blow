@@ -1,0 +1,18 @@
+{
+  "timerSeconds": 30,
+  "maxPressure": 100,
+  "pressureDecayRate": 8,
+  "pressureBuildRate": 18,
+  "particleCount": 24,
+  "particleGravity": -4.5,
+  "particleSpread": 0.6,
+  "particleInitialSpeed": 5.0,
+  "coveragePerHit": 4,
+  "floorPenaltyPerHit": 2,
+  "fastTieThresholdMs": 2500,
+  "fastTieFlairPoints": 5,
+  "completeDelaySec": 1.5,
+  "boxPosition": [0.0, 0.9, -0.6],
+  "boxHalfWidth": 0.18,
+  "boxHalfHeight": 0.26
+}

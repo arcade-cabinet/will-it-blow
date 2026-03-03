@@ -1,32 +1,41 @@
 /**
  * @module ChallengeRegistry
  * Central registry for challenge configurations, variant selection, and
- * final verdict calculation. Orchestrates the 5-challenge game flow:
- * ingredients -> grinding -> stuffing -> cooking -> tasting.
+ * final verdict calculation. Orchestrates the 6-challenge game flow:
+ * ingredients -> chopping -> grinding -> stuffing -> cooking -> tasting.
  *
  * Variant selection is deterministic per seed — the same variantSeed
  * always produces the same challenge parameters, ensuring fair replays.
  */
 
+import {config} from '../config';
 import type {
+  ChoppingVariant,
   CookingVariant,
   GrindingVariant,
   IngredientVariant,
   StuffingVariant,
-} from '../data/challenges/variants';
-import {
-  COOKING_VARIANTS,
-  GRINDING_VARIANTS,
-  INGREDIENT_VARIANTS,
-  STUFFING_VARIANTS,
-} from '../data/challenges/variants';
+} from '../config/types';
 
-/** Identifier for each of the 5 sequential challenge phases. */
-export type ChallengeId = 'ingredients' | 'grinding' | 'stuffing' | 'cooking' | 'tasting';
+const INGREDIENT_VARIANTS = config.variants.ingredients;
+const CHOPPING_VARIANTS = config.variants.chopping;
+const GRINDING_VARIANTS = config.variants.grinding;
+const STUFFING_VARIANTS = config.variants.stuffing;
+const COOKING_VARIANTS = config.variants.cooking;
+
+/** Identifier for each of the 6 sequential challenge phases. */
+export type ChallengeId =
+  | 'ingredients'
+  | 'chopping'
+  | 'grinding'
+  | 'stuffing'
+  | 'cooking'
+  | 'tasting';
 
 /** The fixed sequence of challenges. Index matches `currentChallenge` in the store. */
 export const CHALLENGE_ORDER: ChallengeId[] = [
   'ingredients',
+  'chopping',
   'grinding',
   'stuffing',
   'cooking',
@@ -54,6 +63,13 @@ const CHALLENGE_CONFIGS: Record<ChallengeId, ChallengeConfig> = {
     station: 'fridge',
     cameraOffset: [0, 0, 1],
     description: "Choose ingredients that satisfy Mr. Sausage's demands.",
+  },
+  chopping: {
+    id: 'chopping',
+    name: 'Chopping',
+    station: 'cutting-board',
+    cameraOffset: [0, 0.3, 0.6],
+    description: 'Chop ingredients with precise timing.',
   },
   grinding: {
     id: 'grinding',
@@ -115,7 +131,7 @@ function seededIndex(seed: number, arrayLength: number): number {
 
 /**
  * Picks a deterministic variant for the given challenge and seed.
- * Each challenge type offsets the seed by its index (0-3) so the same
+ * Each challenge type offsets the seed by its index (0-4) so the same
  * base seed produces different variants for different challenges.
  *
  * @param challengeId - Which challenge to pick a variant for
@@ -125,16 +141,18 @@ function seededIndex(seed: number, arrayLength: number): number {
 export function pickVariant(
   challengeId: ChallengeId,
   seed: number,
-): IngredientVariant | GrindingVariant | StuffingVariant | CookingVariant | null {
+): IngredientVariant | ChoppingVariant | GrindingVariant | StuffingVariant | CookingVariant | null {
   switch (challengeId) {
     case 'ingredients':
       return INGREDIENT_VARIANTS[seededIndex(seed, INGREDIENT_VARIANTS.length)];
+    case 'chopping':
+      return CHOPPING_VARIANTS[seededIndex(seed + 1, CHOPPING_VARIANTS.length)];
     case 'grinding':
-      return GRINDING_VARIANTS[seededIndex(seed + 1, GRINDING_VARIANTS.length)];
+      return GRINDING_VARIANTS[seededIndex(seed + 2, GRINDING_VARIANTS.length)];
     case 'stuffing':
-      return STUFFING_VARIANTS[seededIndex(seed + 2, STUFFING_VARIANTS.length)];
+      return STUFFING_VARIANTS[seededIndex(seed + 3, STUFFING_VARIANTS.length)];
     case 'cooking':
-      return COOKING_VARIANTS[seededIndex(seed + 3, COOKING_VARIANTS.length)];
+      return COOKING_VARIANTS[seededIndex(seed + 4, COOKING_VARIANTS.length)];
     case 'tasting':
       return null;
     default:
@@ -159,6 +177,7 @@ export interface Verdict {
 
 /**
  * Averages challenge scores and returns a final verdict.
+ * If a demandBonus is provided, it is added to the average before ranking.
  *
  * Rank thresholds:
  * - S (>= 92): "THE SAUSAGE KING" — the only true victory
@@ -167,10 +186,11 @@ export interface Verdict {
  * - F (< 50):  "Unacceptable" — "You are the sausage now"
  *
  * @param challengeScores - Array of scores (0-100) from each completed challenge
+ * @param demandBonus - Optional bonus/penalty from demand matching (added to average, clamped 0-100)
  * @returns Verdict with rank, title, average score, and Mr. Sausage's message
  * @throws {Error} If any score is non-finite (NaN, Infinity)
  */
-export function calculateFinalVerdict(challengeScores: number[]): Verdict {
+export function calculateFinalVerdict(challengeScores: number[], demandBonus?: number): Verdict {
   if (challengeScores.length === 0) {
     return {rank: 'F', averageScore: 0, title: 'FAILED', message: 'No challenges completed.'};
   }
@@ -178,7 +198,9 @@ export function calculateFinalVerdict(challengeScores: number[]): Verdict {
   if (bad !== undefined) {
     throw new Error(`calculateFinalVerdict received non-finite score: ${bad}`);
   }
-  const averageScore = challengeScores.reduce((sum, s) => sum + s, 0) / challengeScores.length;
+  const rawAverage = challengeScores.reduce((sum, s) => sum + s, 0) / challengeScores.length;
+  const averageScore =
+    demandBonus !== undefined ? Math.max(0, Math.min(100, rawAverage + demandBonus)) : rawAverage;
 
   if (averageScore >= 92) {
     return {

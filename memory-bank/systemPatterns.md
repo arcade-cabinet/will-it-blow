@@ -14,18 +14,34 @@ Root:    SafeAreaView (React Native)  <- Container, background (#0a0a0a)
 - Layer 2 is React Native views with `pointerEvents="box-none"` floating above the 3D scene
 - Both layers subscribe independently to the Zustand store — no direct communication between them
 
-## Challenge Component Pattern
+## Challenge Component Pattern (Post-Phase 1)
 
-Every challenge follows the same three-part structure:
+Challenges follow two patterns depending on the station:
+
+### ECS Orchestrator Pattern (Grinding, Stuffing, Cooking)
+
+```
+challenge = ECS orchestrator (ecs/orchestrators/) + thin HUD (challenges/) + dialogue (data/dialogue/)
+```
+
+- **Orchestrator** (R3F, in 3D Canvas) OWNS all game logic: phase machine, scoring, strikes, timers, audio, reactions
+- **Orchestrator** reads ECS input state (crank velocity, dial power, toggle state) and writes to Zustand store
+- **Thin HUD** (React Native) is pure read-only — subscribes to Zustand and displays values (timer, progress, zones)
+- **Dialogue** phase: orchestrator sets `challengePhase='dialogue'`, HUD renders DialogueOverlay, HUD calls `setChallengePhase('active')` on dialogue completion
+- Data flow: 3D input → ECS system → orchestrator → Zustand → HUD display
+- **ZERO input handling in HUD components**
+
+Files: `src/ecs/orchestrators/*Orchestrator.tsx` + `src/components/challenges/*HUD.tsx` + `src/data/dialogue/*.ts`
+
+### Bridge Pattern (Ingredients, Tasting)
 
 ```
 challenge = overlay (challenges/) + 3D station (kitchen/) + dialogue (data/dialogue/)
 ```
 
-- **Overlay** (React Native) writes to the Zustand store: progress, pressure, strikes, scores
-- **3D Station** (R3F) reads from the store via props passed through GameWorld
-- **Dialogue** data feeds into DialogueOverlay at challenge start
-- There is **no direct communication** between overlay and station — they coordinate through the store
+- **Overlay** (React Native) owns scoring logic and writes to store
+- **3D Station** (R3F) handles visual interaction (fridge clicks, sausage display)
+- Coordinate through Zustand store (no direct communication)
 
 Files: `src/components/challenges/*.tsx` + `src/components/kitchen/*Station.tsx` + `src/data/dialogue/*.ts`
 
@@ -69,8 +85,10 @@ Source: `src/engine/FurnitureLayout.ts`
 
 - `FPSController.tsx` — WASD/arrow keys + pointer-lock mouse look for desktop
 - `MobileJoystick.tsx` — Touch controls for mobile
-- `ProximityTrigger` in GameWorld checks player distance to station targets
-- Camera at y=1.6 (standing eye height), fov=70, near=0.1
+- Station triggers: Rapier physics sensors on web (`PlayerBody` + `StationSensor` colliders), manual proximity check on native (`ManualProximityTrigger`)
+- Camera: initial yaw=Math.PI (facing -Z = CRT TV), y=1.6 (eye height), walk speed 3.0, mouse sensitivity 0.002
+- Position clamped to room AABB with 0.5 unit margin
+- **NOTE:** No `CameraWalker.tsx` exists — navigation is purely FPS free-walk, not waypoint-based
 
 Source: `src/components/controls/`
 

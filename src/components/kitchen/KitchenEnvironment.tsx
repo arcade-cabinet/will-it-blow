@@ -17,12 +17,17 @@
  */
 
 import {useTexture} from '@react-three/drei';
-import {useFrame} from '@react-three/fiber';
-import type React from 'react';
-import {useMemo, useRef} from 'react';
+import {useMemo} from 'react';
 import * as THREE from 'three/webgpu';
+import {config} from '../../config';
 import {getAssetUrl} from '../../engine/assetUrl';
+import {useGameStore} from '../../store/gameStore';
+import {CabinetDrawer} from './CabinetDrawer';
+import {CeilingLightOrchestrator} from './CeilingLightOrchestrator';
 import {FurnitureLoader} from './FurnitureLoader';
+import {HorrorPropsLoader} from './HorrorPropsLoader';
+import {ProceduralSink} from './ProceduralSink';
+import {TrapDoorMount} from './TrapDoorMount';
 
 // --- Room dimensions (slightly larger than 12x12 kitchen GLB to avoid z-fighting) ---
 const ROOM_W = 13; // x-axis
@@ -80,15 +85,6 @@ const GRIME_BASES: Array<{
     rotY: -Math.PI / 2,
   },
 ];
-
-// Fluorescent tube fixture positions (from Babylon source)
-const TUBE_POSITIONS: [number, number, number][] = [
-  [-2.5, 4.2, 1.5],
-  [1.5, 4.2, -1.0],
-  [-2.5, 4.2, -3.0],
-];
-
-const BASE_INTENSITY = 2.0;
 
 /** Resolve asset root URL for a subdirectory (textures, models) */
 function getAssetRootUrl(subdir: string): string {
@@ -265,43 +261,6 @@ function PbrGrimeDecal({size, position, rotY, textures}: PbrGrimeDecalProps) {
 }
 
 // -------------------------------------------------------
-// FluorescentTube — single tube fixture mesh + point light
-// -------------------------------------------------------
-
-interface FluorescentTubeProps {
-  position: [number, number, number];
-  lightRef: React.RefObject<THREE.PointLight | null>;
-}
-
-function FluorescentTube({position, lightRef}: FluorescentTubeProps) {
-  return (
-    <group position={position}>
-      {/* Emissive tube (self-lit, no lighting response) */}
-      <mesh>
-        <boxGeometry args={[0.12, 0.06, 2.5]} />
-        <meshBasicMaterial color="#f2ffe6" />
-      </mesh>
-
-      {/* Housing bracket above tube */}
-      <mesh position={[0, 0.06, 0]}>
-        <boxGeometry args={[0.3, 0.08, 2.7]} />
-        <meshStandardMaterial color="#808080" roughness={0.8} metalness={0.1} />
-      </mesh>
-
-      {/* Point light just below tube */}
-      <pointLight
-        ref={lightRef}
-        position={[0, -0.05, 0]}
-        color="#f2ffe6"
-        intensity={BASE_INTENSITY}
-        distance={12}
-        decay={2}
-      />
-    </group>
-  );
-}
-
-// -------------------------------------------------------
 // KitchenEnvironment — room enclosure, furniture, lighting, grime
 // -------------------------------------------------------
 
@@ -310,144 +269,153 @@ function FluorescentTube({position, lightRef}: FluorescentTubeProps) {
  * Composes room enclosure, PBR grime decals, GLB furniture, and all lighting.
  * Fluorescent tubes randomly flicker using per-frame sine wave intensity.
  *
- * @param props.fridgeDoorOpen - Controls fridge door animation in FurnitureLoader
  * @param props.grinderCranking - Controls grinder crank animation in FurnitureLoader
- * @param props.bowlPosition - Dynamic position for the mixing bowl (null = hidden)
- * @param props.bowlReceiving - Whether the bowl accepts dropped ingredients
+ * @param props.onItemWashed - Called when a cleanup wash cycle completes for an item ID
  */
+const lc = config.scene.lighting;
+
 export const KitchenEnvironment = ({
-  fridgeDoorOpen = false,
   grinderCranking = false,
-  bowlPosition,
-  bowlReceiving = false,
+  onItemWashed,
 }: {
-  fridgeDoorOpen?: boolean;
   grinderCranking?: boolean;
-  /** Override position for the mixing bowl (dynamic — follows bowlPosition state). */
-  bowlPosition?: [number, number, number] | null;
-  /** Whether the bowl should accept dropped ingredients. */
-  bowlReceiving?: boolean;
+  onItemWashed?: (itemId: string) => void;
 }) => {
   // Load PBR textures for room enclosure
   const textures = useRoomTextures();
-
-  // Refs for fluorescent tube lights (flicker animation)
-  const tubeLight0 = useRef<THREE.PointLight>(null);
-  const tubeLight1 = useRef<THREE.PointLight>(null);
-  const tubeLight2 = useRef<THREE.PointLight>(null);
-  const tubeLightRefs = [tubeLight0, tubeLight1, tubeLight2];
-
-  // Flicker state persisted across frames
-  const flickerState = useRef({
-    time: 0,
-    nextFlickerAt: 2 + Math.random() * 3,
-    flickeringTube: -1,
-    flickerEnd: 0,
-  });
-
-  // =======================================================
-  // FLICKER ANIMATION (matches Babylon source logic exactly)
-  // =======================================================
-  useFrame((_, delta) => {
-    const dt = Math.min(delta, 0.1);
-    const s = flickerState.current;
-    s.time += dt;
-
-    // Trigger a new flicker burst
-    if (s.time > s.nextFlickerAt && s.flickeringTube === -1) {
-      s.flickeringTube = Math.floor(Math.random() * TUBE_POSITIONS.length);
-      s.flickerEnd = s.time + 0.1 + Math.random() * 0.3;
-      s.nextFlickerAt = s.time + 3 + Math.random() * 8;
-    }
-
-    // Apply intensity to each tube light
-    for (let i = 0; i < tubeLightRefs.length; i++) {
-      const light = tubeLightRefs[i].current;
-      if (!light) continue;
-
-      if (i === s.flickeringTube && s.time < s.flickerEnd) {
-        // Rapid on/off flicker using sine wave
-        light.intensity = Math.sin(s.time * 60) > 0 ? 0.4 : BASE_INTENSITY;
-      } else {
-        light.intensity = BASE_INTENSITY;
-      }
-    }
-
-    // End flicker burst
-    if (s.flickeringTube !== -1 && s.time >= s.flickerEnd) {
-      s.flickeringTube = -1;
-    }
-  });
+  const arEnabled = useGameStore(s => s.arEnabled);
 
   return (
     <group>
       {/* =======================================================
           ROOM ENCLOSURE — floor, ceiling, 4 walls with PBR textures
+          Hidden in AR mode so real-world camera passthrough is visible.
           ======================================================= */}
-      <RoomEnclosure textures={textures} />
-
-      {/* Trap door — brushed steel ceiling panel (easter egg if player looks up) */}
-      <mesh position={[0, ROOM_H - 0.01, 0]} rotation={[Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[1.8, 1.8]} />
-        <meshStandardMaterial color="#6a6e73" metalness={0.85} roughness={0.35} />
-      </mesh>
+      {!arEnabled && <RoomEnclosure textures={textures} />}
 
       {/* =======================================================
           GRIME DECALS — PBR textured transparent planes
+          Hidden in AR mode (they attach to the room enclosure walls).
           ======================================================= */}
 
       {/* Dripping grime decals on walls */}
-      {GRIME_DRIPS.map((decal, i) => (
-        <PbrGrimeDecal key={`grimeDrip_${i}`} {...decal} textures={textures.grimeDrip} />
-      ))}
+      {!arEnabled &&
+        GRIME_DRIPS.map((decal, i) => (
+          <PbrGrimeDecal key={`grimeDrip_${i}`} {...decal} textures={textures.grimeDrip} />
+        ))}
 
       {/* Baseboard mold decals along floor line */}
-      {GRIME_BASES.map((decal, i) => (
-        <PbrGrimeDecal key={`grimeBase_${i}`} {...decal} textures={textures.grimeBase} />
-      ))}
+      {!arEnabled &&
+        GRIME_BASES.map((decal, i) => (
+          <PbrGrimeDecal key={`grimeBase_${i}`} {...decal} textures={textures.grimeBase} />
+        ))}
 
       {/* =======================================================
           FURNITURE — GLB segments positioned via FurnitureLayout targets
           ======================================================= */}
-      <FurnitureLoader
-        fridgeDoorOpen={fridgeDoorOpen}
-        grinderCranking={grinderCranking}
-        bowlPosition={bowlPosition}
-        bowlReceiving={bowlReceiving}
+      <FurnitureLoader grinderCranking={grinderCranking} />
+
+      {/* =======================================================
+          SINK — procedural geometry, left-wall counter area
+          ======================================================= */}
+      <ProceduralSink position={[-4, 0.85, 2]} onItemWashed={onItemWashed} />
+
+      {/* =======================================================
+          HORROR PROPS — PSX scene dressing (tiered loading)
+          ======================================================= */}
+      <HorrorPropsLoader />
+
+      {/* =======================================================
+          INTERACTIVE CABINETS AND DRAWERS — hidden object layer
+          Positions come from config.enemies.spawnCabinets plus
+          supplemental drawers matching KitchenAssembly part locations.
+          ======================================================= */}
+      {config.enemies.spawnCabinets.map(cab => (
+        <CabinetDrawer
+          key={cab.id}
+          id={cab.id}
+          type="cabinet"
+          position={cab.position as [number, number, number]}
+          size={[0.7, 0.85, 0.05]}
+        />
+      ))}
+      {/* Supplemental drawers for stuffer/stove parts */}
+      <CabinetDrawer
+        id="drawer-upper-right"
+        type="drawer"
+        position={[4.5, 1.0, -3.0]}
+        size={[0.55, 0.22, 0.45]}
+      />
+      <CabinetDrawer
+        id="drawer-lower-right"
+        type="drawer"
+        position={[4.5, 0.35, -3.0]}
+        size={[0.55, 0.22, 0.45]}
+      />
+      <CabinetDrawer
+        id="drawer-upper-left"
+        type="drawer"
+        position={[-4.5, 1.0, -3.0]}
+        size={[0.55, 0.22, 0.45]}
+      />
+      <CabinetDrawer
+        id="drawer-lower-left"
+        type="drawer"
+        position={[-4.5, 0.35, -3.0]}
+        size={[0.55, 0.22, 0.45]}
       />
 
       {/* =======================================================
-          LIGHTING — harsh fluorescent overhead
+          CEILING ELEMENTS — trap door + ECS-driven lighting panels
           ======================================================= */}
+      <TrapDoorMount position={[0, ROOM_H, 0]} />
+      <CeilingLightOrchestrator />
 
-      {/* Hemisphere light: slightly cooler fluorescent sky color
-          with darker ground bounce for horror atmosphere */}
-      <hemisphereLight args={['#d9e6d1', '#4d473d', 0.6]} />
+      {/* Hemisphere light: brighter in AR mode for real-world blending,
+          cooler fluorescent with dark ground bounce in normal mode */}
+      <hemisphereLight
+        args={
+          arEnabled ? ['#ffffff', '#cccccc', 1.2] : ['#d9e6d1', '#4d473d', lc.ambient.hemisphere]
+        }
+      />
 
       {/* Center fill point light at mid-wall height —
-          illuminates vertical surfaces the hemisphere misses */}
-      <pointLight position={[0, 2.0, 0]} color="#d9e1cc" intensity={0.8} distance={14} decay={2} />
-
-      {/* Fluorescent tube fixtures with flicker animation */}
-      {TUBE_POSITIONS.map((pos, i) => (
-        <FluorescentTube key={`tube_${i}`} position={pos} lightRef={tubeLightRefs[i]} />
-      ))}
-
-      {/* =======================================================
-          HORROR ATMOSPHERE LIGHTING
-          ======================================================= */}
-
-      {/* Red emergency light near the ceiling trap door — pulsing ominous glow */}
+          illuminates vertical surfaces the hemisphere misses.
+          Boosted in AR for visibility against real-world background. */}
       <pointLight
-        position={[1.5, ROOM_H - 0.3, 1.5]}
-        color="#ff1a1a"
-        intensity={0.4}
-        distance={8}
+        position={[0, 2.0, 0]}
+        color={arEnabled ? '#ffffff' : '#d9e1cc'}
+        intensity={arEnabled ? 2.0 : lc.ambient.centerFill}
+        distance={14}
         decay={2}
       />
 
-      {/* Dim under-counter light casting creepy shadows from below */}
-      <pointLight position={[0, 0.15, 0]} color="#443322" intensity={0.3} distance={5} decay={2} />
+      {/* =======================================================
+          HORROR ATMOSPHERE LIGHTING
+          Disabled in AR mode — horror lights look wrong with passthrough.
+          ======================================================= */}
+
+      {!arEnabled && (
+        <>
+          {/* Red emergency light near the ceiling trap door — pulsing ominous glow */}
+          <pointLight
+            position={lc.horror.redEmergency.position}
+            color="#ff1a1a"
+            intensity={lc.horror.redEmergency.intensity}
+            distance={8}
+            decay={2}
+          />
+
+          {/* Dim under-counter light casting creepy shadows from below */}
+          <pointLight
+            position={[0, 0.15, 0]}
+            color="#443322"
+            intensity={lc.horror.underCounter.intensity}
+            distance={5}
+            decay={2}
+          />
+        </>
+      )}
     </group>
   );
 };

@@ -1,0 +1,133 @@
+/**
+ * @module TransferBowl
+ * Always-rendered procedural mixing bowl that visually travels between stations
+ * as the player progresses through the sausage-making pipeline.
+ *
+ * Reads bowlPosition and blendColor directly from the Zustand store.
+ * Uses damp3 from maath/easing for smooth position interpolation each frame.
+ *
+ * Bowl positions are derived from resolveTargets (FurnitureLayout), offset
+ * slightly so the procedural bowl sits at the correct place relative to each
+ * station's machinery.
+ */
+
+import {useFrame} from '@react-three/fiber';
+import {damp3} from 'maath/easing';
+import {useMemo, useRef} from 'react';
+import * as THREE from 'three/webgpu';
+import {config} from '../../config';
+import {DEFAULT_ROOM} from '../../engine/FurnitureLayout';
+import {mergeLayoutConfigs, resolveLayout} from '../../engine/layout';
+import type {BowlPosition} from '../../store/gameStore';
+import {useGameStore} from '../../store/gameStore';
+
+// ---------------------------------------------------------------------------
+// Bowl lathe profile — scaled down from POC to kitchen-realistic dimensions
+// ---------------------------------------------------------------------------
+
+const BOWL_POINTS = [
+  new THREE.Vector2(0.002, 0),
+  new THREE.Vector2(0.6, 0),
+  new THREE.Vector2(0.7, 0.3),
+  new THREE.Vector2(0.66, 0.32),
+  new THREE.Vector2(0.56, 0.04),
+  new THREE.Vector2(0.002, 0.04),
+];
+
+// ---------------------------------------------------------------------------
+// Station positions for the bowl (derived from FurnitureLayout targets)
+// ---------------------------------------------------------------------------
+
+const KITCHEN_LAYOUT = mergeLayoutConfigs(
+  config.layout.room,
+  config.layout.rails,
+  config.layout.placements,
+);
+const TARGETS = resolveLayout(KITCHEN_LAYOUT, DEFAULT_ROOM).targets;
+
+const BOWL_POSITIONS: Partial<Record<BowlPosition, [number, number, number]>> = {
+  fridge: TARGETS['mixing-bowl'].position,
+  grinder: [
+    TARGETS.grinder.position[0],
+    TARGETS.grinder.position[1],
+    TARGETS.grinder.position[2] + 1.5,
+  ],
+  'grinder-output': TARGETS['grinder-output'].position,
+  stuffer: [
+    TARGETS.stuffer.position[0],
+    TARGETS.stuffer.position[1] - 0.3,
+    TARGETS.stuffer.position[2] + 0.5,
+  ],
+};
+
+// Scale factor to match the original mixing_bowl.glb visual size
+const BOWL_SCALE = 0.65;
+
+// Off-screen position for 'done' / 'carried' states
+const HIDDEN_POS: [number, number, number] = [0, -50, 0];
+
+// ---------------------------------------------------------------------------
+// TransferBowl
+// ---------------------------------------------------------------------------
+
+export const TransferBowl = () => {
+  const bowlPosition = useGameStore(s => s.bowlPosition);
+  const blendColor = useGameStore(s => s.blendColor);
+
+  const groupRef = useRef<THREE.Group>(null);
+  const meatMoundRef = useRef<THREE.Mesh>(null);
+
+  // Geometry (created once)
+  const bowlGeo = useMemo(() => new THREE.LatheGeometry(BOWL_POINTS, 32), []);
+
+  // Materials
+  const bowlMat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        roughness: 0.1,
+      }),
+    [],
+  );
+  // Memoised meat mound color
+  const meatColor = useMemo(() => new THREE.Color(blendColor), [blendColor]);
+
+  // Whether grinding has happened (meat mound should show)
+  const hasGround = blendColor !== '#808080' && blendColor !== '#888888';
+
+  // Determine visibility — hide for 'done' and 'carried'
+  const isVisible = bowlPosition !== 'done' && bowlPosition !== 'carried';
+
+  useFrame((_, delta) => {
+    if (!groupRef.current) return;
+
+    const targetPos = BOWL_POSITIONS[bowlPosition] ?? HIDDEN_POS;
+    damp3(groupRef.current.position, targetPos, 0.1, delta);
+
+    // Scale meat mound based on grind state
+    if (meatMoundRef.current) {
+      const targetScale = hasGround ? 1.0 : 0.001;
+      const s = meatMoundRef.current.scale.x;
+      const newScale = s + (targetScale - s) * Math.min(1, delta * 5);
+      meatMoundRef.current.scale.setScalar(newScale);
+    }
+  });
+
+  // Start at the correct position immediately
+  const initialPos = BOWL_POSITIONS[bowlPosition] ?? HIDDEN_POS;
+
+  return (
+    <group ref={groupRef} position={initialPos} visible={isVisible} scale={BOWL_SCALE}>
+      <mesh castShadow>
+        <primitive object={bowlGeo} attach="geometry" />
+        <primitive object={bowlMat} attach="material" />
+      </mesh>
+
+      {/* Meat mound inside bowl — hemisphere, colored by blendColor */}
+      <mesh ref={meatMoundRef} position={[0, 0.04, 0]} scale={[0.001, 0.001, 0.001]}>
+        <sphereGeometry args={[0.56, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        <meshStandardMaterial color={meatColor} roughness={0.6} />
+      </mesh>
+    </group>
+  );
+};

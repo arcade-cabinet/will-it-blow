@@ -2,9 +2,9 @@
  * @module GameWorld
  * Main R3F Canvas scene orchestrator for the "Will It Blow?" kitchen.
  *
- * Renders the full 3D scene: kitchen environment, all five station components
- * (fridge, grinder, stuffer, stove, CRT television), FPS camera controller,
- * physics world, grab system, and station waypoint markers.
+ * Renders the full 3D scene: kitchen environment, ECS-driven orchestrators
+ * (grinder, stuffer, cooking), the CRT television, fridge station,
+ * FPS camera controller, physics world, grab system, and station waypoint markers.
  *
  * Architecture:
  * - `GameWorld` is the top-level export, providing the R3F `<Canvas>` with
@@ -21,6 +21,13 @@
  */
 
 import {Canvas, useFrame, useThree} from '@react-three/fiber';
+import {
+  Bloom,
+  ChromaticAberration,
+  EffectComposer,
+  Noise,
+  Vignette,
+} from '@react-three/postprocessing';
 import type {RapierRigidBody} from '@react-three/rapier';
 import {
   BallCollider,
@@ -29,29 +36,47 @@ import {
   Physics,
   RigidBody,
 } from '@react-three/rapier';
-import {createXRStore, XR} from '@react-three/xr';
-import {Suspense, useCallback, useEffect, useRef, useState} from 'react';
-import {Platform, Pressable, Text, View} from 'react-native';
+import {createXRStore, useXR, XR, XROrigin} from '@react-three/xr';
+import {useKeepAwake} from 'expo-keep-awake';
+import {BlendFunction} from 'postprocessing';
+import {Suspense, useCallback, useEffect, useRef} from 'react';
+import {Platform, View} from 'react-native';
 import {WebGPURenderer} from 'three/webgpu';
-import {DEFAULT_ROOM, resolveTargets, STATION_TARGET_NAMES} from '../engine/FurnitureLayout';
+import {config} from '../config';
+import {BlowoutOrchestrator} from '../ecs/orchestrators/BlowoutOrchestrator';
+import {ChoppingOrchestrator} from '../ecs/orchestrators/ChoppingOrchestrator';
+import {CookingOrchestrator} from '../ecs/orchestrators/CookingOrchestrator';
+import {GrinderOrchestrator} from '../ecs/orchestrators/GrinderOrchestrator';
+import {StufferOrchestrator} from '../ecs/orchestrators/StufferOrchestrator';
+import {ECSScene} from '../ecs/renderers/ECSScene';
+import {DEFAULT_ROOM, STATION_TARGET_NAMES} from '../engine/FurnitureLayout';
+import {isStationReady} from '../engine/KitchenAssembly';
+import {mergeLayoutConfigs, resolveLayout} from '../engine/layout';
 import {useGameStore} from '../store/gameStore';
+import {ARPlacement} from './controls/ARPlacement';
 import {FPSController} from './controls/FPSController';
 import {GrabSystem} from './controls/GrabSystem';
+import {VRLocomotion} from './controls/VRLocomotion';
+import {BasementStructure} from './kitchen/BasementStructure';
 import {CrtTelevision} from './kitchen/CrtTelevision';
 import {FridgeStation} from './kitchen/FridgeStation';
-import {GrabbableSausage} from './kitchen/GrabbableSausage';
-import {GrinderStation} from './kitchen/GrinderStation';
 import {KitchenEnvironment} from './kitchen/KitchenEnvironment';
+import {SausagePhysics} from './kitchen/SausagePhysics';
 import {StationMarker} from './kitchen/StationMarker';
-import {StoveStation} from './kitchen/StoveStation';
-import {StufferStation} from './kitchen/StufferStation';
+import {TransferBowl} from './kitchen/TransferBowl';
 import {SceneIntrospector} from './SceneIntrospector';
+import {VRHUDLayer} from './vr/VRHUDLayer';
 
 // -----------------------------------------------------------------
 // Resolve station targets from the layout system
 // -----------------------------------------------------------------
 
-const RESOLVED_TARGETS = resolveTargets(DEFAULT_ROOM);
+const KITCHEN_LAYOUT = mergeLayoutConfigs(
+  config.layout.room,
+  config.layout.rails,
+  config.layout.placements,
+);
+const RESOLVED_TARGETS = resolveLayout(KITCHEN_LAYOUT, DEFAULT_ROOM).targets;
 
 // Pre-compute station data from resolved targets for rendering
 const STATIONS = STATION_TARGET_NAMES.map(name => {
@@ -62,10 +87,6 @@ const STATIONS = STATION_TARGET_NAMES.map(name => {
     markerY: t.markerY ?? t.position[1],
   };
 });
-
-// Output positions for carried objects between stations — from named targets
-const GRINDER_OUTPUT_POS = RESOLVED_TARGETS['grinder-output'].position;
-const STUFFER_OUTPUT_POS = RESOLVED_TARGETS['stuffer-output'].position;
 
 // -----------------------------------------------------------------
 // PlayerBody — kinematic rigid body that follows the camera
@@ -107,7 +128,7 @@ function PlayerBody() {
  *
  * @param props.position - World position from resolveTargets()
  * @param props.radius - Trigger radius from the target definition
- * @param props.challengeIndex - Which challenge (0-4) this sensor gates
+ * @param props.challengeIndex - Which challenge (0-5) this sensor gates
  */
 function StationSensor({
   position,
@@ -210,6 +231,62 @@ function ManualProximityTrigger() {
 }
 
 // -----------------------------------------------------------------
+/**
+ * Renders postprocessing effects only when:
+ * - The renderer is WebGL (not WebGPU)
+ * - No XR session is active (postprocessing breaks stereo rendering)
+ */
+function WebGLOnlyEffects() {
+  const gl = useThree(s => s.gl);
+  const xrMode = useXR(xr => xr.mode);
+
+  // Disable during XR — EffectComposer renders to a single framebuffer,
+  // which breaks the stereo left/right eye split in immersive sessions.
+  if (xrMode === 'immersive-vr' || xrMode === 'immersive-ar') return null;
+  if (!(gl as any).isWebGLRenderer) return null;
+
+  return (
+    <EffectComposer>
+      <Bloom intensity={0.3} luminanceThreshold={0.9} luminanceSmoothing={0.025} mipmapBlur />
+      <Vignette offset={0.3} darkness={0.4} blendFunction={BlendFunction.NORMAL} />
+      <ChromaticAberration offset={[0.002, 0.002]} blendFunction={BlendFunction.NORMAL} />
+      <Noise opacity={0.02} blendFunction={BlendFunction.OVERLAY} />
+    </EffectComposer>
+  );
+}
+
+// -----------------------------------------------------------------
+/**
+ * VR locomotion wrapper — smooth thumbstick or teleport movement,
+ * snap/smooth turning, room bounds clamping, comfort vignette.
+ * Only renders when an XR session (immersive-vr) is active.
+ */
+function VRLocomotionGate() {
+  const xrMode = useXR(xr => xr.mode);
+  if (xrMode !== 'immersive-vr') return null;
+  return <VRLocomotion />;
+}
+
+// -----------------------------------------------------------------
+/**
+ * XROrigin wrapper — places the session origin in the scene.
+ * In seated mode, raises the origin so the player doesn't appear
+ * to be sitting on the floor. In standing mode, the XR runtime's
+ * floor-level reference space is used as-is.
+ */
+function XROriginWrapper() {
+  const xrMode = useXR(xr => xr.mode);
+  const xrSeatedMode = useGameStore(s => s.xrSeatedMode);
+
+  // Only render XROrigin when an XR session is active
+  if (xrMode !== 'immersive-vr' && xrMode !== 'immersive-ar') return null;
+
+  // Seated mode: raise origin to approximate standing eye height
+  const seatedOffset: [number, number, number] = xrSeatedMode ? [0, 1.2, 0] : [0, 0, 0];
+
+  return <XROrigin position={seatedOffset} />;
+}
+
 // SceneContent — all 3D content inside the Canvas
 // -----------------------------------------------------------------
 
@@ -217,16 +294,10 @@ function ManualProximityTrigger() {
  * All 3D content rendered inside the R3F Canvas.
  *
  * Reads game state from Zustand and distributes it as props to child
- * components (stations, environment, markers). Manages derived state
- * such as grinder crank angle, splatter timing, and bowl/sausage visibility.
- *
- * Key responsibilities:
- * - Determines which station is "active" based on gameStatus, currentChallenge,
- *   and challengeTriggered
- * - Converts store arrays to Sets for FridgeStation props (performance)
- * - Tracks strike count changes to trigger splatter/burst visuals with timeouts
- * - Computes bowl render position from the bowlPosition state machine
- *   (fridge -> grinder-output -> stuffer -> done)
+ * components (Mechanics, environment, markers). Determines which station
+ * is "active" based on gameStatus / currentChallenge / challengeTriggered,
+ * converts store arrays to Sets for FridgeStation, and computes bowl
+ * render position from the bowlPosition state machine.
  *
  * @param props.joystickRef - Shared ref from MobileJoystick for movement input
  * @param props.lookDeltaRef - Shared ref from MobileJoystick for look-drag input
@@ -238,87 +309,37 @@ const SceneContent = ({
   joystickRef?: React.RefObject<{x: number; y: number}>;
   lookDeltaRef?: React.RefObject<{dx: number; dy: number}>;
 }) => {
+  useKeepAwake();
   const gameStatus = useGameStore(s => s.gameStatus);
   const currentChallenge = useGameStore(s => s.currentChallenge);
   const challengeTriggered = useGameStore(s => s.challengeTriggered);
-  const challengeProgress = useGameStore(s => s.challengeProgress);
-  const challengePressure = useGameStore(s => s.challengePressure);
-  const challengeIsPressing = useGameStore(s => s.challengeIsPressing);
-  const challengeTemperature = useGameStore(s => s.challengeTemperature);
-  const challengeHeatLevel = useGameStore(s => s.challengeHeatLevel);
-  const strikes = useGameStore(s => s.strikes);
   const mrSausageReaction = useGameStore(s => s.mrSausageReaction);
   const hintActive = useGameStore(s => s.hintActive);
-  // Bowl & sausage tracking for inter-station physics flow
-  const bowlPosition = useGameStore(s => s.bowlPosition);
-  const sausagePlaced = useGameStore(s => s.sausagePlaced);
-  const setSausagePlaced = useGameStore(s => s.setSausagePlaced);
+  const fridgeDoorProgress = useGameStore(s => s.fridgeDoorProgress);
   // Shared fridge state from store (IngredientChallenge writes, 3D reads)
   const fridgePool = useGameStore(s => s.fridgePool);
   const fridgeMatchingIndices = useGameStore(s => s.fridgeMatchingIndices);
   const fridgeSelectedIndices = useGameStore(s => s.fridgeSelectedIndices);
   const triggerFridgeClick = useGameStore(s => s.triggerFridgeClick);
   const setFridgeHovered = useGameStore(s => s.setFridgeHovered);
+  const assembledParts = useGameStore(s => s.assembledParts);
+  const difficulty = useGameStore(s => s.difficulty);
+  const sausagePlaced = useGameStore(s => s.sausagePlaced);
+
+  // Assembly gate: at Medium+ difficulty, stations require parts to be found first
+  const assemblyEnabled = (difficulty as any).assembly === true;
+  const grinderReady = !assemblyEnabled || isStationReady('grinder', assembledParts);
+  const stufferReady = !assemblyEnabled || isStationReady('stuffer', assembledParts);
+  const stoveReady = !assemblyEnabled || isStationReady('stove', assembledParts);
 
   // Station is active only when playing + correct challenge + player has arrived
   const isPlaying = gameStatus === 'playing' && challengeTriggered;
   const isFridgeActive = isPlaying && currentChallenge === 0;
-  const isGrinderActive = isPlaying && currentChallenge === 1;
-  const isStufferActive = isPlaying && currentChallenge === 2;
-  const isStoveActive = isPlaying && currentChallenge === 3;
-
-  // Grinder station state derived from store
-  const grinderCrankAngle = useRef(0);
-  const prevStrikesRef = useRef(strikes);
-
-  // Animate crank angle based on challenge progress changes
-  useEffect(() => {
-    if (isGrinderActive) {
-      grinderCrankAngle.current = (challengeProgress / 100) * Math.PI * 8;
-    }
-  }, [isGrinderActive, challengeProgress]);
-
-  // Detect new strikes to trigger splatter visual
-  const [grinderSplattering, setGrinderSplattering] = useState(false);
-  useEffect(() => {
-    if (isGrinderActive && strikes > prevStrikesRef.current) {
-      setGrinderSplattering(true);
-      const timeout = setTimeout(() => setGrinderSplattering(false), 800);
-      prevStrikesRef.current = strikes;
-      return () => clearTimeout(timeout);
-    }
-    prevStrikesRef.current = strikes;
-  }, [isGrinderActive, strikes]);
-
-  // Stuffer station state: detect burst from strike changes
-  const [stufferBurst, setStufferBurst] = useState(false);
-  const prevStufferStrikesRef = useRef(strikes);
-  useEffect(() => {
-    if (isStufferActive && strikes > prevStufferStrikesRef.current) {
-      setStufferBurst(true);
-      const timeout = setTimeout(() => setStufferBurst(false), 1000);
-      prevStufferStrikesRef.current = strikes;
-      return () => clearTimeout(timeout);
-    }
-    prevStufferStrikesRef.current = strikes;
-  }, [isStufferActive, strikes]);
-
-  // Callback for when sausage is dropped on the stove pan
-  const handleSausagePlaced = useCallback(() => {
-    setSausagePlaced();
-  }, [setSausagePlaced]);
-
-  // Determine bowl rendering position based on bowlPosition store state
-  const bowlRenderPos =
-    bowlPosition === 'fridge'
-      ? RESOLVED_TARGETS['mixing-bowl'].position
-      : bowlPosition === 'grinder-output'
-        ? GRINDER_OUTPUT_POS
-        : null;
-  const showBowl = bowlRenderPos !== null;
-
-  // Show sausage at stuffer output after Challenge 2, until placed on stove
-  const showSausage = bowlPosition === 'done' && currentChallenge >= 3 && !sausagePlaced;
+  const isChoppingActive = isPlaying && currentChallenge === 1;
+  const isGrinderActive = isPlaying && currentChallenge === 2 && grinderReady;
+  const isStufferActive = isPlaying && currentChallenge === 3 && stufferReady;
+  const isStoveActive = isPlaying && currentChallenge === 4 && stoveReady;
+  const isBlowoutActive = isPlaying && currentChallenge === 5;
 
   // Convert store arrays to Sets for FridgeStation props
   const fridgeSelectedSet = new Set(fridgeSelectedIndices);
@@ -332,8 +353,10 @@ const SceneContent = ({
   return (
     <>
       {/* Dim ambient fill (KitchenEnvironment provides the strong fluorescent + fill lights) */}
-      <ambientLight intensity={0.15} />
+      <ambientLight intensity={0.35} />
       <SceneIntrospector />
+      <XROriginWrapper />
+      <VRLocomotionGate />
       <FPSController joystickRef={joystickRef} lookDeltaRef={lookDeltaRef} />
       <GrabSystem />
 
@@ -355,14 +378,9 @@ const SceneContent = ({
         <ManualProximityTrigger />
       )}
 
-      <KitchenEnvironment
-        fridgeDoorOpen={isFridgeActive}
-        grinderCranking={isGrinderActive}
-        bowlPosition={showBowl ? bowlRenderPos : null}
-        bowlReceiving={bowlPosition === 'fridge'}
-      />
+      <KitchenEnvironment grinderCranking={isGrinderActive} />
       <CrtTelevision
-        position={STATIONS[4].position}
+        position={STATIONS[6].position}
         reaction={gameStatus === 'defeat' ? 'laugh' : mrSausageReaction}
       />
 
@@ -375,11 +393,12 @@ const SceneContent = ({
         />
       ))}
 
-      {/* Grabbable sausage — spawns at stuffer output after Challenge 2 */}
-      {showSausage && <GrabbableSausage position={STUFFER_OUTPUT_POS} />}
+      {/* Horror post-processing: subtle bloom, vignette, chromatic aberration, film noise.
+         Disabled under WebGPU — postprocessing library requires WebGL's getContextAttributes(). */}
+      <WebGLOnlyEffects />
 
-      {/* All stations always rendered — positions from target system */}
-      {isFridgeActive && fridgePool.length > 0 && (
+      {/* Fridge station — 3D shelf with ingredient items (only after door is fully open) */}
+      {isFridgeActive && fridgeDoorProgress >= 1 && fridgePool.length > 0 && (
         <FridgeStation
           position={STATIONS[0].position}
           ingredients={fridgePool}
@@ -390,25 +409,32 @@ const SceneContent = ({
           onHover={setFridgeHovered}
         />
       )}
-      <GrinderStation
-        position={STATIONS[1].position}
-        grindProgress={isGrinderActive ? challengeProgress : 0}
-        crankAngle={isGrinderActive ? grinderCrankAngle.current : 0}
-        isSplattering={isGrinderActive && grinderSplattering}
-      />
-      <StufferStation
-        position={STATIONS[2].position}
-        fillLevel={isStufferActive ? challengeProgress : 0}
-        pressureLevel={isStufferActive ? challengePressure : 0}
-        isPressing={isStufferActive && challengeIsPressing}
-        hasBurst={isStufferActive && stufferBurst}
-      />
-      <StoveStation
-        position={STATIONS[3].position}
-        temperature={isStoveActive ? challengeTemperature : 70}
-        heatLevel={isStoveActive ? challengeHeatLevel : 0}
-        onSausagePlaced={handleSausagePlaced}
-      />
+
+      {/* Procedural mechanics — visual-only station geometry driven by Zustand */}
+      <ChoppingOrchestrator position={STATIONS[1].position} visible={isChoppingActive} />
+      <GrinderOrchestrator position={STATIONS[2].position} visible={isGrinderActive} />
+      <StufferOrchestrator position={STATIONS[3].position} visible={isStufferActive} />
+      <CookingOrchestrator position={STATIONS[4].position} visible={isStoveActive} />
+      <BlowoutOrchestrator position={STATIONS[5].position} visible={isBlowoutActive} />
+
+      {/* Sausage coil physics — Rapier rigid body segments, active after stuffing */}
+      {sausagePlaced && <SausagePhysics position={STATIONS[3].position} />}
+
+      {/* Procedural transfer bowl — follows bowlPosition through the pipeline */}
+      <TransferBowl />
+
+      {/* Atmospheric basement elements — always visible */}
+      <BasementStructure room={DEFAULT_ROOM} />
+
+      {/* ECS-driven renderers — renders nothing until entities are spawned */}
+      <ECSScene />
+
+      {/* AR placement reticle — shown when AR is active but kitchen not yet placed */}
+      <ARPlacement />
+
+      {/* VR world-space HUD panels — renders challenge HUDs inside the 3D scene
+          when an immersive-vr session is active. Flat-screen mode uses 2D overlay. */}
+      <VRHUDLayer />
     </>
   );
 };
@@ -439,7 +465,31 @@ function PhysicsWrapper({children}: {children: React.ReactNode}) {
 // GameWorld — top-level 3D scene container
 // -----------------------------------------------------------------
 
-const xrStore = createXRStore();
+/** XR store — exported so SettingsScreen can trigger VR/AR entry.
+ *  AR sessions request hit-test, dom-overlay, and anchors as optional features. */
+export const xrStore = createXRStore({
+  hitTest: true,
+  domOverlay: true,
+  anchors: true,
+});
+
+/** Auto-enters VR or AR when the respective store flag is true. Must live inside the Canvas tree. */
+function XRAutoEntry() {
+  const xrEnabled = useGameStore(s => s.xrEnabled);
+  const arEnabled = useGameStore(s => s.arEnabled);
+  useEffect(() => {
+    if (arEnabled) {
+      // AR takes priority — small delay lets the Canvas/XR wrapper fully initialize
+      const t = setTimeout(() => xrStore.enterAR(), 500);
+      return () => clearTimeout(t);
+    }
+    if (xrEnabled) {
+      const t = setTimeout(() => xrStore.enterVR(), 500);
+      return () => clearTimeout(t);
+    }
+  }, [xrEnabled, arEnabled]);
+  return null;
+}
 
 /**
  * Top-level 3D scene container exported for use by App.tsx (lazy-loaded).
@@ -448,7 +498,8 @@ const xrStore = createXRStore();
  * browser WebGPU on web). Wraps the scene in `<XR>` for optional VR entry
  * and `<PhysicsWrapper>` for Rapier physics on web.
  *
- * An "Enter VR" button is rendered as a React Native overlay on web.
+ * VR entry is available via the XR wrapper but the button lives in
+ * SettingsScreen, not as an in-game overlay.
  *
  * @param props.joystickRef - Forwarded to SceneContent for mobile movement
  * @param props.lookDeltaRef - Forwarded to SceneContent for mobile look
@@ -460,16 +511,19 @@ export const GameWorld = ({
   joystickRef?: React.RefObject<{x: number; y: number}>;
   lookDeltaRef?: React.RefObject<{dx: number; dy: number}>;
 }) => {
+  const arEnabled = useGameStore(s => s.arEnabled);
+
   return (
     <View style={{flex: 1}}>
       <Canvas
-        camera={{fov: 70, near: 0.1, far: 100, position: [0, 1.6, 0]}}
+        camera={{fov: 80, near: 0.1, far: 100, position: [0, 1.6, 0]}}
         style={{width: '100%', height: '100%'}}
         gl={async props => {
           try {
             const renderer = new WebGPURenderer({
               canvas: props.canvas as HTMLCanvasElement,
               antialias: true,
+              alpha: arEnabled,
             });
             await renderer.init();
             return renderer;
@@ -480,27 +534,12 @@ export const GameWorld = ({
         }}
       >
         <XR store={xrStore}>
+          <XRAutoEntry />
           <PhysicsWrapper>
             <SceneContent joystickRef={joystickRef} lookDeltaRef={lookDeltaRef} />
           </PhysicsWrapper>
         </XR>
       </Canvas>
-      {Platform.OS === 'web' && (
-        <Pressable
-          onPress={() => xrStore.enterVR()}
-          style={{
-            position: 'absolute',
-            zIndex: 20,
-            bottom: 20,
-            right: 20,
-            backgroundColor: 'rgba(0,0,0,0.7)',
-            padding: 12,
-            borderRadius: 8,
-          }}
-        >
-          <Text style={{color: '#fff', fontWeight: 'bold'}}>Enter VR</Text>
-        </Pressable>
-      )}
     </View>
   );
 };

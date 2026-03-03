@@ -43,13 +43,15 @@ Different agents need different files. Read the files relevant to your role:
 
 ## Relationship to Other Documentation
 
-The memory bank is a **summary layer** on top of the detailed docs:
+The memory bank is the **detail layer** — shared knowledge that all agents read:
 
-- `CLAUDE.md` — Claude Code-specific instructions (commands, pitfalls, key files)
+- `AGENTS.md` (project root) — Lean entry point: architecture, key files, commands, rules, pointers
+- `memory-bank/` (this dir) — Persistent agent context: tech stack, pitfalls, patterns, progress
 - `docs/` — Deep technical documentation (architecture, game design, rendering, etc.)
-- `memory-bank/` — Persistent agent context (session state, progress, patterns)
+- `CLAUDE.md` — Claude Code-specific behavior only (slash commands, agents, tool preferences)
+- `.github/copilot-instructions.md` — GitHub Copilot-specific behavior only
 
-The memory bank is designed to be read quickly at session start. For deep dives, follow the references into `docs/` or source code.
+Tool-specific files (`CLAUDE.md`, `copilot-instructions.md`) mandate reading `AGENTS.md` + `memory-bank/` first. Project knowledge lives here and in `docs/`, not in tool-specific files.
 
 ## Rules
 

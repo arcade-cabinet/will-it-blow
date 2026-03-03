@@ -128,13 +128,30 @@ export function DialogueOverlay({lines, onComplete}: DialogueOverlayProps) {
   const speakerColor = currentLine.speaker === 'sausage' ? '#FF1744' : '#FFC832';
 
   return (
-    <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={handleTap}>
+    <TouchableOpacity
+      style={styles.overlay}
+      activeOpacity={1}
+      onPress={handleTap}
+      accessibilityRole="button"
+      accessibilityLabel={`${speakerLabel} says: ${fullTextRef.current}. ${!isTyping && choices.length === 0 ? 'Tap to continue' : ''}`}
+      accessibilityHint={
+        isTyping
+          ? 'Tap to skip text animation'
+          : choices.length > 0
+            ? 'Select a dialogue choice below'
+            : 'Tap to advance dialogue'
+      }
+    >
       <View style={styles.dialogueBox}>
         {/* Speaker label */}
-        <Text style={[styles.speakerLabel, {color: speakerColor}]}>{speakerLabel}</Text>
+        <Text style={[styles.speakerLabel, {color: speakerColor}]} accessibilityRole="text">
+          {speakerLabel}
+        </Text>
 
         {/* Dialogue text */}
-        <Text style={styles.dialogueText}>{displayedText}</Text>
+        <Text style={styles.dialogueText} accessibilityLiveRegion="polite">
+          {displayedText}
+        </Text>
 
         {/* Tap to continue indicator */}
         {!isTyping && choices.length === 0 && (
@@ -145,7 +162,7 @@ export function DialogueOverlay({lines, onComplete}: DialogueOverlayProps) {
 
         {/* Player choices */}
         {!isTyping && choices.length > 0 && (
-          <View style={styles.choiceContainer}>
+          <View style={styles.choiceContainer} accessibilityRole="menu">
             {choices.map((choice, index) => (
               <TouchableOpacity
                 key={index}
@@ -153,6 +170,8 @@ export function DialogueOverlay({lines, onComplete}: DialogueOverlayProps) {
                 onPress={() => handleChoice(index)}
                 activeOpacity={0.7}
                 testID="dialogue-choice"
+                accessibilityRole="menuitem"
+                accessibilityLabel={choice.text}
               >
                 <Text style={styles.choiceText}>{choice.text}</Text>
               </TouchableOpacity>
