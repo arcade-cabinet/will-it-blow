@@ -515,3 +515,20 @@ export interface ChallengeSequenceConfig {
     challengeType: string;
   }>;
 }
+
+// ---------------------------------------------------------------------------
+// Horror Props Config
+// ---------------------------------------------------------------------------
+
+export interface HorrorPropDef {
+  id: string;
+  model: string;
+  position: [number, number, number];
+  rotation: [number, number, number];
+  scale: number;
+  tier: 1 | 2;
+}
+
+export interface HorrorPropsConfig {
+  props: HorrorPropDef[];
+}

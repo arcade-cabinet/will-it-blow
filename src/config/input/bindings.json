@@ -44,6 +44,11 @@
       "keyboard": ["Escape"],
       "gamepad": { "button": "start" },
       "touch": { "gesture": "menuButton" }
+    },
+    "flip": {
+      "keyboard": ["f"],
+      "gamepad": { "button": "y" },
+      "touch": { "gesture": "swipeUp" }
     }
   },
   "tuning": {

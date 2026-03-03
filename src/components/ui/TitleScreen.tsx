@@ -19,13 +19,22 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {Animated, StyleSheet, Text, View} from 'react-native';
 import {useGameStore} from '../../store/gameStore';
+import {DifficultySelector} from './DifficultySelector';
 import {SausageButton} from './SausageButton';
 import {SettingsScreen} from './SettingsScreen';
 
 export function TitleScreen() {
-  const {setAppPhase, continueGame, currentChallenge, challengeScores} = useGameStore();
+  const {
+    setAppPhase,
+    continueGame,
+    startNewGame,
+    setDifficulty,
+    currentChallenge,
+    challengeScores,
+  } = useGameStore();
   const hasSaveData = challengeScores.length > 0 && currentChallenge < 5;
   const [showSettings, setShowSettings] = useState(false);
+  const [showDifficulty, setShowDifficulty] = useState(false);
 
   // Fade-in animation
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -72,7 +81,7 @@ export function TitleScreen() {
 
   const handleMenuPress = (index: number) => {
     if (index === 0) {
-      setAppPhase('loading');
+      setShowDifficulty(true);
     } else if (index === 1 && hasSaveData) {
       // Restore saved progress before entering loading phase.
       // LoadingScreen only handles asset preloading — it doesn't touch game state.
@@ -82,7 +91,20 @@ export function TitleScreen() {
     // index === 2 (quit/settings) is handled inline via setShowSettings
   };
 
+  const handleDifficultySelect = useCallback(
+    (tierId: string) => {
+      setDifficulty(tierId);
+      startNewGame();
+      setAppPhase('loading');
+    },
+    [setDifficulty, startNewGame, setAppPhase],
+  );
+  const handleDifficultyBack = useCallback(() => setShowDifficulty(false), []);
   const handleSettingsBack = useCallback(() => setShowSettings(false), []);
+
+  if (showDifficulty) {
+    return <DifficultySelector onSelect={handleDifficultySelect} onBack={handleDifficultyBack} />;
+  }
 
   if (showSettings) {
     return <SettingsScreen onBack={handleSettingsBack} />;

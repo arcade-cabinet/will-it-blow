@@ -22,8 +22,8 @@ describe('gameStore initial state', () => {
     expect(store().strikes).toBe(0);
   });
 
-  it('starts with 3 hints', () => {
-    expect(store().hintsRemaining).toBe(3);
+  it('starts with hints matching default difficulty tier', () => {
+    expect(store().hintsRemaining).toBe(store().difficulty.hints);
   });
 
   it('starts with empty challenge scores', () => {
@@ -74,10 +74,10 @@ describe('startNewGame', () => {
     expect(store().challengeScores).toEqual([]);
   });
 
-  it('resets hints to 3', () => {
+  it('resets hints to difficulty tier value', () => {
     useGameStore.setState({hintsRemaining: 0});
     store().startNewGame();
-    expect(store().hintsRemaining).toBe(3);
+    expect(store().hintsRemaining).toBe(store().difficulty.hints);
   });
 
   it('increments totalGamesPlayed', () => {
@@ -213,8 +213,9 @@ describe('returnToMenu', () => {
 describe('useHint', () => {
   it('decrements hints', () => {
     store().startNewGame();
+    const initialHints = store().hintsRemaining;
     store().useHint();
-    expect(store().hintsRemaining).toBe(2);
+    expect(store().hintsRemaining).toBe(initialHints - 1);
   });
 
   it('does not go below 0', () => {

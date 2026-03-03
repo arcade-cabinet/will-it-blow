@@ -92,6 +92,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 2,
     color: '#D4A017',
     shape: {base: 'box', detail: 'rounded'},
+    glbPath: 'burger.glb',
     formAffinity: 'link',
     decomposition: {
       chunkColor: '#D4A017',
@@ -130,6 +131,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 1,
     color: '#C41E3A',
     shape: {base: 'elongated', detail: 'claws'},
+    glbPath: 'fish.glb',
     formAffinity: 'coil',
     decomposition: {
       chunkColor: '#C41E3A',
@@ -187,6 +189,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 2,
     color: '#FF1744',
     shape: {base: 'cone'},
+    glbPath: 'donut.glb',
     formAffinity: 'link',
     decomposition: {
       chunkColor: '#FF1744',
@@ -206,6 +209,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 3,
     color: '#B71C1C',
     shape: {base: 'small-sphere'},
+    glbPath: 'pepper_red.glb',
     formAffinity: 'link',
     decomposition: {
       chunkColor: '#B71C1C',
@@ -225,6 +229,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 3,
     color: '#FFC107',
     shape: {base: 'sphere', detail: 'wobbly'},
+    glbPath: 'chickenleg.glb',
     formAffinity: 'neutral',
     decomposition: {
       chunkColor: '#FFC107',
@@ -263,6 +268,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 2,
     color: '#8D6E63',
     shape: {base: 'box', detail: 'rounded'},
+    glbPath: 'steak.glb',
     formAffinity: 'coil',
     decomposition: {
       chunkColor: '#8D6E63',
@@ -282,6 +288,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 3,
     color: '#FF6D00',
     shape: {base: 'small-sphere'},
+    glbPath: 'pepper_green.glb',
     formAffinity: 'link',
     decomposition: {
       chunkColor: '#FF6D00',
@@ -339,6 +346,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 2,
     color: '#7B1FA2',
     shape: {base: 'cylinder', detail: 'flat'},
+    glbPath: 'banana.glb',
     formAffinity: 'link',
     decomposition: {
       chunkColor: '#7B1FA2',
@@ -377,6 +385,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 2,
     color: '#FFF9C4',
     shape: {base: 'cylinder'},
+    glbPath: 'cake.glb',
     formAffinity: 'link',
     decomposition: {
       chunkColor: '#FFF9C4',
@@ -396,6 +405,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 3,
     color: '#F57C00',
     shape: {base: 'cylinder', detail: 'flat'},
+    glbPath: 'pizza_slice.glb',
     formAffinity: 'link',
     decomposition: {
       chunkColor: '#F57C00',
@@ -453,6 +463,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 2,
     color: '#EF5350',
     shape: {base: 'box', detail: 'rounded'},
+    glbPath: 'fish.glb',
     formAffinity: 'coil',
     decomposition: {
       chunkColor: '#EF5350',
@@ -510,6 +521,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 3,
     color: '#FFCA28',
     shape: {base: 'sphere', detail: 'wobbly'},
+    glbPath: 'cheese_singles.glb',
     formAffinity: 'neutral',
     decomposition: {
       chunkColor: '#FFCA28',
@@ -529,6 +541,7 @@ export const INGREDIENTS: Ingredient[] = [
     blowPower: 2,
     color: '#F9A825',
     shape: {base: 'elongated'},
+    glbPath: 'corndog.glb',
     formAffinity: 'coil',
     decomposition: {
       chunkColor: '#F9A825',

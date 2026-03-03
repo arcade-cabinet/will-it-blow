@@ -148,7 +148,7 @@ describe('FurnitureLoader', () => {
       const source = fs.readFileSync(path.resolve(__dirname, '../FurnitureLoader.tsx'), 'utf8');
       expect(source).toContain('fridgeDoorProgress');
       expect(source).toContain('setFridgeDoorProgress');
-      expect(source).toContain('FRIDGE_SNAP_THRESHOLD');
+      expect(source).toContain('springBackRef');
     });
 
     it('source has pointer drag handlers for fridge door', () => {

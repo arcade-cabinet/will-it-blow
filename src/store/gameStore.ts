@@ -20,6 +20,11 @@ import {create} from 'zustand';
 import {createJSONStorage, persist} from 'zustand/middleware';
 import type {Reaction} from '../components/characters/reactions';
 import {computeBlendProperties as computeBlend} from '../engine/BlendCalculator';
+import {
+  DEFAULT_DIFFICULTY,
+  type DifficultyTier,
+  loadDifficultyTier,
+} from '../engine/DifficultyConfig';
 import {getRandomIngredientPool, type Ingredient} from '../engine/Ingredients';
 
 /** Top-level application phase controlling which screen is rendered. */
@@ -200,6 +205,11 @@ export interface GameState {
   /** Player's tracked decisions across all stages */
   playerDecisions: PlayerDecisions;
 
+  // ---- Difficulty ----
+
+  /** Active difficulty tier for the current game session. */
+  difficulty: DifficultyTier;
+
   // ---- Settings (persisted) ----
 
   /** Music volume level 0-1 */
@@ -215,6 +225,8 @@ export interface GameState {
 
   // ---- Actions ----
 
+  /** Change the difficulty tier by ID. Persisted across sessions. */
+  setDifficulty: (id: string) => void;
   /** Transition the app to a different phase (menu/loading/playing). */
   setAppPhase: (phase: AppPhase) => void;
   /** Reset all game state and start a fresh game. Increments totalGamesPlayed. */
@@ -307,10 +319,9 @@ export interface GameState {
 
 /** Number of sequential challenges in a full game (ingredients through tasting). */
 const TOTAL_CHALLENGES = 6;
-/** Hint tokens given at the start of each new game. */
-const INITIAL_HINTS = 3;
-/** Maximum strikes before the game ends in defeat. */
-const MAX_STRIKES = 3;
+
+/** The default difficulty tier, loaded once at module init. */
+const DEFAULT_TIER = loadDifficultyTier(DEFAULT_DIFFICULTY);
 
 /**
  * Adapts BlendCalculator output to the flat store shape.
@@ -353,7 +364,7 @@ export const INITIAL_GAME_STATE = {
   challengePhase: 'dialogue' as ChallengePhase,
   mrSausageReaction: 'idle' as Reaction,
   hintActive: false,
-  hintsRemaining: INITIAL_HINTS,
+  hintsRemaining: DEFAULT_TIER.hints,
   totalGamesPlayed: 0,
   variantSeed: 0,
   grabbedObject: null as string | null,
@@ -383,6 +394,7 @@ export const INITIAL_GAME_STATE = {
     stageTimings: {},
     flairPoints: [],
   } as PlayerDecisions,
+  difficulty: DEFAULT_TIER,
   musicVolume: 0.7,
   sfxVolume: 0.8,
   musicMuted: false,
@@ -399,6 +411,8 @@ export const useGameStore = create<GameState>()(
   persist(
     (set, get) => ({
       ...INITIAL_GAME_STATE,
+
+      setDifficulty: (id: string) => set({difficulty: loadDifficultyTier(id)}),
 
       setAppPhase: (phase: AppPhase) => set({appPhase: phase}),
 
@@ -419,7 +433,7 @@ export const useGameStore = create<GameState>()(
           challengeSpeedZone: null,
           challengePhase: 'dialogue' as ChallengePhase,
           mrSausageReaction: 'idle' as Reaction,
-          hintsRemaining: INITIAL_HINTS,
+          hintsRemaining: state.difficulty.hints,
           totalGamesPlayed: state.totalGamesPlayed + 1,
           variantSeed: Date.now(),
           grabbedObject: null,
@@ -531,7 +545,7 @@ export const useGameStore = create<GameState>()(
           const newStrikes = state.strikes + 1;
           return {
             strikes: newStrikes,
-            gameStatus: newStrikes >= MAX_STRIKES ? 'defeat' : state.gameStatus,
+            gameStatus: newStrikes >= state.difficulty.maxStrikes ? 'defeat' : state.gameStatus,
           };
         }),
 
@@ -765,6 +779,7 @@ export const useGameStore = create<GameState>()(
         challengeScores: state.challengeScores,
         hintsRemaining: state.hintsRemaining,
         variantSeed: state.variantSeed,
+        difficulty: state.difficulty,
         musicVolume: state.musicVolume,
         sfxVolume: state.sfxVolume,
         musicMuted: state.musicMuted,

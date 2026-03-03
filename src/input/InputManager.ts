@@ -42,7 +42,6 @@ export class InputManager {
 
   // Keyboard state
   private keys = new Set<string>();
-  private canvas: HTMLCanvasElement | null = null;
   private pointerLocked = false;
 
   // Mouse look accumulator (drained each frame)
@@ -73,8 +72,6 @@ export class InputManager {
 
   /** Bind to a canvas element for pointer-lock and keyboard events. */
   init(canvas: HTMLCanvasElement): void {
-    this.canvas = canvas;
-
     const onClick = () => canvas.requestPointerLock?.();
     const onMouseMove = (e: MouseEvent) => {
       if (document.pointerLockElement !== canvas) return;
@@ -210,7 +207,7 @@ export class InputManager {
   }
 
   /** Check if an action key is currently pressed (any binding). */
-  isActionHeld(action: 'interact' | 'pause'): boolean {
+  isActionHeld(action: 'interact' | 'pause' | 'flip'): boolean {
     const cfg = bindings.actions[action];
     for (const key of cfg.keyboard) {
       if (this.keys.has(key.toLowerCase())) return true;
@@ -224,7 +221,7 @@ export class InputManager {
   }
 
   /** Check for rising edge (pressed this frame, not last). */
-  isActionJustPressed(action: 'interact' | 'pause'): boolean {
+  isActionJustPressed(action: 'interact' | 'pause' | 'flip'): boolean {
     const held = this.isActionHeld(action);
     const wasHeld = this.actionPressed.get(action) ?? false;
     this.actionPressed.set(action, held);

@@ -23,6 +23,7 @@ import {config} from '../../config';
 import {getAssetUrl} from '../../engine/assetUrl';
 import {CeilingLightOrchestrator} from './CeilingLightOrchestrator';
 import {FurnitureLoader} from './FurnitureLoader';
+import {HorrorPropsLoader} from './HorrorPropsLoader';
 import {TrapDoorMount} from './TrapDoorMount';
 
 // --- Room dimensions (slightly larger than 12x12 kitchen GLB to avoid z-fighting) ---
@@ -298,6 +299,11 @@ export const KitchenEnvironment = ({grinderCranking = false}: {grinderCranking?:
           FURNITURE — GLB segments positioned via FurnitureLayout targets
           ======================================================= */}
       <FurnitureLoader grinderCranking={grinderCranking} />
+
+      {/* =======================================================
+          HORROR PROPS — PSX scene dressing (tiered loading)
+          ======================================================= */}
+      <HorrorPropsLoader />
 
       {/* =======================================================
           CEILING ELEMENTS — trap door + ECS-driven lighting panels

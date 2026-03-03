@@ -79,5 +79,14 @@ describe('InputManager', () => {
     const input = InputManager.getInstance();
     expect(input.isActionHeld('interact')).toBe(false);
     expect(input.isActionHeld('pause')).toBe(false);
+    expect(input.isActionHeld('flip')).toBe(false);
+  });
+
+  it('isActionJustPressed detects rising edge', () => {
+    const input = InputManager.getInstance();
+    // First call with no input — not pressed
+    expect(input.isActionJustPressed('flip')).toBe(false);
+    // Second call still no input — still not pressed
+    expect(input.isActionJustPressed('flip')).toBe(false);
   });
 });

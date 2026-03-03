@@ -38,6 +38,7 @@ import basementScene from './scene/basement.json';
 import casingScene from './scene/casing.json';
 import challengeSequence from './scene/challenge-sequence.json';
 import fridgeScene from './scene/fridge.json';
+import horrorPropsScene from './scene/horror-props.json';
 import lightingScene from './scene/lighting.json';
 // --- Scoring ---
 import scoringData from './scoring.json';
@@ -51,6 +52,7 @@ import type {
   FridgeSceneConfig,
   GreasePhysicsConfig,
   GrindingGameplayConfig,
+  HorrorPropsConfig,
   LightingSceneConfig,
   MachineConfig,
   PlungerPhysicsConfig,
@@ -93,6 +95,7 @@ export const config = {
     fridge: fridgeScene as unknown as FridgeSceneConfig,
     casing: casingScene as unknown as CasingSceneConfig,
     basement: basementScene as unknown as BasementSceneConfig,
+    horrorProps: horrorPropsScene as unknown as HorrorPropsConfig,
     lighting: lightingScene as unknown as LightingSceneConfig,
     challengeSequence: challengeSequence as unknown as ChallengeSequenceConfig,
   },
@@ -115,6 +118,7 @@ export type {
   FridgeSceneConfig,
   GreasePhysicsConfig,
   GrindingGameplayConfig,
+  HorrorPropsConfig,
   LightingSceneConfig,
   MachineConfig,
   PlungerPhysicsConfig,

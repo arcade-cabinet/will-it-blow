@@ -29,6 +29,7 @@ import type {CookingVariant} from '../../config/types';
 import {audioEngine} from '../../engine/AudioEngine';
 import {pickVariant} from '../../engine/ChallengeRegistry';
 import {fireHaptic} from '../../input/HapticService';
+import {InputManager} from '../../input/InputManager';
 import {useGameStore} from '../../store/gameStore';
 import {buildMachineArchetype} from '../archetypes/buildMachineArchetype';
 import {despawnMachine, spawnMachine} from '../archetypes/spawnMachine';
@@ -475,6 +476,11 @@ export function CookingOrchestrator({position, visible}: CookingOrchestratorProp
         r = Math.min(1, r + flicker);
       }
       burnerMatRef.current.color.setRGB(r, g, b);
+    }
+
+    // ---- Keyboard/gamepad flip trigger (supplements pan handle click) ----
+    if (InputManager.getInstance().isActionJustPressed('flip')) {
+      triggerFlip();
     }
 
     // ---- Flip animation ----
