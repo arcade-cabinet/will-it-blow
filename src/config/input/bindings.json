@@ -1,0 +1,56 @@
+{
+  "$schema": "Input binding configuration for all supported platforms",
+  "movement": {
+    "forward": {
+      "keyboard": ["w", "ArrowUp"],
+      "gamepad": { "axis": "leftStick.y", "invert": true, "deadzone": 0.15 },
+      "touch": { "source": "leftJoystick", "axis": "y" }
+    },
+    "backward": {
+      "keyboard": ["s", "ArrowDown"],
+      "gamepad": { "axis": "leftStick.y", "deadzone": 0.15 },
+      "touch": { "source": "leftJoystick", "axis": "-y" }
+    },
+    "strafeLeft": {
+      "keyboard": ["a", "ArrowLeft"],
+      "gamepad": { "axis": "leftStick.x", "invert": true, "deadzone": 0.15 },
+      "touch": { "source": "leftJoystick", "axis": "-x" }
+    },
+    "strafeRight": {
+      "keyboard": ["d", "ArrowRight"],
+      "gamepad": { "axis": "leftStick.x", "deadzone": 0.15 },
+      "touch": { "source": "leftJoystick", "axis": "x" }
+    }
+  },
+  "look": {
+    "yaw": {
+      "keyboard": { "source": "pointerLock", "axis": "movementX", "sensitivity": 0.002 },
+      "gamepad": { "axis": "rightStick.x", "sensitivity": 2.5, "deadzone": 0.1 },
+      "touch": { "source": "rightDrag", "axis": "dx", "sensitivity": 0.004 }
+    },
+    "pitch": {
+      "keyboard": { "source": "pointerLock", "axis": "movementY", "sensitivity": 0.002 },
+      "gamepad": { "axis": "rightStick.y", "sensitivity": 2.0, "deadzone": 0.1, "invert": false },
+      "touch": { "source": "rightDrag", "axis": "dy", "sensitivity": 0.004 }
+    }
+  },
+  "actions": {
+    "interact": {
+      "keyboard": ["e", " "],
+      "gamepad": { "button": "a" },
+      "touch": { "gesture": "tap" }
+    },
+    "pause": {
+      "keyboard": ["Escape"],
+      "gamepad": { "button": "start" },
+      "touch": { "gesture": "menuButton" }
+    }
+  },
+  "tuning": {
+    "walkSpeed": 3.0,
+    "pitchLimit": 80,
+    "eyeHeight": 1.6,
+    "wallMargin": 0.5,
+    "positionSyncHz": 10
+  }
+}
