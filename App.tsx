@@ -164,13 +164,15 @@ export default function App() {
     Platform.OS !== 'web' ||
     (typeof window !== 'undefined' && 'ontouchstart' in window && navigator.maxTouchPoints > 0);
 
-  // Ambient drone disabled — synthesized 55Hz sawtooth + pink noise was awful.
-  // TODO: Replace with real incidental audio from asset library.
+  // Start ambient horror loop when entering gameplay, stop on exit
   useEffect(() => {
+    if (appPhase === 'playing') {
+      audioEngine.startAmbientDrone();
+    }
     return () => {
       audioEngine.stopAmbientDrone();
     };
-  }, []);
+  }, [appPhase]);
 
   // Prefetch heavy chunks while the loading screen is showing.
   // By the time kitchen.glb finishes downloading, the GameWorld JS

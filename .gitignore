@@ -8,6 +8,9 @@
 *.unitypackage
 /meat_grinder.glb
 
+# Audio assets (converted OGG files, too large for git)
+public/audio/
+
 # OSX
 #
 .DS_Store

@@ -1,4 +1,5 @@
 import * as Tone from 'tone';
+import {useGameStore} from '../store/gameStore';
 import {getAssetUrl} from './assetUrl';
 
 /** Sample categories mapped to their OGG file variants. */
@@ -247,48 +248,61 @@ class AudioEngine {
     Tone.getTransport().start();
   }
 
-  /** Start an eerie ambient drone for the horror atmosphere */
+  /** Gain node for ambient music — respects musicVolume / musicMuted. */
+  private ambientGain: Tone.Gain | null = null;
+  /** Looping player for the ambient horror track. */
+  private ambientPlayer: Tone.Player | null = null;
+  /** Store subscription disposer for volume/mute reactivity. */
+  private ambientUnsub: (() => void) | null = null;
+
+  /** Start the ambient horror loop, respecting musicVolume & musicMuted. */
   startAmbientDrone() {
     if (!this.isInitialized) return;
     this.stopAmbientDrone();
 
-    // Low rumble
-    const drone = new Tone.Oscillator(55, 'sawtooth').toDestination();
-    drone.volume.value = -28;
-    drone.start();
-    this.sfxSynths.ambientDrone = drone;
+    const {musicVolume, musicMuted} = useGameStore.getState();
 
-    // Slow LFO on drone pitch for unease
-    const lfo = new Tone.LFO(0.1, 50, 60).start();
-    lfo.connect(drone.frequency);
-    this.sfxSynths.ambientDroneLfo = lfo;
+    // Gain node so we can adjust volume without touching the player
+    const gain = new Tone.Gain(musicMuted ? 0 : musicVolume).toDestination();
+    this.ambientGain = gain;
 
-    // Subtle high-frequency whisper noise
-    const hiss = new Tone.NoiseSynth({
-      noise: {type: 'pink'},
-      envelope: {attack: 2, decay: 0, sustain: 1, release: 2},
-      volume: -32,
-    }).toDestination();
-    hiss.triggerAttack();
-    this.sfxSynths.ambientHiss = hiss;
+    const url = getAssetUrl('audio', 'ambient-horror.ogg');
+    const player = new Tone.Player({
+      url,
+      loop: true,
+      fadeIn: 2,
+      volume: -6,
+      onload: () => {
+        // Only start if we haven't been stopped while loading
+        if (this.ambientPlayer === player) {
+          player.start();
+        }
+      },
+      onerror: err => console.warn('Failed to load ambient-horror.ogg:', err),
+    }).connect(gain);
+    this.ambientPlayer = player;
+
+    // Subscribe to store changes for live volume/mute reactivity
+    this.ambientUnsub = useGameStore.subscribe(state => {
+      if (this.ambientGain) {
+        this.ambientGain.gain.rampTo(state.musicMuted ? 0 : state.musicVolume, 0.3);
+      }
+    });
   }
 
   stopAmbientDrone() {
-    if (this.sfxSynths.ambientDrone) {
-      this.sfxSynths.ambientDrone.stop();
-      this.sfxSynths.ambientDrone.dispose();
-      delete this.sfxSynths.ambientDrone;
+    if (this.ambientUnsub) {
+      this.ambientUnsub();
+      this.ambientUnsub = null;
     }
-    if (this.sfxSynths.ambientDroneLfo) {
-      this.sfxSynths.ambientDroneLfo.dispose();
-      delete this.sfxSynths.ambientDroneLfo;
+    if (this.ambientPlayer) {
+      this.ambientPlayer.stop();
+      this.ambientPlayer.dispose();
+      this.ambientPlayer = null;
     }
-    if (this.sfxSynths.ambientHiss) {
-      this.sfxSynths.ambientHiss.triggerRelease();
-      setTimeout(() => {
-        this.sfxSynths.ambientHiss?.dispose();
-        delete this.sfxSynths.ambientHiss;
-      }, 2500);
+    if (this.ambientGain) {
+      this.ambientGain.dispose();
+      this.ambientGain = null;
     }
   }
 
