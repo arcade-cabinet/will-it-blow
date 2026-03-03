@@ -1,8 +1,8 @@
 /**
  * @module ChallengeRegistry
  * Central registry for challenge configurations, variant selection, and
- * final verdict calculation. Orchestrates the 6-challenge game flow:
- * ingredients -> chopping -> grinding -> stuffing -> cooking -> tasting.
+ * final verdict calculation. Orchestrates the 7-challenge game flow:
+ * ingredients -> chopping -> grinding -> stuffing -> cooking -> blowout -> tasting.
  *
  * Variant selection is deterministic per seed — the same variantSeed
  * always produces the same challenge parameters, ensuring fair replays.
@@ -23,13 +23,14 @@ const GRINDING_VARIANTS = config.variants.grinding;
 const STUFFING_VARIANTS = config.variants.stuffing;
 const COOKING_VARIANTS = config.variants.cooking;
 
-/** Identifier for each of the 6 sequential challenge phases. */
+/** Identifier for each of the 7 sequential challenge phases. */
 export type ChallengeId =
   | 'ingredients'
   | 'chopping'
   | 'grinding'
   | 'stuffing'
   | 'cooking'
+  | 'blowout'
   | 'tasting';
 
 /** The fixed sequence of challenges. Index matches `currentChallenge` in the store. */
@@ -39,6 +40,7 @@ export const CHALLENGE_ORDER: ChallengeId[] = [
   'grinding',
   'stuffing',
   'cooking',
+  'blowout',
   'tasting',
 ];
 
@@ -92,6 +94,13 @@ const CHALLENGE_CONFIGS: Record<ChallengeId, ChallengeConfig> = {
     cameraOffset: [0, 0.5, 0.5],
     description: 'Cook the sausage to the perfect temperature.',
   },
+  blowout: {
+    id: 'blowout',
+    name: 'Blowout',
+    station: 'dining-table',
+    cameraOffset: [0, 0.3, 0.8],
+    description: 'Aim at the cereal box and tie the casing before pressure builds.',
+  },
   tasting: {
     id: 'tasting',
     name: 'Tasting',
@@ -136,7 +145,7 @@ function seededIndex(seed: number, arrayLength: number): number {
  *
  * @param challengeId - Which challenge to pick a variant for
  * @param seed - The game session's variant seed
- * @returns The selected variant config, or `null` for tasting (which has no variants)
+ * @returns The selected variant config, or `null` for blowout and tasting (which have no variants)
  */
 export function pickVariant(
   challengeId: ChallengeId,
@@ -153,6 +162,7 @@ export function pickVariant(
       return STUFFING_VARIANTS[seededIndex(seed + 3, STUFFING_VARIANTS.length)];
     case 'cooking':
       return COOKING_VARIANTS[seededIndex(seed + 4, COOKING_VARIANTS.length)];
+    case 'blowout':
     case 'tasting':
       return null;
     default:

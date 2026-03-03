@@ -25,13 +25,15 @@ import {SausageButton} from './SausageButton';
 /** Auto-advance delay in milliseconds. */
 const AUTO_ADVANCE_DELAY_MS = 10_000;
 
-/** Challenge display names in order (indexes 0-4 match CHALLENGE_ORDER). */
+/** Challenge display names in order (indexes 0-6 match CHALLENGE_ORDER). */
 const CHALLENGE_LABELS: Record<number, string> = {
   0: 'INGREDIENTS',
   1: 'CHOPPING',
   2: 'GRINDING',
   3: 'STUFFING',
   4: 'COOKING',
+  5: 'BLOWOUT',
+  6: 'TASTING',
 };
 
 // ---------------------------------------------------------------------------

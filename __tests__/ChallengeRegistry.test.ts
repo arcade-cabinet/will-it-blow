@@ -7,16 +7,17 @@ import {
 } from '../src/engine/ChallengeRegistry';
 
 describe('ChallengeRegistry', () => {
-  it('CHALLENGE_ORDER has 6 entries in correct sequence', () => {
+  it('CHALLENGE_ORDER has 7 entries in correct sequence', () => {
     expect(CHALLENGE_ORDER).toEqual([
       'ingredients',
       'chopping',
       'grinding',
       'stuffing',
       'cooking',
+      'blowout',
       'tasting',
     ]);
-    expect(CHALLENGE_ORDER).toHaveLength(6);
+    expect(CHALLENGE_ORDER).toHaveLength(7);
   });
 
   it('getChallengeConfig returns config for each valid id', () => {
@@ -51,6 +52,11 @@ describe('ChallengeRegistry', () => {
     expect(variant).toHaveProperty('criteria');
     expect(variant).toHaveProperty('requiredCount');
     expect(variant).toHaveProperty('mrSausageDemand');
+  });
+
+  it('pickVariant returns null for blowout (no variants)', () => {
+    const variant = pickVariant('blowout', 42);
+    expect(variant).toBeNull();
   });
 
   it('pickVariant is deterministic for the same seed', () => {
