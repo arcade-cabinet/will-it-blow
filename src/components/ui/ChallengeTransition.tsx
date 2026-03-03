@@ -27,7 +27,9 @@ const TRANSITION_QUIPS: Record<number, string> = {
   1: 'Time to grind. And I mean that literally.',
   2: "Stuff it. Carefully. Or it's YOUR casing next.",
   3: "Fire it up. Don't burn my kitchen.",
-  4: 'Now I taste. And I judge.',
+  4: 'Last step. Cook my sausage to perfection.',
+  5: 'Tie it off. One wrong move and... BOOM.',
+  6: 'Now I taste. And I judge.',
 };
 
 interface ChallengeTransitionProps {
