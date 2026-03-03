@@ -84,6 +84,11 @@ export function GameOverScreen() {
           ? '#FFC832'
           : '#FF1744';
 
+  // Responsive sizes for short landscape viewports
+  const rankFontSize = isLandscape ? 48 : 72;
+  const titleFontSize = isLandscape ? 20 : 28;
+  const gameOverFontSize = isLandscape ? 36 : 52;
+
   return (
     <Animated.View style={[styles.overlay, {opacity: fadeAnim}]}>
       <ScrollView
@@ -98,6 +103,7 @@ export function GameOverScreen() {
                 style={[
                   styles.rankLetter,
                   {
+                    fontSize: rankFontSize,
                     color: rankColor,
                     transform: [{scale: rankScale}],
                     textShadowColor: rankColor,
@@ -110,7 +116,10 @@ export function GameOverScreen() {
               </Animated.Text>
 
               {/* Title */}
-              <Text style={styles.verdictTitle} accessibilityRole="header">
+              <Text
+                style={[styles.verdictTitle, {fontSize: titleFontSize}]}
+                accessibilityRole="header"
+              >
                 {verdict.title}
               </Text>
 
@@ -143,7 +152,10 @@ export function GameOverScreen() {
           ) : (
             <>
               {/* Defeat — show rank if we have scores (A/B/F) */}
-              <Text style={styles.gameOverTitle} accessibilityRole="header">
+              <Text
+                style={[styles.gameOverTitle, {fontSize: gameOverFontSize}]}
+                accessibilityRole="header"
+              >
                 GAME OVER
               </Text>
               {challengeScores.length > 0 &&
@@ -155,7 +167,11 @@ export function GameOverScreen() {
                       <Text
                         style={[
                           styles.rankLetter,
-                          {color: defeatColor, textShadowColor: defeatColor},
+                          {
+                            fontSize: rankFontSize,
+                            color: defeatColor,
+                            textShadowColor: defeatColor,
+                          },
                         ]}
                       >
                         {defeatVerdict.rank}

@@ -41,6 +41,7 @@ import {useKeepAwake} from 'expo-keep-awake';
 import {BlendFunction} from 'postprocessing';
 import {Suspense, useCallback, useEffect, useRef} from 'react';
 import {Platform, View} from 'react-native';
+import type * as THREE from 'three';
 import {WebGPURenderer} from 'three/webgpu';
 import {config} from '../config';
 import {BlowoutOrchestrator} from '../ecs/orchestrators/BlowoutOrchestrator';
@@ -287,6 +288,35 @@ function XROriginWrapper() {
   return <XROrigin position={seatedOffset} />;
 }
 
+// PortraitFOVAdjuster — widen FOV on tall viewports
+// -----------------------------------------------------------------
+
+const BASE_FOV = 80;
+const MIN_HFOV_DEG = 65;
+
+/** Adjusts camera vertical FOV on portrait viewports so horizontal FOV stays usable. */
+function PortraitFOVAdjuster() {
+  const camera = useThree(s => s.camera);
+  const size = useThree(s => s.size);
+
+  useEffect(() => {
+    const aspect = size.width / size.height;
+    if (aspect >= 1) {
+      // Landscape / square — use base FOV
+      (camera as THREE.PerspectiveCamera).fov = BASE_FOV;
+    } else {
+      // Portrait — increase vFOV so hFOV >= MIN_HFOV_DEG
+      const minHRad = (MIN_HFOV_DEG * Math.PI) / 180;
+      const neededVFov = 2 * Math.atan(Math.tan(minHRad / 2) / aspect) * (180 / Math.PI);
+      (camera as THREE.PerspectiveCamera).fov = Math.max(BASE_FOV, neededVFov);
+    }
+    (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
+  }, [camera, size]);
+
+  return null;
+}
+
+// -----------------------------------------------------------------
 // SceneContent — all 3D content inside the Canvas
 // -----------------------------------------------------------------
 
@@ -533,6 +563,7 @@ export const GameWorld = ({
           }
         }}
       >
+        <PortraitFOVAdjuster />
         <XR store={xrStore}>
           <XRAutoEntry />
           <PhysicsWrapper>

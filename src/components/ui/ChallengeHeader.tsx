@@ -43,8 +43,8 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     top: 16,
-    left: 0,
-    right: 0,
+    left: 16,
+    right: 16,
     alignItems: 'center',
     zIndex: 70,
   },

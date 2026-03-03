@@ -168,6 +168,7 @@ const MobileJoystick = lazy(() =>
 
 export default function App() {
   const appPhase = useGameStore(s => s.appPhase);
+  const gameStatus = useGameStore(s => s.gameStatus);
 
   // Shared refs for mobile FPS controls (joystick writes, FPSController reads)
   const joystickRef = useRef({x: 0, y: 0});
@@ -208,7 +209,7 @@ export default function App() {
             lookDeltaRef={isTouchDevice ? lookDeltaRef : undefined}
           />
           <GameUI />
-          {isTouchDevice && (
+          {isTouchDevice && gameStatus === 'playing' && (
             <MobileJoystick
               joystickRef={joystickRef}
               onLookDrag={(dx, dy) => {
