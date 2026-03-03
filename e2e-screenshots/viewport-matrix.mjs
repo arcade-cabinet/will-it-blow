@@ -2,9 +2,10 @@
  * viewport-matrix.mjs — Captures screenshots at multiple device viewports.
  *
  * Targets: OnePlus Open (folded + unfolded), common phones, tablets, desktop.
- * Takes screenshots at title screen, in-game (center view), and challenge active.
+ * Takes 5 screenshots per viewport: title screen, in-game center view,
+ * left wall view, challenge card, and game over screen.
  *
- * Usage: node e2e-screenshots/viewport-matrix.mjs
+ * Usage: PLAYWRIGHT_CHANNEL=chrome node e2e-screenshots/viewport-matrix.mjs
  * Output: e2e-screenshots/viewports/<device>-<scene>.png
  */
 
@@ -40,91 +41,96 @@ const launchOptions = {headless: true};
 if (process.env.PLAYWRIGHT_CHANNEL) {
   launchOptions.channel = process.env.PLAYWRIGHT_CHANNEL;
 }
+
 const browser = await chromium.launch(launchOptions);
 
-for (const vp of VIEWPORTS) {
-  console.log(`\n=== ${vp.name} (${vp.w}x${vp.h} @${vp.dpr}x) ===`);
+try {
+  for (const vp of VIEWPORTS) {
+    console.log(`\n=== ${vp.name} (${vp.w}x${vp.h} @${vp.dpr}x) ===`);
 
-  const context = await browser.newContext({
-    viewport: {width: vp.w, height: vp.h},
-    deviceScaleFactor: vp.dpr,
-    hasTouch: vp.touch,
-    isMobile: vp.touch,
-  });
-  const page = await context.newPage();
+    let context;
+    try {
+      context = await browser.newContext({
+        viewport: {width: vp.w, height: vp.h},
+        deviceScaleFactor: vp.dpr,
+        hasTouch: vp.touch,
+        isMobile: vp.touch,
+      });
+      const page = await context.newPage();
 
-  try {
-    // 1. Title screen
-    await page.goto('http://localhost:8082', {waitUntil: 'networkidle', timeout: 20000});
-    await page.waitForTimeout(2000);
-    await page.screenshot({path: `${OUT_DIR}/${vp.name}-01-title.png`});
-    console.log('  [1] Title screen captured');
+      // 1. Title screen
+      await page.goto('http://localhost:8082', {waitUntil: 'networkidle', timeout: 20000});
+      await page.waitForTimeout(2000);
+      await page.screenshot({path: `${OUT_DIR}/${vp.name}-01-title.png`});
+      console.log('  [1] Title screen captured');
 
-    // 2. Start game
-    await page.evaluate(() => {
-      if (window.__gov) window.__gov.startGameDirect();
-    });
-    await page.waitForTimeout(3000);
-    await page.screenshot({path: `${OUT_DIR}/${vp.name}-02-ingame.png`});
-    console.log('  [2] In-game captured');
+      // 2. Start game
+      await page.evaluate(() => {
+        if (window.__gov) window.__gov.startGameDirect();
+      });
+      await page.waitForTimeout(3000);
+      await page.screenshot({path: `${OUT_DIR}/${vp.name}-02-ingame.png`});
+      console.log('  [2] In-game captured');
 
-    // 3. Check furniture visibility
-    const furniture = await page.evaluate(() => {
-      const gov = window.__gov;
-      if (!gov?.findObject) return null;
-      const items = ['fridge', 'l-counter', 'island', 'upper-cabinets', 'oven', 'table'];
-      const results = {};
-      for (const name of items) {
-        const obj = gov.findObject(name);
-        results[name] = obj
-          ? {visible: obj.visible, pos: obj.worldPosition.map(v => +v.toFixed(1))}
-          : null;
+      // 3. Check furniture visibility
+      const furniture = await page.evaluate(() => {
+        const gov = window.__gov;
+        if (!gov?.findObject) return null;
+        const items = ['fridge', 'l-counter', 'island', 'upper-cabinets', 'oven', 'table'];
+        const results = {};
+        for (const name of items) {
+          const obj = gov.findObject(name);
+          results[name] = obj
+            ? {visible: obj.visible, pos: obj.worldPosition.map(v => +v.toFixed(1))}
+            : null;
+        }
+        return results;
+      });
+      if (furniture) {
+        const visible = Object.entries(furniture).filter(([, v]) => v?.visible).length;
+        console.log(`  Furniture: ${visible}/${Object.keys(furniture).length} visible`);
       }
-      return results;
-    });
-    if (furniture) {
-      const visible = Object.entries(furniture).filter(([, v]) => v?.visible).length;
-      console.log(`  Furniture: ${visible}/${Object.keys(furniture).length} visible`);
+
+      // 4. Look around — teleport to see left wall (where most furniture is)
+      await page.evaluate(() => {
+        const gov = window.__gov;
+        if (gov) gov.movePlayerTo(-3, 1.6, -2);
+      });
+      await page.waitForTimeout(1000);
+      await page.screenshot({path: `${OUT_DIR}/${vp.name}-03-left-wall.png`});
+      console.log('  [3] Left wall view captured');
+
+      // 5. Trigger challenge and capture
+      await page.evaluate(() => {
+        const gov = window.__gov;
+        if (gov) {
+          gov.skipToChallenge(1); // chopping — has nice title card
+        }
+      });
+      await page.waitForTimeout(2000);
+      await page.screenshot({path: `${OUT_DIR}/${vp.name}-04-challenge.png`});
+      console.log('  [4] Challenge card captured');
+
+      // 6. Game Over screen
+      await page.evaluate(() => {
+        const gov = window.__gov;
+        if (gov) {
+          gov.triggerVictory([90, 88, 92, 85, 91, 87, 95]);
+        }
+      });
+      await page.waitForTimeout(1500);
+      await page.screenshot({path: `${OUT_DIR}/${vp.name}-05-gameover.png`});
+      console.log('  [5] Game over captured');
+    } catch (err) {
+      console.error(`  ERROR: ${err.message}`);
+    } finally {
+      if (context) await context.close();
     }
-
-    // 4. Look around — teleport to see left wall (where most furniture is)
-    await page.evaluate(() => {
-      const gov = window.__gov;
-      if (gov) gov.movePlayerTo(-3, 1.6, -2);
-    });
-    await page.waitForTimeout(1000);
-    await page.screenshot({path: `${OUT_DIR}/${vp.name}-03-left-wall.png`});
-    console.log('  [3] Left wall view captured');
-
-    // 5. Trigger challenge and capture
-    await page.evaluate(() => {
-      const gov = window.__gov;
-      if (gov) {
-        gov.skipToChallenge(1); // chopping — has nice title card
-      }
-    });
-    await page.waitForTimeout(2000);
-    await page.screenshot({path: `${OUT_DIR}/${vp.name}-04-challenge.png`});
-    console.log('  [4] Challenge card captured');
-
-    // 6. Game Over screen
-    await page.evaluate(() => {
-      const gov = window.__gov;
-      if (gov) {
-        gov.triggerVictory([90, 88, 92, 85, 91, 87, 95]);
-      }
-    });
-    await page.waitForTimeout(1500);
-    await page.screenshot({path: `${OUT_DIR}/${vp.name}-05-gameover.png`});
-    console.log('  [5] Game over captured');
-  } catch (err) {
-    console.error(`  ERROR: ${err.message}`);
   }
-
-  await context.close();
+} finally {
+  await browser.close();
 }
 
-await browser.close();
 console.log(`\n✅ Done. Screenshots in ${OUT_DIR}/`);
 console.log(
   `Total: ${VIEWPORTS.length} viewports × 5 scenes = ${VIEWPORTS.length * 5} screenshots`,
