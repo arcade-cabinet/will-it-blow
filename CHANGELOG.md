@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.5.0](https://github.com/arcade-cabinet/will-it-blow/compare/v1.4.0...v1.5.0) (2026-03-03)
+
+
+### Features
+
+* **ecs:** complete sausage factory kitchen — ECS machines + orchestrator game drivers ([#25](https://github.com/arcade-cabinet/will-it-blow/issues/25)) ([716881f](https://github.com/arcade-cabinet/will-it-blow/commit/716881f3c98f893a972d4a55be3033f4fd16a3dc))
+
+
+### Bug Fixes
+
+* add blowout to ChallengeRegistry ([#28](https://github.com/arcade-cabinet/will-it-blow/issues/28)) ([2af9fc9](https://github.com/arcade-cabinet/will-it-blow/commit/2af9fc9fb88a3bc9d7f3b3009537a39d8d293787))
+* responsive layout for mobile/foldable viewports ([#29](https://github.com/arcade-cabinet/will-it-blow/issues/29)) ([e2f9f5e](https://github.com/arcade-cabinet/will-it-blow/commit/e2f9f5ec59fd96f58c2f6564055961d2888ec35b))
+
 ## [1.4.0](https://github.com/arcade-cabinet/will-it-blow/compare/v1.3.0...v1.4.0) (2026-03-01)
 
 
