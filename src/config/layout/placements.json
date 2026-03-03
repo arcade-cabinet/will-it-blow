@@ -56,6 +56,14 @@
       "at": [0.6923, 0.6923],
       "minBounds": [2, 0.9, 1.5]
     },
+    "dining-table": {
+      "on": "floor",
+      "at": [0.6923, 0.6923],
+      "minBounds": [1.5, 0.9, 1.2],
+      "rotationY": 0,
+      "triggerRadius": 2,
+      "markerY": 3.0
+    },
     "mixing-bowl": {
       "on": "left-wall",
       "at": [0.1138, 0.1818],

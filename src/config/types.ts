@@ -303,6 +303,25 @@ export interface CookingGameplayConfig {
   flipHoldTimerPenalty: number;
 }
 
+export interface BlowoutGameplayConfig {
+  timerSeconds: number;
+  maxPressure: number;
+  pressureDecayRate: number;
+  pressureBuildRate: number;
+  particleCount: number;
+  particleGravity: number;
+  particleSpread: number;
+  particleInitialSpeed: number;
+  coveragePerHit: number;
+  floorPenaltyPerHit: number;
+  fastTieThresholdMs: number;
+  fastTieFlairPoints: number;
+  completeDelaySec: number;
+  boxPosition: [number, number, number];
+  boxHalfWidth: number;
+  boxHalfHeight: number;
+}
+
 // ---------------------------------------------------------------------------
 // Physics Configs
 // ---------------------------------------------------------------------------

@@ -119,15 +119,15 @@ describe('completeChallenge', () => {
     expect(store().currentChallenge).toBe(1);
   });
 
-  it('sets victory when completing challenge 5 (the last)', () => {
+  it('sets victory when completing challenge 6 (the last)', () => {
     useGameStore.setState({
       gameStatus: 'playing',
-      currentChallenge: 5,
-      challengeScores: [80, 85, 90, 70, 85],
+      currentChallenge: 6,
+      challengeScores: [80, 85, 90, 70, 85, 75],
     });
     store().completeChallenge(95);
     expect(store().gameStatus).toBe('victory');
-    expect(store().challengeScores).toEqual([80, 85, 90, 70, 85, 95]);
+    expect(store().challengeScores).toEqual([80, 85, 90, 70, 85, 75, 95]);
   });
 
   it('resets strikes on challenge completion', () => {
@@ -444,6 +444,97 @@ describe('combat actions', () => {
     expect(store().activeEnemy).toBeNull();
     expect(store().playerDecisions.enemiesDefeated).toBe(0);
     expect(store().playerDecisions.enemyIngredientsUsed).toBe(0);
+  });
+});
+
+describe('advanceRound', () => {
+  it('increments currentRound', () => {
+    useGameStore.setState({currentRound: 1});
+    store().advanceRound();
+    expect(store().currentRound).toBe(2);
+  });
+
+  it('stores the current ingredient combo in usedIngredientCombos (sorted)', () => {
+    useGameStore.setState({
+      playerDecisions: {
+        ...INITIAL_GAME_STATE.playerDecisions,
+        selectedIngredients: ['Lobster', 'Candy Cane'],
+      },
+      usedIngredientCombos: [],
+    });
+    store().advanceRound();
+    expect(store().usedIngredientCombos).toEqual([['Candy Cane', 'Lobster']]);
+  });
+
+  it('accumulates combos across multiple rounds', () => {
+    useGameStore.setState({
+      playerDecisions: {
+        ...INITIAL_GAME_STATE.playerDecisions,
+        selectedIngredients: ['Apple', 'Bacon'],
+      },
+      usedIngredientCombos: [],
+    });
+    store().advanceRound();
+    useGameStore.setState({
+      playerDecisions: {
+        ...INITIAL_GAME_STATE.playerDecisions,
+        selectedIngredients: ['Carrot'],
+      },
+    });
+    store().advanceRound();
+    expect(store().usedIngredientCombos).toHaveLength(2);
+    expect(store().usedIngredientCombos[0]).toEqual(['Apple', 'Bacon']);
+    expect(store().usedIngredientCombos[1]).toEqual(['Carrot']);
+  });
+
+  it('resets casingTied and blowoutScore', () => {
+    useGameStore.setState({casingTied: true, blowoutScore: 75});
+    store().advanceRound();
+    expect(store().casingTied).toBe(false);
+    expect(store().blowoutScore).toBe(0);
+  });
+});
+
+describe('continueGame round progress', () => {
+  it('preserves currentRound', () => {
+    useGameStore.setState({currentRound: 3, challengeScores: [80, 90, 70]});
+    store().continueGame();
+    expect(store().currentRound).toBe(3);
+  });
+
+  it('preserves usedIngredientCombos', () => {
+    const combos = [['Apple', 'Bacon'], ['Carrot']];
+    useGameStore.setState({usedIngredientCombos: combos, challengeScores: [80]});
+    store().continueGame();
+    expect(store().usedIngredientCombos).toEqual(combos);
+  });
+
+  it('preserves currentChallenge and challengeScores', () => {
+    useGameStore.setState({currentChallenge: 2, challengeScores: [80, 90]});
+    store().continueGame();
+    expect(store().currentChallenge).toBe(2);
+    expect(store().challengeScores).toEqual([80, 90]);
+  });
+});
+
+describe('returnToMenu round state', () => {
+  it('resets currentRound to 1', () => {
+    useGameStore.setState({currentRound: 4});
+    store().returnToMenu();
+    expect(store().currentRound).toBe(1);
+  });
+
+  it('clears usedIngredientCombos', () => {
+    useGameStore.setState({usedIngredientCombos: [['Apple', 'Bacon']]});
+    store().returnToMenu();
+    expect(store().usedIngredientCombos).toEqual([]);
+  });
+
+  it('resets currentChallenge to 0 and clears challengeScores', () => {
+    useGameStore.setState({currentChallenge: 3, challengeScores: [80, 90, 70]});
+    store().returnToMenu();
+    expect(store().currentChallenge).toBe(0);
+    expect(store().challengeScores).toEqual([]);
   });
 });
 

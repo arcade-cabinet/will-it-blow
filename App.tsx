@@ -46,6 +46,11 @@ const CookingHUD = lazy(() =>
     default: m.CookingHUD,
   })),
 );
+const BlowoutHUD = lazy(() =>
+  import('./src/components/challenges/BlowoutHUD').then(m => ({
+    default: m.BlowoutHUD,
+  })),
+);
 const TastingChallenge = lazy(() =>
   import('./src/components/challenges/TastingChallenge').then(m => ({
     default: m.TastingChallenge,
@@ -110,7 +115,8 @@ const GameUI = () => {
   const isGrindingChallenge = showChallenge && currentChallenge === 2;
   const isStuffingChallenge = showChallenge && currentChallenge === 3;
   const isCookingChallenge = showChallenge && currentChallenge === 4;
-  const isTastingChallenge = showChallenge && currentChallenge === 5;
+  const isBlowoutChallenge = showChallenge && currentChallenge === 5;
+  const isTastingChallenge = showChallenge && currentChallenge === 6;
 
   return (
     <View style={styles.overlay} pointerEvents="box-none" testID="game-overlay">
@@ -134,6 +140,7 @@ const GameUI = () => {
           {isGrindingChallenge && <GrindingHUD />}
           {isStuffingChallenge && <StuffingHUD />}
           {isCookingChallenge && <CookingHUD />}
+          {isBlowoutChallenge && <BlowoutHUD />}
           {isTastingChallenge && (
             <TastingChallenge onComplete={completeChallenge} onReaction={handleReaction} />
           )}

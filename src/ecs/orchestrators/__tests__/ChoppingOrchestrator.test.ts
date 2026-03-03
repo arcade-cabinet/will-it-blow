@@ -67,10 +67,10 @@ describe('ChoppingOrchestrator', () => {
     expect(source).toContain('knifeRef');
   });
 
-  it('TOTAL_CHALLENGES is now 6 in store', () => {
+  it('TOTAL_CHALLENGES is now 7 in store (ingredients, chopping, grinding, stuffing, cooking, blowout, tasting)', () => {
     const fs = require('node:fs');
     const path = require('node:path');
     const source = fs.readFileSync(path.resolve(__dirname, '../../../store/gameStore.ts'), 'utf8');
-    expect(source).toContain('TOTAL_CHALLENGES = 6');
+    expect(source).toContain('TOTAL_CHALLENGES = 7');
   });
 });

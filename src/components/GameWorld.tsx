@@ -43,12 +43,14 @@ import {Suspense, useCallback, useEffect, useRef} from 'react';
 import {Platform, View} from 'react-native';
 import {WebGPURenderer} from 'three/webgpu';
 import {config} from '../config';
+import {BlowoutOrchestrator} from '../ecs/orchestrators/BlowoutOrchestrator';
 import {ChoppingOrchestrator} from '../ecs/orchestrators/ChoppingOrchestrator';
 import {CookingOrchestrator} from '../ecs/orchestrators/CookingOrchestrator';
 import {GrinderOrchestrator} from '../ecs/orchestrators/GrinderOrchestrator';
 import {StufferOrchestrator} from '../ecs/orchestrators/StufferOrchestrator';
 import {ECSScene} from '../ecs/renderers/ECSScene';
 import {DEFAULT_ROOM, STATION_TARGET_NAMES} from '../engine/FurnitureLayout';
+import {isStationReady} from '../engine/KitchenAssembly';
 import {mergeLayoutConfigs, resolveLayout} from '../engine/layout';
 import {useGameStore} from '../store/gameStore';
 import {FPSController} from './controls/FPSController';
@@ -274,14 +276,23 @@ const SceneContent = ({
   const fridgeSelectedIndices = useGameStore(s => s.fridgeSelectedIndices);
   const triggerFridgeClick = useGameStore(s => s.triggerFridgeClick);
   const setFridgeHovered = useGameStore(s => s.setFridgeHovered);
+  const assembledParts = useGameStore(s => s.assembledParts);
+  const difficulty = useGameStore(s => s.difficulty);
+
+  // Assembly gate: at Medium+ difficulty, stations require parts to be found first
+  const assemblyEnabled = (difficulty as any).assembly === true;
+  const grinderReady = !assemblyEnabled || isStationReady('grinder', assembledParts);
+  const stufferReady = !assemblyEnabled || isStationReady('stuffer', assembledParts);
+  const stoveReady = !assemblyEnabled || isStationReady('stove', assembledParts);
 
   // Station is active only when playing + correct challenge + player has arrived
   const isPlaying = gameStatus === 'playing' && challengeTriggered;
   const isFridgeActive = isPlaying && currentChallenge === 0;
   const isChoppingActive = isPlaying && currentChallenge === 1;
-  const isGrinderActive = isPlaying && currentChallenge === 2;
-  const isStufferActive = isPlaying && currentChallenge === 3;
-  const isStoveActive = isPlaying && currentChallenge === 4;
+  const isGrinderActive = isPlaying && currentChallenge === 2 && grinderReady;
+  const isStufferActive = isPlaying && currentChallenge === 3 && stufferReady;
+  const isStoveActive = isPlaying && currentChallenge === 4 && stoveReady;
+  const isBlowoutActive = isPlaying && currentChallenge === 5;
 
   // Convert store arrays to Sets for FridgeStation props
   const fridgeSelectedSet = new Set(fridgeSelectedIndices);
@@ -320,7 +331,7 @@ const SceneContent = ({
 
       <KitchenEnvironment grinderCranking={isGrinderActive} />
       <CrtTelevision
-        position={STATIONS[5].position}
+        position={STATIONS[6].position}
         reaction={gameStatus === 'defeat' ? 'laugh' : mrSausageReaction}
       />
 
@@ -355,6 +366,7 @@ const SceneContent = ({
       <GrinderOrchestrator position={STATIONS[2].position} visible={isGrinderActive} />
       <StufferOrchestrator position={STATIONS[3].position} visible={isStufferActive} />
       <CookingOrchestrator position={STATIONS[4].position} visible={isStoveActive} />
+      <BlowoutOrchestrator position={STATIONS[5].position} visible={isBlowoutActive} />
 
       {/* Procedural transfer bowl — follows bowlPosition through the pipeline */}
       <TransferBowl />

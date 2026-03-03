@@ -16,6 +16,7 @@ import ceilingHousing from './fixtures/ceiling-housing.json';
 import ceilingTrapdoorHousing from './fixtures/ceiling-trapdoor-housing.json';
 import wallTvHousing from './fixtures/wall-tv-housing.json';
 // --- Gameplay tunables ---
+import blowoutGameplay from './gameplay/blowout.json';
 import choppingGameplay from './gameplay/chopping.json';
 import cookingGameplay from './gameplay/cooking.json';
 import grindingGameplay from './gameplay/grinding.json';
@@ -46,6 +47,7 @@ import lightingScene from './scene/lighting.json';
 import scoringData from './scoring.json';
 import type {
   BasementSceneConfig,
+  BlowoutGameplayConfig,
   CasingSceneConfig,
   ChallengeSequenceConfig,
   ChoppingGameplayConfig,
@@ -87,6 +89,7 @@ export const config = {
     grinding: grindingGameplay as unknown as GrindingGameplayConfig,
     stuffing: stuffingGameplay as unknown as StuffingGameplayConfig,
     cooking: cookingGameplay as unknown as CookingGameplayConfig,
+    blowout: blowoutGameplay as unknown as BlowoutGameplayConfig,
   },
   physics: {
     sausage: sausagePhysics as unknown as SausagePhysicsConfig,
@@ -114,6 +117,7 @@ export const config = {
 // Re-export types for consumers
 export type {
   BasementSceneConfig,
+  BlowoutGameplayConfig,
   CasingSceneConfig,
   ChallengeSequenceConfig,
   ChoppingGameplayConfig,

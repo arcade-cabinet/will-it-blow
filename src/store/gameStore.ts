@@ -221,6 +221,30 @@ export interface GameState {
   /** Active enemy info, or null when no encounter. */
   activeEnemy: {id: string; type: string; hp: number; maxHp: number} | null;
 
+  // ---- Multi-round ----
+
+  /** Current round number (1-indexed). */
+  currentRound: number;
+  /** Total rounds in this game session. */
+  totalRounds: number;
+  /** Ingredient combos already used in previous rounds. */
+  usedIngredientCombos: string[][];
+  /** Whether the casing has been tied (post-stuffing). */
+  casingTied: boolean;
+  /** Blowout score for the current round (coverage + precision). */
+  blowoutScore: number;
+
+  // ---- Hidden objects / Kitchen state ----
+
+  /** Which cabinets are open (by furniture ID). */
+  openCabinets: string[];
+  /** Which drawers are open (by furniture ID). */
+  openDrawers: string[];
+  /** Equipment parts found and carried to stations. */
+  assembledParts: string[];
+  /** Equipment cleanliness tracking per station (0=dirty, 1=clean). */
+  stationCleanliness: Record<string, number>;
+
   // ---- Settings (persisted) ----
 
   /** Music volume level 0-1 */
@@ -332,12 +356,26 @@ export interface GameState {
   endCombat: () => void;
   /** Record that a defeated enemy was used as a bonus ingredient. */
   recordEnemyIngredient: () => void;
+  /** Advance to the next round, recording the current ingredient combo as used. */
+  advanceRound: () => void;
+  /** Set the casing tied state. */
+  setCasingTied: (tied: boolean) => void;
+  /** Set the blowout score for the current round. */
+  setBlowoutScore: (score: number) => void;
+  /** Toggle a cabinet open/closed. */
+  toggleCabinet: (id: string) => void;
+  /** Toggle a drawer open/closed. */
+  toggleDrawer: (id: string) => void;
+  /** Record a part as assembled at its station. */
+  assemblePart: (partId: string) => void;
+  /** Set cleanliness level for a station. */
+  setStationCleanliness: (station: string, level: number) => void;
   /** Return to the main menu, resetting all ephemeral game state. */
   returnToMenu: () => void;
 }
 
-/** Number of sequential challenges in a full game (ingredients through tasting). */
-const TOTAL_CHALLENGES = 6;
+/** Number of sequential challenges in a full game (ingredients through blowout through tasting). */
+const TOTAL_CHALLENGES = 7;
 
 /** The default difficulty tier, loaded once at module init. */
 const DEFAULT_TIER = loadDifficultyTier(DEFAULT_DIFFICULTY);
@@ -418,6 +456,15 @@ export const INITIAL_GAME_STATE = {
   difficulty: DEFAULT_TIER,
   combatActive: false,
   activeEnemy: null as {id: string; type: string; hp: number; maxHp: number} | null,
+  currentRound: 1,
+  totalRounds: 1,
+  usedIngredientCombos: [] as string[][],
+  casingTied: false,
+  blowoutScore: 0,
+  openCabinets: [] as string[],
+  openDrawers: [] as string[],
+  assembledParts: [] as string[],
+  stationCleanliness: {} as Record<string, number>,
   musicVolume: 0.7,
   sfxVolume: 0.8,
   musicMuted: false,
@@ -477,6 +524,15 @@ export const useGameStore = create<GameState>()(
           challengeTriggered: false,
           combatActive: false,
           activeEnemy: null,
+          currentRound: 1,
+          totalRounds: 1,
+          usedIngredientCombos: [],
+          casingTied: false,
+          blowoutScore: 0,
+          openCabinets: [],
+          openDrawers: [],
+          assembledParts: [],
+          stationCleanliness: {},
           playerDecisions: {
             selectedIngredients: [],
             twistPoints: [],
@@ -775,6 +831,46 @@ export const useGameStore = create<GameState>()(
           },
         })),
 
+      advanceRound: () =>
+        set(state => {
+          const combo = state.playerDecisions.selectedIngredients.slice().sort();
+          return {
+            currentRound: state.currentRound + 1,
+            usedIngredientCombos: [...state.usedIngredientCombos, combo],
+            casingTied: false,
+            blowoutScore: 0,
+          };
+        }),
+
+      setCasingTied: (tied: boolean) => set({casingTied: tied}),
+      setBlowoutScore: (score: number) => set({blowoutScore: score}),
+
+      toggleCabinet: (id: string) =>
+        set(state => ({
+          openCabinets: state.openCabinets.includes(id)
+            ? state.openCabinets.filter(c => c !== id)
+            : [...state.openCabinets, id],
+        })),
+
+      toggleDrawer: (id: string) =>
+        set(state => ({
+          openDrawers: state.openDrawers.includes(id)
+            ? state.openDrawers.filter(d => d !== id)
+            : [...state.openDrawers, id],
+        })),
+
+      assemblePart: (partId: string) =>
+        set(state =>
+          state.assembledParts.includes(partId)
+            ? {}
+            : {assembledParts: [...state.assembledParts, partId]},
+        ),
+
+      setStationCleanliness: (station: string, level: number) =>
+        set(state => ({
+          stationCleanliness: {...state.stationCleanliness, [station]: level},
+        })),
+
       setMusicVolume: (volume: number) => set({musicVolume: Math.max(0, Math.min(1, volume))}),
       setSfxVolume: (volume: number) => set({sfxVolume: Math.max(0, Math.min(1, volume))}),
       setMusicMuted: (muted: boolean) => set({musicMuted: muted}),
@@ -785,6 +881,8 @@ export const useGameStore = create<GameState>()(
         set({
           appPhase: 'menu' as AppPhase,
           gameStatus: 'menu',
+          currentChallenge: 0,
+          challengeScores: [],
           strikes: 0,
           challengeProgress: 0,
           challengePressure: 0,
@@ -814,6 +912,15 @@ export const useGameStore = create<GameState>()(
           challengeTriggered: false,
           combatActive: false,
           activeEnemy: null,
+          currentRound: 1,
+          totalRounds: 1,
+          usedIngredientCombos: [],
+          casingTied: false,
+          blowoutScore: 0,
+          openCabinets: [],
+          openDrawers: [],
+          assembledParts: [],
+          stationCleanliness: {},
           mrSausageDemands: null,
           playerDecisions: {
             selectedIngredients: [],
@@ -840,6 +947,9 @@ export const useGameStore = create<GameState>()(
         hintsRemaining: state.hintsRemaining,
         variantSeed: state.variantSeed,
         difficulty: state.difficulty,
+        currentRound: state.currentRound,
+        totalRounds: state.totalRounds,
+        usedIngredientCombos: state.usedIngredientCombos,
         musicVolume: state.musicVolume,
         sfxVolume: state.sfxVolume,
         musicMuted: state.musicMuted,

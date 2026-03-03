@@ -43,16 +43,17 @@ describe('FurnitureLayout', () => {
   });
 
   describe('STATION_TARGET_NAMES', () => {
-    it('has 6 station names in challenge order', () => {
+    it('has 7 station names in challenge order', () => {
       expect(STATION_TARGET_NAMES).toEqual([
         'fridge',
         'cutting-board',
         'grinder',
         'stuffer',
         'stove',
+        'dining-table',
         'crt-tv',
       ]);
-      expect(STATION_TARGET_NAMES).toHaveLength(6);
+      expect(STATION_TARGET_NAMES).toHaveLength(7);
     });
   });
 
@@ -68,7 +69,7 @@ describe('FurnitureLayout', () => {
       }
     });
 
-    it('all 5 station targets exist with triggerRadius > 0 and markerY', () => {
+    it('all 7 station targets exist with triggerRadius > 0 and markerY', () => {
       for (const name of STATION_TARGET_NAMES) {
         const t = targets[name];
         expect(t).toBeDefined();
@@ -139,8 +140,8 @@ describe('FurnitureLayout', () => {
   describe('getStationTarget', () => {
     const targets = resolve(DEFAULT_ROOM);
 
-    it('returns correct target for indices 0-5', () => {
-      for (let i = 0; i < 6; i++) {
+    it('returns correct target for indices 0-6', () => {
+      for (let i = 0; i < 7; i++) {
         const t = getStationTarget(targets, i);
         expect(t).toBeDefined();
         expect(t).toBe(targets[STATION_TARGET_NAMES[i]]);
@@ -149,7 +150,7 @@ describe('FurnitureLayout', () => {
 
     it('returns undefined for invalid indices', () => {
       expect(getStationTarget(targets, -1)).toBeUndefined();
-      expect(getStationTarget(targets, 6)).toBeUndefined();
+      expect(getStationTarget(targets, 7)).toBeUndefined();
       expect(getStationTarget(targets, 100)).toBeUndefined();
     });
   });

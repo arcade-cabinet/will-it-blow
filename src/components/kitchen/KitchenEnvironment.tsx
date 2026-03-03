@@ -21,9 +21,11 @@ import {useMemo} from 'react';
 import * as THREE from 'three/webgpu';
 import {config} from '../../config';
 import {getAssetUrl} from '../../engine/assetUrl';
+import {CabinetDrawer} from './CabinetDrawer';
 import {CeilingLightOrchestrator} from './CeilingLightOrchestrator';
 import {FurnitureLoader} from './FurnitureLoader';
 import {HorrorPropsLoader} from './HorrorPropsLoader';
+import {ProceduralSink} from './ProceduralSink';
 import {TrapDoorMount} from './TrapDoorMount';
 
 // --- Room dimensions (slightly larger than 12x12 kitchen GLB to avoid z-fighting) ---
@@ -267,10 +269,17 @@ function PbrGrimeDecal({size, position, rotY, textures}: PbrGrimeDecalProps) {
  * Fluorescent tubes randomly flicker using per-frame sine wave intensity.
  *
  * @param props.grinderCranking - Controls grinder crank animation in FurnitureLoader
+ * @param props.onItemWashed - Called when a cleanup wash cycle completes for an item ID
  */
 const lc = config.scene.lighting;
 
-export const KitchenEnvironment = ({grinderCranking = false}: {grinderCranking?: boolean}) => {
+export const KitchenEnvironment = ({
+  grinderCranking = false,
+  onItemWashed,
+}: {
+  grinderCranking?: boolean;
+  onItemWashed?: (itemId: string) => void;
+}) => {
   // Load PBR textures for room enclosure
   const textures = useRoomTextures();
 
@@ -301,9 +310,54 @@ export const KitchenEnvironment = ({grinderCranking = false}: {grinderCranking?:
       <FurnitureLoader grinderCranking={grinderCranking} />
 
       {/* =======================================================
+          SINK — procedural geometry, left-wall counter area
+          ======================================================= */}
+      <ProceduralSink position={[-4, 0.85, 2]} onItemWashed={onItemWashed} />
+
+      {/* =======================================================
           HORROR PROPS — PSX scene dressing (tiered loading)
           ======================================================= */}
       <HorrorPropsLoader />
+
+      {/* =======================================================
+          INTERACTIVE CABINETS AND DRAWERS — hidden object layer
+          Positions come from config.enemies.spawnCabinets plus
+          supplemental drawers matching KitchenAssembly part locations.
+          ======================================================= */}
+      {config.enemies.spawnCabinets.map(cab => (
+        <CabinetDrawer
+          key={cab.id}
+          id={cab.id}
+          type="cabinet"
+          position={cab.position as [number, number, number]}
+          size={[0.7, 0.85, 0.05]}
+        />
+      ))}
+      {/* Supplemental drawers for stuffer/stove parts */}
+      <CabinetDrawer
+        id="drawer-upper-right"
+        type="drawer"
+        position={[4.5, 1.0, -3.0]}
+        size={[0.55, 0.22, 0.45]}
+      />
+      <CabinetDrawer
+        id="drawer-lower-right"
+        type="drawer"
+        position={[4.5, 0.35, -3.0]}
+        size={[0.55, 0.22, 0.45]}
+      />
+      <CabinetDrawer
+        id="drawer-upper-left"
+        type="drawer"
+        position={[-4.5, 1.0, -3.0]}
+        size={[0.55, 0.22, 0.45]}
+      />
+      <CabinetDrawer
+        id="drawer-lower-left"
+        type="drawer"
+        position={[-4.5, 0.35, -3.0]}
+        size={[0.55, 0.22, 0.45]}
+      />
 
       {/* =======================================================
           CEILING ELEMENTS — trap door + ECS-driven lighting panels

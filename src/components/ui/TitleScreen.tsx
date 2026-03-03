@@ -24,14 +24,13 @@ import {SausageButton} from './SausageButton';
 import {SettingsScreen} from './SettingsScreen';
 
 export function TitleScreen() {
-  const {
-    setAppPhase,
-    continueGame,
-    startNewGame,
-    setDifficulty,
-    currentChallenge,
-    challengeScores,
-  } = useGameStore();
+  const setAppPhase = useGameStore(s => s.setAppPhase);
+  const continueGame = useGameStore(s => s.continueGame);
+  const startNewGame = useGameStore(s => s.startNewGame);
+  const setDifficulty = useGameStore(s => s.setDifficulty);
+  const currentChallenge = useGameStore(s => s.currentChallenge);
+  const challengeScores = useGameStore(s => s.challengeScores);
+  const currentRound = useGameStore(s => s.currentRound);
   const hasSaveData = challengeScores.length > 0 && currentChallenge < 5;
   const [showSettings, setShowSettings] = useState(false);
   const [showDifficulty, setShowDifficulty] = useState(false);
@@ -142,7 +141,12 @@ export function TitleScreen() {
       {/* Menu buttons — procedural sausage-shaped RN components */}
       <View style={styles.menuContainer}>
         <SausageButton label="NEW GAME" onPress={() => handleMenuPress(0)} />
-        <SausageButton label="LOAD" onPress={() => handleMenuPress(1)} disabled={!hasSaveData} />
+        <View style={styles.loadButtonGroup}>
+          <SausageButton label="LOAD" onPress={() => handleMenuPress(1)} disabled={!hasSaveData} />
+          {hasSaveData && (
+            <Text style={styles.roundSubtitle}>Last played: Round {currentRound}</Text>
+          )}
+        </View>
         <SausageButton label="SETTINGS" onPress={() => setShowSettings(true)} />
       </View>
 
@@ -227,6 +231,17 @@ const styles = StyleSheet.create({
   },
   menuContainer: {
     alignItems: 'center',
+  },
+  loadButtonGroup: {
+    alignItems: 'center',
+  },
+  roundSubtitle: {
+    fontFamily: 'Bangers',
+    fontSize: 13,
+    color: '#8a6a3a',
+    letterSpacing: 2,
+    marginTop: -4,
+    marginBottom: 4,
   },
   footer: {
     fontFamily: 'Bangers',
