@@ -14,5 +14,59 @@
   "completeDelaySec": 1.5,
   "boxPosition": [0.0, 0.9, -0.6],
   "boxHalfWidth": 0.18,
-  "boxHalfHeight": 0.26
+  "boxHalfHeight": 0.26,
+  "visual": {
+    "nozzleHeightOffset": 0.8,
+    "particleSphereRadius": 0.022,
+    "particleSphereDetail": 5,
+    "table": {
+      "position": [0, 0.85, -0.4],
+      "size": [1.2, 0.04, 0.8],
+      "color": [0.45, 0.32, 0.18],
+      "roughness": 0.7,
+      "legPositions": [
+        [0.55, 0.4, -0.1],
+        [-0.55, 0.4, -0.1],
+        [0.55, 0.4, -0.7],
+        [-0.55, 0.4, -0.7]
+      ],
+      "legRadius": 0.025,
+      "legHeight": 0.8,
+      "legColor": [0.35, 0.25, 0.12],
+      "legRoughness": 0.8
+    },
+    "placeSetting": {
+      "groupPosition": [0, 0.87, -0.38],
+      "platePosition": [0, 0, 0.05],
+      "plateRadius": 0.14,
+      "plateHeight": 0.012,
+      "plateSegments": 24,
+      "plateColor": [0.95, 0.95, 0.92],
+      "plateRoughness": 0.3,
+      "plateMetalness": 0.1,
+      "forkPosition": [-0.18, 0, 0.05],
+      "forkSize": [0.015, 0.004, 0.16],
+      "forkColor": [0.75, 0.75, 0.78],
+      "forkMetalness": 0.6,
+      "forkRoughness": 0.3,
+      "knifePosition": [0.18, 0, 0.05],
+      "knifeSize": [0.015, 0.004, 0.16],
+      "knifeColor": [0.75, 0.75, 0.78],
+      "knifeMetalness": 0.6,
+      "knifeRoughness": 0.3,
+      "glassPosition": [0.22, 0.04, -0.1],
+      "glassTopRadius": 0.025,
+      "glassBottomRadius": 0.022,
+      "glassHeight": 0.1,
+      "glassSegments": 10,
+      "glassColor": [0.85, 0.95, 1.0],
+      "glassOpacity": 0.4,
+      "glassRoughness": 0.05,
+      "napkinPosition": [-0.22, 0, 0.05],
+      "napkinRotationY": 0.2,
+      "napkinSize": [0.1, 0.1],
+      "napkinColor": [0.95, 0.92, 0.88],
+      "napkinRoughness": 0.9
+    }
+  }
 }

@@ -20,6 +20,7 @@ import * as THREE from 'three/webgpu';
 import {config} from '../../config';
 import type {HorrorPropDef} from '../../config/types';
 import {getAssetUrl} from '../../engine/assetUrl';
+import {traverseMeshes} from '../../engine/threeUtils';
 
 const TIER_2_DELAY_MS = 2000;
 
@@ -84,12 +85,12 @@ function HorrorProp({prop}: {prop: HorrorPropDef}) {
   const cloned = useMemo(() => scene.clone(true), [scene]);
 
   useEffect(() => {
-    cloned.traverse((child: any) => {
-      if (child.isMesh) {
-        child.material.side = THREE.FrontSide;
-        if (child.material.isMeshStandardMaterial) {
-          child.material.envMapIntensity = 0.05;
-        }
+    traverseMeshes(cloned, mesh => {
+      const mat = mesh.material;
+      if (Array.isArray(mat)) return;
+      mat.side = THREE.FrontSide;
+      if (mat instanceof THREE.MeshStandardMaterial) {
+        mat.envMapIntensity = 0.05;
       }
     });
   }, [cloned]);

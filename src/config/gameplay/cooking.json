@@ -17,7 +17,7 @@
   "smokeThreshold": 0.85,
   "steamCount": 10,
   "smokeCount": 8,
-  "flipDuration": 0.5,
+  "flipDurationSec": 0.5,
   "coolingRate": 3,
   "roomTemp": 70,
   "scorePenaltyPerOverheat": 15,
@@ -26,5 +26,62 @@
   "sizzleThrottleMs": 1200,
   "maxFlips": 3,
   "flipFlairPoints": 5,
-  "flipHoldTimerPenalty": 0.5
+  "flipHoldTimerPenalty": 0.5,
+  "visual": {
+    "burnerRing": {
+      "position": [0, 0.06, 0],
+      "torusRadius": 0.35,
+      "torusTube": 0.03,
+      "torusRadialSegments": 12,
+      "torusTubularSegments": 24,
+      "defaultColor": [0.15, 0.05, 0.02]
+    },
+    "pan": {
+      "bodySegments": 24,
+      "panColor": [0.2, 0.2, 0.22],
+      "panMetalness": 0.7,
+      "panRoughness": 0.3,
+      "handlePosition": [0, 0, 0.65],
+      "handleSize": [0.06, 0.04, 0.5],
+      "handleColor": [0.12, 0.12, 0.14],
+      "handleHoverColor": [0.25, 0.25, 0.3],
+      "handleHoverEmissive": [0.05, 0.05, 0.1]
+    },
+    "steam": {
+      "sphereRadius": 0.015,
+      "sphereDetail": 4,
+      "color": [0.9, 0.9, 0.95],
+      "opacity": 0.6,
+      "spawnSpread": 0.48,
+      "spawnBaseVelocity": 0.5,
+      "spawnVelocityRange": 0.5,
+      "spawnLifeMin": 0.3,
+      "spawnLifeRange": 0.3,
+      "spawnIntervalBase": 0.12
+    },
+    "smoke": {
+      "sphereRadius": 0.04,
+      "sphereDetail": 4,
+      "color": [0.25, 0.22, 0.2],
+      "opacity": 0.5,
+      "spawnSpread": 0.2,
+      "yOffsetFromPan": 0.15,
+      "baseVelocityY": 0.3,
+      "velocityRangeY": 0.3,
+      "velocityRangeXZ": 0.1,
+      "lifeMin": 1.0,
+      "lifeRange": 0.5,
+      "spawnInterval": 0.1,
+      "expandScale": 2.0
+    },
+    "glistenLight": {
+      "positionOffset": [-2, 6, -2],
+      "intensity": 150,
+      "distance": 50,
+      "orbitRadiusX": 2.0,
+      "orbitRadiusZ": 1.5,
+      "orbitSpeedX": 0.5,
+      "orbitSpeedZ": 0.7
+    }
+  }
 }

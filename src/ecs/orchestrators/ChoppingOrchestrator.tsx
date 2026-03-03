@@ -54,6 +54,11 @@ const {
   missStrikeCooldownMs: MISS_STRIKE_COOLDOWN_MS,
 } = config.gameplay.chopping;
 
+// Visual config — static JSON, never changes at runtime
+const CHOP_VIS = config.gameplay.chopping.visual;
+const CHOP_CHUNK_GEO_RADIUS = CHOP_VIS.chunkGeoDodecahedronRadius;
+const CHOP_CHUNK_GEO_DETAIL = CHOP_VIS.chunkGeoDodecahedronDetail;
+
 // ---------------------------------------------------------------------------
 // ChoppingOrchestrator
 // ---------------------------------------------------------------------------
@@ -118,7 +123,10 @@ export const ChoppingOrchestrator = ({position, visible}: ChoppingOrchestratorPr
     [chunkColors],
   );
 
-  const chunkGeo = useMemo(() => new THREE.DodecahedronGeometry(0.15, 1), []);
+  const chunkGeo = useMemo(
+    () => new THREE.DodecahedronGeometry(CHOP_CHUNK_GEO_RADIUS, CHOP_CHUNK_GEO_DETAIL),
+    [],
+  );
 
   // ---- Variant selection on mount when visible ----
   useEffect(() => {
@@ -289,7 +297,10 @@ export const ChoppingOrchestrator = ({position, visible}: ChoppingOrchestratorPr
   return (
     <group position={position}>
       {/* Interactive knife — bobs up and down, click to chop */}
-      <group ref={knifeRef} position={[0, KNIFE_REST_Y + KNIFE_AMPLITUDE, 0.2]}>
+      <group
+        ref={knifeRef}
+        position={[0, KNIFE_REST_Y + KNIFE_AMPLITUDE, CHOP_VIS.knifeGroupZOffset]}
+      >
         {/* Knife blade */}
         <mesh
           onClick={handleChop}
@@ -304,27 +315,41 @@ export const ChoppingOrchestrator = ({position, visible}: ChoppingOrchestratorPr
             }
           }}
         >
-          <boxGeometry args={[0.02, 0.25, 0.4]} />
-          <meshStandardMaterial color="#c0c0c0" metalness={0.9} roughness={0.15} />
+          <boxGeometry args={CHOP_VIS.knifeBlade.size} />
+          <meshStandardMaterial
+            color={CHOP_VIS.knifeBlade.color}
+            metalness={CHOP_VIS.knifeBlade.metalness}
+            roughness={CHOP_VIS.knifeBlade.roughness}
+          />
         </mesh>
         {/* Knife handle */}
-        <mesh position={[0, 0.18, 0]}>
-          <boxGeometry args={[0.04, 0.12, 0.08]} />
-          <meshStandardMaterial color="#3d2b1f" roughness={0.8} metalness={0.05} />
+        <mesh position={[0, CHOP_VIS.knifeHandle.positionY, 0]}>
+          <boxGeometry args={CHOP_VIS.knifeHandle.size} />
+          <meshStandardMaterial
+            color={CHOP_VIS.knifeHandle.color}
+            roughness={CHOP_VIS.knifeHandle.roughness}
+            metalness={CHOP_VIS.knifeHandle.metalness}
+          />
         </mesh>
       </group>
 
       {/* Ingredient chunks scattered on the board surface */}
-      <group position={[0, 0.52, 0]}>
+      <group position={[0, CHOP_VIS.chunkGroupY, 0]}>
         {chunkMats.map((mat, i) => (
           <mesh
             key={`chunk-${i}`}
             position={[
-              ((i % 3) - 1) * 0.2 + Math.sin(i * 2.3) * 0.05,
+              ((i % CHOP_VIS.chunkGridCols) - 1) * CHOP_VIS.chunkGridSpacing +
+                Math.sin(i * 2.3) * CHOP_VIS.chunkJitterAmplitude,
               0,
-              (Math.floor(i / 3) - 0.5) * 0.2 + Math.cos(i * 1.7) * 0.05,
+              (Math.floor(i / CHOP_VIS.chunkGridCols) - 0.5) * CHOP_VIS.chunkGridSpacing +
+                Math.cos(i * 1.7) * CHOP_VIS.chunkJitterAmplitude,
             ]}
-            rotation={[Math.random() * 0.3, Math.random() * Math.PI, Math.random() * 0.3]}
+            rotation={
+              CHOP_VIS.chunkRandomRotation
+                ? [Math.random() * 0.3, Math.random() * Math.PI, Math.random() * 0.3]
+                : [0, 0, 0]
+            }
           >
             <primitive object={chunkGeo} attach="geometry" />
             <primitive object={mat} attach="material" />
@@ -333,18 +358,22 @@ export const ChoppingOrchestrator = ({position, visible}: ChoppingOrchestratorPr
       </group>
 
       {/* Clickable surface hitbox (covers the cutting board area) */}
-      <mesh position={[0, 0.55, 0]} onClick={handleChop} visible={false}>
-        <boxGeometry args={[1.0, 0.3, 0.8]} />
+      <mesh position={CHOP_VIS.hitboxPosition} onClick={handleChop} visible={false}>
+        <boxGeometry args={CHOP_VIS.hitboxSize} />
         <meshBasicMaterial transparent opacity={0} />
       </mesh>
 
       {/* Sweet spot indicator light — glows green when knife is in sweet zone */}
       <pointLight
-        position={[0, 0.3, 0.5]}
-        color="#4CAF50"
-        intensity={phaseRef.current === 'active' ? 2.0 : 0}
-        distance={2}
-        decay={2}
+        position={CHOP_VIS.sweetSpotLight.position}
+        color={CHOP_VIS.sweetSpotLight.color}
+        intensity={
+          phaseRef.current === 'active'
+            ? CHOP_VIS.sweetSpotLight.intensityActive
+            : CHOP_VIS.sweetSpotLight.intensityInactive
+        }
+        distance={CHOP_VIS.sweetSpotLight.distance}
+        decay={CHOP_VIS.sweetSpotLight.decay}
       />
     </group>
   );

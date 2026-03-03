@@ -165,7 +165,6 @@ test.describe('Full Game Playthrough — Visual Audit (7 Challenges)', () => {
   test('02 — Loading screen', async ({page}) => {
     // Stall asset fetches (never resolve) so preloading doesn't complete.
     // This keeps the sausage-links progress bar visible for the screenshot.
-    // biome-ignore lint/suspicious/noEmptyBlockStatements: intentionally stall requests
     await page.route('**/*.{glb,ogg,jpg}', _route => {});
     await page.evaluate(() => (window as any).__gov.setPhase('loading'));
     await waitForPhase(page, 'loading');

@@ -436,7 +436,7 @@ export const StufferOrchestrator = ({position, visible}: StufferOrchestratorProp
       <MachineEntitiesRenderer entities={entitiesRef.current} />
 
       {/* Water bowl: casing soaking bowl, offset to left/front */}
-      <WaterBowl position={[-0.5, -0.5, 0.3]} />
+      <WaterBowl position={config.gameplay.stuffing.visual.waterBowlPosition} />
 
       {/* Casing tube: inflates based on fill/pressure, shifts color */}
       <StufferCasing

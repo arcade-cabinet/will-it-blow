@@ -11,5 +11,39 @@
   "scorePenaltyPerStrike": 15,
   "streakBonusThreshold": 3,
   "streakFlairPoints": 3,
-  "missStrikeCooldownMs": 600
+  "missStrikeCooldownMs": 600,
+  "visual": {
+    "knifeGroupZOffset": 0.2,
+    "knifeBlade": {
+      "size": [0.02, 0.25, 0.4],
+      "color": "#c0c0c0",
+      "metalness": 0.9,
+      "roughness": 0.15
+    },
+    "knifeHandle": {
+      "positionY": 0.18,
+      "size": [0.04, 0.12, 0.08],
+      "color": "#3d2b1f",
+      "roughness": 0.8,
+      "metalness": 0.05
+    },
+    "chunkGroupY": 0.52,
+    "chunkGeoDodecahedronRadius": 0.15,
+    "chunkGeoDodecahedronDetail": 1,
+    "chunkCount": 6,
+    "chunkGridCols": 3,
+    "chunkGridSpacing": 0.2,
+    "chunkJitterAmplitude": 0.05,
+    "chunkRandomRotation": true,
+    "hitboxPosition": [0, 0.55, 0],
+    "hitboxSize": [1.0, 0.3, 0.8],
+    "sweetSpotLight": {
+      "position": [0, 0.3, 0.5],
+      "color": "#4CAF50",
+      "intensityActive": 2.0,
+      "intensityInactive": 0,
+      "distance": 2,
+      "decay": 2
+    }
+  }
 }

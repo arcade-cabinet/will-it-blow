@@ -94,8 +94,17 @@ const CHUNK_BOWL_OFFSETS = Array.from({length: chunkCount}, (_, i) => {
   };
 });
 
+const GRIND_VIS = config.gameplay.grinding.visual;
+const GRIND_CHUNK_GEO_RADIUS = GRIND_VIS.chunkGeoDodecahedronRadius;
+const GRIND_CHUNK_GEO_DETAIL = GRIND_VIS.chunkGeoDodecahedronDetail;
+
 function makeParticleGeo() {
-  return new THREE.CylinderGeometry(0.08, 0.08, 0.5, 6).rotateX(Math.PI / 2);
+  return new THREE.CylinderGeometry(
+    GRIND_VIS.particleCylinderTopRadius,
+    GRIND_VIS.particleCylinderBottomRadius,
+    GRIND_VIS.particleCylinderHeight,
+    GRIND_VIS.particleCylinderSegments,
+  ).rotateX(Math.PI / 2);
 }
 
 // ---------------------------------------------------------------------------
@@ -270,7 +279,11 @@ export const GrinderOrchestrator = ({position, visible}: GrinderOrchestratorProp
   }, [chunkColors]);
 
   // ---- geometry ----
-  const chunkGeo = useMemo(() => new THREE.DodecahedronGeometry(0.5, 1), []);
+  // grindVis comes from static JSON config — values never change at runtime.
+  const chunkGeo = useMemo(
+    () => new THREE.DodecahedronGeometry(GRIND_CHUNK_GEO_RADIUS, GRIND_CHUNK_GEO_DETAIL),
+    [],
+  );
   const hopperChunkGeo = useMemo(() => new THREE.DodecahedronGeometry(HOPPER_CHUNK_SCALE, 1), []);
   const particleGeo = useMemo(() => makeParticleGeo(), []);
 
@@ -422,9 +435,15 @@ export const GrinderOrchestrator = ({position, visible}: GrinderOrchestratorProp
         if (p) {
           p.active = true;
           const ang = Math.random() * Math.PI * 2;
-          const r = Math.random() * 0.8;
-          p.pos.set(r * Math.cos(ang), 2.5, 2.1);
-          p.vel.set((Math.random() - 0.5) * 1, -2 - Math.random() * 2, 1 + Math.random() * 2);
+          const r = Math.random() * GRIND_VIS.particleSpawnRadiusMax;
+          p.pos.set(r * Math.cos(ang), GRIND_VIS.particleSpawnY, GRIND_VIS.particleSpawnZ);
+          p.vel.set(
+            (Math.random() - 0.5) * GRIND_VIS.particleInitialVelocityXRange,
+            GRIND_VIS.particleInitialVelocityY -
+              Math.random() * GRIND_VIS.particleInitialVelocityYRange,
+            GRIND_VIS.particleInitialVelocityZBase +
+              Math.random() * GRIND_VIS.particleInitialVelocityZRange,
+          );
           p.rot.set(0, 0, 0);
         }
       }
@@ -505,7 +524,7 @@ export const GrinderOrchestrator = ({position, visible}: GrinderOrchestratorProp
       <MachineEntitiesRenderer entities={entitiesRef.current} />
 
       {/* Meat chunks — decorative, no click interaction */}
-      <group position={[-5, 0, 2]}>
+      <group position={GRIND_VIS.chunkBowlGroupOffset}>
         {chunks.map((chunk, i) => (
           <mesh
             key={chunk.id}

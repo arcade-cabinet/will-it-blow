@@ -9,5 +9,8 @@
   "fillDropOnBurst": 20,
   "completeDelayMs": 1200,
   "crankDragThreshold": 0.1,
-  "burstCooldownMs": 1000
+  "burstCooldownMs": 1000,
+  "visual": {
+    "waterBowlPosition": [-0.5, -0.5, 0.3]
+  }
 }

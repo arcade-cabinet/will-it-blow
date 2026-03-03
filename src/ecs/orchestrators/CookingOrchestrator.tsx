@@ -61,7 +61,7 @@ const {
   smokeThreshold: SMOKE_THRESHOLD,
   steamCount: STEAM_COUNT,
   smokeCount: SMOKE_COUNT,
-  flipDuration: FLIP_DURATION,
+  flipDurationSec: FLIP_DURATION,
   coolingRate: COOLING_RATE,
   roomTemp: ROOM_TEMP,
   scorePenaltyPerOverheat: SCORE_PENALTY_PER_OVERHEAT,
@@ -71,6 +71,7 @@ const {
   maxFlips: MAX_FLIPS,
   flipFlairPoints: FLIP_FLAIR_POINTS,
   flipHoldTimerPenalty: FLIP_HOLD_TIMER_PENALTY,
+  visual: cookingVis,
 } = config.gameplay.cooking;
 
 const COLOR_RAW = config.gameplay.cooking.colorRaw as [number, number, number];
@@ -225,8 +226,8 @@ export function CookingOrchestrator({position, visible}: CookingOrchestratorProp
   const panHandleHoverMat = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        color: new THREE.Color(0.25, 0.25, 0.3),
-        emissive: new THREE.Color(0.05, 0.05, 0.1),
+        color: new THREE.Color(...cookingVis.pan.handleHoverColor),
+        emissive: new THREE.Color(...cookingVis.pan.handleHoverEmissive),
       }),
     [],
   );
@@ -506,8 +507,11 @@ export function CookingOrchestrator({position, visible}: CookingOrchestratorProp
 
     // ---- Glisten light orbit ----
     if (glistenRef.current && cookLevelRef.current > 0) {
-      glistenRef.current.position.x = -2 + Math.sin(timeRef.current * 0.5) * 2;
-      glistenRef.current.position.z = -2 + Math.cos(timeRef.current * 0.7) * 1.5;
+      const gl = cookingVis.glistenLight;
+      glistenRef.current.position.x =
+        gl.positionOffset[0] + Math.sin(timeRef.current * gl.orbitSpeedX) * gl.orbitRadiusX;
+      glistenRef.current.position.z =
+        gl.positionOffset[2] + Math.cos(timeRef.current * gl.orbitSpeedZ) * gl.orbitRadiusZ;
     }
 
     // ---- Steam particles (scale with heat) ----
@@ -522,12 +526,15 @@ export function CookingOrchestrator({position, visible}: CookingOrchestratorProp
           const s = steamState.current[i];
           if (!s.active) {
             s.active = true;
-            s.x = (Math.random() - 0.5) * 0.4 * 1.2;
+            s.x = (Math.random() - 0.5) * cookingVis.steam.spawnSpread;
             s.y = PAN_Y + PAN_HEIGHT;
-            s.z = (Math.random() - 0.5) * 0.4 * 1.2;
-            s.vy = 0.5 + Math.random() * 0.5;
+            s.z = (Math.random() - 0.5) * cookingVis.steam.spawnSpread;
+            s.vy =
+              cookingVis.steam.spawnBaseVelocity +
+              Math.random() * cookingVis.steam.spawnVelocityRange;
             s.life = 0;
-            s.maxLife = 0.3 + Math.random() * 0.3;
+            s.maxLife =
+              cookingVis.steam.spawnLifeMin + Math.random() * cookingVis.steam.spawnLifeRange;
             break;
           }
         }
@@ -558,21 +565,21 @@ export function CookingOrchestrator({position, visible}: CookingOrchestratorProp
     // ---- Smoke particles (dark, when cookLevel > 0.85) ----
     if (cookLevelRef.current > SMOKE_THRESHOLD) {
       smokeTimerRef.current += dt;
-      const smokeInterval = 0.1;
+      const smokeInterval = cookingVis.smoke.spawnInterval;
       if (smokeTimerRef.current >= smokeInterval) {
         smokeTimerRef.current = 0;
         for (let i = 0; i < SMOKE_COUNT; i++) {
           const s = smokeState.current[i];
           if (!s.active) {
             s.active = true;
-            s.x = (Math.random() - 0.5) * 0.2;
-            s.y = PAN_Y + 0.15;
-            s.z = (Math.random() - 0.5) * 0.2;
-            s.vx = (Math.random() - 0.5) * 0.1;
-            s.vy = 0.3 + Math.random() * 0.3;
-            s.vz = (Math.random() - 0.5) * 0.1;
+            s.x = (Math.random() - 0.5) * cookingVis.smoke.spawnSpread;
+            s.y = PAN_Y + cookingVis.smoke.yOffsetFromPan;
+            s.z = (Math.random() - 0.5) * cookingVis.smoke.spawnSpread;
+            s.vx = (Math.random() - 0.5) * cookingVis.smoke.velocityRangeXZ;
+            s.vy = cookingVis.smoke.baseVelocityY + Math.random() * cookingVis.smoke.velocityRangeY;
+            s.vz = (Math.random() - 0.5) * cookingVis.smoke.velocityRangeXZ;
             s.life = 0;
-            s.maxLife = 1.0 + Math.random() * 0.5;
+            s.maxLife = cookingVis.smoke.lifeMin + Math.random() * cookingVis.smoke.lifeRange;
             break;
           }
         }
@@ -590,7 +597,7 @@ export function CookingOrchestrator({position, visible}: CookingOrchestratorProp
         s.y += s.vy * dt;
         s.z += s.vz * dt;
         const lifeNorm = s.life / s.maxLife;
-        const expandScale = 1.0 + lifeNorm * 2.0;
+        const expandScale = 1.0 + lifeNorm * cookingVis.smoke.expandScale;
         mesh.position.set(s.x, s.y, s.z);
         mesh.scale.setScalar(expandScale);
         mesh.visible = true;
@@ -618,9 +625,16 @@ export function CookingOrchestrator({position, visible}: CookingOrchestratorProp
       <MachineEntitiesRenderer entities={entitiesRef.current} />
 
       {/* Burner ring override — heat-responsive color (uses ref, not ECS material) */}
-      <mesh position={[0, 0.06, 0]}>
-        <torusGeometry args={[0.35, 0.03, 12, 24]} />
-        <meshBasicMaterial ref={burnerMatRef} color={[0.15, 0.05, 0.02]} />
+      <mesh position={cookingVis.burnerRing.position}>
+        <torusGeometry
+          args={[
+            cookingVis.burnerRing.torusRadius,
+            cookingVis.burnerRing.torusTube,
+            cookingVis.burnerRing.torusRadialSegments,
+            cookingVis.burnerRing.torusTubularSegments,
+          ]}
+        />
+        <meshBasicMaterial ref={burnerMatRef} color={cookingVis.burnerRing.defaultColor} />
       </mesh>
 
       {/* Frying Pan Group (tips during flip) — always visible when station active */}
@@ -633,7 +647,7 @@ export function CookingOrchestrator({position, visible}: CookingOrchestratorProp
 
         {/* Pan handle — click to trigger flip */}
         <mesh
-          position={[0, 0, 0.65]}
+          position={cookingVis.pan.handlePosition}
           onClick={triggerFlip}
           onPointerOver={e => {
             e.stopPropagation();
@@ -644,12 +658,12 @@ export function CookingOrchestrator({position, visible}: CookingOrchestratorProp
             if (panHandleMat) (e.object as THREE.Mesh).material = panHandleMat;
           }}
         >
-          <boxGeometry args={[0.06, 0.04, 0.5]} />
+          <boxGeometry args={cookingVis.pan.handleSize} />
           <meshStandardMaterial
             ref={el => {
               panHandleMat = el;
             }}
-            color={[0.12, 0.12, 0.14]}
+            color={cookingVis.pan.handleColor}
           />
         </mesh>
 
@@ -677,9 +691,13 @@ export function CookingOrchestrator({position, visible}: CookingOrchestratorProp
       {/* Glisten light — orbiting point light for grease specular */}
       <pointLight
         ref={glistenRef}
-        position={[-2, PAN_Y + 6, -2]}
-        intensity={150}
-        distance={50}
+        position={[
+          cookingVis.glistenLight.positionOffset[0],
+          PAN_Y + cookingVis.glistenLight.positionOffset[1],
+          cookingVis.glistenLight.positionOffset[2],
+        ]}
+        intensity={cookingVis.glistenLight.intensity}
+        distance={cookingVis.glistenLight.distance}
         color={0xffffff}
         visible={cookLevel > 0}
       />
@@ -694,8 +712,18 @@ export function CookingOrchestrator({position, visible}: CookingOrchestratorProp
           position={[0, PAN_Y, 0]}
           visible={false}
         >
-          <sphereGeometry args={[0.015, 4, 4]} />
-          <meshBasicMaterial color={[0.9, 0.9, 0.95]} transparent opacity={0.6} />
+          <sphereGeometry
+            args={[
+              cookingVis.steam.sphereRadius,
+              cookingVis.steam.sphereDetail,
+              cookingVis.steam.sphereDetail,
+            ]}
+          />
+          <meshBasicMaterial
+            color={cookingVis.steam.color}
+            transparent
+            opacity={cookingVis.steam.opacity}
+          />
         </mesh>
       ))}
 
@@ -706,11 +734,21 @@ export function CookingOrchestrator({position, visible}: CookingOrchestratorProp
           ref={el => {
             smokeRefs.current[i] = el;
           }}
-          position={[0, PAN_Y + 0.3, 0]}
+          position={[0, PAN_Y + cookingVis.smoke.yOffsetFromPan, 0]}
           visible={false}
         >
-          <sphereGeometry args={[0.04, 4, 4]} />
-          <meshBasicMaterial color={[0.25, 0.22, 0.2]} transparent opacity={0.5} />
+          <sphereGeometry
+            args={[
+              cookingVis.smoke.sphereRadius,
+              cookingVis.smoke.sphereDetail,
+              cookingVis.smoke.sphereDetail,
+            ]}
+          />
+          <meshBasicMaterial
+            color={cookingVis.smoke.color}
+            transparent
+            opacity={cookingVis.smoke.opacity}
+          />
         </mesh>
       ))}
     </group>
