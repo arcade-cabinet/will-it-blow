@@ -97,7 +97,7 @@ describe('layout spatial sanity', () => {
       const t = targets[name];
       if (!t) continue;
       // Counters are placed at floor level; the GLB model provides visual height
-      expect(t.position[1]).toBeLessThan(1.0);
+      expect(t.position[1]).toBeCloseTo(0, 1);
       expect(t.position[1]).toBeGreaterThanOrEqual(0);
     }
   });
