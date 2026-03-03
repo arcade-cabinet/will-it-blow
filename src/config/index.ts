@@ -9,6 +9,8 @@
  */
 
 import type {PlacementsConfig, RailsConfig, RoomConfig} from '../engine/layout/types';
+// --- Enemies / Combat ---
+import enemiesData from './enemies.json';
 // --- Fixture housings ---
 import ceilingHousing from './fixtures/ceiling-housing.json';
 import ceilingTrapdoorHousing from './fixtures/ceiling-trapdoor-housing.json';
@@ -49,6 +51,7 @@ import type {
   ChoppingGameplayConfig,
   CookingGameplayConfig,
   DisplayHousingConfig,
+  EnemiesConfig,
   FridgeSceneConfig,
   GreasePhysicsConfig,
   GrindingGameplayConfig,
@@ -99,6 +102,7 @@ export const config = {
     lighting: lightingScene as unknown as LightingSceneConfig,
     challengeSequence: challengeSequence as unknown as ChallengeSequenceConfig,
   },
+  enemies: enemiesData as unknown as EnemiesConfig,
   variants: variantsData as unknown as VariantsConfig,
   layout: {
     room: kitchenRoom as unknown as RoomConfig,
@@ -115,6 +119,7 @@ export type {
   ChoppingGameplayConfig,
   CookingGameplayConfig,
   DisplayHousingConfig,
+  EnemiesConfig,
   FridgeSceneConfig,
   GreasePhysicsConfig,
   GrindingGameplayConfig,

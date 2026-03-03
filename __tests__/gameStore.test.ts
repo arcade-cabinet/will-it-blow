@@ -384,6 +384,69 @@ describe('addFridgeSelected', () => {
   });
 });
 
+describe('combat actions', () => {
+  const mockEnemy = {id: 'giant-rat', type: 'giant-rat', hp: 2, maxHp: 2};
+
+  it('startCombat activates combat and sets enemy', () => {
+    store().startCombat(mockEnemy);
+    expect(store().combatActive).toBe(true);
+    expect(store().activeEnemy).toEqual(mockEnemy);
+  });
+
+  it('damageEnemy decrements HP and returns remaining', () => {
+    store().startCombat(mockEnemy);
+    const remaining = store().damageEnemy(1);
+    expect(remaining).toBe(1);
+    expect(store().activeEnemy!.hp).toBe(1);
+  });
+
+  it('damageEnemy does not go below 0', () => {
+    store().startCombat({...mockEnemy, hp: 1, maxHp: 1});
+    const remaining = store().damageEnemy(5);
+    expect(remaining).toBe(0);
+    expect(store().activeEnemy!.hp).toBe(0);
+  });
+
+  it('damageEnemy returns 0 with no active enemy', () => {
+    const remaining = store().damageEnemy(1);
+    expect(remaining).toBe(0);
+  });
+
+  it('endCombat clears combat state and increments enemiesDefeated', () => {
+    store().startCombat(mockEnemy);
+    store().endCombat();
+    expect(store().combatActive).toBe(false);
+    expect(store().activeEnemy).toBeNull();
+    expect(store().playerDecisions.enemiesDefeated).toBe(1);
+  });
+
+  it('endCombat accumulates across multiple encounters', () => {
+    store().startCombat(mockEnemy);
+    store().endCombat();
+    store().startCombat(mockEnemy);
+    store().endCombat();
+    expect(store().playerDecisions.enemiesDefeated).toBe(2);
+  });
+
+  it('recordEnemyIngredient increments counter', () => {
+    store().recordEnemyIngredient();
+    expect(store().playerDecisions.enemyIngredientsUsed).toBe(1);
+    store().recordEnemyIngredient();
+    expect(store().playerDecisions.enemyIngredientsUsed).toBe(2);
+  });
+
+  it('startNewGame resets combat state', () => {
+    store().startCombat(mockEnemy);
+    store().endCombat();
+    store().recordEnemyIngredient();
+    store().startNewGame();
+    expect(store().combatActive).toBe(false);
+    expect(store().activeEnemy).toBeNull();
+    expect(store().playerDecisions.enemiesDefeated).toBe(0);
+    expect(store().playerDecisions.enemyIngredientsUsed).toBe(0);
+  });
+});
+
 describe('startNewGame demand integration', () => {
   it('resets playerDecisions and generates fresh demands', () => {
     // Dirty the state

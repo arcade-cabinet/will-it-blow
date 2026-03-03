@@ -1,7 +1,9 @@
 import {ButtonSystem} from './ButtonSystem';
+import {CombatSystem} from './CombatSystem';
 import {CookingColorSystem} from './CookingColorSystem';
 import {CrankSystem} from './CrankSystem';
 import {DialSystem} from './DialSystem';
+import {EnemySpawnSystem} from './EnemySpawnSystem';
 import {FillDrivenSystem} from './FillDrivenSystem';
 import {FlickerSystem} from './FlickerSystem';
 import {InflationSystem} from './InflationSystem';
@@ -32,6 +34,9 @@ export function SystemsProvider() {
       <FillDrivenSystem />
       <FlickerSystem />
       <ParticlePhysicsSystem />
+      {/* Enemy / combat systems */}
+      <EnemySpawnSystem />
+      <CombatSystem />
     </>
   );
 }

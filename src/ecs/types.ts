@@ -191,6 +191,39 @@ export interface Entity {
     active: boolean;
   };
 
+  // --- Enemy / Combat ---
+
+  /** Enemy behavior component. Drives AI state machine + health. */
+  enemy?: {
+    type: string;
+    hp: number;
+    maxHp: number;
+    speed: number;
+    damage: number;
+    /** AI state machine: spawning (emerging) → approaching → attacking → stunned → dying → dead */
+    state: 'spawning' | 'approaching' | 'attacking' | 'stunned' | 'dying' | 'dead';
+    /** World position the enemy is moving toward (usually the player). */
+    targetPosition: [number, number, number];
+    /** Timer for reaction window, attack cooldown, death animation, etc. */
+    stateTimer: number;
+    /** Which cabinet this enemy spawned from (for burst animation sync). */
+    spawnCabinetId: string;
+    /** Ingredient name dropped on death (for bonus scoring). */
+    deathDropIngredient: string;
+  };
+
+  /** Weapon component. Attached to grabbable kitchen objects that can deal damage. */
+  weapon?: {
+    id: string;
+    damage: number;
+    range: number;
+    knockback: number;
+    /** Minimum swing velocity (units/s) to register as an attack. */
+    swingSpeedThreshold: number;
+    /** SFX key played on hit. */
+    hitSfx: string;
+  };
+
   // Tags
   isStatic?: true;
   isHitbox?: true;

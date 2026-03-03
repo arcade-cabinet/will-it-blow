@@ -532,3 +532,48 @@ export interface HorrorPropDef {
 export interface HorrorPropsConfig {
   props: HorrorPropDef[];
 }
+
+// ---------------------------------------------------------------------------
+// Enemy / Combat Config
+// ---------------------------------------------------------------------------
+
+export interface EnemyDef {
+  id: string;
+  name: string;
+  /** GLB model path relative to models/, or null for procedural (living sausage). */
+  model: string | null;
+  hp: number;
+  speed: number;
+  damage: number;
+  spawnLocation: string;
+  /** Milliseconds the player has to react before the enemy starts attacking. */
+  reactionWindowMs: number;
+  /** Ingredient name dropped when defeated. */
+  deathDropIngredient: string;
+  /** Mr. Sausage commentary lines for this enemy type. */
+  commentary: string[];
+}
+
+export interface WeaponDef {
+  id: string;
+  name: string;
+  model: string;
+  damage: number;
+  range: number;
+  knockback: number;
+  swingSpeedThreshold: number;
+  hitSfx: string;
+}
+
+export interface SpawnCabinetDef {
+  id: string;
+  position: [number, number, number];
+  doorRotationAxis: string;
+  doorHinge: [number, number, number];
+}
+
+export interface EnemiesConfig {
+  enemies: EnemyDef[];
+  weapons: WeaponDef[];
+  spawnCabinets: SpawnCabinetDef[];
+}

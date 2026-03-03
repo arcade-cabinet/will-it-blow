@@ -72,6 +72,10 @@ export interface PlayerDecisions {
   stageTimings: Record<string, number>;
   /** Flair bonuses earned — ALWAYS additive, never negative */
   flairPoints: {reason: string; points: number}[];
+  /** Number of enemies defeated during this run */
+  enemiesDefeated: number;
+  /** Number of defeated enemies used as bonus ingredients */
+  enemyIngredientsUsed: number;
 }
 
 /** The type of object the player is currently carrying, or null if hands are empty. */
@@ -210,6 +214,13 @@ export interface GameState {
   /** Active difficulty tier for the current game session. */
   difficulty: DifficultyTier;
 
+  // ---- Enemy / Combat ----
+
+  /** Whether a combat encounter is currently active. */
+  combatActive: boolean;
+  /** Active enemy info, or null when no encounter. */
+  activeEnemy: {id: string; type: string; hp: number; maxHp: number} | null;
+
   // ---- Settings (persisted) ----
 
   /** Music volume level 0-1 */
@@ -313,6 +324,14 @@ export interface GameState {
   recordStageTiming: (stage: string, duration: number) => void;
   /** Record a flair bonus (always additive, never negative). */
   recordFlairPoint: (reason: string, points: number) => void;
+  /** Start an enemy encounter. */
+  startCombat: (enemy: {id: string; type: string; hp: number; maxHp: number}) => void;
+  /** Apply damage to the active enemy. Returns remaining HP. */
+  damageEnemy: (amount: number) => number;
+  /** End the current combat encounter and record the defeat. */
+  endCombat: () => void;
+  /** Record that a defeated enemy was used as a bonus ingredient. */
+  recordEnemyIngredient: () => void;
   /** Return to the main menu, resetting all ephemeral game state. */
   returnToMenu: () => void;
 }
@@ -393,8 +412,12 @@ export const INITIAL_GAME_STATE = {
     flairTwists: 0,
     stageTimings: {},
     flairPoints: [],
+    enemiesDefeated: 0,
+    enemyIngredientsUsed: 0,
   } as PlayerDecisions,
   difficulty: DEFAULT_TIER,
+  combatActive: false,
+  activeEnemy: null as {id: string; type: string; hp: number; maxHp: number} | null,
   musicVolume: 0.7,
   sfxVolume: 0.8,
   musicMuted: false,
@@ -452,6 +475,8 @@ export const useGameStore = create<GameState>()(
           fridgeDoorProgress: 0,
           playerPosition: [0, 1.6, 0] as [number, number, number],
           challengeTriggered: false,
+          combatActive: false,
+          activeEnemy: null,
           playerDecisions: {
             selectedIngredients: [],
             twistPoints: [],
@@ -461,6 +486,8 @@ export const useGameStore = create<GameState>()(
             flairTwists: 0,
             stageTimings: {},
             flairPoints: [],
+            enemiesDefeated: 0,
+            enemyIngredientsUsed: 0,
           },
         }));
         get().generateDemands(pool.map(i => i.name));
@@ -719,6 +746,35 @@ export const useGameStore = create<GameState>()(
           },
         })),
 
+      startCombat: (enemy: {id: string; type: string; hp: number; maxHp: number}) =>
+        set({combatActive: true, activeEnemy: enemy}),
+
+      damageEnemy: (amount: number) => {
+        const state = get();
+        if (!state.activeEnemy) return 0;
+        const newHp = Math.max(0, state.activeEnemy.hp - amount);
+        set({activeEnemy: {...state.activeEnemy, hp: newHp}});
+        return newHp;
+      },
+
+      endCombat: () =>
+        set(state => ({
+          combatActive: false,
+          activeEnemy: null,
+          playerDecisions: {
+            ...state.playerDecisions,
+            enemiesDefeated: state.playerDecisions.enemiesDefeated + 1,
+          },
+        })),
+
+      recordEnemyIngredient: () =>
+        set(state => ({
+          playerDecisions: {
+            ...state.playerDecisions,
+            enemyIngredientsUsed: state.playerDecisions.enemyIngredientsUsed + 1,
+          },
+        })),
+
       setMusicVolume: (volume: number) => set({musicVolume: Math.max(0, Math.min(1, volume))}),
       setSfxVolume: (volume: number) => set({sfxVolume: Math.max(0, Math.min(1, volume))}),
       setMusicMuted: (muted: boolean) => set({musicMuted: muted}),
@@ -756,6 +812,8 @@ export const useGameStore = create<GameState>()(
           fridgeDoorProgress: 0,
           playerPosition: [0, 1.6, 0] as [number, number, number],
           challengeTriggered: false,
+          combatActive: false,
+          activeEnemy: null,
           mrSausageDemands: null,
           playerDecisions: {
             selectedIngredients: [],
@@ -766,6 +824,8 @@ export const useGameStore = create<GameState>()(
             flairTwists: 0,
             stageTimings: {},
             flairPoints: [],
+            enemiesDefeated: 0,
+            enemyIngredientsUsed: 0,
           },
         }),
     }),

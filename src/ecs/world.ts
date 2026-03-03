@@ -27,3 +27,7 @@ export const plungers = world.with('plunger', 'three');
 export const toggles = world.with('toggle', 'three');
 export const buttons = world.with('button', 'three');
 export const contracts = world.with('inputContract');
+
+// Enemy / Combat queries
+export const enemies = world.with('enemy', 'three');
+export const weapons = world.with('weapon', 'three');
