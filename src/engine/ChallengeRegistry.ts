@@ -99,7 +99,7 @@ const CHALLENGE_CONFIGS: Record<ChallengeId, ChallengeConfig> = {
     name: 'Blowout',
     station: 'dining-table',
     cameraOffset: [0, 0.3, 0.8],
-    description: 'Tie and plate the sausage before it blows.',
+    description: 'Aim at the cereal box and tie the casing before pressure builds.',
   },
   tasting: {
     id: 'tasting',
@@ -145,7 +145,7 @@ function seededIndex(seed: number, arrayLength: number): number {
  *
  * @param challengeId - Which challenge to pick a variant for
  * @param seed - The game session's variant seed
- * @returns The selected variant config, or `null` for tasting (which has no variants)
+ * @returns The selected variant config, or `null` for blowout and tasting (which have no variants)
  */
 export function pickVariant(
   challengeId: ChallengeId,
