@@ -91,12 +91,14 @@ describe('layout spatial sanity', () => {
     }
   });
 
-  it('counters are at counter height (~1.0m)', () => {
+  it('counters are floor-standing (Y near 0)', () => {
     const counterTargets = ['l-counter', 'l-counter-ext'];
     for (const name of counterTargets) {
       const t = targets[name];
       if (!t) continue;
-      expect(t.position[1]).toBeCloseTo(1.0, 0);
+      // Counters are placed at floor level; the GLB model provides visual height
+      expect(t.position[1]).toBeCloseTo(0, 1);
+      expect(t.position[1]).toBeGreaterThanOrEqual(0);
     }
   });
 });

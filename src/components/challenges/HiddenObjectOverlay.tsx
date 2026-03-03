@@ -69,7 +69,7 @@ export function HiddenObjectOverlay() {
   const assembledParts = useGameStore(s => s.assembledParts);
 
   // Only show this overlay at Medium+ difficulty with assembly enabled
-  if (!(difficulty as any).assembly) {
+  if (!difficulty.assembly) {
     return null;
   }
 

@@ -25,6 +25,7 @@ import {getAssetUrl} from '../../engine/assetUrl';
 import type {FurnitureRule, RoomDimensions, Target} from '../../engine/FurnitureLayout';
 import {DEFAULT_ROOM, FURNITURE_RULES} from '../../engine/FurnitureLayout';
 import {mergeLayoutConfigs, resolveLayout} from '../../engine/layout';
+import {traverseMeshes} from '../../engine/threeUtils';
 import {useGameStore} from '../../store/gameStore';
 
 /** Seconds the player must be within proximity before the fridge auto-opens. */
@@ -68,12 +69,12 @@ function FurniturePiece({
 
   // Apply material fixes once on load (backface culling + tame envMapIntensity)
   useEffect(() => {
-    scene.traverse((child: any) => {
-      if (child.isMesh) {
-        child.material.side = THREE.FrontSide;
-        if (child.material.isMeshStandardMaterial) {
-          child.material.envMapIntensity = 0.05;
-        }
+    traverseMeshes(scene, mesh => {
+      const mat = mesh.material;
+      if (Array.isArray(mat)) return;
+      mat.side = THREE.FrontSide;
+      if (mat instanceof THREE.MeshStandardMaterial) {
+        mat.envMapIntensity = 0.05;
       }
     });
   }, [scene]);

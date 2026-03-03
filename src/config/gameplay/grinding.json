@@ -17,5 +17,26 @@
   "hopperBottomY": 4.5,
   "hopperSpreadX": 1.8,
   "hopperSpreadZ": 1.4,
-  "hopperChunkScale": 0.35
+  "hopperChunkScale": 0.35,
+  "visual": {
+    "chunkBowlGroupOffset": [-5, 0, 2],
+    "chunkGeoDodecahedronRadius": 0.5,
+    "chunkGeoDodecahedronDetail": 1,
+    "particleCylinderTopRadius": 0.08,
+    "particleCylinderBottomRadius": 0.08,
+    "particleCylinderHeight": 0.5,
+    "particleCylinderSegments": 6,
+    "particleSpawnY": 2.5,
+    "particleSpawnZ": 2.1,
+    "particleSpawnRadiusMax": 0.8,
+    "particleInitialVelocityY": -2.0,
+    "particleInitialVelocityYRange": 2.0,
+    "particleInitialVelocityZBase": 1.0,
+    "particleInitialVelocityZRange": 2.0,
+    "particleInitialVelocityXRange": 1.0,
+    "hopperSpreadHalfMultiplier": 0.5,
+    "hopperAngleStepMultiplier": 2,
+    "hopperRadiusBase": 0.4,
+    "hopperRadiusStep": 0.3
+  }
 }

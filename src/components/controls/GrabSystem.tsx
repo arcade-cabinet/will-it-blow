@@ -7,6 +7,28 @@ import {useGameStore} from '../../store/gameStore';
 
 /** Rapier RigidBodyType numeric values (avoids importing the enum directly) */
 const BODY_TYPE_DYNAMIC = 0;
+
+/**
+ * Shape of the Rapier rigid body API attached by @react-three/rapier.
+ * Only the methods used by GrabSystem are listed here.
+ */
+interface RapierRigidBody {
+  setBodyType(type: number, wakeUp?: boolean): void;
+  setLinvel(vel: {x: number; y: number; z: number}, wakeUp?: boolean): void;
+  setAngvel(vel: {x: number; y: number; z: number}, wakeUp?: boolean): void;
+  setTranslation(pos: {x: number; y: number; z: number}, wakeUp?: boolean): void;
+  setNextKinematicTranslation(pos: {x: number; y: number; z: number}): void;
+}
+
+/**
+ * @react-three/rapier attaches its rigid body API to Object3D nodes via
+ * private fields (`__rb`) or the `rigidBody` property. This interface
+ * models that attachment so we can access it without `as any`.
+ */
+interface RapierObject3D extends THREE.Object3D {
+  __rb?: RapierRigidBody;
+  rigidBody?: RapierRigidBody;
+}
 const BODY_TYPE_KINEMATIC_POSITION = 2;
 
 /** How far in front of the camera the grabbed object floats */
@@ -30,7 +52,7 @@ interface GrabbedState {
   /** The Three.js mesh that was grabbed */
   mesh: THREE.Mesh;
   /** The Rapier rigid body ref attached to the mesh's parent */
-  rigidBody: any;
+  rigidBody: RapierRigidBody | null;
   /** Original material opacity */
   originalOpacity: number;
   /** Original material transparent flag */
@@ -78,16 +100,16 @@ function GrabSystemInner() {
 
   // Find the Rapier rigid body for a mesh by walking up the scene graph.
   // @react-three/rapier attaches the rigid body API to the parent Object3D.
-  const findRigidBody = useCallback((mesh: THREE.Object3D): any | null => {
+  const findRigidBody = useCallback((mesh: THREE.Object3D): RapierRigidBody | null => {
     let current: THREE.Object3D | null = mesh;
     while (current) {
-      const rb = (current as any).__rb;
-      if (rb) return rb;
+      const node = current as RapierObject3D;
+      if (node.__rb) return node.__rb;
       // @react-three/rapier stores the api on the object's userData or via ref
-      if ((current as any).rigidBody) return (current as any).rigidBody;
-      // Check if the rapier instance ref was forwarded
-      const userData = current.userData as any;
-      if (userData?.rigidBody) return userData.rigidBody;
+      if (node.rigidBody) return node.rigidBody;
+      // Check if the rapier instance ref was forwarded via userData
+      const rb = current.userData?.rigidBody as RapierRigidBody | undefined;
+      if (rb) return rb;
       current = current.parent;
     }
     return null;

@@ -39,6 +39,7 @@ import {useGameStore} from '../../store/gameStore';
 // ---------------------------------------------------------------------------
 
 const blowoutCfg = config.gameplay.blowout;
+const blowoutVis = blowoutCfg.visual;
 
 const TIMER_SECONDS: number = blowoutCfg.timerSeconds;
 const MAX_PRESSURE: number = blowoutCfg.maxPressure;
@@ -54,6 +55,7 @@ const COMPLETE_DELAY_SEC: number = blowoutCfg.completeDelaySec;
 const BOX_POSITION: [number, number, number] = blowoutCfg.boxPosition as [number, number, number];
 const BOX_HALF_WIDTH: number = blowoutCfg.boxHalfWidth;
 const BOX_HALF_HEIGHT: number = blowoutCfg.boxHalfHeight;
+const NOZZLE_HEIGHT_OFFSET: number = blowoutVis.nozzleHeightOffset;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -179,7 +181,7 @@ export function BlowoutOrchestrator({position, visible}: BlowoutOrchestratorProp
 
     // World-space nozzle position (in front of station)
     const nozzleX = position[0];
-    const nozzleY = position[1] + 0.8;
+    const nozzleY = position[1] + NOZZLE_HEIGHT_OFFSET;
     const nozzleZ = position[2];
 
     let spawned = 0;
@@ -359,64 +361,91 @@ export function BlowoutOrchestrator({position, visible}: BlowoutOrchestratorProp
 
   if (!visible) return null;
 
+  const {table, placeSetting} = blowoutVis;
+
   return (
     <group position={position}>
       {/* Dining table surface */}
-      <mesh position={[0, 0.85, -0.4]}>
-        <boxGeometry args={[1.2, 0.04, 0.8]} />
-        <meshStandardMaterial color={[0.45, 0.32, 0.18]} roughness={0.7} />
+      <mesh position={table.position}>
+        <boxGeometry args={table.size} />
+        <meshStandardMaterial color={table.color} roughness={table.roughness} />
       </mesh>
 
       {/* Table legs */}
-      {(
-        [
-          [0.55, 0.4, -0.1],
-          [-0.55, 0.4, -0.1],
-          [0.55, 0.4, -0.7],
-          [-0.55, 0.4, -0.7],
-        ] as [number, number, number][]
-      ).map((legPos, i) => (
+      {(table.legPositions as [number, number, number][]).map((legPos, i) => (
         <mesh key={`leg_${i}`} position={legPos}>
-          <cylinderGeometry args={[0.025, 0.025, 0.8, 8]} />
-          <meshStandardMaterial color={[0.35, 0.25, 0.12]} roughness={0.8} />
+          <cylinderGeometry args={[table.legRadius, table.legRadius, table.legHeight, 8]} />
+          <meshStandardMaterial color={table.legColor} roughness={table.legRoughness} />
         </mesh>
       ))}
 
       {/* Place setting */}
-      <group position={[0, 0.87, -0.38]}>
+      <group position={placeSetting.groupPosition}>
         {/* Plate */}
-        <mesh position={[0, 0, 0.05]}>
-          <cylinderGeometry args={[0.14, 0.14, 0.012, 24]} />
-          <meshStandardMaterial color={[0.95, 0.95, 0.92]} roughness={0.3} metalness={0.1} />
+        <mesh position={placeSetting.platePosition}>
+          <cylinderGeometry
+            args={[
+              placeSetting.plateRadius,
+              placeSetting.plateRadius,
+              placeSetting.plateHeight,
+              placeSetting.plateSegments,
+            ]}
+          />
+          <meshStandardMaterial
+            color={placeSetting.plateColor}
+            roughness={placeSetting.plateRoughness}
+            metalness={placeSetting.plateMetalness}
+          />
         </mesh>
 
         {/* Fork */}
-        <mesh position={[-0.18, 0, 0.05]} rotation={[0, 0, 0]}>
-          <boxGeometry args={[0.015, 0.004, 0.16]} />
-          <meshStandardMaterial color={[0.75, 0.75, 0.78]} metalness={0.6} roughness={0.3} />
+        <mesh position={placeSetting.forkPosition}>
+          <boxGeometry args={placeSetting.forkSize} />
+          <meshStandardMaterial
+            color={placeSetting.forkColor}
+            metalness={placeSetting.forkMetalness}
+            roughness={placeSetting.forkRoughness}
+          />
         </mesh>
 
         {/* Knife */}
-        <mesh position={[0.18, 0, 0.05]}>
-          <boxGeometry args={[0.015, 0.004, 0.16]} />
-          <meshStandardMaterial color={[0.75, 0.75, 0.78]} metalness={0.6} roughness={0.3} />
+        <mesh position={placeSetting.knifePosition}>
+          <boxGeometry args={placeSetting.knifeSize} />
+          <meshStandardMaterial
+            color={placeSetting.knifeColor}
+            metalness={placeSetting.knifeMetalness}
+            roughness={placeSetting.knifeRoughness}
+          />
         </mesh>
 
         {/* Glass */}
-        <mesh position={[0.22, 0.04, -0.1]}>
-          <cylinderGeometry args={[0.025, 0.022, 0.1, 10]} />
+        <mesh position={placeSetting.glassPosition}>
+          <cylinderGeometry
+            args={[
+              placeSetting.glassTopRadius,
+              placeSetting.glassBottomRadius,
+              placeSetting.glassHeight,
+              placeSetting.glassSegments,
+            ]}
+          />
           <meshStandardMaterial
-            color={[0.85, 0.95, 1.0]}
+            color={placeSetting.glassColor}
             transparent
-            opacity={0.4}
-            roughness={0.05}
+            opacity={placeSetting.glassOpacity}
+            roughness={placeSetting.glassRoughness}
           />
         </mesh>
 
         {/* Napkin */}
-        <mesh position={[-0.22, 0, 0.05]} rotation={[0, 0.2, 0]}>
-          <planeGeometry args={[0.1, 0.1]} />
-          <meshStandardMaterial color={[0.95, 0.92, 0.88]} roughness={0.9} />
+        <mesh
+          position={placeSetting.napkinPosition}
+          rotation={[0, placeSetting.napkinRotationY, 0]}
+        >
+          <planeGeometry args={placeSetting.napkinSize} />
+          <meshStandardMaterial
+            color={placeSetting.napkinColor}
+            roughness={placeSetting.napkinRoughness}
+          />
         </mesh>
       </group>
 
@@ -437,7 +466,13 @@ export function BlowoutOrchestrator({position, visible}: BlowoutOrchestratorProp
           }}
           visible={false}
         >
-          <sphereGeometry args={[0.022, 5, 5]} />
+          <sphereGeometry
+            args={[
+              blowoutVis.particleSphereRadius,
+              blowoutVis.particleSphereDetail,
+              blowoutVis.particleSphereDetail,
+            ]}
+          />
           <meshBasicMaterial color={particleColor.current} />
         </mesh>
       ))}

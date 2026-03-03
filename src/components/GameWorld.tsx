@@ -243,7 +243,7 @@ function WebGLOnlyEffects() {
   // Disable during XR — EffectComposer renders to a single framebuffer,
   // which breaks the stereo left/right eye split in immersive sessions.
   if (xrMode === 'immersive-vr' || xrMode === 'immersive-ar') return null;
-  if (!(gl as any).isWebGLRenderer) return null;
+  if (!('isWebGLRenderer' in gl)) return null;
 
   return (
     <EffectComposer>
@@ -327,7 +327,7 @@ const SceneContent = ({
   const sausagePlaced = useGameStore(s => s.sausagePlaced);
 
   // Assembly gate: at Medium+ difficulty, stations require parts to be found first
-  const assemblyEnabled = (difficulty as any).assembly === true;
+  const assemblyEnabled = difficulty.assembly === true;
   const grinderReady = !assemblyEnabled || isStationReady('grinder', assembledParts);
   const stufferReady = !assemblyEnabled || isStationReady('stuffer', assembledParts);
   const stoveReady = !assemblyEnabled || isStationReady('stove', assembledParts);

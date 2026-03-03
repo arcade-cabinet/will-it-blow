@@ -245,6 +245,27 @@ export interface GrindingGameplayConfig {
   hopperSpreadX: number;
   hopperSpreadZ: number;
   hopperChunkScale: number;
+  visual: {
+    chunkBowlGroupOffset: [number, number, number];
+    chunkGeoDodecahedronRadius: number;
+    chunkGeoDodecahedronDetail: number;
+    particleCylinderTopRadius: number;
+    particleCylinderBottomRadius: number;
+    particleCylinderHeight: number;
+    particleCylinderSegments: number;
+    particleSpawnY: number;
+    particleSpawnZ: number;
+    particleSpawnRadiusMax: number;
+    particleInitialVelocityY: number;
+    particleInitialVelocityYRange: number;
+    particleInitialVelocityZBase: number;
+    particleInitialVelocityZRange: number;
+    particleInitialVelocityXRange: number;
+    hopperSpreadHalfMultiplier: number;
+    hopperAngleStepMultiplier: number;
+    hopperRadiusBase: number;
+    hopperRadiusStep: number;
+  };
 }
 
 export interface StuffingGameplayConfig {
@@ -259,6 +280,9 @@ export interface StuffingGameplayConfig {
   completeDelayMs: number;
   crankDragThreshold: number;
   burstCooldownMs: number;
+  visual: {
+    waterBowlPosition: [number, number, number];
+  };
 }
 
 export interface ChoppingGameplayConfig {
@@ -275,6 +299,40 @@ export interface ChoppingGameplayConfig {
   streakBonusThreshold: number;
   streakFlairPoints: number;
   missStrikeCooldownMs: number;
+  visual: {
+    knifeGroupZOffset: number;
+    knifeBlade: {
+      size: [number, number, number];
+      color: string;
+      metalness: number;
+      roughness: number;
+    };
+    knifeHandle: {
+      positionY: number;
+      size: [number, number, number];
+      color: string;
+      roughness: number;
+      metalness: number;
+    };
+    chunkGroupY: number;
+    chunkGeoDodecahedronRadius: number;
+    chunkGeoDodecahedronDetail: number;
+    chunkCount: number;
+    chunkGridCols: number;
+    chunkGridSpacing: number;
+    chunkJitterAmplitude: number;
+    chunkRandomRotation: boolean;
+    hitboxPosition: [number, number, number];
+    hitboxSize: [number, number, number];
+    sweetSpotLight: {
+      position: [number, number, number];
+      color: string;
+      intensityActive: number;
+      intensityInactive: number;
+      distance: number;
+      decay: number;
+    };
+  };
 }
 
 export interface CookingGameplayConfig {
@@ -291,7 +349,7 @@ export interface CookingGameplayConfig {
   smokeThreshold: number;
   steamCount: number;
   smokeCount: number;
-  flipDuration: number;
+  flipDurationSec: number;
   coolingRate: number;
   roomTemp: number;
   scorePenaltyPerOverheat: number;
@@ -301,6 +359,63 @@ export interface CookingGameplayConfig {
   maxFlips: number;
   flipFlairPoints: number;
   flipHoldTimerPenalty: number;
+  visual: {
+    burnerRing: {
+      position: [number, number, number];
+      torusRadius: number;
+      torusTube: number;
+      torusRadialSegments: number;
+      torusTubularSegments: number;
+      defaultColor: [number, number, number];
+    };
+    pan: {
+      bodySegments: number;
+      panColor: [number, number, number];
+      panMetalness: number;
+      panRoughness: number;
+      handlePosition: [number, number, number];
+      handleSize: [number, number, number];
+      handleColor: [number, number, number];
+      handleHoverColor: [number, number, number];
+      handleHoverEmissive: [number, number, number];
+    };
+    steam: {
+      sphereRadius: number;
+      sphereDetail: number;
+      color: [number, number, number];
+      opacity: number;
+      spawnSpread: number;
+      spawnBaseVelocity: number;
+      spawnVelocityRange: number;
+      spawnLifeMin: number;
+      spawnLifeRange: number;
+      spawnIntervalBase: number;
+    };
+    smoke: {
+      sphereRadius: number;
+      sphereDetail: number;
+      color: [number, number, number];
+      opacity: number;
+      spawnSpread: number;
+      yOffsetFromPan: number;
+      baseVelocityY: number;
+      velocityRangeY: number;
+      velocityRangeXZ: number;
+      lifeMin: number;
+      lifeRange: number;
+      spawnInterval: number;
+      expandScale: number;
+    };
+    glistenLight: {
+      positionOffset: [number, number, number];
+      intensity: number;
+      distance: number;
+      orbitRadiusX: number;
+      orbitRadiusZ: number;
+      orbitSpeedX: number;
+      orbitSpeedZ: number;
+    };
+  };
 }
 
 export interface BlowoutGameplayConfig {
@@ -320,6 +435,55 @@ export interface BlowoutGameplayConfig {
   boxPosition: [number, number, number];
   boxHalfWidth: number;
   boxHalfHeight: number;
+  visual: {
+    nozzleHeightOffset: number;
+    particleSphereRadius: number;
+    particleSphereDetail: number;
+    table: {
+      position: [number, number, number];
+      size: [number, number, number];
+      color: [number, number, number];
+      roughness: number;
+      legPositions: [number, number, number][];
+      legRadius: number;
+      legHeight: number;
+      legColor: [number, number, number];
+      legRoughness: number;
+    };
+    placeSetting: {
+      groupPosition: [number, number, number];
+      platePosition: [number, number, number];
+      plateRadius: number;
+      plateHeight: number;
+      plateSegments: number;
+      plateColor: [number, number, number];
+      plateRoughness: number;
+      plateMetalness: number;
+      forkPosition: [number, number, number];
+      forkSize: [number, number, number];
+      forkColor: [number, number, number];
+      forkMetalness: number;
+      forkRoughness: number;
+      knifePosition: [number, number, number];
+      knifeSize: [number, number, number];
+      knifeColor: [number, number, number];
+      knifeMetalness: number;
+      knifeRoughness: number;
+      glassPosition: [number, number, number];
+      glassTopRadius: number;
+      glassBottomRadius: number;
+      glassHeight: number;
+      glassSegments: number;
+      glassColor: [number, number, number];
+      glassOpacity: number;
+      glassRoughness: number;
+      napkinPosition: [number, number, number];
+      napkinRotationY: number;
+      napkinSize: [number, number];
+      napkinColor: [number, number, number];
+      napkinRoughness: number;
+    };
+  };
 }
 
 // ---------------------------------------------------------------------------

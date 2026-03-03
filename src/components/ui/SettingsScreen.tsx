@@ -174,7 +174,7 @@ export function SettingsScreen({onBack}: SettingsScreenProps) {
   } = useGameStore();
   const xrSupported = useXrSupported();
   const arSupported = useArSupported();
-  const {width, isLandscape} = useOrientation();
+  const {width} = useOrientation();
 
   // Escape returns to title screen
   useKeyboardNav({onEscape: onBack});
