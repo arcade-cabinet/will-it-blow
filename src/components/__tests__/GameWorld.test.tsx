@@ -123,3 +123,86 @@ describe('GameWorld', () => {
     expect(source).toContain('TransferBowl');
   });
 });
+
+describe('GameWorld VR head tracking + stereo rendering', () => {
+  it('imports useXR and XROrigin from @react-three/xr', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
+    expect(source).toContain('useXR');
+    expect(source).toContain('XROrigin');
+    expect(source).toContain("from '@react-three/xr'");
+  });
+
+  it('WebGLOnlyEffects checks XR mode and disables postprocessing in XR', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
+    // WebGLOnlyEffects should read xr.mode
+    expect(source).toContain('xr => xr.mode');
+    // Should check for immersive modes and return null
+    expect(source).toContain("'immersive-vr'");
+    expect(source).toContain("'immersive-ar'");
+  });
+
+  it('has XROriginWrapper component for seated mode support', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
+    expect(source).toContain('XROriginWrapper');
+    expect(source).toContain('xrSeatedMode');
+    // Should only render when XR is active
+    expect(source).toContain("xrMode !== 'immersive-vr'");
+  });
+
+  it('XROriginWrapper renders XROrigin with seated offset', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
+    // Seated mode applies a Y offset to the origin
+    expect(source).toContain('seatedOffset');
+    expect(source).toContain('<XROrigin position={seatedOffset}');
+  });
+
+  it('SceneContent includes XROriginWrapper', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
+    expect(source).toContain('<XROriginWrapper');
+  });
+});
+
+describe('GameWorld AR support', () => {
+  it('imports ARPlacement component', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
+    expect(source).toContain('ARPlacement');
+    expect(source).toContain("'./controls/ARPlacement'");
+  });
+
+  it('creates XR store with AR optional features', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
+    expect(source).toContain('hitTest: true');
+    expect(source).toContain('domOverlay: true');
+    expect(source).toContain('anchors: true');
+  });
+
+  it('XRAutoEntry handles both VR and AR modes', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
+    expect(source).toContain('arEnabled');
+    expect(source).toContain('xrStore.enterAR()');
+    expect(source).toContain('xrStore.enterVR()');
+  });
+
+  it('Canvas supports alpha for AR transparency', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
+    expect(source).toContain('alpha: arEnabled');
+  });
+});

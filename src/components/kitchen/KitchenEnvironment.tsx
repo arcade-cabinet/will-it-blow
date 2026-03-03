@@ -21,6 +21,7 @@ import {useMemo} from 'react';
 import * as THREE from 'three/webgpu';
 import {config} from '../../config';
 import {getAssetUrl} from '../../engine/assetUrl';
+import {useGameStore} from '../../store/gameStore';
 import {CabinetDrawer} from './CabinetDrawer';
 import {CeilingLightOrchestrator} from './CeilingLightOrchestrator';
 import {FurnitureLoader} from './FurnitureLoader';
@@ -282,27 +283,32 @@ export const KitchenEnvironment = ({
 }) => {
   // Load PBR textures for room enclosure
   const textures = useRoomTextures();
+  const arEnabled = useGameStore(s => s.arEnabled);
 
   return (
     <group>
       {/* =======================================================
           ROOM ENCLOSURE — floor, ceiling, 4 walls with PBR textures
+          Hidden in AR mode so real-world camera passthrough is visible.
           ======================================================= */}
-      <RoomEnclosure textures={textures} />
+      {!arEnabled && <RoomEnclosure textures={textures} />}
 
       {/* =======================================================
           GRIME DECALS — PBR textured transparent planes
+          Hidden in AR mode (they attach to the room enclosure walls).
           ======================================================= */}
 
       {/* Dripping grime decals on walls */}
-      {GRIME_DRIPS.map((decal, i) => (
-        <PbrGrimeDecal key={`grimeDrip_${i}`} {...decal} textures={textures.grimeDrip} />
-      ))}
+      {!arEnabled &&
+        GRIME_DRIPS.map((decal, i) => (
+          <PbrGrimeDecal key={`grimeDrip_${i}`} {...decal} textures={textures.grimeDrip} />
+        ))}
 
       {/* Baseboard mold decals along floor line */}
-      {GRIME_BASES.map((decal, i) => (
-        <PbrGrimeDecal key={`grimeBase_${i}`} {...decal} textures={textures.grimeBase} />
-      ))}
+      {!arEnabled &&
+        GRIME_BASES.map((decal, i) => (
+          <PbrGrimeDecal key={`grimeBase_${i}`} {...decal} textures={textures.grimeBase} />
+        ))}
 
       {/* =======================================================
           FURNITURE — GLB segments positioned via FurnitureLayout targets
@@ -365,41 +371,51 @@ export const KitchenEnvironment = ({
       <TrapDoorMount position={[0, ROOM_H, 0]} />
       <CeilingLightOrchestrator />
 
-      {/* Hemisphere light: slightly cooler fluorescent sky color
-          with darker ground bounce for horror atmosphere */}
-      <hemisphereLight args={['#d9e6d1', '#4d473d', lc.ambient.hemisphere]} />
+      {/* Hemisphere light: brighter in AR mode for real-world blending,
+          cooler fluorescent with dark ground bounce in normal mode */}
+      <hemisphereLight
+        args={
+          arEnabled ? ['#ffffff', '#cccccc', 1.2] : ['#d9e6d1', '#4d473d', lc.ambient.hemisphere]
+        }
+      />
 
       {/* Center fill point light at mid-wall height —
-          illuminates vertical surfaces the hemisphere misses */}
+          illuminates vertical surfaces the hemisphere misses.
+          Boosted in AR for visibility against real-world background. */}
       <pointLight
         position={[0, 2.0, 0]}
-        color="#d9e1cc"
-        intensity={lc.ambient.centerFill}
+        color={arEnabled ? '#ffffff' : '#d9e1cc'}
+        intensity={arEnabled ? 2.0 : lc.ambient.centerFill}
         distance={14}
         decay={2}
       />
 
       {/* =======================================================
           HORROR ATMOSPHERE LIGHTING
+          Disabled in AR mode — horror lights look wrong with passthrough.
           ======================================================= */}
 
-      {/* Red emergency light near the ceiling trap door — pulsing ominous glow */}
-      <pointLight
-        position={lc.horror.redEmergency.position}
-        color="#ff1a1a"
-        intensity={lc.horror.redEmergency.intensity}
-        distance={8}
-        decay={2}
-      />
+      {!arEnabled && (
+        <>
+          {/* Red emergency light near the ceiling trap door — pulsing ominous glow */}
+          <pointLight
+            position={lc.horror.redEmergency.position}
+            color="#ff1a1a"
+            intensity={lc.horror.redEmergency.intensity}
+            distance={8}
+            decay={2}
+          />
 
-      {/* Dim under-counter light casting creepy shadows from below */}
-      <pointLight
-        position={[0, 0.15, 0]}
-        color="#443322"
-        intensity={lc.horror.underCounter.intensity}
-        distance={5}
-        decay={2}
-      />
+          {/* Dim under-counter light casting creepy shadows from below */}
+          <pointLight
+            position={[0, 0.15, 0]}
+            color="#443322"
+            intensity={lc.horror.underCounter.intensity}
+            distance={5}
+            decay={2}
+          />
+        </>
+      )}
     </group>
   );
 };

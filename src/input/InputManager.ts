@@ -30,6 +30,16 @@ export interface LookDelta {
   pitch: number;
 }
 
+/** XR controller input state pushed by XRInputSystem each frame. */
+export interface XRInputState {
+  moveX: number;
+  moveZ: number;
+  lookX: number;
+  lookY: number;
+  triggerValue: number;
+  squeezeValue: number;
+}
+
 /** Tuning constants from the input config. */
 export const INPUT_TUNING = bindings.tuning;
 
@@ -54,6 +64,10 @@ export class InputManager {
 
   // Gamepad state
   private gamepadIndex: number | null = null;
+
+  // XR controller state (set by XRInputSystem each frame)
+  private xrInput: XRInputState | null = null;
+  private xrActions = new Map<string, boolean>();
 
   // Action press tracking (edge detection)
   private actionPressed = new Map<string, boolean>();
@@ -120,6 +134,31 @@ export class InputManager {
     this.lookDeltaRef = lookDelta;
   }
 
+  /** Push XR controller analog state from XRInputSystem. Called each frame during XR. */
+  setXRInput(state: XRInputState): void {
+    this.xrInput = state;
+  }
+
+  /** Set XR action button state (edge-detected by XRInputSystem). */
+  setXRActionPressed(action: string, pressed: boolean): void {
+    this.xrActions.set(action, pressed);
+  }
+
+  /** Read the current XR trigger value (0-1). Useful for grab force. */
+  getXRTriggerValue(): number {
+    return this.xrInput?.triggerValue ?? 0;
+  }
+
+  /** Read the current XR squeeze/grip value (0-1). Useful for press force. */
+  getXRSqueezeValue(): number {
+    return this.xrInput?.squeezeValue ?? 0;
+  }
+
+  /** True when XR controller data is being fed in. */
+  isXRActive(): boolean {
+    return this.xrInput !== null;
+  }
+
   /** Read normalized movement input from all sources. */
   getMovement(): MovementInput {
     let x = 0;
@@ -155,6 +194,12 @@ export class InputManager {
       const j = this.joystickRef;
       if (Math.abs(j.x) > 0.1) x += j.x;
       if (Math.abs(j.y) > 0.1) z += -j.y; // Joystick Y-up = forward = -Z
+    }
+
+    // XR left thumbstick (additive)
+    if (this.xrInput) {
+      if (Math.abs(this.xrInput.moveX) > 0) x += this.xrInput.moveX;
+      if (Math.abs(this.xrInput.moveZ) > 0) z += this.xrInput.moveZ;
     }
 
     // Normalize diagonal
@@ -203,6 +248,15 @@ export class InputManager {
       }
     }
 
+    // XR right thumbstick (rate-based, like gamepad)
+    if (this.xrInput) {
+      const xrLookSens = bindings.look.yaw.xr?.sensitivity ?? bindings.look.yaw.gamepad.sensitivity;
+      const xrPitchSens =
+        bindings.look.pitch.xr?.sensitivity ?? bindings.look.pitch.gamepad.sensitivity;
+      if (Math.abs(this.xrInput.lookX) > 0) yaw += -this.xrInput.lookX * xrLookSens;
+      if (Math.abs(this.xrInput.lookY) > 0) pitch += -this.xrInput.lookY * xrPitchSens;
+    }
+
     return {yaw, pitch};
   }
 
@@ -217,6 +271,8 @@ export class InputManager {
       const btnIndex = this.gamepadButtonIndex(cfg.gamepad.button);
       if (btnIndex !== -1 && gp.buttons[btnIndex]?.pressed) return true;
     }
+    // XR action buttons (edge-detected by XRInputSystem)
+    if (this.xrActions.get(action)) return true;
     return false;
   }
 
@@ -235,6 +291,8 @@ export class InputManager {
     this.joystickRef = null;
     this.lookDeltaRef = null;
     this.gamepadIndex = null;
+    this.xrInput = null;
+    this.xrActions.clear();
     InputManager.instance = null;
   }
 

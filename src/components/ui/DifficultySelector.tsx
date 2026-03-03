@@ -12,6 +12,7 @@
 
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {DIFFICULTY_TIERS} from '../../engine/DifficultyConfig';
+import {useKeyboardNav} from '../../hooks/useKeyboardNav';
 
 interface DifficultySelectorProps {
   /** Called when the player selects a difficulty tier. */
@@ -25,28 +26,33 @@ const safeTiers = DIFFICULTY_TIERS.filter(t => !t.permadeath);
 const brutalTiers = DIFFICULTY_TIERS.filter(t => t.permadeath);
 
 export function DifficultySelector({onSelect, onBack}: DifficultySelectorProps) {
+  // Escape goes back to the title screen
+  useKeyboardNav({onEscape: onBack});
+
   return (
     <View style={styles.container}>
-      <View style={styles.panel}>
-        <Text style={styles.title}>CHOOSE YOUR DONENESS</Text>
+      <View style={styles.panel} accessibilityLabel="Difficulty selection">
+        <Text style={styles.title} accessibilityRole="header">
+          CHOOSE YOUR DONENESS
+        </Text>
         <View style={styles.divider} />
 
         {/* Safe tiers row */}
-        <View style={styles.tierRow}>
+        <View style={styles.tierRow} accessibilityRole="radiogroup">
           {safeTiers.map(tier => (
             <TierButton key={tier.id} tier={tier} onPress={() => onSelect(tier.id)} />
           ))}
         </View>
 
         {/* Permadeath line separator */}
-        <View style={styles.permadeathLine}>
+        <View style={styles.permadeathLine} accessibilityLabel="Permadeath difficulty line">
           <View style={styles.permadeathDash} />
           <Text style={styles.permadeathLabel}>PERMADEATH</Text>
           <View style={styles.permadeathDash} />
         </View>
 
         {/* Brutal tiers row */}
-        <View style={styles.tierRow}>
+        <View style={styles.tierRow} accessibilityRole="radiogroup">
           {brutalTiers.map(tier => (
             <TierButton key={tier.id} tier={tier} onPress={() => onSelect(tier.id)} />
           ))}
@@ -54,7 +60,12 @@ export function DifficultySelector({onSelect, onBack}: DifficultySelectorProps) 
 
         <View style={styles.divider} />
 
-        <Pressable style={styles.backButton} onPress={onBack}>
+        <Pressable
+          style={styles.backButton}
+          onPress={onBack}
+          accessibilityRole="button"
+          accessibilityLabel="Back to main menu"
+        >
           <Text style={styles.backText}>{'\u25C0'} BACK</Text>
         </Pressable>
       </View>
@@ -70,8 +81,15 @@ function TierButton({
   tier: (typeof DIFFICULTY_TIERS)[number];
   onPress: () => void;
 }) {
+  const strikeText = `${tier.maxStrikes} strike${tier.maxStrikes !== 1 ? 's' : ''}`;
   return (
-    <Pressable style={styles.tierButton} onPress={onPress}>
+    <Pressable
+      style={styles.tierButton}
+      onPress={onPress}
+      accessibilityRole="radio"
+      accessibilityLabel={`${tier.name} difficulty, ${strikeText}${tier.permadeath ? ', permadeath' : ''}`}
+      accessibilityHint="Select this difficulty level"
+    >
       {({pressed}) => (
         <>
           <View
@@ -82,9 +100,7 @@ function TierButton({
             ]}
           />
           <Text style={[styles.tierName, {color: tier.color}]}>{tier.name}</Text>
-          <Text style={styles.tierHint}>
-            {tier.maxStrikes} strike{tier.maxStrikes !== 1 ? 's' : ''}
-          </Text>
+          <Text style={styles.tierHint}>{strikeText}</Text>
         </>
       )}
     </Pressable>

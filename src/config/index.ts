@@ -138,6 +138,7 @@ export type {
   PlungerPhysicsConfig,
   SausagePhysicsConfig,
   ScoringConfig,
+  SpatialSoundDef,
   StuffingGameplayConfig,
   VariantsConfig,
 } from './types';

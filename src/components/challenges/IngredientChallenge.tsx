@@ -289,7 +289,11 @@ export function IngredientChallenge({onComplete, onReaction}: IngredientChalleng
       {phase === 'selecting' && (
         <>
           {/* Demand banner at top */}
-          <View style={styles.demandBanner}>
+          <View
+            style={styles.demandBanner}
+            accessibilityRole="alert"
+            accessibilityLabel={`Mr. Sausage demands: ${variant.mrSausageDemand}`}
+          >
             <Text style={styles.demandLabel}>MR. SAUSAGE DEMANDS:</Text>
             <Text style={styles.demandText}>{variant.mrSausageDemand}</Text>
           </View>
@@ -305,12 +309,13 @@ export function IngredientChallenge({onComplete, onReaction}: IngredientChalleng
 
           {/* Result flash feedback */}
           {lastResult && (
-            <View style={styles.resultFlash}>
+            <View style={styles.resultFlash} accessibilityLiveRegion="assertive">
               <Text
                 style={[
                   styles.resultText,
                   lastResult === 'correct' ? styles.resultCorrect : styles.resultWrong,
                 ]}
+                accessibilityRole="alert"
               >
                 {lastResult === 'correct' ? 'CORRECT!' : 'WRONG!'}
               </Text>
@@ -334,7 +339,14 @@ export function IngredientChallenge({onComplete, onReaction}: IngredientChalleng
 
           {/* Hint button at bottom */}
           {hintsRemaining > 0 && (
-            <TouchableOpacity style={styles.hintButton} onPress={handleHint} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.hintButton}
+              onPress={handleHint}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`Use hint, ${hintsRemaining} remaining`}
+              accessibilityHint="Highlights matching ingredients"
+            >
               <Text style={styles.hintButtonText}>HINT ({hintsRemaining} left)</Text>
             </TouchableOpacity>
           )}

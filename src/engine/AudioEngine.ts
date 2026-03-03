@@ -1,7 +1,10 @@
 // Native AudioEngine — uses expo-audio for basic audio on iOS/Android.
 // Metro resolves AudioEngine.web.ts on web (Tone.js), this file on native.
 
-import {createAudioPlayer, setAudioModeAsync} from 'expo-audio';
+import {type AudioPlayer, createAudioPlayer, setAudioModeAsync} from 'expo-audio';
+import {config} from '../config';
+import {useGameStore} from '../store/gameStore';
+import {getAssetUrl} from './assetUrl';
 
 /** Simple beep generator via expo-audio. Falls back to no-op if audio context unavailable. */
 async function playBeep(frequencyHz: number, durationMs: number, volume = 0.5): Promise<void> {
@@ -68,6 +71,10 @@ async function playBeep(frequencyHz: number, durationMs: number, volume = 0.5): 
 
 class AudioEngine {
   private isInitialized = false;
+  /** Currently playing ambient music track. */
+  private ambientTrack: AudioPlayer | null = null;
+  /** Currently playing challenge music track. */
+  private challengePlayer: AudioPlayer | null = null;
 
   async initTone() {
     if (this.isInitialized) return;
@@ -158,14 +165,76 @@ class AudioEngine {
     });
   }
 
+  /** Start the ambient horror loop using expo-audio for native music playback. */
   startAmbientDrone() {
-    // Native ambient drone: play a low sustained tone
     if (!this.isInitialized) return;
-    playBeep(55, 5000, 0.15);
+    this.stopAmbientDrone();
+    try {
+      const url = getAssetUrl('audio', 'ambient-horror.ogg');
+      const player = createAudioPlayer(url);
+      const {musicVolume, musicMuted} = useGameStore.getState();
+      player.volume = musicMuted ? 0 : musicVolume;
+      player.loop = true;
+      player.play();
+      this.ambientTrack = player;
+    } catch {
+      // Fallback to beep if file loading fails
+      playBeep(55, 5000, 0.15);
+    }
   }
 
   stopAmbientDrone() {
-    // No persistent sounds to stop in simplified native engine
+    if (this.ambientTrack) {
+      try {
+        this.ambientTrack.remove();
+      } catch {
+        // Player may already be released
+      }
+      this.ambientTrack = null;
+    }
+  }
+
+  /** Start a music track for the current challenge with crossfade from ambient. */
+  startChallengeTrack(challengeType: string): void {
+    if (!this.isInitialized) return;
+    const trackDef = config.audio.challengeTracks[challengeType];
+    if (!trackDef) return;
+
+    this.stopChallengeTrack();
+
+    // Fade ambient out
+    if (this.ambientTrack) {
+      this.ambientTrack.volume = 0;
+    }
+
+    try {
+      const url = getAssetUrl('audio', trackDef.file);
+      const player = createAudioPlayer(url);
+      const {musicVolume, musicMuted} = useGameStore.getState();
+      player.volume = musicMuted ? 0 : musicVolume;
+      player.loop = true;
+      player.play();
+      this.challengePlayer = player;
+    } catch {
+      // Challenge music is non-critical
+    }
+  }
+
+  /** Stop challenge track and restore ambient volume. */
+  stopChallengeTrack(): void {
+    if (this.challengePlayer) {
+      try {
+        this.challengePlayer.remove();
+      } catch {
+        // Player may already be released
+      }
+      this.challengePlayer = null;
+    }
+    // Restore ambient volume
+    if (this.ambientTrack) {
+      const {musicVolume, musicMuted} = useGameStore.getState();
+      this.ambientTrack.volume = musicMuted ? 0 : musicVolume;
+    }
   }
 
   playSample(_category: string, _volume?: number) {}
@@ -180,15 +249,40 @@ class AudioEngine {
   stopCookingSizzle() {}
   playSizzleHit() {}
   playBoiling() {}
-  startChallengeTrack(_challengeType: string) {}
-  stopChallengeTrack() {}
   playCabinetBurst() {}
   playCreatureVocal() {}
   playWeaponImpact() {}
   playEnemyDeath() {}
 
+  // Spatial audio stubs — native does not support 3D positional audio
+  setListenerPosition(_x: number, _y: number, _z: number) {}
+  setListenerOrientation(
+    _fx: number,
+    _fy: number,
+    _fz: number,
+    _ux: number,
+    _uy: number,
+    _uz: number,
+  ) {}
+  playSpatial(
+    _soundId: string,
+    _position: [number, number, number],
+    _options?: {
+      file?: string;
+      volume?: number;
+      loop?: boolean;
+      refDistance?: number;
+      maxDistance?: number;
+      rolloffFactor?: number;
+    },
+  ) {}
+  stopSpatial(_soundId: string) {}
+  startSpatialAmbient() {}
+  stopSpatialAmbient() {}
+
   stopEngine() {
-    // Nothing persistent to clean up
+    this.stopAmbientDrone();
+    this.stopChallengeTrack();
   }
 }
 

@@ -259,6 +259,20 @@ export interface GameState {
   sfxMuted: boolean;
   /** Whether to auto-enter VR when the game starts (requires WebXR support) */
   xrEnabled: boolean;
+  /** Snap-turn angle in degrees. 0 = smooth turning. */
+  snapTurnAngle: 0 | 30 | 45 | 90;
+  /** Whether to show a comfort vignette during smooth movement in VR. */
+  comfortVignette: boolean;
+  /** Whether the player is in seated mode (lowers XR origin height). */
+  xrSeatedMode: boolean;
+  /** VR locomotion mode: smooth thumbstick or teleport. */
+  vrLocomotionMode: 'smooth' | 'teleport';
+  /** Whether spatial (3D positional) audio is enabled */
+  spatialAudioEnabled: boolean;
+  /** Whether AR mode is enabled (immersive-ar with camera passthrough) */
+  arEnabled: boolean;
+  /** Whether the kitchen has been placed in the real world via AR hit-test */
+  arPlaced: boolean;
 
   // ---- Actions ----
 
@@ -338,6 +352,20 @@ export interface GameState {
   setSfxMuted: (muted: boolean) => void;
   /** Enable or disable VR auto-entry on game start. */
   setXrEnabled: (enabled: boolean) => void;
+  /** Set snap-turn angle (0 = smooth). */
+  setSnapTurnAngle: (angle: 0 | 30 | 45 | 90) => void;
+  /** Enable or disable the comfort vignette during VR movement. */
+  setComfortVignette: (enabled: boolean) => void;
+  /** Toggle between standing and seated VR mode. */
+  setXrSeatedMode: (seated: boolean) => void;
+  /** Set VR locomotion mode. */
+  setVrLocomotionMode: (mode: 'smooth' | 'teleport') => void;
+  /** Enable or disable spatial (3D positional) audio. */
+  setSpatialAudioEnabled: (enabled: boolean) => void;
+  /** Enable or disable AR mode (immersive-ar with camera passthrough). */
+  setArEnabled: (enabled: boolean) => void;
+  /** Set whether the kitchen has been placed in AR via hit-test. */
+  setArPlaced: (placed: boolean) => void;
   /** Generate Mr. Sausage's secret demands from the given ingredient pool. */
   generateDemands: (ingredientPool: string[]) => void;
   /** Record a twist at a normalized position (0-1) along the sausage extrusion. */
@@ -477,6 +505,13 @@ export const INITIAL_GAME_STATE = {
   musicMuted: false,
   sfxMuted: false,
   xrEnabled: false,
+  snapTurnAngle: 0 as 0 | 30 | 45 | 90,
+  comfortVignette: true,
+  xrSeatedMode: false,
+  vrLocomotionMode: 'smooth' as 'smooth' | 'teleport',
+  spatialAudioEnabled: true,
+  arEnabled: false,
+  arPlaced: false,
 };
 
 /**
@@ -886,7 +921,16 @@ export const useGameStore = create<GameState>()(
       setSfxVolume: (volume: number) => set({sfxVolume: Math.max(0, Math.min(1, volume))}),
       setMusicMuted: (muted: boolean) => set({musicMuted: muted}),
       setSfxMuted: (muted: boolean) => set({sfxMuted: muted}),
-      setXrEnabled: (enabled: boolean) => set({xrEnabled: enabled}),
+      setXrEnabled: (enabled: boolean) =>
+        set({xrEnabled: enabled, arEnabled: enabled ? false : undefined}),
+      setArEnabled: (enabled: boolean) =>
+        set({arEnabled: enabled, xrEnabled: enabled ? false : undefined}),
+      setArPlaced: (placed: boolean) => set({arPlaced: placed}),
+      setSnapTurnAngle: (angle: 0 | 30 | 45 | 90) => set({snapTurnAngle: angle}),
+      setComfortVignette: (enabled: boolean) => set({comfortVignette: enabled}),
+      setXrSeatedMode: (seated: boolean) => set({xrSeatedMode: seated}),
+      setVrLocomotionMode: (mode: 'smooth' | 'teleport') => set({vrLocomotionMode: mode}),
+      setSpatialAudioEnabled: (enabled: boolean) => set({spatialAudioEnabled: enabled}),
 
       returnToMenu: () =>
         set({
@@ -967,6 +1011,12 @@ export const useGameStore = create<GameState>()(
         musicMuted: state.musicMuted,
         sfxMuted: state.sfxMuted,
         xrEnabled: state.xrEnabled,
+        snapTurnAngle: state.snapTurnAngle,
+        comfortVignette: state.comfortVignette,
+        xrSeatedMode: state.xrSeatedMode,
+        vrLocomotionMode: state.vrLocomotionMode,
+        arEnabled: state.arEnabled,
+        spatialAudioEnabled: state.spatialAudioEnabled,
       }),
     },
   ),

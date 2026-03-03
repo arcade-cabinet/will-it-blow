@@ -90,7 +90,7 @@ function ScoreRow({label, score}: ScoreRowProps) {
   const color =
     score >= 90 ? '#FFD700' : score >= 70 ? '#FFC832' : score >= 50 ? '#FF8C00' : '#FF1744';
   return (
-    <View style={styles.scoreRow}>
+    <View style={styles.scoreRow} accessibilityLabel={`${label}: ${Math.round(score)} points`}>
       <Text style={styles.scoreLabel}>{label}</Text>
       <Text style={[styles.scoreValue, {color}]}>{Math.round(score)}</Text>
     </View>
@@ -154,9 +154,12 @@ export function RoundTransition() {
     <Animated.View style={[styles.container, {opacity: overlayOpacity}]} pointerEvents="box-none">
       <View style={styles.darkOverlay} />
 
-      <View style={styles.card}>
+      <View
+        style={styles.card}
+        accessibilityLabel={`Round ${currentRound} of ${totalRounds} complete`}
+      >
         {/* Round counter */}
-        <Text style={styles.roundLabel}>
+        <Text style={styles.roundLabel} accessibilityRole="header">
           ROUND {currentRound} OF {totalRounds}
         </Text>
 
@@ -164,7 +167,9 @@ export function RoundTransition() {
         <View style={styles.divider} />
 
         {/* Score breakdown */}
-        <Text style={styles.sectionTitle}>CHALLENGE SCORES</Text>
+        <Text style={styles.sectionTitle} accessibilityRole="header">
+          CHALLENGE SCORES
+        </Text>
         <View style={styles.scoresContainer}>
           {challengeScores.map((score, i) => {
             const challengeId = CHALLENGE_ORDER[i];
@@ -175,7 +180,7 @@ export function RoundTransition() {
         </View>
 
         {/* Average */}
-        <View style={styles.avgRow}>
+        <View style={styles.avgRow} accessibilityLabel={`Average score ${Math.round(avg)}`}>
           <Text style={styles.avgLabel}>AVERAGE</Text>
           <Text style={[styles.avgValue, {color: avgColor}]}>{Math.round(avg)}</Text>
         </View>

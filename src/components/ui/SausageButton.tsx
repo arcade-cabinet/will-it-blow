@@ -96,6 +96,9 @@ export function SausageButton({label, onPress, disabled = false}: SausageButtonP
       onHoverOut={() => setPressed(false)}
       disabled={disabled}
       style={[styles.wrapper, disabled && styles.disabled]}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{disabled}}
     >
       {/* Layer 1: outer body (darkest pink, full pill) */}
       <View style={[styles.body, {backgroundColor: pal.outer}]}>

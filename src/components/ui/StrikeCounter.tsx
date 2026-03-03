@@ -20,9 +20,17 @@ export function StrikeCounter() {
   const {strikes} = useGameStore();
 
   return (
-    <View style={styles.container}>
+    <View
+      style={styles.container}
+      accessibilityRole="text"
+      accessibilityLabel={`${strikes} of ${MAX_STRIKES} strikes used`}
+    >
       {Array.from({length: MAX_STRIKES}, (_, i) => (
-        <Text key={i} style={[styles.strike, i < strikes ? styles.used : styles.unused]}>
+        <Text
+          key={i}
+          style={[styles.strike, i < strikes ? styles.used : styles.unused]}
+          accessibilityLabel={i < strikes ? `Strike ${i + 1} used` : `Strike ${i + 1} remaining`}
+        >
           {i < strikes ? '\u2715' : '\u25CB'}
         </Text>
       ))}

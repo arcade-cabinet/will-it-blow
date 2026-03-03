@@ -546,6 +546,14 @@ export interface HorrorPropDef {
   rotation: [number, number, number];
   scale: number;
   tier: 1 | 2;
+  /**
+   * If set, this prop is a flickering PSX lamp. The value is the `_on` variant
+   * model path. The component alternates between `model` (_off) and `modelOn`
+   * using a randomized timer — no ECS entity needed.
+   */
+  modelOn?: string;
+  /** Flicker interval range in seconds [min, max]. Defaults to [1.5, 4.0]. */
+  flickerInterval?: [number, number];
 }
 
 export interface HorrorPropsConfig {
@@ -606,9 +614,20 @@ export interface ChallengeTrackDef {
   volume: number;
 }
 
+export interface SpatialSoundDef {
+  file: string;
+  volume: number;
+  position: [number, number, number];
+  refDistance: number;
+  maxDistance: number;
+  rolloffFactor: number;
+  loop: boolean;
+}
+
 export interface AudioConfig {
   challengeTracks: Record<string, ChallengeTrackDef>;
   enemyTrack: ChallengeTrackDef;
   defeatTrack: ChallengeTrackDef;
   crossfadeDuration: number;
+  spatialSounds: Record<string, SpatialSoundDef>;
 }

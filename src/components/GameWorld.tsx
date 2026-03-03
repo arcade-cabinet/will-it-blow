@@ -36,7 +36,7 @@ import {
   Physics,
   RigidBody,
 } from '@react-three/rapier';
-import {createXRStore, XR} from '@react-three/xr';
+import {createXRStore, useXR, XR, XROrigin} from '@react-three/xr';
 import {useKeepAwake} from 'expo-keep-awake';
 import {BlendFunction} from 'postprocessing';
 import {Suspense, useCallback, useEffect, useRef} from 'react';
@@ -53,8 +53,10 @@ import {DEFAULT_ROOM, STATION_TARGET_NAMES} from '../engine/FurnitureLayout';
 import {isStationReady} from '../engine/KitchenAssembly';
 import {mergeLayoutConfigs, resolveLayout} from '../engine/layout';
 import {useGameStore} from '../store/gameStore';
+import {ARPlacement} from './controls/ARPlacement';
 import {FPSController} from './controls/FPSController';
 import {GrabSystem} from './controls/GrabSystem';
+import {VRLocomotion} from './controls/VRLocomotion';
 import {BasementStructure} from './kitchen/BasementStructure';
 import {CrtTelevision} from './kitchen/CrtTelevision';
 import {FridgeStation} from './kitchen/FridgeStation';
@@ -63,6 +65,7 @@ import {SausagePhysics} from './kitchen/SausagePhysics';
 import {StationMarker} from './kitchen/StationMarker';
 import {TransferBowl} from './kitchen/TransferBowl';
 import {SceneIntrospector} from './SceneIntrospector';
+import {VRHUDLayer} from './vr/VRHUDLayer';
 
 // -----------------------------------------------------------------
 // Resolve station targets from the layout system
@@ -228,10 +231,20 @@ function ManualProximityTrigger() {
 }
 
 // -----------------------------------------------------------------
-/** Renders postprocessing effects only when the renderer is WebGL (not WebGPU). */
+/**
+ * Renders postprocessing effects only when:
+ * - The renderer is WebGL (not WebGPU)
+ * - No XR session is active (postprocessing breaks stereo rendering)
+ */
 function WebGLOnlyEffects() {
   const gl = useThree(s => s.gl);
+  const xrMode = useXR(xr => xr.mode);
+
+  // Disable during XR — EffectComposer renders to a single framebuffer,
+  // which breaks the stereo left/right eye split in immersive sessions.
+  if (xrMode === 'immersive-vr' || xrMode === 'immersive-ar') return null;
   if (!(gl as any).isWebGLRenderer) return null;
+
   return (
     <EffectComposer>
       <Bloom intensity={0.3} luminanceThreshold={0.9} luminanceSmoothing={0.025} mipmapBlur />
@@ -240,6 +253,38 @@ function WebGLOnlyEffects() {
       <Noise opacity={0.02} blendFunction={BlendFunction.OVERLAY} />
     </EffectComposer>
   );
+}
+
+// -----------------------------------------------------------------
+/**
+ * VR locomotion wrapper — smooth thumbstick or teleport movement,
+ * snap/smooth turning, room bounds clamping, comfort vignette.
+ * Only renders when an XR session (immersive-vr) is active.
+ */
+function VRLocomotionGate() {
+  const xrMode = useXR(xr => xr.mode);
+  if (xrMode !== 'immersive-vr') return null;
+  return <VRLocomotion />;
+}
+
+// -----------------------------------------------------------------
+/**
+ * XROrigin wrapper — places the session origin in the scene.
+ * In seated mode, raises the origin so the player doesn't appear
+ * to be sitting on the floor. In standing mode, the XR runtime's
+ * floor-level reference space is used as-is.
+ */
+function XROriginWrapper() {
+  const xrMode = useXR(xr => xr.mode);
+  const xrSeatedMode = useGameStore(s => s.xrSeatedMode);
+
+  // Only render XROrigin when an XR session is active
+  if (xrMode !== 'immersive-vr' && xrMode !== 'immersive-ar') return null;
+
+  // Seated mode: raise origin to approximate standing eye height
+  const seatedOffset: [number, number, number] = xrSeatedMode ? [0, 1.2, 0] : [0, 0, 0];
+
+  return <XROrigin position={seatedOffset} />;
 }
 
 // SceneContent — all 3D content inside the Canvas
@@ -310,6 +355,8 @@ const SceneContent = ({
       {/* Dim ambient fill (KitchenEnvironment provides the strong fluorescent + fill lights) */}
       <ambientLight intensity={0.35} />
       <SceneIntrospector />
+      <XROriginWrapper />
+      <VRLocomotionGate />
       <FPSController joystickRef={joystickRef} lookDeltaRef={lookDeltaRef} />
       <GrabSystem />
 
@@ -381,6 +428,13 @@ const SceneContent = ({
 
       {/* ECS-driven renderers — renders nothing until entities are spawned */}
       <ECSScene />
+
+      {/* AR placement reticle — shown when AR is active but kitchen not yet placed */}
+      <ARPlacement />
+
+      {/* VR world-space HUD panels — renders challenge HUDs inside the 3D scene
+          when an immersive-vr session is active. Flat-screen mode uses 2D overlay. */}
+      <VRHUDLayer />
     </>
   );
 };
@@ -411,19 +465,29 @@ function PhysicsWrapper({children}: {children: React.ReactNode}) {
 // GameWorld — top-level 3D scene container
 // -----------------------------------------------------------------
 
-/** XR store — exported so SettingsScreen can trigger VR/AR entry */
-export const xrStore = createXRStore();
+/** XR store — exported so SettingsScreen can trigger VR/AR entry.
+ *  AR sessions request hit-test, dom-overlay, and anchors as optional features. */
+export const xrStore = createXRStore({
+  hitTest: true,
+  domOverlay: true,
+  anchors: true,
+});
 
-/** Auto-enters VR when xrEnabled is true. Must live inside the Canvas tree. */
+/** Auto-enters VR or AR when the respective store flag is true. Must live inside the Canvas tree. */
 function XRAutoEntry() {
   const xrEnabled = useGameStore(s => s.xrEnabled);
+  const arEnabled = useGameStore(s => s.arEnabled);
   useEffect(() => {
+    if (arEnabled) {
+      // AR takes priority — small delay lets the Canvas/XR wrapper fully initialize
+      const t = setTimeout(() => xrStore.enterAR(), 500);
+      return () => clearTimeout(t);
+    }
     if (xrEnabled) {
-      // Small delay lets the Canvas/XR wrapper fully initialize
       const t = setTimeout(() => xrStore.enterVR(), 500);
       return () => clearTimeout(t);
     }
-  }, [xrEnabled]);
+  }, [xrEnabled, arEnabled]);
   return null;
 }
 
@@ -447,6 +511,8 @@ export const GameWorld = ({
   joystickRef?: React.RefObject<{x: number; y: number}>;
   lookDeltaRef?: React.RefObject<{dx: number; dy: number}>;
 }) => {
+  const arEnabled = useGameStore(s => s.arEnabled);
+
   return (
     <View style={{flex: 1}}>
       <Canvas
@@ -457,6 +523,7 @@ export const GameWorld = ({
             const renderer = new WebGPURenderer({
               canvas: props.canvas as HTMLCanvasElement,
               antialias: true,
+              alpha: arEnabled,
             });
             await renderer.init();
             return renderer;

@@ -170,7 +170,10 @@ function BarredWindow({
       </mesh>
 
       {/* Vertical bars spaced evenly across the window frame */}
-      {Array.from({length: bc.window.barCount}, (_, i) => (i - (bc.window.barCount - 1) / 2) * barSpacing).map((bz, i) => (
+      {Array.from(
+        {length: bc.window.barCount},
+        (_, i) => (i - (bc.window.barCount - 1) / 2) * barSpacing,
+      ).map((bz, i) => (
         <mesh key={`bar_${i}`} position={[bz, 0, 0.06]}>
           <cylinderGeometry args={[bc.window.barRadius, bc.window.barRadius, frameH - 0.05, 6]} />
           <primitive object={darkMetal} attach="material" />

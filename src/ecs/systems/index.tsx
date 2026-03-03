@@ -14,10 +14,13 @@ import {PlungerSystem} from './PlungerSystem';
 import {RotationSystem} from './RotationSystem';
 import {ToggleSystem} from './ToggleSystem';
 import {VibrationSystem} from './VibrationSystem';
+import {XRInputSystem} from './XRInputSystem';
 
 export function SystemsProvider() {
   return (
     <>
+      {/* XR input — must run before other input systems so XR state is current */}
+      <XRInputSystem />
       {/* Input systems — process gestures first */}
       <DialSystem />
       <CrankSystem />

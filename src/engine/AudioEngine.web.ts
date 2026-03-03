@@ -21,6 +21,12 @@ const SAMPLE_VARIANTS: Record<string, string[]> = {
   sizzle_loop: ['sizzle_loop_1.ogg', 'sizzle_loop_2.ogg'],
 };
 
+/** Spatial sound instance: player + panner, managed by the engine. */
+interface SpatialSource {
+  player: Tone.Player;
+  panner: Tone.Panner3D;
+}
+
 class AudioEngine {
   private synths: Tone.PolySynth[] = [];
   private currentSong: Tone.Part | null = null;
@@ -31,6 +37,9 @@ class AudioEngine {
   private samples: Map<string, Tone.Player> = new Map();
   /** Currently playing looped sample. */
   private loopingSample: Tone.Player | null = null;
+
+  /** Active spatial (3D-positioned) sound sources keyed by sound ID. */
+  private spatialSources: Map<string, SpatialSource> = new Map();
 
   async initTone() {
     if (this.isInitialized) return;
@@ -548,6 +557,144 @@ class AudioEngine {
     this.playSample('boiling', -10);
   }
 
+  // ---------------------------------------------------------------------------
+  // Spatial Audio — 3D positional sounds via Tone.Panner3D
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Update the audio listener position (typically called from FPSController).
+   * Maps to the Web Audio API AudioListener position.
+   */
+  setListenerPosition(x: number, y: number, z: number): void {
+    if (!this.isInitialized) return;
+    const listener = Tone.getContext().rawContext.listener;
+    if (listener.positionX) {
+      listener.positionX.value = x;
+      listener.positionY.value = y;
+      listener.positionZ.value = z;
+    }
+  }
+
+  /**
+   * Update the audio listener orientation (forward + up vectors).
+   * Called from FPSController or XR head pose.
+   */
+  setListenerOrientation(
+    forwardX: number,
+    forwardY: number,
+    forwardZ: number,
+    upX: number,
+    upY: number,
+    upZ: number,
+  ): void {
+    if (!this.isInitialized) return;
+    const listener = Tone.getContext().rawContext.listener;
+    if (listener.forwardX) {
+      listener.forwardX.value = forwardX;
+      listener.forwardY.value = forwardY;
+      listener.forwardZ.value = forwardZ;
+      listener.upX.value = upX;
+      listener.upY.value = upY;
+      listener.upZ.value = upZ;
+    }
+  }
+
+  /**
+   * Play a sound at a 3D position using Panner3D.
+   * If the soundId already has an active source, it is stopped first.
+   */
+  playSpatial(
+    soundId: string,
+    position: [number, number, number],
+    options?: {
+      file?: string;
+      volume?: number;
+      loop?: boolean;
+      refDistance?: number;
+      maxDistance?: number;
+      rolloffFactor?: number;
+    },
+  ): void {
+    if (!this.isInitialized) return;
+    if (!useGameStore.getState().spatialAudioEnabled) return;
+
+    // Stop existing source for this ID
+    this.stopSpatial(soundId);
+
+    const file = options?.file;
+    if (!file) return;
+
+    const panner = new Tone.Panner3D({
+      positionX: position[0],
+      positionY: position[1],
+      positionZ: position[2],
+      refDistance: options?.refDistance ?? 1,
+      maxDistance: options?.maxDistance ?? 10,
+      rolloffFactor: options?.rolloffFactor ?? 1,
+      distanceModel: 'inverse',
+      panningModel: 'HRTF',
+    }).toDestination();
+
+    const url = getAssetUrl('audio', file);
+    const player = new Tone.Player({
+      url,
+      loop: options?.loop ?? false,
+      volume: options?.volume ?? -12,
+      onload: () => {
+        // Only start if still active
+        const current = this.spatialSources.get(soundId);
+        if (current?.player === player) {
+          player.start();
+        }
+      },
+      onerror: err => console.warn(`Failed to load spatial sound ${file}:`, err),
+    }).connect(panner);
+
+    this.spatialSources.set(soundId, {player, panner});
+  }
+
+  /** Stop and dispose a specific spatial sound source. */
+  stopSpatial(soundId: string): void {
+    const source = this.spatialSources.get(soundId);
+    if (source) {
+      try {
+        source.player.stop();
+      } catch {
+        // Player may not be started
+      }
+      source.player.dispose();
+      source.panner.dispose();
+      this.spatialSources.delete(soundId);
+    }
+  }
+
+  /** Start all configured spatial ambient sounds from audio.json. */
+  startSpatialAmbient(): void {
+    if (!this.isInitialized) return;
+    if (!useGameStore.getState().spatialAudioEnabled) return;
+
+    const spatialSounds = config.audio.spatialSounds;
+    if (!spatialSounds) return;
+
+    for (const [id, def] of Object.entries(spatialSounds)) {
+      this.playSpatial(id, def.position, {
+        file: def.file,
+        volume: def.volume,
+        loop: def.loop,
+        refDistance: def.refDistance,
+        maxDistance: def.maxDistance,
+        rolloffFactor: def.rolloffFactor,
+      });
+    }
+  }
+
+  /** Stop all spatial ambient sounds. */
+  stopSpatialAmbient(): void {
+    for (const id of this.spatialSources.keys()) {
+      this.stopSpatial(id);
+    }
+  }
+
   stopEngine() {
     if (this.currentSong) {
       this.currentSong.dispose();
@@ -560,6 +707,7 @@ class AudioEngine {
     this.stopAmbientDrone();
     this.stopChallengeTrack();
     this.stopSampleLoop();
+    this.stopSpatialAmbient();
     for (const player of this.samples.values()) {
       player.dispose();
     }

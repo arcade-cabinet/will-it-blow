@@ -10,5 +10,43 @@
   },
   "enemyTrack": { "file": "track_kick_harder.ogg", "volume": -6 },
   "defeatTrack": { "file": "track_boss_horror.ogg", "volume": -8 },
-  "crossfadeDuration": 2.0
+  "crossfadeDuration": 2.0,
+  "spatialSounds": {
+    "fridge_hum": {
+      "file": "fridge_hum_loop.ogg",
+      "volume": -18,
+      "position": [-2.5, 1.0, -2.0],
+      "refDistance": 1.0,
+      "maxDistance": 8.0,
+      "rolloffFactor": 1.5,
+      "loop": true
+    },
+    "grinder_idle": {
+      "file": "grinder_idle_loop.ogg",
+      "volume": -20,
+      "position": [1.5, 0.9, -1.5],
+      "refDistance": 0.8,
+      "maxDistance": 6.0,
+      "rolloffFactor": 2.0,
+      "loop": true
+    },
+    "stove_sizzle": {
+      "file": "sizzle_loop_1.ogg",
+      "volume": -16,
+      "position": [2.0, 0.9, 1.5],
+      "refDistance": 1.0,
+      "maxDistance": 7.0,
+      "rolloffFactor": 1.5,
+      "loop": true
+    },
+    "drain_drip": {
+      "file": "drain_drip_loop.ogg",
+      "volume": -22,
+      "position": [0.0, 0.0, 0.0],
+      "refDistance": 0.5,
+      "maxDistance": 5.0,
+      "rolloffFactor": 2.5,
+      "loop": true
+    }
+  }
 }

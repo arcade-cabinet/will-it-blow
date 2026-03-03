@@ -24,6 +24,7 @@ import {Animated, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {audioEngine} from '../../engine/AudioEngine';
 import {getAssetUrl} from '../../engine/assetUrl';
 import {FURNITURE_RULES} from '../../engine/FurnitureLayout';
+import {useReducedMotion} from '../../hooks/useReducedMotion';
 import {useGameStore} from '../../store/gameStore';
 
 const TEXTURE_FILES = [
@@ -220,6 +221,7 @@ export function LoadingScreen() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [quoteIndex, setQuoteIndex] = useState(0);
   const [retryCount, setRetryCount] = useState(0);
+  const reducedMotion = useReducedMotion();
 
   // Track when the loading screen first mounted so we can enforce a minimum display time.
   const mountTimeRef = useRef(Date.now());
@@ -234,12 +236,16 @@ export function LoadingScreen() {
   );
 
   useEffect(() => {
+    if (reducedMotion) {
+      fadeAnim.setValue(1);
+      return;
+    }
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 600,
       useNativeDriver: true,
     }).start();
-  }, [fadeAnim]);
+  }, [fadeAnim, reducedMotion]);
 
   // Cycle quotes every 2 seconds
   useEffect(() => {
@@ -341,15 +347,19 @@ export function LoadingScreen() {
     for (let i = 0; i < LINK_COUNT; i++) {
       if (progress >= LINK_THRESHOLDS[i] && !activatedRef.current[i]) {
         activatedRef.current[i] = true;
-        Animated.spring(linkScales[i], {
-          toValue: 1,
-          friction: 5,
-          tension: 120,
-          useNativeDriver: true,
-        }).start();
+        if (reducedMotion) {
+          linkScales[i].setValue(1);
+        } else {
+          Animated.spring(linkScales[i], {
+            toValue: 1,
+            friction: 5,
+            tension: 120,
+            useNativeDriver: true,
+          }).start();
+        }
       }
     }
-  }, [progress, linkScales]);
+  }, [progress, linkScales, reducedMotion]);
 
   // Compute which links are active and which is newest (for googly eyes)
   const activeCount = LINK_THRESHOLDS.filter(t => progress >= t).length;
@@ -366,18 +376,32 @@ export function LoadingScreen() {
   };
 
   return (
-    <Animated.View style={[styles.container, {opacity: fadeAnim}]}>
+    <Animated.View
+      style={[styles.container, {opacity: fadeAnim}]}
+      accessibilityLabel={`Loading game assets, ${progress}% complete`}
+    >
       {loadError ? (
         <View style={styles.progressArea}>
-          <Text style={styles.errorText}>{loadError}</Text>
-          <TouchableOpacity onPress={handleRetry} style={styles.retryButton}>
+          <Text style={styles.errorText} accessibilityRole="alert">
+            {loadError}
+          </Text>
+          <TouchableOpacity
+            onPress={handleRetry}
+            style={styles.retryButton}
+            accessibilityRole="button"
+            accessibilityLabel="Retry loading assets"
+          >
             <Text style={styles.retryText}>RETRY</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <>
           {/* Sausage links progress */}
-          <View style={styles.progressArea}>
+          <View
+            style={styles.progressArea}
+            accessibilityRole="progressbar"
+            accessibilityValue={{min: 0, max: 100, now: progress}}
+          >
             <View style={styles.linksContainer}>
               {Array.from({length: LINK_COUNT}, (_, i) => {
                 const active = progress >= LINK_THRESHOLDS[i];

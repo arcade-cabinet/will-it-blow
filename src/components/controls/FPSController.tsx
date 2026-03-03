@@ -1,7 +1,9 @@
 import {useFrame, useThree} from '@react-three/fiber';
+import {useXR} from '@react-three/xr';
 import {useEffect, useRef} from 'react';
 import {Platform} from 'react-native';
 import * as THREE from 'three/webgpu';
+import {audioEngine} from '../../engine/AudioEngine';
 import {DEFAULT_ROOM} from '../../engine/FurnitureLayout';
 import {INPUT_TUNING, InputManager} from '../../input/InputManager';
 import {useGameStore} from '../../store/gameStore';
@@ -17,6 +19,13 @@ const ROOM_HALF_D = DEFAULT_ROOM.d / 2 - INPUT_TUNING.wallMargin;
  * read from the singleton InputManager which normalizes everything
  * to movement vectors and look deltas. No raw event handling here.
  *
+ * When an XR session is active (immersive-vr or immersive-ar), the
+ * controller skips all manual camera manipulation — the XR runtime
+ * owns the camera transform via head tracking. Teleport still works
+ * in XR by updating the XROrigin position (handled externally).
+ * Position sync and audio listener sync continue in XR mode so that
+ * spatial audio and proximity triggers stay accurate.
+ *
  * Touch refs are wired from MobileJoystick via setTouchRefs() on mount.
  */
 export function FPSController({
@@ -27,6 +36,7 @@ export function FPSController({
   lookDeltaRef?: React.RefObject<{dx: number; dy: number}>;
 }) {
   const {camera, gl} = useThree();
+  const xrMode = useXR(xr => xr.mode);
   const setPlayerPosition = useGameStore(s => s.setPlayerPosition);
   const clearTeleport = useGameStore(s => s.clearTeleport);
   // getState() gives the freshest value without re-rendering on every change
@@ -64,6 +74,26 @@ export function FPSController({
 
   useFrame((_, delta) => {
     const dt = Math.min(delta, 0.1);
+    const isXRActive = xrMode === 'immersive-vr' || xrMode === 'immersive-ar';
+
+    // In XR mode, the runtime controls the camera — skip manual yaw/pitch/position.
+    // We still sync position to store and update the audio listener.
+    if (isXRActive) {
+      syncTimer.current += dt;
+      if (syncTimer.current > 1 / INPUT_TUNING.positionSyncHz) {
+        syncTimer.current = 0;
+        const p = camera.position;
+        setPlayerPosition([p.x, p.y, p.z]);
+
+        // Sync audio listener to XR camera position and orientation
+        audioEngine.setListenerPosition(p.x, p.y, p.z);
+        const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+        const up = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
+        audioEngine.setListenerOrientation(fwd.x, fwd.y, fwd.z, up.x, up.y, up.z);
+      }
+      return;
+    }
+
     const input = InputManager.getInstance();
 
     // --- Teleport (one-shot, set by GameGovernor / E2E tests) ---
@@ -103,11 +133,17 @@ export function FPSController({
     const euler = new THREE.Euler(pitchRef.current, yawRef.current, 0, 'YXZ');
     camera.quaternion.setFromEuler(euler);
 
-    // --- Sync position to store (throttled) ---
+    // --- Sync position to store + audio listener (throttled) ---
     syncTimer.current += dt;
     if (syncTimer.current > 1 / INPUT_TUNING.positionSyncHz) {
       syncTimer.current = 0;
       setPlayerPosition([posRef.current.x, posRef.current.y, posRef.current.z]);
+
+      // Sync audio listener to camera position and orientation
+      audioEngine.setListenerPosition(posRef.current.x, posRef.current.y, posRef.current.z);
+      const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+      const up = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
+      audioEngine.setListenerOrientation(fwd.x, fwd.y, fwd.z, up.x, up.y, up.z);
     }
   });
 

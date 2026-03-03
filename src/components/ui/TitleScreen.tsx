@@ -18,6 +18,8 @@
 
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {Animated, StyleSheet, Text, View} from 'react-native';
+import {useKeyboardNav} from '../../hooks/useKeyboardNav';
+import {useReducedMotion} from '../../hooks/useReducedMotion';
 import {useGameStore} from '../../store/gameStore';
 import {DifficultySelector} from './DifficultySelector';
 import {SausageButton} from './SausageButton';
@@ -34,6 +36,10 @@ export function TitleScreen() {
   const hasSaveData = challengeScores.length > 0 && currentChallenge < 5;
   const [showSettings, setShowSettings] = useState(false);
   const [showDifficulty, setShowDifficulty] = useState(false);
+  const reducedMotion = useReducedMotion();
+
+  // Keyboard navigation — no Escape handler on the main menu
+  useKeyboardNav();
 
   // Fade-in animation
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -43,6 +49,12 @@ export function TitleScreen() {
   const swingAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    if (reducedMotion) {
+      fadeAnim.setValue(1);
+      slideAnim.setValue(0);
+      return;
+    }
+
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -71,7 +83,7 @@ export function TitleScreen() {
         }),
       ]),
     ).start();
-  }, [fadeAnim, slideAnim, swingAnim]);
+  }, [fadeAnim, slideAnim, swingAnim, reducedMotion]);
 
   const rotate = swingAnim.interpolate({
     inputRange: [-1, 1],
@@ -118,9 +130,11 @@ export function TitleScreen() {
           transform: [{translateY: slideAnim}],
         },
       ]}
+      accessibilityRole="summary"
+      accessibilityLabel="Will It Blow main menu"
     >
       {/* Butcher shop sign */}
-      <Animated.View style={[styles.sign, {transform: [{rotate}]}]}>
+      <Animated.View style={[styles.sign, reducedMotion ? undefined : {transform: [{rotate}]}]}>
         {/* Hanging chains */}
         <View style={styles.chainRow}>
           <View style={styles.chain} />
@@ -130,28 +144,41 @@ export function TitleScreen() {
         <View style={styles.signBoard}>
           {/* Outer border */}
           <View style={styles.signInner}>
-            <Text style={styles.established}>Est. 1974</Text>
-            <Text style={styles.title}>WILL IT{'\n'}BLOW?</Text>
+            <Text style={styles.established} accessibilityRole="text">
+              Est. 1974
+            </Text>
+            <Text style={styles.title} accessibilityRole="header">
+              WILL IT{'\n'}BLOW?
+            </Text>
             <View style={styles.divider} />
-            <Text style={styles.tagline}>Fine Meats & Sausages</Text>
+            <Text style={styles.tagline} accessibilityRole="text">
+              Fine Meats & Sausages
+            </Text>
           </View>
         </View>
       </Animated.View>
 
       {/* Menu buttons — procedural sausage-shaped RN components */}
-      <View style={styles.menuContainer}>
+      <View style={styles.menuContainer} accessibilityRole="menu">
         <SausageButton label="NEW GAME" onPress={() => handleMenuPress(0)} />
         <View style={styles.loadButtonGroup}>
           <SausageButton label="LOAD" onPress={() => handleMenuPress(1)} disabled={!hasSaveData} />
           {hasSaveData && (
-            <Text style={styles.roundSubtitle}>Last played: Round {currentRound}</Text>
+            <Text
+              style={styles.roundSubtitle}
+              accessibilityLabel={`Last played round ${currentRound}`}
+            >
+              Last played: Round {currentRound}
+            </Text>
           )}
         </View>
         <SausageButton label="SETTINGS" onPress={() => setShowSettings(true)} />
       </View>
 
       {/* Footer */}
-      <Text style={styles.footer}>Mr. Sausage's Fine Meats & Sausages</Text>
+      <Text style={styles.footer} accessibilityRole="text">
+        Mr. Sausage's Fine Meats & Sausages
+      </Text>
     </Animated.View>
   );
 }

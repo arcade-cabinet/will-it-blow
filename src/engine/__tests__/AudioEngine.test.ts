@@ -289,4 +289,269 @@ describe('src/config/types.ts — AudioConfig type', () => {
   it('defines ChallengeTrackDef interface', () => {
     expect(src).toContain('interface ChallengeTrackDef');
   });
+
+  it('defines SpatialSoundDef interface', () => {
+    expect(src).toContain('interface SpatialSoundDef');
+  });
+
+  it('AudioConfig has spatialSounds field', () => {
+    expect(src).toContain('spatialSounds');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Spatial Audio — Web engine
+// ---------------------------------------------------------------------------
+
+describe('AudioEngine.web.ts — spatial audio methods', () => {
+  let src: string;
+
+  beforeAll(() => {
+    src = readSource('src/engine/AudioEngine.web.ts');
+  });
+
+  it('has setListenerPosition method', () => {
+    expect(src).toContain('setListenerPosition(');
+  });
+
+  it('has setListenerOrientation method', () => {
+    expect(src).toContain('setListenerOrientation(');
+  });
+
+  it('has playSpatial method', () => {
+    expect(src).toContain('playSpatial(');
+  });
+
+  it('has stopSpatial method', () => {
+    expect(src).toContain('stopSpatial(');
+  });
+
+  it('has startSpatialAmbient method', () => {
+    expect(src).toContain('startSpatialAmbient(');
+  });
+
+  it('has stopSpatialAmbient method', () => {
+    expect(src).toContain('stopSpatialAmbient(');
+  });
+
+  it('uses Panner3D for spatial positioning', () => {
+    expect(src).toContain('Panner3D');
+  });
+
+  it('uses HRTF panning model for immersive audio', () => {
+    expect(src).toContain('HRTF');
+  });
+
+  it('checks spatialAudioEnabled from store before playing', () => {
+    expect(src).toContain('spatialAudioEnabled');
+  });
+
+  it('reads spatialSounds from config for ambient setup', () => {
+    expect(src).toContain('config.audio.spatialSounds');
+  });
+
+  it('updates Web Audio API listener position', () => {
+    expect(src).toContain('listener.positionX');
+  });
+
+  it('updates Web Audio API listener orientation', () => {
+    expect(src).toContain('listener.forwardX');
+  });
+
+  it('cleans up spatial sources in stopEngine', () => {
+    expect(src).toContain('stopSpatialAmbient()');
+  });
+
+  it('tracks spatial sources in a Map', () => {
+    expect(src).toContain('spatialSources');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Spatial Audio — Native engine stubs
+// ---------------------------------------------------------------------------
+
+describe('AudioEngine.ts (native) — spatial audio stubs', () => {
+  let src: string;
+
+  beforeAll(() => {
+    src = readSource('src/engine/AudioEngine.ts');
+  });
+
+  it('has setListenerPosition stub', () => {
+    expect(src).toContain('setListenerPosition(');
+  });
+
+  it('has setListenerOrientation stub', () => {
+    expect(src).toContain('setListenerOrientation(');
+  });
+
+  it('has playSpatial stub', () => {
+    expect(src).toContain('playSpatial(');
+  });
+
+  it('has stopSpatial stub', () => {
+    expect(src).toContain('stopSpatial(');
+  });
+
+  it('has startSpatialAmbient stub', () => {
+    expect(src).toContain('startSpatialAmbient(');
+  });
+
+  it('has stopSpatialAmbient stub', () => {
+    expect(src).toContain('stopSpatialAmbient(');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Native engine: music track support
+// ---------------------------------------------------------------------------
+
+describe('AudioEngine.ts (native) — music track support', () => {
+  let src: string;
+
+  beforeAll(() => {
+    src = readSource('src/engine/AudioEngine.ts');
+  });
+
+  it('imports config for challenge track definitions', () => {
+    expect(src).toContain("from '../config'");
+  });
+
+  it('imports getAssetUrl for audio file resolution', () => {
+    expect(src).toContain("from './assetUrl'");
+  });
+
+  it('imports useGameStore for volume/mute reactivity', () => {
+    expect(src).toContain("from '../store/gameStore'");
+  });
+
+  it('has ambientTrack field for persistent music', () => {
+    expect(src).toContain('ambientTrack');
+  });
+
+  it('has challengePlayer field for challenge music', () => {
+    expect(src).toContain('challengePlayer');
+  });
+
+  it('startAmbientDrone creates a looping audio player', () => {
+    expect(src).toContain('player.loop = true');
+  });
+
+  it('startChallengeTrack reads track definition from config', () => {
+    expect(src).toContain('config.audio.challengeTracks');
+  });
+
+  it('stopChallengeTrack restores ambient volume', () => {
+    expect(src).toContain('ambientTrack');
+  });
+
+  it('stopEngine cleans up ambient and challenge tracks', () => {
+    expect(src).toContain('stopAmbientDrone()');
+    expect(src).toContain('stopChallengeTrack()');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Audio config JSON — spatial sounds shape
+// ---------------------------------------------------------------------------
+
+describe('src/config/audio.json — spatialSounds shape', () => {
+  let cfg: Record<string, unknown>;
+
+  beforeAll(() => {
+    cfg = readJson('src/config/audio.json') as Record<string, unknown>;
+  });
+
+  it('has spatialSounds section', () => {
+    expect(cfg.spatialSounds).toBeDefined();
+  });
+
+  it('spatialSounds contains fridge_hum', () => {
+    const spatial = cfg.spatialSounds as Record<string, unknown>;
+    expect(spatial.fridge_hum).toBeDefined();
+  });
+
+  it('spatialSounds contains stove_sizzle', () => {
+    const spatial = cfg.spatialSounds as Record<string, unknown>;
+    expect(spatial.stove_sizzle).toBeDefined();
+  });
+
+  it('each spatial sound has required fields', () => {
+    const spatial = cfg.spatialSounds as Record<
+      string,
+      {
+        file: string;
+        volume: number;
+        position: number[];
+        refDistance: number;
+        maxDistance: number;
+        rolloffFactor: number;
+        loop: boolean;
+      }
+    >;
+    for (const [, def] of Object.entries(spatial)) {
+      expect(typeof def.file).toBe('string');
+      expect(typeof def.volume).toBe('number');
+      expect(Array.isArray(def.position)).toBe(true);
+      expect(def.position).toHaveLength(3);
+      expect(typeof def.refDistance).toBe('number');
+      expect(typeof def.maxDistance).toBe('number');
+      expect(typeof def.rolloffFactor).toBe('number');
+      expect(typeof def.loop).toBe('boolean');
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FPSController — audio listener sync
+// ---------------------------------------------------------------------------
+
+describe('FPSController — spatial audio listener wiring', () => {
+  let src: string;
+
+  beforeAll(() => {
+    src = readSource('src/components/controls/FPSController.tsx');
+  });
+
+  it('imports audioEngine', () => {
+    expect(src).toContain("from '../../engine/AudioEngine'");
+  });
+
+  it('calls setListenerPosition in the sync block', () => {
+    expect(src).toContain('audioEngine.setListenerPosition(');
+  });
+
+  it('calls setListenerOrientation in the sync block', () => {
+    expect(src).toContain('audioEngine.setListenerOrientation(');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Store — spatialAudioEnabled setting
+// ---------------------------------------------------------------------------
+
+describe('gameStore — spatialAudioEnabled', () => {
+  let src: string;
+
+  beforeAll(() => {
+    src = readSource('src/store/gameStore.ts');
+  });
+
+  it('has spatialAudioEnabled field in GameState', () => {
+    expect(src).toContain('spatialAudioEnabled');
+  });
+
+  it('has setSpatialAudioEnabled action', () => {
+    expect(src).toContain('setSpatialAudioEnabled');
+  });
+
+  it('defaults spatialAudioEnabled to true', () => {
+    expect(src).toContain('spatialAudioEnabled: true');
+  });
+
+  it('persists spatialAudioEnabled in partialize', () => {
+    // Check that the partialize function includes spatialAudioEnabled
+    expect(src).toContain('spatialAudioEnabled: state.spatialAudioEnabled');
+  });
 });

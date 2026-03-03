@@ -7,6 +7,7 @@ import {StrikeCounter} from './src/components/ui/StrikeCounter';
 import {TitleScreen} from './src/components/ui/TitleScreen';
 import {installGovernor} from './src/dev/GameGovernor';
 import {audioEngine} from './src/engine/AudioEngine';
+import {useXRModeFromStore} from './src/hooks/useXRMode';
 import {useGameStore} from './src/store/gameStore';
 
 // ── Dynamic imports for code splitting ──────────────────────────
@@ -69,6 +70,7 @@ const GameUI = () => {
   const challengeTriggered = useGameStore(s => s.challengeTriggered);
   const completeChallenge = useGameStore(s => s.completeChallenge);
   const setMrSausageReaction = useGameStore(s => s.setMrSausageReaction);
+  const {isVR} = useXRModeFromStore();
 
   // Transition state: show title card between challenges
   const [transitioning, setTransitioning] = useState(false);
@@ -118,6 +120,10 @@ const GameUI = () => {
   const isBlowoutChallenge = showChallenge && currentChallenge === 5;
   const isTastingChallenge = showChallenge && currentChallenge === 6;
 
+  // In VR mode, HUDs are rendered as world-space panels inside the Canvas
+  // by VRHUDLayer. Skip the 2D overlay to avoid duplicate UI.
+  // Transition cards and bridge-pattern challenges still render in 2D
+  // (they use full-screen interaction patterns that work in VR via dom-overlay).
   return (
     <View style={styles.overlay} pointerEvents="box-none" testID="game-overlay">
       {/* Challenge transition title card */}
@@ -128,7 +134,7 @@ const GameUI = () => {
         />
       )}
 
-      {showChallenge && (
+      {showChallenge && !isVR && (
         <Suspense fallback={<ChunkFallback />}>
           <ChallengeHeader />
           <StrikeCounter />
@@ -147,7 +153,7 @@ const GameUI = () => {
         </Suspense>
       )}
 
-      {(gameStatus === 'victory' || gameStatus === 'defeat') && (
+      {(gameStatus === 'victory' || gameStatus === 'defeat') && !isVR && (
         <Suspense fallback={<ChunkFallback />}>
           <GameOverScreen />
         </Suspense>

@@ -38,7 +38,12 @@ export function ProgressGauge({
   const percentage = Math.round(clampedValue);
 
   return (
-    <View style={styles.container}>
+    <View
+      style={styles.container}
+      accessibilityRole="progressbar"
+      accessibilityLabel={label}
+      accessibilityValue={{min: 0, max: 100, now: percentage}}
+    >
       <View style={styles.labelRow}>
         <Text style={styles.label}>{label}</Text>
         <Text style={[styles.percentage, {color: fillColor}]}>{percentage}%</Text>
