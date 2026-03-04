@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.6.0](https://github.com/arcade-cabinet/will-it-blow/compare/v1.5.0...v1.6.0) (2026-03-04)
+
+
+### Features
+
+* dual-zone touch controls (move left / look right) ([#33](https://github.com/arcade-cabinet/will-it-blow/issues/33)) ([ce22ada](https://github.com/arcade-cabinet/will-it-blow/commit/ce22ada2e5f657711e5581e4a4e38716a3831019))
+* swipe/tap FPS controls + loading flash fix ([#32](https://github.com/arcade-cabinet/will-it-blow/issues/32)) ([00fc449](https://github.com/arcade-cabinet/will-it-blow/commit/00fc4497e38682676be9110ca2719ee616419da2))
+
+
+### Bug Fixes
+
+* visual polish + GLB artifact mesh culling ([#30](https://github.com/arcade-cabinet/will-it-blow/issues/30)) ([faeb864](https://github.com/arcade-cabinet/will-it-blow/commit/faeb86492cfefadfe0f75e87cbe49eb292db06da))
+
 ## [1.5.0](https://github.com/arcade-cabinet/will-it-blow/compare/v1.4.0...v1.5.0) (2026-03-03)
 
 
