@@ -285,8 +285,12 @@ export function LoadingScreen() {
 
     async function preload() {
       try {
-        const glbUrls = FURNITURE_RULES.map(r => getAssetUrl('models', r.glb));
-        const textureUrls = TEXTURE_FILES.map(f => getAssetUrl('textures', f));
+        // On web, drei's useGLTF.preload / useTexture.preload (module-level) already
+        // parse GLBs and textures. Only fetch audio here; native still fetches everything.
+        const glbUrls =
+          Platform.OS === 'web' ? [] : FURNITURE_RULES.map(r => getAssetUrl('models', r.glb));
+        const textureUrls =
+          Platform.OS === 'web' ? [] : TEXTURE_FILES.map(f => getAssetUrl('textures', f));
         const audioUrls = AUDIO_FILES.map(f => getAssetUrl('audio', f));
         const allAssets = [...glbUrls, ...textureUrls, ...audioUrls];
 

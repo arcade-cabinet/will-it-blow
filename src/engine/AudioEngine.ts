@@ -207,7 +207,7 @@ class AudioEngine {
 
     this.stopChallengeTrack();
 
-    // Fade ambient out
+    // Hard-cut ambient out (instant mute, not a crossfade)
     if (this.ambientTrack) {
       this.ambientTrack.volume = 0;
     }

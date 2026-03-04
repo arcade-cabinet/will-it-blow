@@ -87,14 +87,27 @@ export function SceneIntrospector() {
 
     /** Debug: dump all meshes with world bounding boxes */
     gov.debugMeshes = () => {
-      const results: any[] = [];
+      interface DebugMeshInfo {
+        name: string;
+        parent: string;
+        wx: number;
+        wy: number;
+        wz: number;
+        visible: boolean;
+        worldBBMin?: [number, number, number];
+        worldBBMax?: [number, number, number];
+        worldBBSize?: [number, number, number];
+        color?: string;
+        side?: number;
+      }
+      const results: DebugMeshInfo[] = [];
       scene.traverse(obj => {
         if (obj.type !== 'Mesh') return;
         const mesh = obj as THREE.Mesh;
         const wp = new THREE.Vector3();
         mesh.getWorldPosition(wp);
 
-        const info: any = {
+        const info: DebugMeshInfo = {
           name: mesh.name || '(unnamed)',
           parent: mesh.parent?.name || '(root)',
           wx: +wp.x.toFixed(2),

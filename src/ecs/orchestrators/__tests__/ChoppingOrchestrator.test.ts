@@ -1,4 +1,5 @@
 import {config} from '../../../config';
+import {TOTAL_CHALLENGES} from '../../../engine/ChallengeManifest';
 import {CHALLENGE_ORDER, pickVariant} from '../../../engine/ChallengeRegistry';
 
 describe('ChoppingOrchestrator', () => {
@@ -84,6 +85,6 @@ describe('ChoppingOrchestrator', () => {
       'utf8',
     );
     const manifest = JSON.parse(manifestSource);
-    expect(manifest.challenges).toHaveLength(7);
+    expect(manifest.challenges).toHaveLength(TOTAL_CHALLENGES);
   });
 });

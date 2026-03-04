@@ -56,10 +56,12 @@ function resolveGlbUrl(glb: string): string {
 function FurniturePiece({
   rule,
   target,
+  room,
   grinderCranking,
 }: {
   rule: FurnitureRule;
   target: Target;
+  room: RoomDimensions;
   grinderCranking: boolean;
 }) {
   const url = resolveGlbUrl(rule.glb);
@@ -89,9 +91,9 @@ function FurniturePiece({
 
     // Room boundary limits — 2m margin to avoid clipping legitimate wall-flush furniture
     const CULL_MARGIN = 2.0;
-    const limX = DEFAULT_ROOM.w / 2 + CULL_MARGIN;
-    const limZ = DEFAULT_ROOM.d / 2 + CULL_MARGIN;
-    const limY = DEFAULT_ROOM.h + CULL_MARGIN;
+    const limX = room.w / 2 + CULL_MARGIN;
+    const limZ = room.d / 2 + CULL_MARGIN;
+    const limY = room.h + CULL_MARGIN;
 
     traverseMeshes(scene, mesh => {
       const mat = mesh.material;
@@ -107,20 +109,18 @@ function FurniturePiece({
         const bb = mesh.geometry.boundingBox;
         if (bb) {
           const worldBB = bb.clone().applyMatrix4(placementMat.clone().multiply(mesh.matrixWorld));
-          if (
+          const outOfBounds =
             worldBB.max.x > limX ||
             worldBB.min.x < -limX ||
             worldBB.max.z > limZ ||
             worldBB.min.z < -limZ ||
             worldBB.max.y > limY ||
-            worldBB.min.y < -CULL_MARGIN
-          ) {
-            mesh.visible = false;
-          }
+            worldBB.min.y < -CULL_MARGIN;
+          mesh.visible = !outOfBounds;
         }
       }
     });
-  }, [scene, target.position, target.rotationY]);
+  }, [scene, target.position, target.rotationY, room]);
 
   // Fridge door animation — driven by store fridgeDoorProgress (0-1)
   const isFridge = rule.glb === 'fridge.glb';
@@ -295,6 +295,7 @@ export function FurnitureLoader({
             key={rule.target}
             rule={rule}
             target={target}
+            room={room}
             grinderCranking={grinderCranking}
           />
         );

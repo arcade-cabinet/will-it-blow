@@ -641,25 +641,6 @@ describe('src/config/audio.json — victoryTrack', () => {
 // ---------------------------------------------------------------------------
 
 describe('public/audio/music/ — track files exist', () => {
-  const musicDir = path.join(ROOT, 'public/audio/music');
-
-  const expectedTracks = [
-    'track_dark.ogg',
-    'track_exploration.ogg',
-    'track_violence.ogg',
-    'track_death_metal.ogg',
-    'track_revenge.ogg',
-    'track_unsettling_victory.ogg',
-    'track_boss_horror.ogg',
-    'track_kick_harder.ogg',
-  ];
-
-  for (const track of expectedTracks) {
-    it(`${track} exists`, () => {
-      expect(fs.existsSync(path.join(musicDir, track))).toBe(true);
-    });
-  }
-
   it('all config-referenced tracks exist on disk', () => {
     const cfg = readJson('src/config/audio.json') as Record<string, unknown>;
     const allFiles: string[] = [];

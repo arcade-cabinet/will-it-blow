@@ -55,7 +55,7 @@ Each challenge = overlay (`challenges/`) + 3D station (`kitchen/`) + dialogue (`
 menu -> loading -> ingredients -> grinding -> stuffing -> cooking -> tasting -> results
 ```
 
-Managed by `appPhase` (menu/loading/playing) and `currentChallenge` (0-4) in the store.
+Managed by `appPhase` (menu/loading/playing) and `currentChallenge` (0-6) in the store.
 
 ### Code Splitting
 

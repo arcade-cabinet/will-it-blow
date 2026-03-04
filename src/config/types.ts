@@ -233,7 +233,8 @@ export interface BlowoutMaterialDef {
  * Extends `MachineConfig` with blowout-specific sub-assemblies and
  * simulation parameters that live alongside the housing/extras geometry.
  */
-export interface BlowoutMachineConfig extends MachineConfig {
+export interface BlowoutMachineConfig extends Omit<MachineConfig, 'template'> {
+  template: 'bare';
   /** Pressure tube body dimensions. */
   tube: {
     innerRadius: number;
@@ -290,7 +291,7 @@ export interface BlowoutMachineConfig extends MachineConfig {
     completionDelayMs: number;
     animExpandToValue: number;
     animExpandDurationMs: number;
-    animConstractToValue: number;
+    animContractToValue: number;
     animContractDurationMs: number;
   };
 }

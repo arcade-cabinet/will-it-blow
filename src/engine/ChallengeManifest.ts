@@ -45,17 +45,25 @@ export const TOTAL_CHALLENGES = MANIFEST.length;
  * Challenge index after which the bowl moves to "grinder-output".
  * Derived from manifest: the challenge that has a "set-bowl-position" milestone with value "grinder-output".
  */
-export const CHALLENGE_INDEX_BOWL_GRINDER_OUTPUT: number = MANIFEST.findIndex(c =>
-  c.milestones.some(m => m.action === 'set-bowl-position' && m.value === 'grinder-output'),
-);
+export const CHALLENGE_INDEX_BOWL_GRINDER_OUTPUT: number = (() => {
+  const idx = MANIFEST.findIndex(c =>
+    c.milestones.some(m => m.action === 'set-bowl-position' && m.value === 'grinder-output'),
+  );
+  if (idx === -1) throw new Error('ChallengeManifest: no "grinder-output" bowl milestone found');
+  return idx;
+})();
 
 /**
  * Challenge index after which the bowl is "done" (sausage placed).
  * Derived from manifest: the challenge that has a "set-bowl-position" milestone with value "done".
  */
-export const CHALLENGE_INDEX_BOWL_DONE: number = MANIFEST.findIndex(c =>
-  c.milestones.some(m => m.action === 'set-bowl-position' && m.value === 'done'),
-);
+export const CHALLENGE_INDEX_BOWL_DONE: number = (() => {
+  const idx = MANIFEST.findIndex(c =>
+    c.milestones.some(m => m.action === 'set-bowl-position' && m.value === 'done'),
+  );
+  if (idx === -1) throw new Error('ChallengeManifest: no "done" bowl milestone found');
+  return idx;
+})();
 
 /** Get the challenge entry at a given index, or undefined if out of range. */
 export function getChallengeAt(index: number): ChallengeEntry | undefined {
@@ -67,9 +75,17 @@ export function getChallengeById(id: string): ChallengeEntry | undefined {
   return MANIFEST.find(c => c.id === id);
 }
 
-/** Get the index of a challenge by ID, or -1 if not found. */
+/**
+ * Get the index of a challenge by ID.
+ * Throws at module load time if the ID is missing — fail-fast prevents silent
+ * -1 propagation into challenge routing logic.
+ */
 export function getChallengeIndex(id: string): number {
-  return MANIFEST.findIndex(c => c.id === id);
+  const idx = MANIFEST.findIndex(c => c.id === id);
+  if (idx === -1) {
+    throw new Error(`ChallengeManifest: unknown challenge ID "${id}"`);
+  }
+  return idx;
 }
 
 /** Get the quip for a challenge at the given index. */

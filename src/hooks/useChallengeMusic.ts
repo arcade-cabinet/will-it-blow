@@ -2,7 +2,7 @@
  * @module useChallengeMusic
  * Manages music track lifecycle: ambient drone during exploration,
  * per-challenge tracks during active challenges, and verdict tracks
- * on game end. Crossfade transitions are handled by AudioEngine.
+ * on game end. Track transitions are hard-cuts handled by AudioEngine.
  */
 
 import {useEffect, useRef} from 'react';
@@ -52,6 +52,11 @@ export function useChallengeMusic(): void {
     }
 
     prevChallengeRef.current = currentChallenge;
+
+    // Stop challenge music if hook unmounts mid-track (prevents leaks)
+    return () => {
+      audioEngine.stopChallengeTrack();
+    };
   }, [gameStatus, currentChallenge, challengeTriggered]);
 
   // Play verdict track on game end

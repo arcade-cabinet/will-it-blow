@@ -96,10 +96,10 @@ export const STATION_TARGET_NAMES = config.scene.challengeSequence.stations.map(
 // ---------------------------------------------------------------------------
 
 /**
- * Returns the target for the given challenge index (0-5), or undefined if invalid.
+ * Returns the target for the given challenge index (0-6), or undefined if invalid.
  *
  * @param targets - The full targets map from resolveLayout()
- * @param challengeIndex - Challenge number (0=fridge, 1=cutting-board, 2=grinder, 3=stuffer, 4=stove, 5=dining-table, 6=crt-tv)
+ * @param challengeIndex - Challenge number (0=ingredients, 1=chopping, 2=grinding, 3=stuffing, 4=cooking, 5=blowout, 6=tasting)
  * @returns The station Target, or `undefined` if the index is out of range
  */
 export function getStationTarget(
