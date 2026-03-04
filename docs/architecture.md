@@ -3,7 +3,7 @@ title: Architecture Overview
 domain: core
 status: current
 engine: r3f
-last-verified: 2026-03-01
+last-verified: 2026-03-04
 depends-on: [state-management, 3d-rendering, game-design]
 agent-context: scene-architect, challenge-dev
 summary: System design, directory structure, data flow for R3F/WebGPU game
@@ -13,7 +13,7 @@ summary: System design, directory structure, data flow for R3F/WebGPU game
 
 ## System Design
 
-Will It Blow? is a first-person horror sausage-making mini-game. The player is trapped in a grimy basement kitchen and must complete 5 sequential challenges under the watchful eye of Mr. Sausage, a menacing sentient sausage displayed on a CRT television.
+Will It Blow? is a first-person horror sausage-making mini-game. The player is trapped in a grimy basement kitchen and must complete 7 sequential challenges under the watchful eye of Mr. Sausage, a menacing sentient sausage displayed on a CRT television.
 
 ### Two-Layer Rendering Stack
 
@@ -86,8 +86,21 @@ will-it-blow/
 │   │   ├── DialogueEngine.ts        Dialogue tree walker
 │   │   ├── AudioEngine.ts           Native audio stub (no-op)
 │   │   └── AudioEngine.web.ts       Tone.js synthesis engine
+│   ├── ecs/
+│   │   ├── types.ts                  Entity type — all components as optional fields
+│   │   ├── world.ts                  World + queries (vibrating, rotating, orbiting, cookable, etc.)
+│   │   ├── systems/                  7 behavior systems (pure update fn + React component)
+│   │   ├── renderers/                MeshRenderer, LightRenderer, LatheRenderer + ECSScene
+│   │   └── orchestrators/            GrinderOrchestrator, StufferOrchestrator, CookingOrchestrator, BlowoutOrchestrator
+│   ├── input/
+│   │   ├── InputManager.ts           Universal input with JSON bindings (keyboard/mouse/gamepad/touch)
+│   │   └── InputActions.ts           Engine-agnostic input abstraction
+│   ├── config/
+│   │   ├── difficulty.json           5 tiers (Rare→Well Done): hints/strikes/timePressure/enemyChance
+│   │   ├── enemies.json              5 enemy types, 5 weapons, 4 spawn cabinets
+│   │   └── blowout.json              Blowout challenge config
 │   ├── components/
-│   │   ├── GameWorld.tsx             R3F Canvas, CameraWalker, station orchestrator
+│   │   ├── GameWorld.tsx             R3F Canvas, FPSController, station orchestrator
 │   │   ├── characters/
 │   │   │   ├── MrSausage3D.tsx       Procedural 3D character (meshBasicMaterial, self-lit)
 │   │   │   └── __tests__/MrSausage3D.test.tsx
@@ -106,21 +119,29 @@ will-it-blow/
 │   │   │   ├── Ingredient3D.tsx      Shape-based ingredient meshes (8 types)
 │   │   │   └── __tests__/Ingredient3D.test.tsx
 │   │   ├── challenges/
-│   │   │   ├── IngredientChallenge.tsx Fridge: pick matching ingredients
-│   │   │   ├── GrindingChallenge.tsx   Grinder: speed control drag mechanic
-│   │   │   ├── StuffingChallenge.tsx   Stuffer: hold-to-fill pressure mgmt
-│   │   │   ├── CookingChallenge.tsx    Stove: temperature control
-│   │   │   └── TastingChallenge.tsx    Verdict: score reveal + rank
+│   │   │   ├── IngredientChallenge.tsx Fridge: pick matching ingredients (bridge pattern)
+│   │   │   ├── ChoppingChallenge.tsx   Chopping: knife-work mechanic
+│   │   │   ├── GrindingHUD.tsx         Grinder: thin read-only HUD (ECS orchestrator drives logic)
+│   │   │   ├── StuffingHUD.tsx         Stuffer: thin read-only HUD (ECS orchestrator drives logic)
+│   │   │   ├── CookingHUD.tsx          Stove: thin read-only HUD (ECS orchestrator drives logic)
+│   │   │   ├── BlowoutHUD.tsx          Blowout: tie gesture + scoring HUD
+│   │   │   └── TastingChallenge.tsx    Verdict: score reveal + rank (bridge pattern)
 │   │   ├── ui/
-│   │   │   ├── TitleScreen.tsx         Butcher shop menu
+│   │   │   ├── TitleScreen.tsx         Butcher shop menu + continue button
 │   │   │   ├── LoadingScreen.tsx       Asset preload + progress
-│   │   │   ├── ChallengeHeader.tsx     "CHALLENGE N/5" header
+│   │   │   ├── DifficultySelector.tsx  "Choose Your Doneness" screen (5 tiers)
+│   │   │   ├── ChallengeHeader.tsx     "CHALLENGE N/7" header
 │   │   │   ├── StrikeCounter.tsx       3 lives display
 │   │   │   ├── HintButton.tsx          Hint trigger (stub)
 │   │   │   ├── ProgressGauge.tsx       Animated progress bar
 │   │   │   ├── DialogueOverlay.tsx     Typewriter text + choices
+│   │   │   ├── CombatHUD.tsx           Enemy encounter HUD
+│   │   │   ├── HiddenObjectOverlay.tsx Cabinet drawer + assembly parts
+│   │   │   ├── RoundTransition.tsx     Multi-round transition UI
 │   │   │   └── GameOverScreen.tsx      Victory/defeat + rank badge
 │   │   └── __tests__/GameWorld.test.tsx
+│   ├── e2e/
+│   │   └── *.spec.ts                 Playwright E2E tests (headed, system Chrome)
 │   └── data/
 │       ├── challenges/
 │       │   └── variants.ts            6 ingredient + 3 grinding + 3 stuffing + 3 cooking variants
@@ -153,6 +174,8 @@ will-it-blow/
 
 ## Data Flow
 
+### Bridge Pattern (Ingredients, Tasting)
+
 ```text
 User Input (touch/click)
   → React Native event handler (challenge overlay)
@@ -162,8 +185,22 @@ User Input (touch/click)
         → Challenge overlay reads store → updates UI (progress bar, strikes)
         → On completeChallenge(score):
           → Store advances currentChallenge
-          → CameraWalker animates camera to next station
+          → FPSController animates camera to next station
           → Next challenge overlay mounts
 ```
 
-The Zustand store is the single source of truth. 3D stations and UI overlays both subscribe to it independently. There is no direct communication between the 3D layer and the UI layer — they coordinate through the store.
+### ECS Orchestrator Pattern (Grinding, Stuffing, Cooking, Blowout)
+
+```text
+ECS Orchestrator (useFrame loop)
+  → Spawns/despawns entities via miniplex world
+  → Runs game logic (timers, scoring, zone detection)
+  → Writes bridge fields to Zustand (challengeTimeRemaining, challengeSpeedZone, challengePhase)
+    → Thin HUD component reads bridge fields from store (ZERO input handling)
+    → HUD renders read-only progress bars, timers, zone indicators
+  → On completeChallenge(score):
+    → Store advances currentChallenge
+    → Orchestrator unmounts, entities despawn automatically
+```
+
+The Zustand store is the single source of truth. 3D stations and UI overlays both subscribe to it independently. There is no direct communication between the 3D layer and the UI layer — they coordinate through the store. ECS orchestrators own game logic for their challenges and write bridge fields to the store for thin HUDs to read.

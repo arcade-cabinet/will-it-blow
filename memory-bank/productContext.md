@@ -28,6 +28,7 @@ An arcade cabinet game exploring the horror-comedy crossover in the cooking genr
 |--------|----------|----------------|
 | WASD/Arrow keys + pointer-lock mouse-look | Desktop web | FPSController.tsx |
 | Touch joystick | Mobile | MobileJoystick.tsx |
+| Dual-zone touch (swipe) | Mobile | SwipeFPSControls.tsx — left half movement, right half look/interact |
 | WebXR | Future (web) | @react-three/xr integrated but not fully utilized |
 
 ## Mr. Sausage Character
@@ -53,7 +54,7 @@ The CRT shader (chromatic aberration, scanlines, flicker) reinforces the horror 
 ## What Players See
 
 ```
-MENU (butcher shop sign) → LOADING (sausage progress bar) → 5 CHALLENGES → RESULTS (rank badge) → MENU
+MENU (butcher shop sign) → LOADING (sausage progress bar) → 7 CHALLENGES → RESULTS (rank badge) → MENU
 ```
 
 Camera smoothly walks between stations (~2.5 seconds, ease-in-out) between challenges.

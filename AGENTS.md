@@ -4,7 +4,7 @@ Entry point for all AI agents working in this codebase.
 
 ## Project Identity
 
-"Will It Blow?" is a first-person horror sausage-making mini-game (SAW meets cooking show). Built with React Native 0.83 + React Three Fiber 9.5 (Three.js 0.183 WebGPU) + Expo SDK 55. Cross-platform: web, iOS, Android. 5 sequential challenges. Single Zustand store. Live at https://arcade-cabinet.github.io/will-it-blow/.
+"Will It Blow?" is a first-person horror sausage-making mini-game (SAW meets cooking show). Built with React Native 0.83 + React Three Fiber 9.5 (Three.js 0.183 WebGPU) + Expo SDK 55. Cross-platform: web, iOS, Android. 7 sequential challenges (ingredients, chopping, grinding, stuffing, cooking, blowout, tasting). Single Zustand store + miniplex ECS. Live at https://arcade-cabinet.github.io/will-it-blow/.
 
 ## Information Hierarchy
 
@@ -38,9 +38,15 @@ Entry point for all AI agents working in this codebase.
 
 Zustand store (`src/store/gameStore.ts`) — single source of truth. No React Context for game state.
 
-### Challenge Pattern
+### Challenge Patterns (Two Types)
 
-Each challenge = overlay (`challenges/`) + 3D station (`kitchen/`) + dialogue (`data/dialogue/`)
+**ECS Orchestrator** (chopping, grinding, stuffing, cooking, blowout):
+- Orchestrator component OWNS game logic, spawns/despawns ECS entities
+- Thin HUD is read-only Zustand subscriber — zero input handling
+- Store bridge fields: `challengeTimeRemaining`, `challengeSpeedZone`, `challengePhase`
+
+**Bridge Pattern** (ingredients, tasting):
+- 2D overlay owns scoring logic, 3D station handles visuals
 - Overlay writes to store (progress, pressure, strikes)
 - Station reads from store via props (passed through GameWorld)
 - No direct communication between overlay and station
@@ -52,7 +58,7 @@ Each challenge = overlay (`challenges/`) + 3D station (`kitchen/`) + dialogue (`
 ### Game Flow
 
 ```text
-menu -> loading -> ingredients -> grinding -> stuffing -> cooking -> tasting -> results
+menu -> difficulty -> loading -> ingredients -> chopping -> grinding -> stuffing -> cooking -> blowout -> tasting -> results
 ```
 
 Managed by `appPhase` (menu/loading/playing) and `currentChallenge` (0-6) in the store.
@@ -73,7 +79,12 @@ Managed by `appPhase` (menu/loading/playing) and `currentChallenge` (0-6) in the
 | `src/engine/FurnitureLayout.ts` | Target-based placement — resolveLayout(), FURNITURE_RULES |
 | `src/components/GameWorld.tsx` | R3F Canvas, FPS controller, station triggers, scene orchestrator |
 | `src/components/kitchen/*.tsx` | 3D station components (Fridge, Grinder, Stuffer, Stove, CRT TV) |
-| `src/components/challenges/*.tsx` | 5 challenge overlays (game mechanics + UI) |
+| `src/ecs/` | Entity-component-system: types, world, systems, renderers, orchestrators |
+| `src/components/challenges/*.tsx` | 7 challenge overlays/HUDs (bridge overlays + thin ECS HUDs) |
+| `src/input/InputManager.ts` | Universal input with JSON bindings (keyboard/mouse/gamepad/touch) |
+| `src/components/controls/SwipeFPSControls.tsx` | Dual-zone touch: left=movement, right=look/interact |
+| `src/config/` | JSON configs: difficulty, enemies, blowout |
+| `e2e/` | Playwright E2E tests (5 mobile device profiles) |
 | `src/components/characters/MrSausage3D.tsx` | Procedural 3D character with reaction animations |
 | `src/components/effects/CrtShader.ts` | TSL NodeMaterial (chromatic aberration + scanlines) |
 | `src/components/ui/*.tsx` | Menu, loading, dialogue, progress, strikes, game over |

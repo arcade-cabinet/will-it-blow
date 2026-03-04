@@ -3,7 +3,7 @@ title: Documentation Index
 domain: reference
 status: current
 engine: r3f
-last-verified: 2026-03-01
+last-verified: 2026-03-04
 depends-on: []
 agent-context: doc-keeper
 summary: Master index of all docs — frontmatter schema, domain map, agent routing
@@ -63,7 +63,7 @@ head -10 docs/plans/*.md
 | `testing.md` | Testing Strategy | current | core | Jest testing strategy, R3F test-renderer, coverage |
 | `deployment.md` | Deployment & CI/CD | current | core | CI/CD pipeline, GitHub Pages, build commands |
 | `development-guide.md` | Development Guide | current | core | Conventions, patterns, pitfalls, how to add features |
-| `status.md` | Project Status & Remaining Work | stale | plan | Current completion status -- needs update for physics/Rapier work |
+| `status.md` | Project Status & Remaining Work | current | plan | Current completion status reflecting Phase 2 features |
 
 ### Plan Docs
 
@@ -84,6 +84,12 @@ head -10 docs/plans/*.md
 | `plans/2026-03-01-free-roam-navigation-design.md` | Free-Roam Kitchen Navigation Design | completed | plan | FPS pointer-lock + WASD nav, mobile joystick, proximity triggers, fridge GLB fix |
 | `plans/2026-03-01-kitchen-diorama-design.md` | Kitchen Diorama Redesign -- Design | completed | plan | Target-based placement, discrete GLB segments, PBR textures, three-layer architecture |
 | `plans/2026-03-01-kitchen-diorama-plan.md` | Kitchen Diorama Redesign -- Implementation | completed | plan | FurnitureLayout targets, FurnitureLoader GLB, PBR room textures, grime decals, wiring |
+| `plans/2026-03-01-phase2-will-it-blow-design.md` | Phase 2 Design -- Will It Blow + Difficulty + Multi-Round | current | plan | Phase 2 game expansion -- blowout mechanic, 5-tier difficulty, multi-round loop, hidden objects |
+| `plans/2026-03-01-phase2-will-it-blow-plan.md` | Phase 2 Implementation Plan | current | plan | Task-by-task execution plan for Phase 2 -- 21 tasks across 5 waves |
+| `plans/2026-03-01-room-architecture.md` | Room Architecture -- The Sausage Factory Kitchen | stale | reference | Definitive spatial reference -- room layout, GLB inventory, procedural geometry, station walkthroughs |
+| `plans/2026-03-01-sausage-factory-kitchen-design.md` | Sausage Factory Kitchen -- Game Completion Design | active | plan | Complete game system design -- title screen, loading, procedural factory mechanics, horror kitchen |
+| `plans/2026-03-01-sausage-factory-kitchen-plan.md` | Sausage Factory Kitchen -- Implementation Plan | active | plan | Five-phase implementation -- foundation, asset swap, room expansion, factory system, polish |
+| `plans/2026-03-02-comprehensive-phase1-phase2-plan.md` | Comprehensive Phase 1 + Phase 2 Plan | current | plan | Complete remaining Phase 1 gaps, then full Phase 2 implementation |
 
 ---
 
@@ -113,4 +119,4 @@ Which agent should read which docs before acting:
 | `asset-pipeline` | `deployment.md` | CI/CD, build config, GitHub Pages, asset URLs |
 | `doc-keeper` | All docs | Documentation maintenance, frontmatter accuracy, status tracking |
 
-**Note:** Only `scene-architect` currently exists as a file in `.claude/agents/`. The other agent names are reserved for future use but appear in frontmatter `agent-context` fields for routing purposes.
+**Note:** All 5 agents exist as files in `.claude/agents/`: scene-architect, challenge-dev, store-warden, asset-pipeline, doc-keeper.

@@ -10,22 +10,24 @@ You're trapped in a filthy basement kitchen. **Mr. Sausage** — a sentient, men
 
 ## Core Loop
 
-5 sequential challenges, each at a different kitchen station:
+7 sequential challenges, each at a different kitchen station:
 
 1. **Ingredients** (fridge) — Pick 3 ingredients matching Mr. Sausage's criteria from a pool of 10
-2. **Grinding** (grinder) — Control grind speed in the "good zone" via drag/fling
-3. **Stuffing** (stuffer) — Hold to fill casing, manage pressure to avoid bursts
-4. **Cooking** (stove) — Control heat to keep temperature in target range
-5. **Tasting** (CRT TV) — Mr. Sausage delivers his verdict with dramatic score reveals
+2. **Chopping** (cutting board) — Chop ingredients with timing-based knife gestures
+3. **Grinding** (grinder) — Control grind speed in the "good zone" via drag/fling
+4. **Stuffing** (stuffer) — Hold to fill casing, manage pressure to avoid bursts
+5. **Cooking** (stove) — Control heat to keep temperature in target range
+6. **Blowout** (place setting) — Tie off casing and manage blowout risk
+7. **Tasting** (CRT TV) — Mr. Sausage delivers his verdict with dramatic score reveals
 
 ## Victory Condition
 
-Average of all 5 challenge scores determines rank:
+Average of all 7 challenge scores determines rank:
 
 | Rank | Score | Title | Outcome |
 |------|-------|-------|---------|
-| **S** | >= 90 | THE SAUSAGE KING | The ONLY true victory — "Perfection. You have earned my respect." |
-| **A** | >= 70 | Acceptable | Defeat (close but not enough) — "Not bad. You may live... for now." |
+| **S** | >= 92 | THE SAUSAGE KING | The ONLY true victory — "Perfection. You have earned my respect." |
+| **A** | >= 75 | Almost Worthy | Defeat (close but not enough) — "Not bad. You may live... for now." |
 | **B** | >= 50 | Mediocre | Defeat — "I've had worse. But not by much." |
 | **F** | < 50 | Unacceptable | Defeat — "You call this a sausage? DISGRACEFUL." |
 

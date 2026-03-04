@@ -22,14 +22,16 @@ The game has a two-level state machine:
    - `'loading'` -- Assets loading, chunk prefetching
    - `'playing'` -- Active gameplay
 
-2. **`currentChallenge`** (0-4) -- Which sausage-making stage the player is on:
-   - `0` -- Ingredients (fridge picking)
-   - `1` -- Grinding (crank mechanic)
-   - `2` -- Stuffing (pressure gauge)
-   - `3` -- Cooking (temperature control)
-   - `4` -- Tasting (verdict)
+2. **`currentChallenge`** (0-6) -- Which sausage-making stage the player is on:
+   - `0` -- Ingredients (fridge picking, bridge pattern)
+   - `1` -- Chopping (ECS orchestrator)
+   - `2` -- Grinding (crank mechanic, ECS orchestrator)
+   - `3` -- Stuffing (pressure gauge, ECS orchestrator)
+   - `4` -- Cooking (temperature control, ECS orchestrator)
+   - `5` -- Blowout (casing tie + plating, ECS orchestrator)
+   - `6` -- Tasting (verdict, bridge pattern)
 
-The flow is strictly sequential: `menu -> loading -> playing(challenge 0 -> 1 -> 2 -> 3 -> 4) -> results`.
+The flow is strictly sequential: `menu -> loading -> playing(challenge 0 -> 1 -> 2 -> 3 -> 4 -> 5 -> 6) -> results`.
 
 ### Store Responsibilities
 
@@ -39,7 +41,15 @@ The flow is strictly sequential: `menu -> loading -> playing(challenge 0 -> 1 ->
 - **Strike system**: 3 strikes = instant failure
 - **Player state**: Position, camera, navigation waypoints
 - **UI state**: Dialogue visibility, menu state, loading progress
-- **Score aggregation**: Final score computed from all 5 challenge scores
+- **Score aggregation**: Final score computed from all 7 challenge scores
+- **ECS bridge fields**: `challengeTimeRemaining`, `challengeSpeedZone`, `challengePhase` (written by orchestrators, read by thin HUDs)
+- **Multi-round state**: `currentRound`, `totalRounds`, `usedIngredientCombos`
+- **Hidden objects**: `openCabinets`, `openDrawers`, `assembledParts`
+- **Cleanup state**: `stationCleanliness`
+- **Blowout state**: `casingTied`, `blowoutScore`
+- **Player decisions**: `PlayerDecisions` nested interface tracking `twistPoints`, `flairPoints`, etc.
+- **XR state**: `xrEnabled`, `arEnabled`, `arPlaced`, `snapTurnAngle`, `comfortVignette`, `xrSeatedMode`, `vrLocomotionMode`, `spatialAudioEnabled`
+- **Teleport bridge**: `pendingTeleport` (one-shot field consumed by FPSController, like `pendingFridgeClick`)
 
 ### Key Principles
 
@@ -115,7 +125,7 @@ clearFridgeClick: () => set({ pendingFridgeClick: null })
 ```
 
 ### Guard Against Invalid Transitions
-- Cannot advance past challenge 4
+- Cannot advance past challenge 6
 - Cannot go backwards in challenges
 - Cannot play without loading first
 - 3 strikes triggers game over regardless of challenge state

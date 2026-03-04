@@ -3,7 +3,7 @@ title: Game Design
 domain: core
 status: current
 engine: r3f
-last-verified: 2026-03-01
+last-verified: 2026-03-04
 depends-on: [state-management, 3d-rendering, audio]
 agent-context: challenge-dev, scene-architect
 summary: Gameplay mechanics, scoring, challenges, Mr. Sausage
@@ -22,28 +22,34 @@ You're trapped in a filthy basement kitchen. Mr. Sausage — a sentient, menacin
 ```text
 MENU (butcher shop sign aesthetic)
   ↓ "NEW GAME"
+DIFFICULTY SELECT ("Choose Your Doneness" — 5 tiers: Rare → Well Done)
+  ↓ tier selected
 LOADING (kitchen.glb preload, sausage progress bar)
   ↓ assets ready
-CHALLENGE 1: INGREDIENT SELECTION (fridge station)
+CHALLENGE 0: INGREDIENT SELECTION (fridge station) — bridge pattern
+  ↓ camera walks to chopping block
+CHALLENGE 1: CHOPPING (chopping station)
   ↓ camera walks to grinder
-CHALLENGE 2: GRINDING (grinder station)
+CHALLENGE 2: GRINDING (grinder station) — ECS orchestrator
   ↓ camera walks to stuffer
-CHALLENGE 3: STUFFING (stuffer station)
+CHALLENGE 3: STUFFING (stuffer station) — ECS orchestrator
   ↓ camera walks to stove
-CHALLENGE 4: COOKING (stove station)
+CHALLENGE 4: COOKING (stove station) — ECS orchestrator
+  ↓ camera walks to table
+CHALLENGE 5: BLOWOUT (table station) — ECS orchestrator
   ↓ camera walks to center
-CHALLENGE 5: TASTING (CRT TV verdict)
+CHALLENGE 6: TASTING (CRT TV verdict) — bridge pattern
   ↓
 RESULTS SCREEN (rank badge: S / A / B / F)
   ↓ "PLAY AGAIN" or "MENU"
 MENU
 ```
 
-Each challenge is played at a different station in the kitchen. The camera smoothly walks between stations (~2.5 seconds, ease-in-out quadratic).
+Each challenge is played at a different station in the kitchen. The camera smoothly walks between stations (~2.5 seconds, ease-in-out quadratic). Multi-round gameplay loops back through challenges with fresh ingredient combinations (C(12,3) combo tracking).
 
 ## Challenge Mechanics
 
-### Challenge 1: Ingredient Selection
+### Challenge 0: Ingredient Selection
 
 **Station:** Fridge (back-left corner)
 
@@ -52,6 +58,16 @@ Mr. Sausage makes a demand: "Only the finest ingredients..." with a tag-based cr
 - Correct pick: ingredient slides forward, reduced opacity
 - Wrong pick: strike (red X)
 - Score: (correct picks / required picks) * 100, minus strike penalty
+
+### Challenge 1: Chopping
+
+**Station:** Chopping block (center counter)
+
+The player chops selected ingredients with knife-work gestures. Timing and precision determine chunk quality. Ingredient decomposition produces chunkColor, chunkScale, and fatRatio per ingredient that flow through the rest of the pipeline.
+
+- Gesture-based cutting mechanic
+- Score based on precision and consistency
+- Results feed into BlendCalculator for downstream challenges
 
 ### Challenge 2: Grinding
 
@@ -63,6 +79,8 @@ The player controls grind speed by dragging/flinging. Too slow = bad texture. To
 - Crank animation follows challenge progress
 - EMA (exponential moving average) smoothing on angular velocity
 - Score based on time spent in good zone
+
+**Note:** Grinding, Stuffing, and Cooking use the ECS orchestrator pattern -- the orchestrator owns game logic, and a thin HUD (GrindingHUD, StuffingHUD, CookingHUD) reads bridge fields from the store with zero input handling.
 
 ### Challenge 3: Stuffing
 
@@ -85,7 +103,20 @@ Control heat level to keep temperature in a target range. Heat overshoots cause 
 - Pan and sausage mesh on stove
 - Score based on time in target zone
 
-### Challenge 5: Tasting (Verdict)
+### Challenge 5: Blowout
+
+**Station:** Table (center)
+
+The titular "Will It Blow?" moment. The player must tie off the sausage casing with a TieGesture before internal pressure causes a blowout. Managed by BlowoutOrchestrator (ECS pattern).
+
+- TieGesture: swipe-to-tie mechanic under time pressure
+- CerealBox: CanvasTexture splat effect on blowout failure
+- PlaceSetting: visual staging for the sausage presentation
+- BlowoutHUD: pressure gauge, tie progress, scoring display
+- Score based on tie quality and blowout avoidance
+- Config driven by `blowout.json`
+
+### Challenge 6: Tasting (Verdict)
 
 **Station:** Center table (facing CRT TV)
 
@@ -102,14 +133,16 @@ Each challenge produces a score from 0 to 100 based on performance during that c
 
 ### Final Verdict
 
-Average of all 5 challenge scores determines rank:
+Average of all 7 challenge scores, adjusted by demandBonus, determines rank:
 
 | Rank | Avg Score | Title | Mr. Sausage Says |
 |------|-----------|-------|-------------------|
-| **S** | ≥ 90 | THE SAUSAGE KING | "Perfection. You have earned my respect." |
-| **A** | ≥ 70 | Acceptable | "Not bad. You may live... for now." |
-| **B** | ≥ 50 | Mediocre | "I've had worse. But not by much." |
-| **F** | < 50 | Unacceptable | "You call this a sausage? DISGRACEFUL." |
+| **S** | ≥ 92 | THE SAUSAGE KING | "Perfection. You have earned my respect." (Only true victory) |
+| **A** | ≥ 75 | Almost Worthy | "Not bad. You may live... for now." (Defeat — close but not enough) |
+| **B** | ≥ 50 | Mediocre | "I've had worse. But not by much." (Defeat) |
+| **F** | < 50 | Unacceptable | "You call this a sausage? DISGRACEFUL." (Defeat — "You are the sausage now") |
+
+**Demand scoring:** DemandScoring.ts compares player decisions vs Mr. Sausage's hidden demands. demandBonus adjusts the raw score average (form +/-15/10, cook +/-10/5, ingredients +/-8/12 each, flair bonus). TastingChallenge has reveal phases: form -> ingredients -> cook -> scores with demand breakdown.
 
 ### Legacy Scoring Formula (SausagePhysics.ts)
 
@@ -183,13 +216,48 @@ Procedural 3D character (no external model files):
 
 Displayed on the CRT television in the kitchen via CrtTelevision component with chromatic aberration shader.
 
-## Unimplemented Features
+## Difficulty System
+
+5 tiers configured in `src/config/difficulty.json`:
+
+| Tier | Name | Hints | Strikes | Time Pressure | Enemy Chance |
+|------|------|-------|---------|---------------|--------------|
+| 1 | Rare | generous | forgiving | low | 0% |
+| 2 | Medium Rare | moderate | standard | moderate | 10% |
+| 3 | Medium | standard | standard | standard | 20% |
+| 4 | Medium Well | limited | strict | high | 35% |
+| 5 | Well Done | none | strict | extreme | 50% |
+
+DifficultySelector UI ("Choose Your Doneness") with permadeath line separator between Medium and Medium Well.
+
+## Enemy Encounter System
+
+Config in `src/config/enemies.json`:
+- **5 enemy types** with AI state machine: spawning -> approaching -> attacking -> stunned -> dying -> dead
+- **5 weapons** for player defense
+- **4 spawn cabinets** with CabinetBurst animation
+- ECS-driven: EnemySpawnSystem + CombatSystem + CombatHUD
+- Spawn probability scales with `difficulty.enemyChance`
+
+## Multi-Round Gameplay
+
+- RoundManager tracks ingredient combinations using C(12,3) combo tracking
+- TrapDoorAnimation for escape sequences between rounds
+- RoundTransition UI between rounds
+- Store fields: currentRound, totalRounds, usedIngredientCombos
+
+## Hidden Objects & Cleanup
+
+- **CabinetDrawer**: Spring animations for interactive cabinet drawers
+- **KitchenAssembly**: Equipment parts and station discovery
+- **HiddenObjectOverlay**: UI for hidden object collection
+- **ProceduralSink**: Procedural lathe/cylinder sink geometry
+- **CleanupManager + CleanupHUD**: Station cleanliness tracking between rounds
+
+## Remaining Unimplemented Features
 
 These are referenced in design docs or have stub code but are not functional:
 
-1. **BUT FIRST events** — Mid-challenge interruptions that grant bonus points. Referenced in scoring formula and design docs. Not implemented.
-2. **Settings menu** — Button exists on title screen. No screen behind it.
-3. **Continue game** — Button exists on title screen. No save/load system.
-4. **Hint glow** — HintButton triggers a store action but the 3D scene doesn't respond with a visual glow on matching ingredients. The fridge station has `hintActive` prop but the button is only shown when NO challenge is active (likely a bug).
-5. **Background music** — No ambient horror audio or background music. Only procedural SFX per challenge.
-6. **Sound effects from asset pack** — `Kitchen Sound Effects.zip` is downloaded but not integrated.
+1. **Hint glow** — HintButton triggers a store action but the 3D scene doesn't respond with a visual glow on matching ingredients.
+2. **Background music** — No ambient horror audio or background music. Only procedural SFX per challenge.
+3. **Sound effects from asset pack** — `Kitchen Sound Effects.zip` is downloaded but not integrated.

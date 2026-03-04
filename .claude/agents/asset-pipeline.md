@@ -45,6 +45,25 @@ Texture tiling values:
 
 Grime decals (`grime_drip`, `grime_base`) use `alphaMap` for transparency blending.
 
+### Tiered Horror Props Loading
+
+`HorrorPropsLoader` loads 21 PSX-style horror GLB models with a tiered strategy to avoid blocking the initial render:
+
+- **Tier 1** (immediate): Core horror props loaded synchronously during scene mount.
+- **Tier 2** (deferred 2s): Secondary props loaded after a 2-second delay to spread the loading cost.
+
+This pattern prevents frame drops during initial scene rendering while still populating the kitchen with atmospheric props.
+
+### GLB Mesh Culling
+
+Blender-exported GLBs often contain helper/collision meshes (e.g., `CubeXXX`) with huge local offsets from the model origin. When rendered via `<primitive object={scene}/>`, these invisible artifact meshes act as massive black occluders.
+
+**Fix in `FurnitureLoader.tsx`**:
+- After loading each GLB, computes world-space bounding boxes (placement transform x mesh local transform).
+- Hides any mesh extending >2m past room walls (+/-6.5 X/Z, 0-5.5 Y).
+- **62 total artifact meshes culled** across all furniture GLBs.
+- Key offenders: `Cube014` (2.5x4x8m black mesh from l-counter GLB), `Cube026`/`Cube030` (far outside room at x=-18/-25).
+
 ### Blender MCP
 
 A Blender MCP server is available for model operations (scene inspection, code execution, asset import/export). Use the `mcp__blender__*` tools for:

@@ -66,10 +66,10 @@ Two separate state fields manage lifecycle:
 - `gameStatus`: `'menu'` | `'playing'` | `'victory'` | `'defeat'` — in-game state
 
 ```
-menu → loading → playing (challenge 0→1→2→3→4) → victory/defeat → menu
+menu → loading → playing (challenge 0→1→2→3→4→5→6) → victory/defeat → menu
 ```
 
-`currentChallenge` (0-4) tracks progression through the 5 challenges. See `src/store/gameStore.ts`.
+`currentChallenge` (0-6) tracks progression through the 7 challenges. See `src/store/gameStore.ts`.
 
 ## Target-Based Placement
 
@@ -85,12 +85,28 @@ Source: `src/engine/FurnitureLayout.ts`
 
 - `FPSController.tsx` — WASD/arrow keys + pointer-lock mouse look for desktop
 - `MobileJoystick.tsx` — Touch controls for mobile
+- `SwipeFPSControls.tsx` — Dual-zone touch controls: left half = movement stick, right half = look/interact swipe
 - Station triggers: Rapier physics sensors on web (`PlayerBody` + `StationSensor` colliders), manual proximity check on native (`ManualProximityTrigger`)
 - Camera: initial yaw=Math.PI (facing -Z = CRT TV), y=1.6 (eye height), walk speed 3.0, mouse sensitivity 0.002
 - Position clamped to room AABB with 0.5 unit margin
 - **NOTE:** No `CameraWalker.tsx` exists — navigation is purely FPS free-walk, not waypoint-based
 
 Source: `src/components/controls/`
+
+## Rapier Sensor Pattern
+
+Rapier `StationSensor` colliders using `KINEMATIC_FIXED` body type require a special bitmask for collision detection:
+
+```jsx
+<CuboidCollider
+  sensor
+  activeCollisionTypes={15 | 8704}  // KINEMATIC_FIXED bitmask
+  onIntersectionEnter={...}
+  onIntersectionExit={...}
+/>
+```
+
+Without `activeCollisionTypes={15 | 8704}`, sensors attached to `KINEMATIC_FIXED` bodies silently fail to detect intersections. This affects all station proximity triggers.
 
 ## Code Splitting
 
@@ -135,6 +151,7 @@ Source: `src/engine/ChallengeRegistry.ts`, `src/data/challenges/variants.ts`
 ## Input Abstraction
 
 Engine-agnostic input through:
+- `InputManager` — Universal input with JSON bindings, keyboard/mouse/gamepad/touch normalization
 - `InputActions.ts` — Unified input action system
 - `HapticService.ts` — Haptic feedback abstraction
 
