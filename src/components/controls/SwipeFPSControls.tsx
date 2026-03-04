@@ -58,6 +58,10 @@ export function SwipeFPSControls({joystickRef, onLookDrag}: SwipeFPSControlsProp
   const pendingInteractRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fireTapInteract = () => {
     const input = InputManager.getInstance();
+    // Clear any existing timeout to prevent overlapping pulses
+    if (pendingInteractRef.current !== null) {
+      clearTimeout(pendingInteractRef.current);
+    }
     input.setTouchActionPressed('interact', true);
     pendingInteractRef.current = setTimeout(() => {
       input.setTouchActionPressed('interact', false);
@@ -65,11 +69,13 @@ export function SwipeFPSControls({joystickRef, onLookDrag}: SwipeFPSControlsProp
     }, 50);
   };
 
-  // Cleanup on unmount: zero joystick and cancel pending interact reset
+  // Cleanup on unmount: zero joystick, cancel pending interact, reset input state
   useEffect(() => {
     return () => {
       if (pendingInteractRef.current !== null) {
         clearTimeout(pendingInteractRef.current);
+        pendingInteractRef.current = null;
+        InputManager.getInstance().setTouchActionPressed('interact', false);
       }
       if (joystickRef.current) {
         joystickRef.current.x = 0;
@@ -130,6 +136,14 @@ export function SwipeFPSControls({joystickRef, onLookDrag}: SwipeFPSControlsProp
         const duration = performance.now() - moveStartTimeRef.current;
         if (duration < TAP_MAX_DURATION && moveTotalDistRef.current < TAP_MAX_DISTANCE) {
           fireTapInteract();
+        }
+      },
+
+      onPanResponderTerminate: () => {
+        // OS interrupted the gesture — zero joystick to prevent stuck movement
+        if (joystickRef.current) {
+          joystickRef.current.x = 0;
+          joystickRef.current.y = 0;
         }
       },
     }),
