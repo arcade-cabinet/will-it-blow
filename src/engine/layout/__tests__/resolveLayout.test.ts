@@ -85,7 +85,7 @@ describe('resolveLayout (full round-trip)', () => {
 
   it('island target is at floor center', () => {
     const island = targets.island;
-    // Island is at [0.5, 0.5] on floor — center of room + adhesion
+    // Island is at [0.5, 0.5] on floor — center of room, no adhesion
     expect(island.position[0]).toBeCloseTo(0, 0);
     expect(island.position[2]).toBeCloseTo(0, 0);
   });

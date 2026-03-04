@@ -17,7 +17,7 @@
       "pattern": "ecs-orchestrator",
       "cameraOffset": [0, 0.3, 0.6],
       "description": "Chop ingredients with precise timing.",
-      "quip": "Time to grind. And I mean that literally.",
+      "quip": "Chop chop. Every second wasted is a second closer to failure.",
       "milestones": []
     },
     {
@@ -27,7 +27,7 @@
       "pattern": "ecs-orchestrator",
       "cameraOffset": [0, 0.3, 0.5],
       "description": "Grind the ingredients at the right speed.",
-      "quip": "Stuff it. Carefully. Or it's YOUR casing next.",
+      "quip": "Time to grind. And I mean that literally.",
       "milestones": [{ "on": "complete", "action": "set-bowl-position", "value": "grinder-output" }]
     },
     {
@@ -37,7 +37,7 @@
       "pattern": "ecs-orchestrator",
       "cameraOffset": [0, 0.2, 0.8],
       "description": "Stuff the casing without letting pressure burst it.",
-      "quip": "Fire it up. Don't burn my kitchen.",
+      "quip": "Stuff it. Carefully. Or it's YOUR casing next.",
       "milestones": [
         { "on": "complete", "action": "set-bowl-position", "value": "done" },
         { "on": "complete", "action": "reset-sausage-placed" }
@@ -50,7 +50,7 @@
       "pattern": "ecs-orchestrator",
       "cameraOffset": [0, 0.5, 0.5],
       "description": "Cook the sausage to the perfect temperature.",
-      "quip": "Cook my sausage to perfection.",
+      "quip": "Fire it up. Don't burn my kitchen.",
       "milestones": []
     },
     {

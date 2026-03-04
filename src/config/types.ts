@@ -769,7 +769,16 @@ export interface DisplayHousingConfig {
 
 export interface LightingSceneConfig {
   panels: Array<{position: [number, number, number]; rotationY?: number}>;
-  ambient: {hemisphere: number; centerFill: number};
+  ambient: {
+    hemisphere: number;
+    centerFill: number;
+    upperFill: {
+      position: [number, number, number];
+      intensity: number;
+      distance: number;
+      color: string;
+    };
+  };
   horror: {
     redEmergency: {position: [number, number, number]; intensity: number};
     underCounter: {intensity: number};
@@ -786,8 +795,6 @@ export interface ChallengeSequenceConfig {
     challengeType: string;
     /** Interaction pattern: bridge (2D overlay owns scoring) or ecs-orchestrator (ECS owns logic) */
     pattern: 'bridge' | 'ecs-orchestrator';
-    /** Mr. Sausage quip shown during the challenge transition card */
-    quip: string;
     /** Bowl position milestone set when this challenge completes, or null if no transition */
     bowlMilestone: string | null;
   }>;

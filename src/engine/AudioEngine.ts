@@ -194,10 +194,15 @@ class AudioEngine {
     }
   }
 
-  /** Start a music track for the current challenge with crossfade from ambient. */
+  /** Start a music track for the current challenge with crossfade from ambient.
+   *  Also supports special keys: 'victory', 'enemy', 'defeat'. */
   startChallengeTrack(challengeType: string): void {
     if (!this.isInitialized) return;
-    const trackDef = config.audio.challengeTracks[challengeType];
+    const trackDef =
+      config.audio.challengeTracks[challengeType] ??
+      (challengeType === 'victory' ? config.audio.victoryTrack : undefined) ??
+      (challengeType === 'enemy' ? config.audio.enemyTrack : undefined) ??
+      (challengeType === 'defeat' ? config.audio.defeatTrack : undefined);
     if (!trackDef) return;
 
     this.stopChallengeTrack();

@@ -19,8 +19,9 @@
  * saved state via `continueGame()` depending on the prior flow.
  */
 
+import {useGLTF, useTexture} from '@react-three/drei';
 import {useEffect, useMemo, useRef, useState} from 'react';
-import {Animated, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {Animated, Platform, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {audioEngine} from '../../engine/AudioEngine';
 import {getAssetUrl} from '../../engine/assetUrl';
 import {FURNITURE_RULES} from '../../engine/FurnitureLayout';
@@ -78,6 +79,23 @@ const AUDIO_FILES = [
   'sizzle_loop_1.ogg',
   'sizzle_loop_2.ogg',
 ];
+
+// ---------------------------------------------------------------------------
+// Three.js-level preloading — populate drei's loader cache
+// ---------------------------------------------------------------------------
+// The HTTP fetch below warms the browser cache, but useTexture/useGLTF still
+// need to PARSE assets (decode JPEGs, parse GLTFs) on first call. By calling
+// drei's static preload() at module load, the Three.js loaders run in parallel
+// with the HTTP fetch. By the time the scene mounts, the hooks resolve from
+// cache instantly — no black screen flash.
+if (Platform.OS === 'web') {
+  for (const rule of FURNITURE_RULES) {
+    useGLTF.preload(getAssetUrl('models', rule.glb));
+  }
+  for (const file of TEXTURE_FILES) {
+    useTexture.preload(getAssetUrl('textures', file));
+  }
+}
 
 const LOADING_QUOTES = [
   'Selecting the finest meats...',

@@ -6,7 +6,7 @@
  * Reads bowlPosition and blendColor directly from the Zustand store.
  * Uses damp3 from maath/easing for smooth position interpolation each frame.
  *
- * Bowl positions are derived from resolveTargets (FurnitureLayout), offset
+ * Bowl positions are derived from resolveLayout() (layout system), offset
  * slightly so the procedural bowl sits at the correct place relative to each
  * station's machinery.
  */

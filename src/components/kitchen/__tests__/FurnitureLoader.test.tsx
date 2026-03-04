@@ -5,7 +5,7 @@ import {DEFAULT_ROOM, FURNITURE_RULES} from '../../../engine/FurnitureLayout';
 import {mergeLayoutConfigs, resolveLayout} from '../../../engine/layout';
 import {FurnitureLoader} from '../FurnitureLoader';
 
-/** Helper — replaces deleted resolveTargets() for tests */
+/** Helper — wraps resolveLayout() for tests */
 function resolve(room: RoomDimensions = DEFAULT_ROOM) {
   return resolveLayout(
     mergeLayoutConfigs(config.layout.room, config.layout.rails, config.layout.placements),

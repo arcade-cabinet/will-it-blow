@@ -33,16 +33,16 @@ describe('resolvePlacement (array form — UV fractions)', () => {
   const surfaces = buildSurfaces();
   const anchors = buildAnchors(surfaces);
 
-  it('places object at floor center with adhesion offset', () => {
+  it('places object at floor center (no adhesion for floor)', () => {
     const placement: PlacementDef = {
       on: 'floor',
       at: [0.5, 0.5],
       minBounds: [1, 0.5, 1],
     };
     const pos = resolvePlacement(placement, surfaces, anchors, room);
-    // Floor center = (0, 0, 0), adhesion = (0, +0.25, 0) (half height)
+    // Floor center = (0, 0, 0), no adhesion — models have base-origin
     expect(pos[0]).toBeCloseTo(0);
-    expect(pos[1]).toBeCloseTo(0.25);
+    expect(pos[1]).toBeCloseTo(0);
     expect(pos[2]).toBeCloseTo(0);
   });
 
@@ -59,15 +59,15 @@ describe('resolvePlacement (array form — UV fractions)', () => {
     expect(pos[2]).toBeCloseTo(0);
   });
 
-  it('places object on ceiling with -y adhesion (hanging)', () => {
+  it('places object on ceiling at room height (no adhesion)', () => {
     const placement: PlacementDef = {
       on: 'ceiling',
       at: [0.5, 0.5],
       minBounds: [1.8, 0.1, 1.8],
     };
     const pos = resolvePlacement(placement, surfaces, anchors, room);
-    // Ceiling normal is (0,-1,0), so adhesion pushes down
-    expect(pos[1]).toBeCloseTo(room.h - 0.05);
+    // Ceiling at room height, no adhesion — models hang from the surface
+    expect(pos[1]).toBeCloseTo(room.h);
   });
 
   it('UV (0, 0) on back-wall is bottom-left corner', () => {
@@ -107,8 +107,8 @@ describe('resolvePlacement (object form — anchor interpolation)', () => {
     const pos = resolvePlacement(placement, surfaces, anchors, room);
     // x: midpoint between center (0) and left-midpoint (-halfW) at t=0.5 → -halfW/2
     expect(pos[0]).toBeCloseTo(-halfW / 2, 0);
-    // adhesion: ceiling pushes down by 0.25
-    expect(pos[1]).toBeCloseTo(room.h - 0.25, 1);
+    // No adhesion on ceiling — models hang from surface plane
+    expect(pos[1]).toBeCloseTo(room.h, 1);
   });
 });
 
@@ -162,10 +162,10 @@ describe('resolvePlacement — different room sizes', () => {
     const posSmall = resolvePlacement(placement, surfaces, smallAnchors, small);
     const posLarge = resolvePlacement(placement, surfaces, largeAnchors, large);
 
-    // Both should be at center (x=0, z=0)
+    // Both should be at center (x=0, z=0) with y=0 (no floor adhesion)
     expect(posSmall[0]).toBeCloseTo(0);
     expect(posLarge[0]).toBeCloseTo(0);
-    // Adhesion is the same (bounds-based, not room-based)
-    expect(posSmall[1]).toBeCloseTo(posLarge[1]);
+    expect(posSmall[1]).toBeCloseTo(0);
+    expect(posLarge[1]).toBeCloseTo(0);
   });
 });

@@ -1,15 +1,16 @@
 {
   "challengeTracks": {
-    "ingredients": { "file": "track_exploration.ogg", "volume": -8 },
-    "chopping": { "file": "track_violence.ogg", "volume": -6 },
-    "grinding": { "file": "track_violence.ogg", "volume": -6 },
-    "stuffing": { "file": "track_death_metal.ogg", "volume": -8 },
-    "cooking": { "file": "track_revenge.ogg", "volume": -8 },
-    "blowout": { "file": "track_revenge.ogg", "volume": -6 },
-    "tasting": { "file": "track_dark.ogg", "volume": -10 }
+    "ingredients": { "file": "music/track_exploration.ogg", "volume": -8 },
+    "chopping": { "file": "music/track_violence.ogg", "volume": -6 },
+    "grinding": { "file": "music/track_violence.ogg", "volume": -6 },
+    "stuffing": { "file": "music/track_death_metal.ogg", "volume": -8 },
+    "cooking": { "file": "music/track_revenge.ogg", "volume": -8 },
+    "blowout": { "file": "music/track_revenge.ogg", "volume": -6 },
+    "tasting": { "file": "music/track_dark.ogg", "volume": -10 }
   },
-  "enemyTrack": { "file": "track_kick_harder.ogg", "volume": -6 },
-  "defeatTrack": { "file": "track_boss_horror.ogg", "volume": -8 },
+  "victoryTrack": { "file": "music/track_unsettling_victory.ogg", "volume": -8 },
+  "enemyTrack": { "file": "music/track_kick_harder.ogg", "volume": -6 },
+  "defeatTrack": { "file": "music/track_boss_horror.ogg", "volume": -8 },
   "crossfadeDuration": 2.0,
   "spatialSounds": {
     "fridge_hum": {

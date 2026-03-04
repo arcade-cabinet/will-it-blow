@@ -5,7 +5,7 @@
  *
  * Each piece of furniture is a separate GLB file (fridge.glb, etc.)
  * loaded via drei's `useGLTF` and `useAnimations`.
- * Positions and rotations come from `resolveTargets()` — no hardcoded
+ * Positions and rotations come from `resolveLayout()` — no hardcoded
  * coordinates in this file.
  *
  * Pieces marked `ecsManaged: true` in FURNITURE_RULES are skipped —

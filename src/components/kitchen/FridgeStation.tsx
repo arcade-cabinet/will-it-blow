@@ -30,7 +30,7 @@ import {getAssetUrl} from '../../engine/assetUrl';
 import type {Ingredient} from '../../engine/Ingredients';
 
 /**
- * @param props.position - Fridge world position from resolveTargets()
+ * @param props.position - Fridge world position from resolveLayout()
  * @param props.ingredients - Pool of 10 ingredients to display
  * @param props.selectedIds - Set of already-selected pool indices (faded out)
  * @param props.hintActive - Whether hint glow is active on matching ingredients

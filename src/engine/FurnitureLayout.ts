@@ -46,7 +46,7 @@ export interface Target {
 export interface FurnitureRule {
   /** GLB filename (resolved at runtime via getAssetUrl) */
   glb: string;
-  /** Name of the target from resolveTargets() to position this GLB at */
+  /** Name of the target from resolveLayout() to position this GLB at */
   target: string;
   /** If true, the GLB contains animations that FurnitureLoader should play */
   animated?: boolean;
@@ -88,8 +88,8 @@ export const DEFAULT_ROOM: RoomDimensions = computeRoom(1);
  */
 export const STATION_TARGET_NAMES = config.scene.challengeSequence.stations.map(s => s.stationName);
 
-// resolveTargets() has been replaced by the seam-based layout system.
-// Use resolveLayout() from src/engine/layout/ with the hierarchical config.
+// resolveLayout() from src/engine/layout/ is the seam-based layout system.
+// Use mergeLayoutConfigs() + resolveLayout() with the hierarchical JSON config.
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -98,8 +98,8 @@ export const STATION_TARGET_NAMES = config.scene.challengeSequence.stations.map(
 /**
  * Returns the target for the given challenge index (0-5), or undefined if invalid.
  *
- * @param targets - The full targets map from resolveTargets()
- * @param challengeIndex - Challenge number (0=fridge, 1=cutting-board, 2=grinder, 3=stuffer, 4=stove, 5=crt-tv)
+ * @param targets - The full targets map from resolveLayout()
+ * @param challengeIndex - Challenge number (0=fridge, 1=cutting-board, 2=grinder, 3=stuffer, 4=stove, 5=dining-table, 6=crt-tv)
  * @returns The station Target, or `undefined` if the index is out of range
  */
 export function getStationTarget(

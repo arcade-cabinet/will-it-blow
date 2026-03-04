@@ -23,12 +23,15 @@ import {BallCollider, type RapierRigidBody, RigidBody} from '@react-three/rapier
 import {useMemo, useRef} from 'react';
 import {Platform} from 'react-native';
 import * as THREE from 'three/webgpu';
+import {getChallengeIndex} from '../../engine/ChallengeManifest';
 import {
   applyCookingShrinkage,
   buildSausageGeometry,
   computeSpringImpulse,
 } from '../../engine/SausageBody';
 import {useGameStore} from '../../store/gameStore';
+
+const COOKING_INDEX = getChallengeIndex('cooking');
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -77,7 +80,9 @@ function SausagePhysicsInner({position}: SausagePhysicsInnerProps) {
   const twistPoints = useGameStore(s => s.playerDecisions.twistPoints);
   const blendColor = useGameStore(s => s.blendColor);
   const cookLevel = useGameStore(s => s.playerDecisions.finalCookLevel);
-  const isCooking = useGameStore(s => s.gameStatus === 'playing' && s.currentChallenge === 4);
+  const isCooking = useGameStore(
+    s => s.gameStatus === 'playing' && s.currentChallenge === COOKING_INDEX,
+  );
 
   // ---- geometry (coil sausage) ----
   const geoResult = useMemo(() => buildSausageGeometry(SAUSAGE_PARAMS), []);

@@ -3,7 +3,7 @@
  * Ceiling-mounted trap door — the only entrance/exit to the sealed basement.
  *
  * Uses ECS bare machine for the brushed steel panel, mounted in a
- * DisplayHousing ceiling bracket. Position from resolveTargets('trap-door').
+ * DisplayHousing ceiling bracket. Position from resolveLayout() targets map ('trap-door' key).
  */
 
 import {useEffect, useState} from 'react';

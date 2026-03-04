@@ -38,6 +38,7 @@ export function ChallengeTransition({challengeIndex, onComplete}: ChallengeTrans
 
   const challengeId = CHALLENGE_ORDER[challengeIndex];
   const config = challengeId ? getChallengeConfig(challengeId) : null;
+  // Each challenge's quip describes THAT challenge (Mr. Sausage taunting about what's next).
   const quip = getTransitionQuip(challengeIndex);
 
   useEffect(() => {

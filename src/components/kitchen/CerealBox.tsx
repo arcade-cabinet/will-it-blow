@@ -13,16 +13,18 @@
 
 import {useEffect, useMemo, useRef} from 'react';
 import * as THREE from 'three/webgpu';
+import {config} from '../../config';
 
 // ---------------------------------------------------------------------------
-// Constants
+// Constants (from config)
 // ---------------------------------------------------------------------------
 
-const BOX_W = 0.14; // width (X)
-const BOX_H = 0.28; // height (Y)
-const BOX_D = 0.07; // depth (Z)
-
-const STAIN_RES = 128; // splat texture resolution
+const {
+  width: BOX_W,
+  height: BOX_H,
+  depth: BOX_D,
+  splatResolution: STAIN_RES,
+} = config.gameplay.blowout.cerealBox;
 
 // ---------------------------------------------------------------------------
 // Helpers

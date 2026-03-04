@@ -162,7 +162,7 @@ export interface GameState {
   /** Player's current [x, y, z] position in the kitchen (FPS controller writes this). */
   playerPosition: [number, number, number];
   /** One-shot teleport target for FPSController. Set by GameGovernor, consumed + cleared by FPS. */
-  pendingTeleport: [number, number, number] | null;
+  pendingTeleport: {pos: [number, number, number]; yaw?: number} | null;
   /** Flipped to `true` when the player enters the current challenge station's trigger radius. */
   challengeTriggered: boolean;
 
@@ -342,7 +342,7 @@ export interface GameState {
   /** Update the player's world-space position (written by FPS controller every frame). */
   setPlayerPosition: (pos: [number, number, number]) => void;
   /** Request a one-shot camera teleport (consumed and cleared by FPSController). */
-  requestTeleport: (pos: [number, number, number]) => void;
+  requestTeleport: (pos: [number, number, number], yaw?: number) => void;
   /** Clear the pending teleport after FPSController has applied it. */
   clearTeleport: () => void;
   /** Signal that the player has entered the current challenge station's trigger zone. */
@@ -478,7 +478,7 @@ export const INITIAL_GAME_STATE = {
   fridgeHoveredIndex: null as number | null,
   fridgeDoorProgress: 0,
   playerPosition: [0, 1.6, 0] as [number, number, number],
-  pendingTeleport: null as [number, number, number] | null,
+  pendingTeleport: null as {pos: [number, number, number]; yaw?: number} | null,
   challengeTriggered: false,
   mrSausageDemands: null as MrSausageDemands | null,
   playerDecisions: {
@@ -769,7 +769,8 @@ export const useGameStore = create<GameState>()(
       updateBlendProperties: () => set(state => mapBlendToStore(state.bowlContents)),
 
       setPlayerPosition: (pos: [number, number, number]) => set({playerPosition: pos}),
-      requestTeleport: (pos: [number, number, number]) => set({pendingTeleport: pos}),
+      requestTeleport: (pos: [number, number, number], yaw?: number) =>
+        set({pendingTeleport: {pos, yaw}}),
       clearTeleport: () => set({pendingTeleport: null}),
       triggerChallenge: () => set({challengeTriggered: true}),
 

@@ -404,7 +404,7 @@ const SceneContent = ({
   return (
     <>
       {/* Dim ambient fill (KitchenEnvironment provides the strong fluorescent + fill lights) */}
-      <ambientLight intensity={0.35} />
+      <ambientLight intensity={0.7} />
       <SceneIntrospector />
       <XROriginWrapper />
       <VRLocomotionGate />

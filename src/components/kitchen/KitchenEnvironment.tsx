@@ -181,14 +181,14 @@ function RoomEnclosure({textures}: {textures: ReturnType<typeof useRoomTextures>
         />
       </mesh>
 
-      {/* Ceiling (concrete) — ground plane facing down */}
+      {/* Ceiling (concrete) — DoubleSide so it's visible from below */}
       <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, ROOM_H, 0]}>
         <planeGeometry args={[ROOM_W, ROOM_D]} />
         <meshStandardMaterial
           {...textures.concrete}
           roughness={0.95}
           metalness={0.0}
-          side={THREE.FrontSide}
+          side={THREE.DoubleSide}
         />
       </mesh>
 
@@ -375,7 +375,7 @@ export const KitchenEnvironment = ({
           cooler fluorescent with dark ground bounce in normal mode */}
       <hemisphereLight
         args={
-          arEnabled ? ['#ffffff', '#cccccc', 1.2] : ['#d9e6d1', '#4d473d', lc.ambient.hemisphere]
+          arEnabled ? ['#ffffff', '#cccccc', 1.2] : ['#d9e6d1', '#665e52', lc.ambient.hemisphere]
         }
       />
 
@@ -386,9 +386,22 @@ export const KitchenEnvironment = ({
         position={[0, 2.0, 0]}
         color={arEnabled ? '#ffffff' : '#d9e1cc'}
         intensity={arEnabled ? 2.0 : lc.ambient.centerFill}
-        distance={14}
-        decay={2}
+        distance={16}
+        decay={1.5}
       />
+
+      {/* Upper fill point light near the ceiling —
+          illuminates the concrete upper walls and ceiling that the
+          mid-height center fill cannot reach due to distance falloff. */}
+      {!arEnabled && (
+        <pointLight
+          position={lc.ambient.upperFill.position}
+          color={lc.ambient.upperFill.color}
+          intensity={lc.ambient.upperFill.intensity}
+          distance={lc.ambient.upperFill.distance}
+          decay={1.5}
+        />
+      )}
 
       {/* =======================================================
           HORROR ATMOSPHERE LIGHTING

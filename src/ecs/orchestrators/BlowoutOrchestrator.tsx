@@ -49,12 +49,20 @@ const PARTICLE_COUNT: number = blowoutCfg.particleCount;
 const PARTICLE_GRAVITY: number = blowoutCfg.particleGravity;
 const PARTICLE_SPREAD: number = blowoutCfg.particleSpread;
 const PARTICLE_INITIAL_SPEED: number = blowoutCfg.particleInitialSpeed;
+const PARTICLE_LAUNCH_VY: number = blowoutCfg.particleLaunchVelocityY;
+const PARTICLE_LAUNCH_VY_RANGE: number = blowoutCfg.particleLaunchVelocityYRange;
+const PARTICLE_LIFE_MIN: number = blowoutCfg.particleLifeMin;
+const PARTICLE_LIFE_RANGE: number = blowoutCfg.particleLifeRange;
+const BURST_COUNT_MAX: number = blowoutCfg.burstCountMax;
 const COVERAGE_PER_HIT: number = blowoutCfg.coveragePerHit;
 const FLOOR_PENALTY_PER_HIT: number = blowoutCfg.floorPenaltyPerHit;
 const COMPLETE_DELAY_SEC: number = blowoutCfg.completeDelaySec;
 const BOX_POSITION: [number, number, number] = blowoutCfg.boxPosition as [number, number, number];
 const BOX_HALF_WIDTH: number = blowoutCfg.boxHalfWidth;
 const BOX_HALF_HEIGHT: number = blowoutCfg.boxHalfHeight;
+const BOX_COLLISION_FRONT_MARGIN: number = blowoutCfg.boxCollisionFrontMargin;
+const BOX_COLLISION_BACK_MARGIN: number = blowoutCfg.boxCollisionBackMargin;
+const FLOOR_COLLISION_EPSILON: number = blowoutCfg.floorCollisionEpsilon;
 const NOZZLE_HEIGHT_OFFSET: number = blowoutVis.nozzleHeightOffset;
 
 // ---------------------------------------------------------------------------
@@ -177,7 +185,7 @@ export function BlowoutOrchestrator({position, visible}: BlowoutOrchestratorProp
   /** Emit a burst of particles from the nozzle toward the box. */
   const emitBurst = useCallback(() => {
     const pressure = pressureRef.current;
-    const burstCount = Math.max(1, Math.floor((pressure / MAX_PRESSURE) * 6));
+    const burstCount = Math.max(1, Math.floor((pressure / MAX_PRESSURE) * BURST_COUNT_MAX));
 
     // World-space nozzle position (in front of station)
     const nozzleX = position[0];
@@ -200,10 +208,10 @@ export function BlowoutOrchestrator({position, visible}: BlowoutOrchestratorProp
         const speed = (pressure / MAX_PRESSURE) * PARTICLE_INITIAL_SPEED;
 
         p.vx = (dx / dist) * speed + (Math.random() - 0.5) * PARTICLE_SPREAD;
-        p.vy = 2.0 + Math.random() * 1.5;
+        p.vy = PARTICLE_LAUNCH_VY + Math.random() * PARTICLE_LAUNCH_VY_RANGE;
         p.vz = (dz / dist) * speed + (Math.random() - 0.5) * PARTICLE_SPREAD;
         p.life = 0;
-        p.maxLife = 0.8 + Math.random() * 0.6;
+        p.maxLife = PARTICLE_LIFE_MIN + Math.random() * PARTICLE_LIFE_RANGE;
         spawned++;
       }
     }
@@ -318,7 +326,7 @@ export function BlowoutOrchestrator({position, visible}: BlowoutOrchestratorProp
       }
 
       // Floor collision (y <= station floor)
-      if (p.y <= position[1] + 0.05) {
+      if (p.y <= position[1] + FLOOR_COLLISION_EPSILON) {
         p.active = false;
         mesh.visible = false;
         // Count floor hit during blow phase (phase may have advanced to score)
@@ -336,8 +344,8 @@ export function BlowoutOrchestrator({position, visible}: BlowoutOrchestratorProp
       const hitBox =
         Math.abs(p.x - boxX) < BOX_HALF_WIDTH &&
         Math.abs(p.y - boxY) < BOX_HALF_HEIGHT &&
-        p.z >= boxZ - 0.05 &&
-        p.z <= boxZ + 0.08;
+        p.z >= boxZ - BOX_COLLISION_FRONT_MARGIN &&
+        p.z <= boxZ + BOX_COLLISION_BACK_MARGIN;
 
       if (hitBox) {
         p.active = false;
