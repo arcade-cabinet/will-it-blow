@@ -62,6 +62,8 @@ describe('SwipeFPSControls', () => {
       expect(source).toContain('setTouchActionPressed');
       expect(source).toContain("'interact'");
       expect(source).toContain('fireTapInteract');
+      // Uses setTimeout for reliable polling window, not single-frame RAF
+      expect(source).toContain('setTimeout');
     });
 
     it('uses MOVE_ZONE_RADIUS for invisible joystick normalization', () => {
@@ -74,9 +76,26 @@ describe('SwipeFPSControls', () => {
     });
 
     it('zeros joystick on move zone release', () => {
-      // joystickRef is zeroed in onPanResponderRelease
       expect(source).toContain('joystickRef.current.x = 0');
       expect(source).toContain('joystickRef.current.y = 0');
+    });
+
+    it('cleans up on unmount (zeros joystick + cancels pending interact)', () => {
+      expect(source).toContain('useEffect');
+      expect(source).toContain('clearTimeout');
+      expect(source).toContain('pendingInteractRef');
+    });
+
+    it('tracks max distance for look zone tap detection (not end-to-end)', () => {
+      expect(source).toContain('lookMaxDistRef');
+      expect(source).toContain('Math.max(lookMaxDistRef.current, fromStartDist)');
+    });
+
+    it('mutates refs in-place instead of allocating new objects', () => {
+      // Grant handlers should use .x = / .y = not = {x: ...}
+      expect(source).toContain('moveStartRef.current.x = touch.pageX');
+      expect(source).toContain('lookLastRef.current.x = touch.pageX');
+      expect(source).toContain('lookStartPosRef.current.x = touch.pageX');
     });
 
     it('does not contain flick/impulse system (removed)', () => {

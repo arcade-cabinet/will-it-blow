@@ -1,4 +1,4 @@
-import {useRef} from 'react';
+import {useEffect, useRef} from 'react';
 import {type GestureResponderEvent, PanResponder, StyleSheet, View} from 'react-native';
 import {InputManager} from '../../input/InputManager';
 
@@ -47,15 +47,31 @@ export function SwipeFPSControls({joystickRef, onLookDrag}: SwipeFPSControlsProp
   const lookLastRef = useRef({x: 0, y: 0});
   const lookStartTimeRef = useRef(0);
   const lookStartPosRef = useRef({x: 0, y: 0});
+  const lookMaxDistRef = useRef(0);
 
   // ── Shared tap helper ──
+  const pendingInteractRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fireTapInteract = () => {
     const input = InputManager.getInstance();
     input.setTouchActionPressed('interact', true);
-    requestAnimationFrame(() => {
+    pendingInteractRef.current = setTimeout(() => {
       input.setTouchActionPressed('interact', false);
-    });
+      pendingInteractRef.current = null;
+    }, 50);
   };
+
+  // Cleanup on unmount: zero joystick and cancel pending interact reset
+  useEffect(() => {
+    return () => {
+      if (pendingInteractRef.current !== null) {
+        clearTimeout(pendingInteractRef.current);
+      }
+      if (joystickRef.current) {
+        joystickRef.current.x = 0;
+        joystickRef.current.y = 0;
+      }
+    };
+  }, [joystickRef]);
 
   // ── Move zone PanResponder (left half) ──
   const movePanResponder = useRef(
@@ -65,7 +81,8 @@ export function SwipeFPSControls({joystickRef, onLookDrag}: SwipeFPSControlsProp
 
       onPanResponderGrant: (evt: GestureResponderEvent) => {
         const touch = evt.nativeEvent;
-        moveStartRef.current = {x: touch.pageX, y: touch.pageY};
+        moveStartRef.current.x = touch.pageX;
+        moveStartRef.current.y = touch.pageY;
         moveStartTimeRef.current = performance.now();
         moveTotalDistRef.current = 0;
         // Zero joystick on new touch
@@ -121,26 +138,32 @@ export function SwipeFPSControls({joystickRef, onLookDrag}: SwipeFPSControlsProp
 
       onPanResponderGrant: (evt: GestureResponderEvent) => {
         const touch = evt.nativeEvent;
-        lookLastRef.current = {x: touch.pageX, y: touch.pageY};
+        lookLastRef.current.x = touch.pageX;
+        lookLastRef.current.y = touch.pageY;
         lookStartTimeRef.current = performance.now();
-        lookStartPosRef.current = {x: touch.pageX, y: touch.pageY};
+        lookStartPosRef.current.x = touch.pageX;
+        lookStartPosRef.current.y = touch.pageY;
+        lookMaxDistRef.current = 0;
       },
 
       onPanResponderMove: (evt: GestureResponderEvent) => {
         const touch = evt.nativeEvent;
         const dx = touch.pageX - lookLastRef.current.x;
         const dy = touch.pageY - lookLastRef.current.y;
-        lookLastRef.current = {x: touch.pageX, y: touch.pageY};
+        lookLastRef.current.x = touch.pageX;
+        lookLastRef.current.y = touch.pageY;
+        // Track max distance from start for robust tap detection
+        const fromStartDx = touch.pageX - lookStartPosRef.current.x;
+        const fromStartDy = touch.pageY - lookStartPosRef.current.y;
+        const fromStartDist = Math.sqrt(fromStartDx * fromStartDx + fromStartDy * fromStartDy);
+        lookMaxDistRef.current = Math.max(lookMaxDistRef.current, fromStartDist);
         onLookDrag?.(dx, dy);
       },
 
       onPanResponderRelease: () => {
-        // Check for tap
+        // Check for tap (max distance, not end-to-end, to reject circular gestures)
         const duration = performance.now() - lookStartTimeRef.current;
-        const dx = lookLastRef.current.x - lookStartPosRef.current.x;
-        const dy = lookLastRef.current.y - lookStartPosRef.current.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (duration < TAP_MAX_DURATION && dist < TAP_MAX_DISTANCE) {
+        if (duration < TAP_MAX_DURATION && lookMaxDistRef.current < TAP_MAX_DISTANCE) {
           fireTapInteract();
         }
       },
