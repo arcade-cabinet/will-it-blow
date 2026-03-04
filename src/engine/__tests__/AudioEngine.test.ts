@@ -641,7 +641,12 @@ describe('src/config/audio.json — victoryTrack', () => {
 // ---------------------------------------------------------------------------
 
 describe('public/audio/music/ — track files exist', () => {
-  it('all config-referenced tracks exist on disk', () => {
+  // Music files live in public/audio/music/ but are NOT committed to git
+  // (large binary assets hosted externally). Skip in CI where they don't exist.
+  const musicDir = path.join(ROOT, 'public/audio/music');
+  const hasMusicDir = fs.existsSync(musicDir);
+
+  (hasMusicDir ? it : it.skip)('all config-referenced tracks exist on disk', () => {
     const cfg = readJson('src/config/audio.json') as Record<string, unknown>;
     const allFiles: string[] = [];
 
