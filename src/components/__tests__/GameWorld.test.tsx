@@ -87,17 +87,22 @@ describe('GameWorld', () => {
     expect(source).not.toMatch(/center:\s*\[\s*-?\d+\.\d+\s*,\s*-?\d+\.\d+\s*\]/);
   });
 
-  it('passes position props to station/mechanics components from STATIONS array', () => {
+  it('passes position props to station/mechanics components from STATIONS array via manifest constants', () => {
     const fs = require('node:fs');
     const path = require('node:path');
     const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
-    // FridgeStation, ChoppingOrchestrator, GrinderOrchestrator, StufferOrchestrator, CookingOrchestrator, CrtTelevision
-    expect(source).toContain('position={STATIONS[0].position}');
-    expect(source).toContain('position={STATIONS[1].position}');
-    expect(source).toContain('position={STATIONS[2].position}');
-    expect(source).toContain('position={STATIONS[3].position}');
-    expect(source).toContain('position={STATIONS[4].position}');
-    expect(source).toContain('position={STATIONS[5].position}');
+    // Station positions are derived from manifest-indexed STATIONS lookups.
+    // FridgeStation, ChoppingOrchestrator, GrinderOrchestrator, StufferOrchestrator, CookingOrchestrator,
+    // BlowoutOrchestrator, CrtTelevision all use STATIONS[CHALLENGE_IDX_*].position.
+    expect(source).toContain('STATIONS[CHALLENGE_IDX_FRIDGE].position');
+    expect(source).toContain('STATIONS[CHALLENGE_IDX_CHOPPING].position');
+    expect(source).toContain('STATIONS[CHALLENGE_IDX_GRINDER].position');
+    expect(source).toContain('STATIONS[CHALLENGE_IDX_STUFFER].position');
+    expect(source).toContain('STATIONS[CHALLENGE_IDX_STOVE].position');
+    expect(source).toContain('STATIONS[CHALLENGE_IDX_BLOWOUT].position');
+    // Challenge index constants are derived from manifest (no magic numbers)
+    expect(source).toContain('getChallengeIndex');
+    expect(source).toContain('CHALLENGE_IDX_FRIDGE');
   });
 
   it('keeps a ManualProximityTrigger fallback for native platforms', () => {

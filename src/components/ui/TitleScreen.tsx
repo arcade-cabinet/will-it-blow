@@ -18,6 +18,7 @@
 
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {Animated, StyleSheet, Text, View} from 'react-native';
+import {TOTAL_CHALLENGES} from '../../engine/ChallengeManifest';
 import {useKeyboardNav} from '../../hooks/useKeyboardNav';
 import {useReducedMotion} from '../../hooks/useReducedMotion';
 import {useGameStore} from '../../store/gameStore';
@@ -33,7 +34,7 @@ export function TitleScreen() {
   const currentChallenge = useGameStore(s => s.currentChallenge);
   const challengeScores = useGameStore(s => s.challengeScores);
   const currentRound = useGameStore(s => s.currentRound);
-  const hasSaveData = challengeScores.length > 0 && currentChallenge < 5;
+  const hasSaveData = challengeScores.length > 0 && currentChallenge < TOTAL_CHALLENGES;
   const [showSettings, setShowSettings] = useState(false);
   const [showDifficulty, setShowDifficulty] = useState(false);
   const reducedMotion = useReducedMotion();

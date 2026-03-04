@@ -221,6 +221,80 @@ export interface MachineConfig {
   lightBox?: LightBoxDef;
 }
 
+/** Material properties for a blowout machine sub-assembly (tube, nozzle). */
+export interface BlowoutMaterialDef {
+  color: string;
+  roughness: number;
+  metalness: number;
+}
+
+/**
+ * Extended machine configuration for the blowout station.
+ * Extends `MachineConfig` with blowout-specific sub-assemblies and
+ * simulation parameters that live alongside the housing/extras geometry.
+ */
+export interface BlowoutMachineConfig extends MachineConfig {
+  /** Pressure tube body dimensions. */
+  tube: {
+    innerRadius: number;
+    outerRadius: number;
+    length: number;
+    wallThickness: number;
+    material: BlowoutMaterialDef;
+  };
+  /** Nozzle assembly dimensions. */
+  nozzle: {
+    baseRadius: number;
+    tipRadius: number;
+    length: number;
+    orificeRadius: number;
+    /** Y offset from tube base to nozzle base. */
+    yOffset: number;
+    material: BlowoutMaterialDef;
+  };
+  /** Pressure gauge display config. */
+  pressureGauge: {
+    faceRadius: number;
+    xOffset: number;
+    yCenter: number;
+    needleLength: number;
+    /** Fraction of max pressure at which gauge needle enters the red zone. */
+    redZoneStartFraction: number;
+  };
+  /** Particle physics overrides not captured in gameplay/blowout.json. */
+  simulation: {
+    particleVerticalVelocityBase: number;
+    particleVerticalVelocityRange: number;
+    particleLifetimeBase: number;
+    particleLifetimeRange: number;
+    /** Scale factor applied to (pressure / maxPressure) for burst count. */
+    maxBurstMultiplier: number;
+    /** Lerp speed for pressure animation. */
+    pressureLerpSpeed: number;
+    /** Y floor offset above station position for floor collision detection. */
+    floorCollisionYOffset: number;
+  };
+  /** Cereal box hit-zone depth range for AABB collision. */
+  cerealBoxZones: {
+    hitDepthMin: number;
+    hitDepthMax: number;
+    uvUMin: number;
+    uvUMax: number;
+    uvVMin: number;
+    uvVMax: number;
+  };
+  /** Tie gesture 2D overlay parameters. */
+  tieGesture: {
+    fastThresholdMs: number;
+    flairPoints: number;
+    completionDelayMs: number;
+    animExpandToValue: number;
+    animExpandDurationMs: number;
+    animConstractToValue: number;
+    animContractDurationMs: number;
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Gameplay Configs
 // ---------------------------------------------------------------------------
@@ -427,6 +501,11 @@ export interface BlowoutGameplayConfig {
   particleGravity: number;
   particleSpread: number;
   particleInitialSpeed: number;
+  particleLaunchVelocityY: number;
+  particleLaunchVelocityYRange: number;
+  particleLifeMin: number;
+  particleLifeRange: number;
+  burstCountMax: number;
   coveragePerHit: number;
   floorPenaltyPerHit: number;
   fastTieThresholdMs: number;
@@ -435,6 +514,15 @@ export interface BlowoutGameplayConfig {
   boxPosition: [number, number, number];
   boxHalfWidth: number;
   boxHalfHeight: number;
+  boxCollisionFrontMargin: number;
+  boxCollisionBackMargin: number;
+  floorCollisionEpsilon: number;
+  cerealBox: {
+    width: number;
+    height: number;
+    depth: number;
+    splatResolution: number;
+  };
   visual: {
     nozzleHeightOffset: number;
     particleSphereRadius: number;
@@ -696,6 +784,12 @@ export interface ChallengeSequenceConfig {
   stations: Array<{
     stationName: string;
     challengeType: string;
+    /** Interaction pattern: bridge (2D overlay owns scoring) or ecs-orchestrator (ECS owns logic) */
+    pattern: 'bridge' | 'ecs-orchestrator';
+    /** Mr. Sausage quip shown during the challenge transition card */
+    quip: string;
+    /** Bowl position milestone set when this challenge completes, or null if no transition */
+    bowlMilestone: string | null;
   }>;
 }
 
@@ -790,6 +884,7 @@ export interface SpatialSoundDef {
 
 export interface AudioConfig {
   challengeTracks: Record<string, ChallengeTrackDef>;
+  victoryTrack: ChallengeTrackDef;
   enemyTrack: ChallengeTrackDef;
   defeatTrack: ChallengeTrackDef;
   crossfadeDuration: number;

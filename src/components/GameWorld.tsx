@@ -16,7 +16,7 @@
  *   for proximity detection (web only). `ManualProximityTrigger` is the
  *   native fallback using per-frame distance checks.
  *
- * All station positions come from {@link resolveTargets} — no hardcoded
+ * All station positions come from {@link resolveLayout} — no hardcoded
  * coordinates in this file. If room dimensions change, everything follows.
  */
 
@@ -50,9 +50,11 @@ import {CookingOrchestrator} from '../ecs/orchestrators/CookingOrchestrator';
 import {GrinderOrchestrator} from '../ecs/orchestrators/GrinderOrchestrator';
 import {StufferOrchestrator} from '../ecs/orchestrators/StufferOrchestrator';
 import {ECSScene} from '../ecs/renderers/ECSScene';
+import {getChallengeIndex} from '../engine/ChallengeManifest';
 import {DEFAULT_ROOM, STATION_TARGET_NAMES} from '../engine/FurnitureLayout';
 import {isStationReady} from '../engine/KitchenAssembly';
 import {mergeLayoutConfigs, resolveLayout} from '../engine/layout';
+import {useChallengeMusic} from '../hooks/useChallengeMusic';
 import {useGameStore} from '../store/gameStore';
 import {ARPlacement} from './controls/ARPlacement';
 import {FPSController} from './controls/FPSController';
@@ -62,6 +64,7 @@ import {BasementStructure} from './kitchen/BasementStructure';
 import {CrtTelevision} from './kitchen/CrtTelevision';
 import {FridgeStation} from './kitchen/FridgeStation';
 import {KitchenEnvironment} from './kitchen/KitchenEnvironment';
+import {PlaceSetting} from './kitchen/PlaceSetting';
 import {SausagePhysics} from './kitchen/SausagePhysics';
 import {StationMarker} from './kitchen/StationMarker';
 import {TransferBowl} from './kitchen/TransferBowl';
@@ -88,6 +91,15 @@ const STATIONS = STATION_TARGET_NAMES.map(name => {
     markerY: t.markerY ?? t.position[1],
   };
 });
+
+// Challenge index constants derived from manifest — no magic numbers in station checks
+const CHALLENGE_IDX_FRIDGE = getChallengeIndex('ingredients');
+const CHALLENGE_IDX_CHOPPING = getChallengeIndex('chopping');
+const CHALLENGE_IDX_GRINDER = getChallengeIndex('grinding');
+const CHALLENGE_IDX_STUFFER = getChallengeIndex('stuffing');
+const CHALLENGE_IDX_STOVE = getChallengeIndex('cooking');
+const CHALLENGE_IDX_BLOWOUT = getChallengeIndex('blowout');
+const CHALLENGE_IDX_TASTING = getChallengeIndex('tasting');
 
 // -----------------------------------------------------------------
 // PlayerBody — kinematic rigid body that follows the camera
@@ -127,7 +139,7 @@ function PlayerBody() {
  * the game is playing, no challenge is already triggered, and
  * the current challenge index matches this sensor's index.
  *
- * @param props.position - World position from resolveTargets()
+ * @param props.position - World position from resolveLayout()
  * @param props.radius - Trigger radius from the target definition
  * @param props.challengeIndex - Which challenge (0-5) this sensor gates
  */
@@ -348,6 +360,7 @@ const SceneContent = ({
   lookDeltaRef?: React.RefObject<{dx: number; dy: number}>;
 }) => {
   useKeepAwake();
+  useChallengeMusic();
   const gameStatus = useGameStore(s => s.gameStatus);
   const currentChallenge = useGameStore(s => s.currentChallenge);
   const challengeTriggered = useGameStore(s => s.challengeTriggered);
@@ -372,12 +385,12 @@ const SceneContent = ({
 
   // Station is active only when playing + correct challenge + player has arrived
   const isPlaying = gameStatus === 'playing' && challengeTriggered;
-  const isFridgeActive = isPlaying && currentChallenge === 0;
-  const isChoppingActive = isPlaying && currentChallenge === 1;
-  const isGrinderActive = isPlaying && currentChallenge === 2 && grinderReady;
-  const isStufferActive = isPlaying && currentChallenge === 3 && stufferReady;
-  const isStoveActive = isPlaying && currentChallenge === 4 && stoveReady;
-  const isBlowoutActive = isPlaying && currentChallenge === 5;
+  const isFridgeActive = isPlaying && currentChallenge === CHALLENGE_IDX_FRIDGE;
+  const isChoppingActive = isPlaying && currentChallenge === CHALLENGE_IDX_CHOPPING;
+  const isGrinderActive = isPlaying && currentChallenge === CHALLENGE_IDX_GRINDER && grinderReady;
+  const isStufferActive = isPlaying && currentChallenge === CHALLENGE_IDX_STUFFER && stufferReady;
+  const isStoveActive = isPlaying && currentChallenge === CHALLENGE_IDX_STOVE && stoveReady;
+  const isBlowoutActive = isPlaying && currentChallenge === CHALLENGE_IDX_BLOWOUT;
 
   // Convert store arrays to Sets for FridgeStation props
   const fridgeSelectedSet = new Set(fridgeSelectedIndices);
@@ -418,7 +431,7 @@ const SceneContent = ({
 
       <KitchenEnvironment grinderCranking={isGrinderActive} />
       <CrtTelevision
-        position={STATIONS[6].position}
+        position={STATIONS[CHALLENGE_IDX_TASTING].position}
         reaction={gameStatus === 'defeat' ? 'laugh' : mrSausageReaction}
       />
 
@@ -438,7 +451,7 @@ const SceneContent = ({
       {/* Fridge station — 3D shelf with ingredient items (only after door is fully open) */}
       {isFridgeActive && fridgeDoorProgress >= 1 && fridgePool.length > 0 && (
         <FridgeStation
-          position={STATIONS[0].position}
+          position={STATIONS[CHALLENGE_IDX_FRIDGE].position}
           ingredients={fridgePool}
           selectedIds={fridgeSelectedSet}
           hintActive={hintActive}
@@ -449,14 +462,30 @@ const SceneContent = ({
       )}
 
       {/* Procedural mechanics — visual-only station geometry driven by Zustand */}
-      <ChoppingOrchestrator position={STATIONS[1].position} visible={isChoppingActive} />
-      <GrinderOrchestrator position={STATIONS[2].position} visible={isGrinderActive} />
-      <StufferOrchestrator position={STATIONS[3].position} visible={isStufferActive} />
-      <CookingOrchestrator position={STATIONS[4].position} visible={isStoveActive} />
-      <BlowoutOrchestrator position={STATIONS[5].position} visible={isBlowoutActive} />
+      <ChoppingOrchestrator
+        position={STATIONS[CHALLENGE_IDX_CHOPPING].position}
+        visible={isChoppingActive}
+      />
+      <GrinderOrchestrator
+        position={STATIONS[CHALLENGE_IDX_GRINDER].position}
+        visible={isGrinderActive}
+      />
+      <StufferOrchestrator
+        position={STATIONS[CHALLENGE_IDX_STUFFER].position}
+        visible={isStufferActive}
+      />
+      <CookingOrchestrator
+        position={STATIONS[CHALLENGE_IDX_STOVE].position}
+        visible={isStoveActive}
+      />
+      <BlowoutOrchestrator
+        position={STATIONS[CHALLENGE_IDX_BLOWOUT].position}
+        visible={isBlowoutActive}
+      />
+      <PlaceSetting position={STATIONS[CHALLENGE_IDX_BLOWOUT].position} visible={isBlowoutActive} />
 
       {/* Sausage coil physics — Rapier rigid body segments, active after stuffing */}
-      {sausagePlaced && <SausagePhysics position={STATIONS[3].position} />}
+      {sausagePlaced && <SausagePhysics position={STATIONS[CHALLENGE_IDX_STUFFER].position} />}
 
       {/* Procedural transfer bowl — follows bowlPosition through the pipeline */}
       <TransferBowl />

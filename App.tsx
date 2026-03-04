@@ -7,8 +7,18 @@ import {StrikeCounter} from './src/components/ui/StrikeCounter';
 import {TitleScreen} from './src/components/ui/TitleScreen';
 import {installGovernor} from './src/dev/GameGovernor';
 import {audioEngine} from './src/engine/AudioEngine';
+import {getChallengeIndex} from './src/engine/ChallengeManifest';
 import {useXRModeFromStore} from './src/hooks/useXRMode';
 import {useGameStore} from './src/store/gameStore';
+
+// Challenge index constants derived from the manifest — no magic numbers
+const CHALLENGE_IDX_INGREDIENTS = getChallengeIndex('ingredients');
+const CHALLENGE_IDX_CHOPPING = getChallengeIndex('chopping');
+const CHALLENGE_IDX_GRINDING = getChallengeIndex('grinding');
+const CHALLENGE_IDX_STUFFING = getChallengeIndex('stuffing');
+const CHALLENGE_IDX_COOKING = getChallengeIndex('cooking');
+const CHALLENGE_IDX_BLOWOUT = getChallengeIndex('blowout');
+const CHALLENGE_IDX_TASTING = getChallengeIndex('tasting');
 
 // ── Dynamic imports for code splitting ──────────────────────────
 // Metro splits these into separate chunks on web builds,
@@ -112,13 +122,13 @@ const GameUI = () => {
   );
 
   const showChallenge = gameStatus === 'playing' && !transitioning && challengeTriggered;
-  const isIngredientChallenge = showChallenge && currentChallenge === 0;
-  const isChoppingChallenge = showChallenge && currentChallenge === 1;
-  const isGrindingChallenge = showChallenge && currentChallenge === 2;
-  const isStuffingChallenge = showChallenge && currentChallenge === 3;
-  const isCookingChallenge = showChallenge && currentChallenge === 4;
-  const isBlowoutChallenge = showChallenge && currentChallenge === 5;
-  const isTastingChallenge = showChallenge && currentChallenge === 6;
+  const isIngredientChallenge = showChallenge && currentChallenge === CHALLENGE_IDX_INGREDIENTS;
+  const isChoppingChallenge = showChallenge && currentChallenge === CHALLENGE_IDX_CHOPPING;
+  const isGrindingChallenge = showChallenge && currentChallenge === CHALLENGE_IDX_GRINDING;
+  const isStuffingChallenge = showChallenge && currentChallenge === CHALLENGE_IDX_STUFFING;
+  const isCookingChallenge = showChallenge && currentChallenge === CHALLENGE_IDX_COOKING;
+  const isBlowoutChallenge = showChallenge && currentChallenge === CHALLENGE_IDX_BLOWOUT;
+  const isTastingChallenge = showChallenge && currentChallenge === CHALLENGE_IDX_TASTING;
 
   // In VR mode, HUDs are rendered as world-space panels inside the Canvas
   // by VRHUDLayer. Skip the 2D overlay to avoid duplicate UI.

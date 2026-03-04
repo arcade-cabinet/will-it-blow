@@ -21,6 +21,11 @@ import {createJSONStorage, persist} from 'zustand/middleware';
 import type {Reaction} from '../components/characters/reactions';
 import {computeBlendProperties as computeBlend} from '../engine/BlendCalculator';
 import {
+  CHALLENGE_INDEX_BOWL_DONE,
+  CHALLENGE_INDEX_BOWL_GRINDER_OUTPUT,
+  TOTAL_CHALLENGES,
+} from '../engine/ChallengeManifest';
+import {
   DEFAULT_DIFFICULTY,
   type DifficultyTier,
   loadDifficultyTier,
@@ -409,7 +414,7 @@ export interface GameState {
 }
 
 /** Number of sequential challenges in a full game (ingredients through blowout through tasting). */
-const TOTAL_CHALLENGES = 7;
+// TOTAL_CHALLENGES imported from ChallengeManifest — derived from manifest.json length
 
 /** The default difficulty tier, loaded once at module init. */
 const DEFAULT_TIER = loadDifficultyTier(DEFAULT_DIFFICULTY);
@@ -633,16 +638,14 @@ export const useGameStore = create<GameState>()(
           const scores = [...state.challengeScores, score];
           const isLastChallenge = nextChallenge >= TOTAL_CHALLENGES;
 
-          // Bowl/sausage transitions per challenge completion:
-          // Challenge 0 (ingredients) → bowl stays at fridge, player carries to grinder
-          // Challenge 1 (chopping) → no bowl transition (prep station)
-          // Challenge 2 (grinding) → ground meat bowl appears at grinder output
-          // Challenge 3 (stuffing) → bowl done, sausage spawns at stuffer output
+          // Bowl/sausage transitions — driven by manifest bowlMilestone fields.
+          // CHALLENGE_INDEX_BOWL_GRINDER_OUTPUT = grinding (2): bowl → grinder-output
+          // CHALLENGE_INDEX_BOWL_DONE = stuffing (3): bowl → done, sausage reset
           let bowlPosition = state.bowlPosition;
           let sausagePlaced = state.sausagePlaced;
-          if (state.currentChallenge === 2) {
+          if (state.currentChallenge === CHALLENGE_INDEX_BOWL_GRINDER_OUTPUT) {
             bowlPosition = 'grinder-output';
-          } else if (state.currentChallenge === 3) {
+          } else if (state.currentChallenge === CHALLENGE_INDEX_BOWL_DONE) {
             bowlPosition = 'done';
             sausagePlaced = false;
           }

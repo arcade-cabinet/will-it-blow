@@ -1,0 +1,77 @@
+{
+  "challenges": [
+    {
+      "id": "ingredients",
+      "name": "Ingredient Selection",
+      "station": "fridge",
+      "pattern": "bridge",
+      "cameraOffset": [0, 0, 1],
+      "description": "Choose ingredients that satisfy Mr. Sausage's demands.",
+      "quip": "Let's see what you're made of...",
+      "milestones": []
+    },
+    {
+      "id": "chopping",
+      "name": "Chopping",
+      "station": "cutting-board",
+      "pattern": "ecs-orchestrator",
+      "cameraOffset": [0, 0.3, 0.6],
+      "description": "Chop ingredients with precise timing.",
+      "quip": "Time to grind. And I mean that literally.",
+      "milestones": []
+    },
+    {
+      "id": "grinding",
+      "name": "Grinding",
+      "station": "grinder",
+      "pattern": "ecs-orchestrator",
+      "cameraOffset": [0, 0.3, 0.5],
+      "description": "Grind the ingredients at the right speed.",
+      "quip": "Stuff it. Carefully. Or it's YOUR casing next.",
+      "milestones": [{ "on": "complete", "action": "set-bowl-position", "value": "grinder-output" }]
+    },
+    {
+      "id": "stuffing",
+      "name": "Stuffing",
+      "station": "stuffer",
+      "pattern": "ecs-orchestrator",
+      "cameraOffset": [0, 0.2, 0.8],
+      "description": "Stuff the casing without letting pressure burst it.",
+      "quip": "Fire it up. Don't burn my kitchen.",
+      "milestones": [
+        { "on": "complete", "action": "set-bowl-position", "value": "done" },
+        { "on": "complete", "action": "reset-sausage-placed" }
+      ]
+    },
+    {
+      "id": "cooking",
+      "name": "Cooking",
+      "station": "stove",
+      "pattern": "ecs-orchestrator",
+      "cameraOffset": [0, 0.5, 0.5],
+      "description": "Cook the sausage to the perfect temperature.",
+      "quip": "Cook my sausage to perfection.",
+      "milestones": []
+    },
+    {
+      "id": "blowout",
+      "name": "Blowout",
+      "station": "dining-table",
+      "pattern": "ecs-orchestrator",
+      "cameraOffset": [0, 0.3, 0.8],
+      "description": "Aim at the cereal box and tie the casing before pressure builds.",
+      "quip": "Tie it off. One wrong move and... BOOM.",
+      "milestones": []
+    },
+    {
+      "id": "tasting",
+      "name": "Tasting",
+      "station": "crt-tv",
+      "pattern": "bridge",
+      "cameraOffset": [0, 0, 0],
+      "description": "Mr. Sausage renders his final verdict.",
+      "quip": "Now I taste. And I judge.",
+      "milestones": []
+    }
+  ]
+}
