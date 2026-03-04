@@ -1,4 +1,4 @@
-import {useCallback, useRef} from 'react';
+import {useCallback, useEffect, useRef} from 'react';
 import {type GestureResponderEvent, PanResponder, StyleSheet, View} from 'react-native';
 import {InputManager} from '../../input/InputManager';
 
@@ -73,6 +73,7 @@ export function SwipeFPSControls({
   const lastPosRef = useRef({x: 0, y: 0});
   const lastTimeRef = useRef(0);
   const velocityRef = useRef({x: 0, y: 0});
+  const peakSpeedRef = useRef(0);
 
   // Impulse decay state
   const impulseRef = useRef<{x: number; y: number; startTime: number; magnitude: number} | null>(
@@ -125,6 +126,7 @@ export function SwipeFPSControls({
         lastPosRef.current = {x: touch.pageX, y: touch.pageY};
         lastTimeRef.current = now;
         velocityRef.current = {x: 0, y: 0};
+        peakSpeedRef.current = 0;
 
         // Cancel any active impulse when a new touch starts
         if (frameLoopRef.current) {
@@ -151,7 +153,11 @@ export function SwipeFPSControls({
         // Feed continuous look drag
         if (dt > 0) {
           onLookDrag?.(dx, dy);
-          velocityRef.current = {x: dx / (dt / 1000), y: dy / (dt / 1000)};
+          const vx = dx / (dt / 1000);
+          const vy = dy / (dt / 1000);
+          velocityRef.current = {x: vx, y: vy};
+          const speed = Math.sqrt(vx * vx + vy * vy);
+          if (speed > peakSpeedRef.current) peakSpeedRef.current = speed;
         }
 
         lastPosRef.current = {x, y};
@@ -180,13 +186,9 @@ export function SwipeFPSControls({
           return;
         }
 
-        // Check for flick (swipe)
-        const speed = Math.sqrt(
-          velocityRef.current.x * velocityRef.current.x +
-            velocityRef.current.y * velocityRef.current.y,
-        );
-
-        if (speed >= FLICK_VELOCITY_THRESHOLD && totalDist > TAP_MAX_DISTANCE) {
+        // Check for flick (swipe) — use peak speed during the gesture,
+        // not the last sample (finger can slow before release)
+        if (peakSpeedRef.current >= FLICK_VELOCITY_THRESHOLD && totalDist > TAP_MAX_DISTANCE) {
           const dir = classifySwipeDirection(totalDx, -totalDy); // Negate Y: screen down = forward
 
           // Check for double-tap + flick (sprint)
@@ -206,6 +208,21 @@ export function SwipeFPSControls({
       },
     }),
   ).current;
+
+  // Cancel active RAF loop on unmount to prevent writes after unmount
+  useEffect(() => {
+    return () => {
+      if (frameLoopRef.current != null) {
+        cancelAnimationFrame(frameLoopRef.current);
+        frameLoopRef.current = null;
+      }
+      impulseRef.current = null;
+      if (joystickRef.current) {
+        joystickRef.current.x = 0;
+        joystickRef.current.y = 0;
+      }
+    };
+  }, [joystickRef]);
 
   return <View style={styles.touchSurface} {...panResponder.panHandlers} />;
 }

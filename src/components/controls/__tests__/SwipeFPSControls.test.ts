@@ -151,5 +151,24 @@ describe('SwipeFPSControls', () => {
       expect(source).toContain('computeDecayFactor');
       expect(source).toContain('cancelAnimationFrame');
     });
+
+    it('cleans up RAF loop on unmount via useEffect', () => {
+      const fs = require('node:fs');
+      const path = require('node:path');
+      const source = fs.readFileSync(path.resolve(__dirname, '../SwipeFPSControls.tsx'), 'utf8');
+      expect(source).toContain('useEffect');
+      // Cleanup should cancel animation frame and zero joystick
+      expect(source).toContain('frameLoopRef.current != null');
+      expect(source).toContain('impulseRef.current = null');
+    });
+
+    it('tracks peak speed during gesture for robust flick detection', () => {
+      const fs = require('node:fs');
+      const path = require('node:path');
+      const source = fs.readFileSync(path.resolve(__dirname, '../SwipeFPSControls.tsx'), 'utf8');
+      expect(source).toContain('peakSpeedRef');
+      // Uses peak speed, not last-sample speed
+      expect(source).toContain('peakSpeedRef.current >= FLICK_VELOCITY_THRESHOLD');
+    });
   });
 });
