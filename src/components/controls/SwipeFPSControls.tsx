@@ -44,8 +44,6 @@ interface SwipeFPSControlsProps {
   joystickRef: React.RefObject<{x: number; y: number}>;
   /** Callback for look drag (deltaX, deltaY in pixels). */
   onLookDrag?: (dx: number, dy: number) => void;
-  /** Bottom safe area inset to avoid home indicator overlap. */
-  safeAreaBottom?: number;
 }
 
 // ── Component ────────────────────────────────────────────────────
@@ -62,11 +60,7 @@ interface SwipeFPSControlsProps {
  * All touch movement feeds look-drag in real-time. Swipe classification happens
  * only on release based on peak velocity + total distance. No mid-gesture confusion.
  */
-export function SwipeFPSControls({
-  joystickRef,
-  onLookDrag,
-  safeAreaBottom: _safeAreaBottom = 0,
-}: SwipeFPSControlsProps) {
+export function SwipeFPSControls({joystickRef, onLookDrag}: SwipeFPSControlsProps) {
   // Track gesture state
   const startTimeRef = useRef(0);
   const startPosRef = useRef({x: 0, y: 0});

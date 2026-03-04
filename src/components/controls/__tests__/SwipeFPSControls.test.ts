@@ -118,13 +118,12 @@ describe('SwipeFPSControls', () => {
       expect(source).not.toContain('backgroundColor');
     });
 
-    it('accepts the same prop interface as MobileJoystick', () => {
+    it('accepts joystickRef and onLookDrag props', () => {
       const fs = require('node:fs');
       const path = require('node:path');
       const source = fs.readFileSync(path.resolve(__dirname, '../SwipeFPSControls.tsx'), 'utf8');
       expect(source).toContain('joystickRef');
       expect(source).toContain('onLookDrag');
-      expect(source).toContain('safeAreaBottom');
     });
 
     it('uses PanResponder for gesture handling', () => {
