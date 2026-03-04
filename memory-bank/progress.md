@@ -15,7 +15,7 @@
 | UI/UX | 90% | Menu/loading/overlays, thin HUDs, challenge transitions, difficulty selector, round manager, hidden object overlay |
 | State management | 95% | Zustand store with orchestrator→HUD bridge fields, multi-round state, AsyncStorage persistence |
 | Cross-platform | 60% | Web works well; native untested on devices |
-| Testing | 98% | 1530 tests across 94 suites |
+| Testing | 98% | 1587 tests across 96 suites |
 | Documentation | 95% | Frontmatter on docs, AGENTS.md hierarchy, memory bank, JSDoc cleaned up, TypeDoc |
 | CI/CD | 100% | Parallel jobs: lint, typecheck, test, build — all run on push to main and feat/** |
 
@@ -92,7 +92,9 @@
 
 | Date | Milestone |
 |------|-----------|
+| 2026-03-04 | Dual-zone touch controls, Rapier KINEMATIC_FIXED fix, real-playthrough E2E + 5 mobile profiles |
 | 2026-03-03 | Phase 2 Sprints 1–3 complete: difficulty, horror dressing, enemy encounters, blowout, multi-round, hidden objects, cleanup |
+| 2026-03-04 | 1587 tests passing across 96 suites |
 | 2026-03-03 | 1530 tests passing across 94 suites, Biome lint clean, TypeScript clean |
 | 2026-03-03 | CI/CD fully hardened: lint + typecheck + test + build in parallel on every push |
 | 2026-03-02 | PRs #25, #27, #28, #29 all merged to main |

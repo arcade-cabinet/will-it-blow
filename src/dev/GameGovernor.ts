@@ -177,6 +177,21 @@ export interface GameGov {
 
   /** Debug: set scene background color */
   setSceneBg?: (r: number, g: number, b: number) => void;
+
+  /** Manual proximity check — mirrors ManualProximityTrigger distance math.
+   *  Returns true if trigger fired. Used when Rapier sensors don't fire in E2E. */
+  checkProximityTrigger: () => boolean;
+
+  /** Get resolved station target for a challenge index (position + triggerRadius) */
+  getStationTarget: (
+    index: number,
+  ) => {position: [number, number, number]; triggerRadius: number; stationName: string} | null;
+
+  /** Start a new game without auto-triggering the first challenge (for real playthrough tests) */
+  startGameNoTrigger: () => void;
+
+  /** Complete the current challenge without auto-triggering the next one */
+  completeCurrentChallengeNoTrigger: (score: number) => void;
 }
 
 function createGovernor(): GameGov {
@@ -398,6 +413,47 @@ function createGovernor(): GameGov {
     },
     setSfxMuted(v) {
       store.getState().setSfxMuted(v);
+    },
+
+    /** Check if player is within trigger radius of current station and fire trigger.
+     *  Mirrors ManualProximityTrigger logic — same distance check, same store conditions.
+     *  Used by E2E tests when Rapier WASM sensors don't fire reliably in headless Chrome. */
+    checkProximityTrigger() {
+      const state = store.getState();
+      if (state.gameStatus !== 'playing' || state.challengeTriggered) return false;
+      const station = CHALLENGE_STATIONS[state.currentChallenge];
+      if (!station) return false;
+      const target = TARGETS[station.stationName];
+      if (!target) return false;
+      const [px, , pz] = state.playerPosition;
+      const dx = px - target.position[0];
+      const dz = pz - target.position[2];
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      if (dist < target.triggerRadius) {
+        state.triggerChallenge();
+        return true;
+      }
+      return false;
+    },
+
+    getStationTarget(index: number) {
+      const station = CHALLENGE_STATIONS[index];
+      if (!station) return null;
+      const target = TARGETS[station.stationName];
+      if (!target) return null;
+      return {
+        position: target.position as [number, number, number],
+        triggerRadius: target.triggerRadius,
+        stationName: station.stationName,
+      };
+    },
+
+    startGameNoTrigger() {
+      store.getState().startNewGame();
+    },
+
+    completeCurrentChallengeNoTrigger(score = 0) {
+      store.getState().completeChallenge(score);
     },
   };
 }

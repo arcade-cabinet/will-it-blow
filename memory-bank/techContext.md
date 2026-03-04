@@ -15,6 +15,9 @@
 | Zustand | 5.0.11 | State management (single store, no React Context) |
 | Tone.js | 15.1.22 | Web audio synthesis (procedural SFX) |
 | react-reconciler | ^0.33.0 | React reconciler (was pinned at 0.31.0 during migration) |
+| miniplex | 2.0.0 | Entity-component-system (ECS) for game entities |
+| @react-three/rapier | — | Rapier physics engine (sensors, rigid bodies, colliders) |
+| Playwright | — | E2E testing (5 mobile device profiles, headed mode, system Chrome) |
 
 ## Build & Dev Tools
 
@@ -35,7 +38,7 @@
 npx expo start --web          # Web dev server (primary dev target)
 
 # Testing
-pnpm test                     # Run all Jest tests (256+)
+pnpm test                     # Run all Jest tests (1587 across 96 suites)
 pnpm test:ci                  # CI mode (--ci --forceExit)
 
 # Linting & formatting
@@ -67,7 +70,7 @@ Everything else (including the entire 3D layer) is unified cross-platform.
 
 - **Framework:** Jest with react-native preset
 - **R3F components:** `@react-three/test-renderer` (renders Three.js scene graph in Node.js)
-- **Coverage:** 256+ tests across ~24 test files
+- **Coverage:** 1587 tests across 96 suites
 - **Pure logic tests:** SausagePhysics, Ingredients, ChallengeRegistry, IngredientMatcher, DialogueEngine, gameStore
 - **Component tests:** MrSausage3D, CrtTelevision, KitchenEnvironment, FridgeStation, GrinderStation, StufferStation, StoveStation, Ingredient3D, GameWorld, CrtShader
 - **Jest config:** `transformIgnorePatterns` must allowlist `three` and `@react-three` (ESM modules)
@@ -76,8 +79,18 @@ Everything else (including the entire 3D layer) is unified cross-platform.
 ## CI/CD
 
 - `.github/workflows/ci.yml` — Tests on push to `main` and `feat/**` branches
+- **Parallel jobs:** lint, typecheck, test, build run concurrently for fast feedback
 - `.github/workflows/cd.yml` — Web export via Expo, deploy to GitHub Pages on push to main
 - **Live:** https://arcade-cabinet.github.io/will-it-blow/
+
+## E2E Testing (Playwright)
+
+- Always run headed (`headless: false`) — local agent workflow
+- Must use system Chrome (`channel: 'chrome'`) — bundled Chromium may lack WebGL
+- **5 mobile device profiles:** iPhone SE, iPhone 14 Pro, Pixel 7, iPad Mini, Galaxy S23
+- GameGovernor at `src/dev/GameGovernor.ts` exposes `window.__gov` with `setCamera(pos, yaw)`, `debugMeshes()`, `setSceneBg()`
+- Jest config excludes `e2e/` via `testPathIgnorePatterns`
+- Dev server port varies (check with curl, often 8082-8084)
 
 ## Assets
 
@@ -102,3 +115,4 @@ Everything else (including the entire 3D layer) is unified cross-platform.
 9. **Camera inside mesh:** Check STATION_CAMERAS values. Camera needs ≥0.5 units clearance from solid meshes.
 10. **MrSausage3D overlap:** The character is ~3.5 units tall at scale 1.0. Verify position in each scene doesn't clip animated geometry.
 11. **Three.js transform allowlist:** `jest.config.js` must include `three` and `@react-three` in `transformIgnorePatterns` or tests fail with ESM syntax errors.
+12. **Rapier KINEMATIC_FIXED sensors:** Bodies with type `KINEMATIC_FIXED` need `activeCollisionTypes={15 | 8704}` bitmask for sensor intersection detection. Without it, `onIntersectionEnter`/`onIntersectionExit` callbacks silently never fire.

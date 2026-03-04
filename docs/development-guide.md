@@ -3,7 +3,7 @@ title: Development Guide
 domain: core
 status: current
 engine: r3f
-last-verified: 2026-03-01
+last-verified: 2026-03-04
 depends-on: [architecture, state-management, 3d-rendering, testing]
 agent-context: scene-architect, challenge-dev, store-warden
 summary: Conventions, patterns, pitfalls, how to add features
@@ -23,8 +23,8 @@ npx expo start --web
 # Run tests
 pnpm test
 
-# Type check
-npx tsc --noEmit
+# Type check (uses node --stack-size=8192 for Three.js types)
+pnpm typecheck
 ```
 
 ## Project Conventions
@@ -38,9 +38,11 @@ npx tsc --noEmit
 - **Data** goes in `src/data/` — dialogue trees, challenge variants
 - **Component tests** go in `src/components/*/__tests__/` — co-located with source
 
-### Challenge Component Pattern
+### Challenge Component Patterns
 
-Each challenge follows this structure:
+There are two challenge architecture patterns in the project:
+
+#### Bridge Pattern (Ingredients, Tasting)
 
 ```text
 src/components/challenges/FooChallenge.tsx    ← React Native overlay (UI + game logic)
@@ -60,6 +62,29 @@ The station component:
 2. Reads store state via props (passed from GameWorld)
 3. Animates meshes in `useFrame` callbacks
 4. Cleanup is automatic (R3F unmounts Three.js objects when component unmounts)
+
+#### ECS Orchestrator Pattern (Grinding, Stuffing, Cooking, Blowout)
+
+```text
+src/ecs/orchestrators/FooOrchestrator.tsx     ← ECS orchestrator (OWNS game logic)
+src/components/challenges/FooHUD.tsx           ← Thin read-only HUD (reads store, ZERO input handling)
+src/components/kitchen/FooStation.tsx           ← R3F 3D visuals
+src/ecs/systems/*.ts                           ← Behavior systems (pure update functions)
+src/ecs/renderers/*.tsx                        ← ECS renderers (MeshRenderer, etc.)
+```
+
+The orchestrator:
+1. Manages entity lifecycle (spawn/despawn via miniplex world)
+2. Runs game logic in `useFrame` (timers, scoring, zone detection)
+3. Writes bridge fields to Zustand (`challengeTimeRemaining`, `challengeSpeedZone`, `challengePhase`)
+4. Calls `completeChallenge(score)` when done — entities despawn automatically on unmount
+
+The thin HUD:
+1. Subscribes to Zustand bridge fields (read-only)
+2. Renders progress bars, timers, zone indicators
+3. Does NOT handle any input or game logic
+
+**Old 2D overlays (GrindingChallenge.tsx, StuffingChallenge.tsx, CookingChallenge.tsx) were DELETED** and replaced by this pattern.
 
 ### R3F 3D Scene Rules
 
@@ -162,6 +187,16 @@ If a new challenge needs new ephemeral state:
 
 **Problem:** Camera positioned inside or too close to a mesh → black screen.
 **Solution:** Check STATION_CAMERAS values. Ensure camera is at least 0.5 units from any solid mesh.
+
+### Rapier KINEMATIC_FIXED sensor detection
+
+**Problem:** Rapier sensors with `type="fixed"` or `type="kinematicPosition"` don't detect collisions by default.
+**Solution:** Must use `activeCollisionTypes={15 | 8704}` bitmask on the `<RigidBody>`. The bitmask `15` covers standard collision pairs and `8704` adds `KINEMATIC_FIXED` detection. Without this, `onIntersectionEnter`/`onIntersectionExit` callbacks will never fire.
+
+### TypeScript stack overflow with Three.js types
+
+**Problem:** `npx tsc --noEmit` overflows the Node.js default stack with Three.js recursive types.
+**Solution:** Always use `pnpm typecheck` which runs `node --stack-size=8192 npx tsc --noEmit`. Also requires `skipLibCheck: true` in tsconfig.
 
 ### MrSausage3D overlap
 

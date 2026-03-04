@@ -3,10 +3,10 @@ title: Plan Archive Index
 domain: reference
 status: current
 engine: r3f
-last-verified: 2026-03-01
+last-verified: 2026-03-04
 depends-on: []
 agent-context: doc-keeper
-summary: Index of all 15 plan documents with status, engine era, and reading guide
+summary: Index of all 21 plan documents with status, engine era, and reading guide
 -->
 
 # Plan Archive Index
@@ -34,6 +34,12 @@ Index of all design and implementation plans for Will It Blow?
 | `2026-03-01-free-roam-navigation-design.md` | Free-Roam Kitchen Navigation Design | completed | r3f | FPS pointer-lock + WASD nav, mobile joystick, proximity triggers, fridge GLB fix |
 | `2026-03-01-kitchen-diorama-design.md` | Kitchen Diorama Redesign -- Design | completed | r3f | Target-based placement, discrete GLB segments, PBR textures, three-layer architecture |
 | `2026-03-01-kitchen-diorama-plan.md` | Kitchen Diorama Redesign -- Implementation | completed | r3f | FurnitureLayout targets, FurnitureLoader GLB, PBR room textures, grime decals, wiring |
+| `2026-03-01-phase2-will-it-blow-design.md` | Phase 2 Design -- Will It Blow + Difficulty + Multi-Round | current | r3f | Phase 2 game expansion -- blowout mechanic, 5-tier difficulty, multi-round loop, hidden objects |
+| `2026-03-01-phase2-will-it-blow-plan.md` | Phase 2 Implementation Plan | current | r3f | Task-by-task execution plan for Phase 2 -- 21 tasks across 5 waves |
+| `2026-03-01-room-architecture.md` | Room Architecture -- The Sausage Factory Kitchen | stale | r3f | Definitive spatial reference -- room layout, GLB inventory, procedural geometry, station walkthroughs |
+| `2026-03-01-sausage-factory-kitchen-design.md` | Sausage Factory Kitchen -- Game Completion Design | active | r3f | Complete game system design -- title screen, loading, procedural factory mechanics, horror kitchen |
+| `2026-03-01-sausage-factory-kitchen-plan.md` | Sausage Factory Kitchen -- Implementation Plan | active | r3f | Five-phase implementation -- foundation, asset swap, room expansion, factory system, polish |
+| `2026-03-02-comprehensive-phase1-phase2-plan.md` | Comprehensive Phase 1 + Phase 2 Plan | current | r3f | Complete remaining Phase 1 gaps, then full Phase 2 implementation |
 
 ---
 
@@ -41,7 +47,7 @@ Index of all design and implementation plans for Will It Blow?
 
 **9 plans** from 2026-02-26 and 2026-02-27 with `status: historical`.
 
-These document the BabylonJS era of the project. They are valuable for understanding **why** architectural decisions were made -- the horror kitchen pivot, the shift from 8 phases to 5 sequential challenges, the input abstraction layer design, and the mobile-first XR ambitions.
+These document the BabylonJS era of the project. They are valuable for understanding **why** architectural decisions were made -- the horror kitchen pivot, the shift from 8 phases to 7 sequential challenges, the input abstraction layer design, and the mobile-first XR ambitions.
 
 **Do NOT follow their technical implementation.** The codebase has fully migrated to React Three Fiber + Three.js WebGPU. BabylonJS APIs (`SceneLoader.ImportMeshAsync`, `ActionManager`, `PBRMaterial`, `scene.onBeforeRenderObservable`, Havok physics) no longer exist in the project.
 
@@ -77,6 +83,23 @@ These document the **actual implementation** that shipped. Reference these for u
 2. WebGPU migration (renderer upgrade + CRT shader rewrite)
 3. Free-roam navigation (FPS controls replacing waypoints)
 4. Kitchen diorama design + plan (target-based layout, PBR textures)
+
+---
+
+## Active/Current Plans (Phase 2 Era)
+
+**6 plans** from 2026-03-01 through 2026-03-02 with `status: current` or `active`.
+
+These document Phase 2 expansion features -- the blowout mechanic, difficulty system, multi-round gameplay, enemy encounters, hidden objects, and cleanup mechanics.
+
+**Design-vs-implementation pairs:**
+
+| Design Doc | Implementation Doc |
+|-----------|-------------------|
+| `2026-03-01-phase2-will-it-blow-design.md` | `2026-03-01-phase2-will-it-blow-plan.md` |
+| `2026-03-01-sausage-factory-kitchen-design.md` | `2026-03-01-sausage-factory-kitchen-plan.md` |
+| *(standalone reference)* | `2026-03-01-room-architecture.md` |
+| *(comprehensive)* | `2026-03-02-comprehensive-phase1-phase2-plan.md` |
 
 ---
 

@@ -28,11 +28,11 @@ Documentation in this project spans multiple layers:
 Each doc file should have **HTML comment frontmatter** at the top with metadata (title, domain, status, engine, etc.).
 
 ### Plan Archive (`docs/plans/`)
-15 plan documents recording design decisions and implementation plans. These are historical records -- they capture the thinking and decisions made during development. Plan filenames follow the pattern `YYYY-MM-DD-<slug>.md`.
+21 plan documents recording design decisions and implementation plans. These are historical records -- they capture the thinking and decisions made during development. Plan filenames follow the pattern `YYYY-MM-DD-<slug>.md`.
 
 ### Claude Configuration
 - `CLAUDE.md` -- Claude Code configuration with project-specific instructions, commands, architecture notes, patterns, and pitfalls
-- `.claude/agents/` -- Agent definition files (this directory)
+- `.claude/agents/` -- 5 agent definition files: `scene-architect`, `challenge-dev`, `store-warden`, `asset-pipeline`, `doc-keeper`
 
 ### JSDoc Coverage
 All engine modules and key components should have module-level `/** */` JSDoc comments with:
@@ -59,9 +59,9 @@ TypeDoc configuration generates API documentation from JSDoc comments. Output go
 | File | Purpose |
 |------|---------|
 | `docs/*.md` | 9 core documentation files |
-| `docs/plans/*.md` | 15 plan archive files (historical) |
+| `docs/plans/*.md` | 21 plan archive files (historical) |
 | `CLAUDE.md` | Claude Code project instructions |
-| `.claude/agents/*.md` | Agent definition files |
+| `.claude/agents/*.md` | 5 agent definition files (scene-architect, challenge-dev, store-warden, asset-pipeline, doc-keeper) |
 | `src/engine/*.ts` | Engine modules requiring JSDoc coverage |
 | `src/store/gameStore.ts` | Store definition requiring JSDoc coverage |
 

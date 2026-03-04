@@ -186,7 +186,12 @@ function StationSensor({
 
   return (
     <RigidBody type="fixed" position={position} colliders={false}>
-      <CylinderCollider args={[2, radius]} sensor onIntersectionEnter={handleIntersection} />
+      <CylinderCollider
+        args={[2, radius]}
+        sensor
+        activeCollisionTypes={15 | 8704 /* DEFAULT | KINEMATIC_FIXED */}
+        onIntersectionEnter={handleIntersection}
+      />
     </RigidBody>
   );
 }

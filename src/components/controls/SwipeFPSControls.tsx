@@ -1,41 +1,15 @@
-import {useCallback, useEffect, useRef} from 'react';
+import {useEffect, useRef} from 'react';
 import {type GestureResponderEvent, PanResponder, StyleSheet, View} from 'react-native';
 import {InputManager} from '../../input/InputManager';
 
 // ── Constants ────────────────────────────────────────────────────
 
-/** Velocity threshold (px/s) to classify a release as a flick/swipe. */
-const FLICK_VELOCITY_THRESHOLD = 600;
 /** Max duration (ms) for a tap gesture. */
 const TAP_MAX_DURATION = 250;
 /** Max travel (px) for a tap gesture. */
 const TAP_MAX_DISTANCE = 10;
-/** Half-life in ms for impulse decay after a flick. */
-const IMPULSE_HALF_LIFE = 150;
-/** Time (ms) after which impulse is considered zero. */
-const IMPULSE_CUTOFF = 500;
-/** Sprint multiplier when double-tap + flick. */
-const SPRINT_MULTIPLIER = 1.8;
-/** Max time (ms) between taps for a double-tap. */
-const DOUBLE_TAP_WINDOW = 350;
-/** Impulse magnitude for a flick (normalized to [-1, 1] joystick range). */
-const FLICK_IMPULSE_MAGNITUDE = 0.85;
-
-// ── Exported helpers (testable) ──────────────────────────────────
-
-/** Classify a swipe direction from dx/dy into a normalized unit vector. */
-export function classifySwipeDirection(dx: number, dy: number): {x: number; y: number} {
-  const len = Math.sqrt(dx * dx + dy * dy);
-  if (len < 1) return {x: 0, y: 0};
-  return {x: dx / len, y: dy / len};
-}
-
-/** Compute the exponential decay factor for impulse at time `t` ms after release. */
-export function computeDecayFactor(t: number): number {
-  if (t >= IMPULSE_CUTOFF) return 0;
-  if (t <= 0) return 1;
-  return 0.5 ** (t / IMPULSE_HALF_LIFE);
-}
+/** Radius (px) at which left-zone drag reaches full joystick magnitude. */
+const MOVE_ZONE_RADIUS = 80;
 
 // ── Props ────────────────────────────────────────────────────────
 
@@ -49,85 +23,80 @@ interface SwipeFPSControlsProps {
 // ── Component ────────────────────────────────────────────────────
 
 /**
- * SwipeFPSControls — invisible fullscreen touch surface for mobile FPS navigation.
+ * SwipeFPSControls — dual-zone invisible touch surface for mobile FPS navigation.
+ *
+ * Layout:
+ * ┌─────────────┬─────────────┐
+ * │  MOVE ZONE  │  LOOK ZONE  │
+ * │  (left 50%) │  (right 50%)│
+ * └─────────────┴─────────────┘
  *
  * Gesture model:
- * - Drag (slow): Look around — continuous delta → onLookDrag(dx, dy)
- * - Flick (fast release): Move impulse — writes decaying value to joystickRef
- * - Tap (<250ms, <10px): Interact — fires setTouchActionPressed('interact', true) pulse
- * - Double-tap + flick: Sprint — 1.8x impulse magnitude
- *
- * All touch movement feeds look-drag in real-time. Swipe classification happens
- * only on release based on peak velocity + total distance. No mid-gesture confusion.
+ * - Left half drag: Move — invisible virtual joystick centered on touch-start
+ * - Left half release: Stop moving — zero joystickRef
+ * - Right half drag: Look around — continuous delta → onLookDrag(dx, dy)
+ * - Tap (either side): Interact — fires setTouchActionPressed('interact', true) pulse
  */
 export function SwipeFPSControls({joystickRef, onLookDrag}: SwipeFPSControlsProps) {
-  // Track gesture state
-  const startTimeRef = useRef(0);
-  const startPosRef = useRef({x: 0, y: 0});
-  const lastPosRef = useRef({x: 0, y: 0});
-  const lastTimeRef = useRef(0);
-  const velocityRef = useRef({x: 0, y: 0});
-  const peakSpeedRef = useRef(0);
+  // ── Move zone (left half) state ──
+  const moveStartRef = useRef({x: 0, y: 0});
+  const moveStartTimeRef = useRef(0);
+  const moveTotalDistRef = useRef(0);
 
-  // Impulse decay state
-  const impulseRef = useRef<{x: number; y: number; startTime: number; magnitude: number} | null>(
-    null,
-  );
-  const frameLoopRef = useRef<number | null>(null);
+  // ── Look zone (right half) state ──
+  const lookLastRef = useRef({x: 0, y: 0});
+  const lookStartTimeRef = useRef(0);
+  const lookStartPosRef = useRef({x: 0, y: 0});
+  const lookMaxDistRef = useRef(0);
+  // Keep callback ref fresh to avoid stale closure in PanResponder
+  const onLookDragRef = useRef(onLookDrag);
+  useEffect(() => {
+    onLookDragRef.current = onLookDrag;
+  }, [onLookDrag]);
 
-  // Double-tap detection
-  const lastTapTimeRef = useRef(0);
+  // ── Shared tap helper ──
+  const pendingInteractRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fireTapInteract = () => {
+    const input = InputManager.getInstance();
+    // Clear any existing timeout to prevent overlapping pulses
+    if (pendingInteractRef.current !== null) {
+      clearTimeout(pendingInteractRef.current);
+    }
+    input.setTouchActionPressed('interact', true);
+    pendingInteractRef.current = setTimeout(() => {
+      input.setTouchActionPressed('interact', false);
+      pendingInteractRef.current = null;
+    }, 50);
+  };
 
-  // Animate impulse decay and write to joystickRef
-  const animateImpulse = useCallback(() => {
-    const imp = impulseRef.current;
-    if (!imp || !joystickRef.current) {
-      if (frameLoopRef.current) {
-        cancelAnimationFrame(frameLoopRef.current);
-        frameLoopRef.current = null;
+  // Cleanup on unmount: zero joystick, cancel pending interact, reset input state
+  useEffect(() => {
+    return () => {
+      if (pendingInteractRef.current !== null) {
+        clearTimeout(pendingInteractRef.current);
+        pendingInteractRef.current = null;
+        InputManager.getInstance().setTouchActionPressed('interact', false);
       }
-      return;
-    }
-
-    const elapsed = performance.now() - imp.startTime;
-    const factor = computeDecayFactor(elapsed);
-
-    if (factor <= 0.04) {
-      // Below threshold — zero out
-      joystickRef.current.x = 0;
-      joystickRef.current.y = 0;
-      impulseRef.current = null;
-      frameLoopRef.current = null;
-      return;
-    }
-
-    joystickRef.current.x = imp.x * imp.magnitude * factor;
-    joystickRef.current.y = imp.y * imp.magnitude * factor;
-
-    frameLoopRef.current = requestAnimationFrame(animateImpulse);
+      if (joystickRef.current) {
+        joystickRef.current.x = 0;
+        joystickRef.current.y = 0;
+      }
+    };
   }, [joystickRef]);
 
-  const panResponder = useRef(
+  // ── Move zone PanResponder (left half) ──
+  const movePanResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
 
       onPanResponderGrant: (evt: GestureResponderEvent) => {
         const touch = evt.nativeEvent;
-        const now = performance.now();
-        startTimeRef.current = now;
-        startPosRef.current = {x: touch.pageX, y: touch.pageY};
-        lastPosRef.current = {x: touch.pageX, y: touch.pageY};
-        lastTimeRef.current = now;
-        velocityRef.current = {x: 0, y: 0};
-        peakSpeedRef.current = 0;
-
-        // Cancel any active impulse when a new touch starts
-        if (frameLoopRef.current) {
-          cancelAnimationFrame(frameLoopRef.current);
-          frameLoopRef.current = null;
-        }
-        impulseRef.current = null;
+        moveStartRef.current.x = touch.pageX;
+        moveStartRef.current.y = touch.pageY;
+        moveStartTimeRef.current = performance.now();
+        moveTotalDistRef.current = 0;
+        // Zero joystick on new touch
         if (joystickRef.current) {
           joystickRef.current.x = 0;
           joystickRef.current.y = 0;
@@ -136,89 +105,96 @@ export function SwipeFPSControls({joystickRef, onLookDrag}: SwipeFPSControlsProp
 
       onPanResponderMove: (evt: GestureResponderEvent) => {
         const touch = evt.nativeEvent;
-        const now = performance.now();
-        const x = touch.pageX;
-        const y = touch.pageY;
+        const dx = touch.pageX - moveStartRef.current.x;
+        const dy = touch.pageY - moveStartRef.current.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        moveTotalDistRef.current = Math.max(moveTotalDistRef.current, dist);
 
-        const dx = x - lastPosRef.current.x;
-        const dy = y - lastPosRef.current.y;
-        const dt = now - lastTimeRef.current;
+        if (!joystickRef.current) return;
 
-        // Feed continuous look drag
-        if (dt > 0) {
-          onLookDrag?.(dx, dy);
-          const vx = dx / (dt / 1000);
-          const vy = dy / (dt / 1000);
-          velocityRef.current = {x: vx, y: vy};
-          const speed = Math.sqrt(vx * vx + vy * vy);
-          if (speed > peakSpeedRef.current) peakSpeedRef.current = speed;
+        // Normalize by MOVE_ZONE_RADIUS, clamp to [-1, 1]
+        const scale = Math.min(dist, MOVE_ZONE_RADIUS) / MOVE_ZONE_RADIUS;
+        if (dist < 1) {
+          joystickRef.current.x = 0;
+          joystickRef.current.y = 0;
+        } else {
+          const nx = dx / dist; // unit direction
+          const ny = dy / dist;
+          joystickRef.current.x = nx * scale;
+          // Negate Y: screen-down = forward = negative Z in game
+          joystickRef.current.y = -(ny * scale);
         }
-
-        lastPosRef.current = {x, y};
-        lastTimeRef.current = now;
       },
 
       onPanResponderRelease: () => {
-        const now = performance.now();
-        const duration = now - startTimeRef.current;
-        const totalDx = lastPosRef.current.x - startPosRef.current.x;
-        const totalDy = lastPosRef.current.y - startPosRef.current.y;
-        const totalDist = Math.sqrt(totalDx * totalDx + totalDy * totalDy);
-
-        // Check for tap
-        if (duration < TAP_MAX_DURATION && totalDist < TAP_MAX_DISTANCE) {
-          // Fire interact action as a pulse
-          const input = InputManager.getInstance();
-          input.setTouchActionPressed('interact', true);
-          // Release after one frame
-          requestAnimationFrame(() => {
-            input.setTouchActionPressed('interact', false);
-          });
-
-          // Track for double-tap
-          lastTapTimeRef.current = now;
-          return;
+        // Zero joystick on release
+        if (joystickRef.current) {
+          joystickRef.current.x = 0;
+          joystickRef.current.y = 0;
         }
+        // Check for tap
+        const duration = performance.now() - moveStartTimeRef.current;
+        if (duration < TAP_MAX_DURATION && moveTotalDistRef.current < TAP_MAX_DISTANCE) {
+          fireTapInteract();
+        }
+      },
 
-        // Check for flick (swipe) — use peak speed during the gesture,
-        // not the last sample (finger can slow before release)
-        if (peakSpeedRef.current >= FLICK_VELOCITY_THRESHOLD && totalDist > TAP_MAX_DISTANCE) {
-          const dir = classifySwipeDirection(totalDx, -totalDy); // Negate Y: screen down = forward
-
-          // Check for double-tap + flick (sprint)
-          const timeSinceLastTap = now - lastTapTimeRef.current;
-          const isSprint = timeSinceLastTap < DOUBLE_TAP_WINDOW;
-          const magnitude = FLICK_IMPULSE_MAGNITUDE * (isSprint ? SPRINT_MULTIPLIER : 1);
-
-          impulseRef.current = {
-            x: dir.x,
-            y: dir.y,
-            startTime: now,
-            magnitude,
-          };
-
-          frameLoopRef.current = requestAnimationFrame(animateImpulse);
+      onPanResponderTerminate: () => {
+        // OS interrupted the gesture — zero joystick to prevent stuck movement
+        if (joystickRef.current) {
+          joystickRef.current.x = 0;
+          joystickRef.current.y = 0;
         }
       },
     }),
   ).current;
 
-  // Cancel active RAF loop on unmount to prevent writes after unmount
-  useEffect(() => {
-    return () => {
-      if (frameLoopRef.current != null) {
-        cancelAnimationFrame(frameLoopRef.current);
-        frameLoopRef.current = null;
-      }
-      impulseRef.current = null;
-      if (joystickRef.current) {
-        joystickRef.current.x = 0;
-        joystickRef.current.y = 0;
-      }
-    };
-  }, [joystickRef]);
+  // ── Look zone PanResponder (right half) ──
+  const lookPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
 
-  return <View style={styles.touchSurface} {...panResponder.panHandlers} />;
+      onPanResponderGrant: (evt: GestureResponderEvent) => {
+        const touch = evt.nativeEvent;
+        lookLastRef.current.x = touch.pageX;
+        lookLastRef.current.y = touch.pageY;
+        lookStartTimeRef.current = performance.now();
+        lookStartPosRef.current.x = touch.pageX;
+        lookStartPosRef.current.y = touch.pageY;
+        lookMaxDistRef.current = 0;
+      },
+
+      onPanResponderMove: (evt: GestureResponderEvent) => {
+        const touch = evt.nativeEvent;
+        const dx = touch.pageX - lookLastRef.current.x;
+        const dy = touch.pageY - lookLastRef.current.y;
+        lookLastRef.current.x = touch.pageX;
+        lookLastRef.current.y = touch.pageY;
+        // Track max distance from start for robust tap detection
+        const fromStartDx = touch.pageX - lookStartPosRef.current.x;
+        const fromStartDy = touch.pageY - lookStartPosRef.current.y;
+        const fromStartDist = Math.sqrt(fromStartDx * fromStartDx + fromStartDy * fromStartDy);
+        lookMaxDistRef.current = Math.max(lookMaxDistRef.current, fromStartDist);
+        onLookDragRef.current?.(dx, dy);
+      },
+
+      onPanResponderRelease: () => {
+        // Check for tap (max distance, not end-to-end, to reject circular gestures)
+        const duration = performance.now() - lookStartTimeRef.current;
+        if (duration < TAP_MAX_DURATION && lookMaxDistRef.current < TAP_MAX_DISTANCE) {
+          fireTapInteract();
+        }
+      },
+    }),
+  ).current;
+
+  return (
+    <View style={styles.touchSurface} testID="touch-surface">
+      <View style={styles.moveZone} testID="move-zone" {...movePanResponder.panHandlers} />
+      <View style={styles.lookZone} testID="look-zone" {...lookPanResponder.panHandlers} />
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -229,18 +205,17 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     zIndex: 15,
-    // Invisible — no background, border, or visual elements
+    flexDirection: 'row',
+  },
+  moveZone: {
+    width: '50%',
+    height: '100%',
+  },
+  lookZone: {
+    width: '50%',
+    height: '100%',
   },
 });
 
 // Exported for testing
-export {
-  FLICK_VELOCITY_THRESHOLD,
-  TAP_MAX_DURATION,
-  TAP_MAX_DISTANCE,
-  IMPULSE_HALF_LIFE,
-  IMPULSE_CUTOFF,
-  SPRINT_MULTIPLIER,
-  DOUBLE_TAP_WINDOW,
-  FLICK_IMPULSE_MAGNITUDE,
-};
+export {TAP_MAX_DURATION, TAP_MAX_DISTANCE, MOVE_ZONE_RADIUS};

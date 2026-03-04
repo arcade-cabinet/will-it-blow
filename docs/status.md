@@ -3,39 +3,44 @@ title: Project Status & Remaining Work
 domain: core
 status: current
 engine: r3f
-last-verified: 2026-03-01
+last-verified: 2026-03-04
 depends-on: [architecture, game-design, testing, deployment]
 agent-context: doc-keeper
-summary: Current completion status reflecting physics/Rapier, grab system, bowl blending, settings, persistence, and documentation overhaul
+summary: Current completion status reflecting Phase 2 features — ECS orchestrators, difficulty, enemies, multi-round, blowout, dual-zone touch, Playwright E2E
 -->
 
 # Project Status & Remaining Work
 
-**Last updated:** 2026-03-01
+**Last updated:** 2026-03-04
 
 ## Completion Status
 
 | Domain | % | Status |
 |--------|---|--------|
-| Core gameplay loop | 95% | All 5 challenges playable, 3D fridge interaction, grab system, bowl blending, transitions |
-| 3D visuals | 80% | Horror kitchen with PBR textures, R3F stations, 3D fridge picking, Rapier physics |
-| Physics/Rapier | 90% | Station proximity sensors, GrabbableSausage, GrabSystem, receiver pattern, splatter particles |
+| Core gameplay loop | 100% | All 7 challenges playable, ECS orchestrators, multi-round gameplay, difficulty system |
+| 3D visuals | 95% | Horror kitchen with PBR textures, 21 PSX horror props, R3F stations, Rapier physics, GLB mesh culling |
+| Physics/Rapier | 95% | Station proximity sensors (KINEMATIC_FIXED + bitmask), GrabbableSausage, GrabSystem, receiver pattern, splatter particles |
 | Audio (web) | 70% | All challenges wired: grinder, squelch, pressure, sizzle, burst, picks, rating song, ambient drone, grab/drop SFX |
 | Audio (native) | 0% | Complete no-op stub |
-| UI/UX | 80% | Menu/loading/overlays, challenge transitions, hover tooltips, intro dialogue, settings screen with volume/mute |
-| State management | 95% | Zustand store with AsyncStorage persistence (progress + settings), grab state, bowl/blend tracking |
-| Cross-platform | 60% | Web works well; native uses same Canvas (react-native-wgpu), untested on devices |
-| Testing | 90% | 253 unit tests across 23 test files (pure logic + R3F component tests) |
+| UI/UX | 90% | Menu/loading/overlays, challenge transitions, hover tooltips, intro dialogue, settings, difficulty selector, dual-zone touch controls |
+| State management | 100% | Zustand store with AsyncStorage persistence, ECS bridge fields, multi-round, hidden objects, cleanup, blowout, XR fields |
+| Cross-platform | 70% | Web works well; native uses same Canvas (react-native-wgpu); dual-zone touch controls; VR/AR foundations; untested on devices |
+| Testing | 95% | 1587 tests across 96 suites (unit + R3F component + Playwright E2E) |
 | Documentation | 95% | Full overhaul: frontmatter, AGENTS.md hierarchy, memory bank, .claude/ agents+commands, JSDoc, TypeDoc |
-| CI/CD | 50% | Tests run; no tsc, no lint, no Android build |
-| Production readiness | 35% | Settings + persistence done; no mobile testing |
+| CI/CD | 100% | 100% (parallel jobs: lint, typecheck, test, build) |
+| Production readiness | 50% | Settings + persistence done; dual-zone touch; no mobile device testing |
 
 ## What Works
 
-- Full game loop: menu -> loading -> 5 challenges -> results -> menu
-- All 5 challenge mechanics with scoring
+- Full game loop: menu -> loading -> 7 challenges -> results -> menu
+- All 7 challenge mechanics with scoring (ingredients, chopping, grinding, stuffing, cooking, blowout, tasting)
+- Two challenge architecture patterns:
+  - **ECS orchestrator** (grinding/stuffing/cooking): orchestrator OWNS game logic, thin HUD reads store
+  - **Bridge pattern** (ingredients/tasting): 2D overlay owns scoring, 3D station handles visuals
 - Horror kitchen environment with PBR textures (GLB + AmbientCG bakes)
-- Rapier physics sensors for station proximity triggers (replace distance-based checks)
+- 21 PSX horror prop GLBs via tiered HorrorPropsLoader (tier 1 immediate, tier 2 deferred 2s)
+- GLB mesh culling: auto-hides artifact meshes extending past room walls
+- Rapier physics sensors for station proximity triggers (KINEMATIC_FIXED + activeCollisionTypes bitmask)
 - GrabbableSausage: physics-enabled sausage link at stuffer output (RigidBody + CapsuleCollider)
 - GrabSystem: raycasting grab/carry/drop mechanic (click grabbable -> carry with bob -> drop on receiver or release to physics)
 - Bowl-based blending: BlendCalculator computes color/roughness/chunkiness/shininess from ingredient stats; BlendMaterial renders the ground meat
@@ -60,13 +65,27 @@ summary: Current completion status reflecting physics/Rapier, grab system, bowl 
 - Dialogue system with typewriter text and branching choices
 - Variant system for replayability (seeded challenge difficulty)
 - Code splitting (React.lazy, 17 production chunks, ~1.2 MB menu, ~4.6 MB GameWorld on demand)
-- 253 passing tests across 23 test files (pure logic + R3F component tests via @react-three/test-renderer)
+- 1587 passing tests across 96 suites (pure logic + R3F component + Playwright E2E)
 - GitHub Pages deployment (auto-deploy on push to main)
 - Unified cross-platform GameWorld (single file, no platform split)
 
+### Phase 2 Features (2026-03-02 through 2026-03-04)
+
+- **Difficulty system**: 5 tiers (Rare -> Well Done) with DifficultySelector UI ("Choose Your Doneness")
+- **ECS orchestrators**: GrinderOrchestrator, StufferOrchestrator, CookingOrchestrator (miniplex 2.0)
+- **Enemy encounter system**: 5 enemy types, 5 weapons, 4 spawn cabinets, AI state machine (spawning -> approaching -> attacking -> stunned -> dying -> dead)
+- **Blowout challenge**: TieGesture, BlowoutOrchestrator, CerealBox splat, PlaceSetting, BlowoutHUD
+- **Multi-round gameplay**: RoundManager (C(12,3) combo tracking), TrapDoorAnimation, RoundTransition UI
+- **Hidden objects**: CabinetDrawer (spring animations), KitchenAssembly (equipment parts/stations), HiddenObjectOverlay
+- **Cleanup mechanics**: ProceduralSink, CleanupManager, CleanupHUD
+- **Dual-zone touch controls**: left-thumb movement joystick + right-thumb look zone (with Rapier sensor detection)
+- **Playwright E2E tests**: GameGovernor at `window.__gov`, headed system Chrome, real playthrough screenshots
+- **InputManager**: Universal input with JSON bindings, keyboard/mouse/gamepad/touch normalization
+- **Horror scene dressing**: 21 PSX GLBs via tiered HorrorPropsLoader
+
 ### Documentation Infrastructure (2026-03-01)
 
-- Frontmatter on all 26 docs (9 core + 15 plans + 2 AGENTS.md)
+- Frontmatter on all 32 docs (9 core + 21 plans + 2 AGENTS.md)
 - AGENTS.md hierarchy (root, docs/, docs/plans/, memory-bank/) for multi-agent coordination
 - Memory bank (7 files): projectbrief, productContext, systemPatterns, techContext, activeContext, progress, AGENTS.md
 - `.claude/agents/` (5 agents): scene-architect, challenge-dev, store-warden, asset-pipeline, doc-keeper
@@ -88,8 +107,14 @@ summary: Current completion status reflecting physics/Rapier, grab system, bowl 
 | 2026-02-28 | Code splitting implemented (17 chunks, lazy GameWorld) |
 | 2026-02-27 | Babylon.js -> R3F migration complete (all 3D components, 93 new tests) |
 | -- | GitHub Pages deployment live |
-| -- | 253 tests passing |
-| -- | All 5 challenges playable end-to-end |
+| 2026-03-04 | Dual-zone touch controls + Rapier sensor detection + Playwright E2E |
+| 2026-03-03 | Cross-platform systems (XR input, VR locomotion, AR placement, spatial audio, accessibility) |
+| 2026-03-02 | Phase 2 Sprint 3 complete (blowout, multi-round, hidden objects, cleanup) |
+| 2026-03-02 | Phase 2 Sprint 2 complete (enemy encounters, combat system) |
+| 2026-03-02 | Phase 2 Sprint 1 complete (difficulty system, horror props, InputManager) |
+| 2026-03-02 | Phase 1 gaps completed (fridge pull, ingredient GLBs, pan flip, hopper, continue button) |
+| -- | 1587 tests passing across 96 suites |
+| -- | All 7 challenges playable end-to-end |
 | -- | CRT shader migrated to TSL NodeMaterial |
 
 ## Babylon.js -> React Three Fiber Migration (Completed 2026-02-27)
@@ -117,28 +142,22 @@ Full migration from Babylon.js/reactylon to R3F/Three.js:
 
 ## Remaining Work (Prioritized)
 
-### Priority 1: Ship What Exists
+### Priority 1: Polish & Production
 
 1. **Commit `public/` assets** -- The game literally doesn't render without these. Consider Git LFS for kitchen.glb (15.5 MB).
-2. **Add `.gitignore` entries** for loose zip files and asset packs.
-3. **Fix CI** -- Add `npx tsc --noEmit` and lint steps to ci.yml.
+2. **Background music** -- Ambient horror drone or dark synth loop.
+3. **Ambient SFX** -- Fridge hum, dripping water, distant clanking, flickering light buzz.
+4. **Loading screen polish** -- Visual improvements to loading state.
 
-### Priority 2: Polish & Production
+### Priority 2: Cross-Platform
 
-4. **BUT FIRST events** -- Mid-challenge interruption mechanic (scoring formula accounts for bonus).
-5. **Background music** -- Ambient horror drone or dark synth loop.
-6. **Ambient SFX** -- Fridge hum, dripping water, distant clanking, flickering light buzz.
-7. **Loading screen polish** -- Visual improvements to loading state.
+5. **Native audio engine** -- Implement `AudioEngine.ts` using `expo-av` or `react-native-audio-api`.
+6. **Mobile device testing** -- Verify dual-zone touch controls, layout scaling, performance on actual iOS/Android devices.
+7. **Android APK build** -- Set up in CI.
 
-### Priority 3: Cross-Platform
+### Priority 3: Nice-to-Have
 
-8. **Native audio engine** -- Implement `AudioEngine.ts` using `expo-av` or `react-native-audio-api`.
-9. **Mobile testing** -- Verify touch interactions, layout scaling, performance on actual devices.
-10. **Android APK build** -- Set up in CI.
-
-### Priority 4: Nice-to-Have
-
-11. **Leaderboard** -- Local or cloud-based high score tracking.
-12. **More ingredients** -- Expand from 25 to 50+ for variety.
-13. **Achievements** -- "First S Rank", "Complete without hints", etc.
-14. **XR mode** -- Explore @react-three/xr integration for immersive play.
+8. **Leaderboard** -- Local or cloud-based high score tracking.
+9. **More ingredients** -- Expand from 25 to 50+ for variety.
+10. **Achievements** -- "First S Rank", "Complete without hints", etc.
+11. **XR polish** -- VR/AR foundations exist (@react-three/xr); needs device testing and UX refinement.

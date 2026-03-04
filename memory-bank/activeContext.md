@@ -1,14 +1,14 @@
 # Active Context — Will It Blow?
 
-**Last updated:** 2026-03-03
+**Last updated:** 2026-03-04
 
 ## Current Branch
 
-`main` — all feature branches merged
+`feat/dual-zone-touch-controls` — dual-zone mobile touch controls, Rapier sensor fix, E2E tests
 
 ## Current Focus
 
-Phase 2 Sprints 1-3 are complete. All major gameplay systems are implemented. Current focus is on data-driven challenge manifest refinement and remaining plan items from the comprehensive Phase 2 design doc.
+PR #33: Dual-zone touch controls for mobile, Rapier KINEMATIC_FIXED sensor detection fix, real-playthrough E2E tests with 5 mobile device profiles.
 
 ## Merged PRs
 
@@ -19,63 +19,32 @@ Phase 2 Sprints 1-3 are complete. All major gameplay systems are implemented. Cu
 | #28 | Phase 2 Sprint 2 | Merged — enemy encounters |
 | #29 | Phase 2 Sprint 3 | Merged — blowout, multi-round, hidden objects, cleanup |
 
+## Open PRs
+
+| PR | Branch | Status |
+|----|--------|--------|
+| #33 | feat/dual-zone-touch-controls | Open — dual-zone touch controls, Rapier fix, E2E tests |
+
 ## Recent Work
 
-### Task #20: JSDoc cleanup + progress.md update (2026-03-03) — COMPLETE
+### PR #33: Dual-zone touch controls + Rapier fix + E2E tests (2026-03-04) — IN PROGRESS
 
-- Replaced all `resolveTargets()` references with `resolveLayout()` in JSDoc/comments:
-  - `src/engine/FurnitureLayout.ts` (FurnitureRule.target doc + getStationTarget params + stale comment)
-  - `src/components/kitchen/FurnitureLoader.tsx` (module doc)
-  - `src/components/kitchen/TrapDoorMount.tsx` (module doc)
-  - `src/components/kitchen/FridgeStation.tsx` (props JSDoc)
-  - `src/components/GameWorld.tsx` (module doc + StationSensor props JSDoc)
-  - `src/components/kitchen/TransferBowl.tsx` (module doc, already fixed by linter)
-- Updated `memory-bank/progress.md` to reflect Phase 2 Sprints 1–3 completion, 1529 tests, 100% CI/CD
-
-### Task #14: Replace `as any` traversals (2026-03-03) — COMPLETE
-
-- Created `src/engine/threeUtils.ts` with typed `traverseMeshes(root, callback)` utility
-- Updated `FurnitureLoader.tsx` and `HorrorPropsLoader.tsx` to use it
-- Added `RapierRigidBody` + `RapierObject3D` typed interfaces in `GrabSystem.tsx`
-
-### Phase 2 Sprint 3 (2026-03-03) — COMPLETE
-
-- Blowout challenge: TieGesture, BlowoutOrchestrator (ECS), CerealBox splat, PlaceSetting, BlowoutHUD
-- Multi-round loop: RoundManager (C(12,3) combo tracking), TrapDoorAnimation, RoundTransition UI
-- Hidden objects: CabinetDrawer (spring animations), KitchenAssembly, HiddenObjectOverlay
-- Cleanup mechanics: ProceduralSink, CleanupManager, CleanupHUD
-- CI/CD: Fully hardened with parallel lint, typecheck, test, build jobs
-
-### Phase 2 Sprint 2 (2026-03-02) — COMPLETE
-
-- Enemy encounter system: 5 enemy types, 5 weapons, 4 spawn cabinets
-- ECS: EnemySpawnSystem + CombatSystem + CabinetBurst + CombatHUD
-- AI state machine: spawning→approaching→attacking→stunned→dying→dead
-- Difficulty-scaled spawn probability
-
-### Phase 2 Sprint 1 (2026-03-02) — COMPLETE
-
-- Difficulty system: 5 tiers (Rare→Well Done), JSON config-driven
-- Horror scene dressing: 21 PSX GLBs via tiered HorrorPropsLoader
-- InputManager: Universal input with JSON bindings, keyboard/mouse/gamepad/touch
-
-### Phase 1 Completion (2026-03-02) — COMPLETE
-
-- ECS orchestrators promoted to full game drivers (Grinder, Stuffer, Cooking)
-- Thin HUD components (GrindingHUD, StuffingHUD, CookingHUD) — read-only Zustand subscribers
-- Old 2D challenge overlays deleted
-- 769 tests, 55 suites at Phase 1 close; grew to 1530 tests, 94 suites by Sprint 3
+- **Dual-zone SwipeFPSControls**: split-screen touch input — left half for movement, right half for look/interact
+- **Rapier KINEMATIC_FIXED bitmask fix**: `activeCollisionTypes={15 | 8704}` for sensor detection with kinematic bodies
+- **GameGovernor additions**: `setCamera(pos, yaw)`, `debugMeshes()`, `setSceneBg()` for Playwright automation
+- **Playwright mobile profiles**: 5 device configurations (iPhone SE, iPhone 14 Pro, Pixel 7, iPad Mini, Galaxy S23)
+- **E2E test specs**: real-playthrough E2E tests + touch-controls E2E tests
+- **Asset preloading + standoff camera**: fix for real playthrough screenshots
 
 ## Test Health
 
-- **1530 tests** across **94 suites**
+- **1587 tests** across **96 suites**
 - Biome lint clean, TypeScript clean
 - CI: parallel lint + typecheck + test + build
 
 ## Known Issues
 
 - TypeScript stack overflow requires `node --stack-size=8192` (handled by `pnpm typecheck`)
-- Mobile touch controls untested on real devices
 - Native audio is a complete no-op
 
 ## Decisions Made
