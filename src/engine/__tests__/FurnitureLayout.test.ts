@@ -9,7 +9,7 @@ import {
 } from '../FurnitureLayout';
 import {mergeLayoutConfigs, resolveLayout} from '../layout';
 
-/** Helper — replaces deleted resolveTargets() for tests */
+/** Helper — wraps resolveLayout() for tests */
 function resolve(room: RoomDimensions = DEFAULT_ROOM) {
   return resolveLayout(
     mergeLayoutConfigs(config.layout.room, config.layout.rails, config.layout.placements),

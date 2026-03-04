@@ -6,8 +6,14 @@
     { "position": [3.0, 5.2, 3.0] }
   ],
   "ambient": {
-    "hemisphere": 1.0,
-    "centerFill": 1.2
+    "hemisphere": 1.4,
+    "centerFill": 2.0,
+    "upperFill": {
+      "position": [0, 4.5, 0],
+      "intensity": 3.0,
+      "distance": 14,
+      "color": "#d9e1cc"
+    }
   },
   "horror": {
     "redEmergency": { "position": [1.5, 5.2, 1.5], "intensity": 0.4 },

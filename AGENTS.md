@@ -47,7 +47,7 @@ Each challenge = overlay (`challenges/`) + 3D station (`kitchen/`) + dialogue (`
 
 ### Target-Based Placement
 
-`FurnitureLayout.ts` defines named targets computed from room dimensions. All furniture, stations, triggers, and waypoint markers reference targets by name — no hardcoded coordinates. `resolveTargets(room)` is the single source of truth.
+`resolveLayout()` (from `src/engine/layout/`) is the single source of truth for named targets computed from room dimensions. All furniture, stations, triggers, and waypoint markers reference those targets by name — no hardcoded coordinates.
 
 ### Game Flow
 
@@ -55,7 +55,7 @@ Each challenge = overlay (`challenges/`) + 3D station (`kitchen/`) + dialogue (`
 menu -> loading -> ingredients -> grinding -> stuffing -> cooking -> tasting -> results
 ```
 
-Managed by `appPhase` (menu/loading/playing) and `currentChallenge` (0-4) in the store.
+Managed by `appPhase` (menu/loading/playing) and `currentChallenge` (0-6) in the store.
 
 ### Code Splitting
 
@@ -70,7 +70,7 @@ Managed by `appPhase` (menu/loading/playing) and `currentChallenge` (0-4) in the
 | `src/engine/ChallengeRegistry.ts` | Challenge configs, variant selection, final verdict |
 | `src/engine/SausagePhysics.ts` | 5 pure scoring functions |
 | `src/engine/Ingredients.ts` | 25 ingredients with stats |
-| `src/engine/FurnitureLayout.ts` | Target-based placement — resolveTargets(), FURNITURE_RULES |
+| `src/engine/FurnitureLayout.ts` | Target-based placement — resolveLayout(), FURNITURE_RULES |
 | `src/components/GameWorld.tsx` | R3F Canvas, FPS controller, station triggers, scene orchestrator |
 | `src/components/kitchen/*.tsx` | 3D station components (Fridge, Grinder, Stuffer, Stove, CRT TV) |
 | `src/components/challenges/*.tsx` | 5 challenge overlays (game mechanics + UI) |
@@ -105,7 +105,7 @@ pnpm docs:build               # Generate TypeDoc API docs
 - **Biome** for linting and formatting (not ESLint/Prettier)
 - **WebGPU** renderer — use TSL `NodeMaterial`, not raw GLSL `ShaderMaterial`
 - **Zustand** only for game state (no React Context)
-- **Target-based placement** — no hardcoded coordinates; everything derives from `resolveTargets()`
+- **Target-based placement** — no hardcoded coordinates; everything derives from `resolveLayout()`
 - **useRef** for mutable state in `useFrame` callbacks (avoid stale closures)
 - **Feature branches** — branch protection on main; use feat/* branches and PRs
 - **Squash merge** — preferred merge strategy

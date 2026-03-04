@@ -7,6 +7,7 @@ jest.mock('@react-three/drei', () => ({
     scene: {
       clone: jest.fn(() => ({
         traverse: jest.fn(),
+        updateMatrixWorld: jest.fn(),
       })),
       traverse: jest.fn(),
     },

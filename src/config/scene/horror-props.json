@@ -197,6 +197,97 @@
       "rotation": [0, -0.6, 0],
       "scale": 1.0,
       "tier": 2
+    },
+
+    {
+      "id": "hook-ceiling-3",
+      "model": "horror/fishing_hook_mx_1.glb",
+      "position": [3.5, 4.7, 3.0],
+      "rotation": [0, -0.7, 0],
+      "scale": 1.3,
+      "tier": 1
+    },
+    {
+      "id": "hook-ceiling-4",
+      "model": "horror/fishing_hook_mx_2.glb",
+      "position": [1.0, 4.5, 4.5],
+      "rotation": [0, 0.4, 0],
+      "scale": 1.2,
+      "tier": 1
+    },
+    {
+      "id": "graffiti-front-wall",
+      "model": "horror/graffiti_mx_1.glb",
+      "position": [-3.0, 2.0, 6.3],
+      "rotation": [0, 3.1416, 0],
+      "scale": 1.1,
+      "tier": 2
+    },
+    {
+      "id": "graffiti-right-wall-upper",
+      "model": "horror/graffiti_mx_2.glb",
+      "position": [6.3, 3.2, 2.5],
+      "rotation": [0, -1.5708, 0],
+      "scale": 0.9,
+      "tier": 2
+    },
+    {
+      "id": "barrel-right-front-1",
+      "model": "horror/metal_barrel_hr_1.glb",
+      "position": [4.5, 0.0, 5.0],
+      "rotation": [0, 0.9, 0],
+      "scale": 1.0,
+      "tier": 1
+    },
+    {
+      "id": "barrel-right-front-2",
+      "model": "horror/metal_barrel_hr_2.glb",
+      "position": [3.5, 0.0, 5.5],
+      "rotation": [0, -0.2, 0],
+      "scale": 0.9,
+      "tier": 2
+    },
+    {
+      "id": "cage-front-right",
+      "model": "horror/cage_mx_1.glb",
+      "position": [2.0, 0.0, 5.5],
+      "rotation": [0, 0.5, 0],
+      "scale": 0.85,
+      "tier": 1
+    },
+    {
+      "id": "bricks-front-left",
+      "model": "horror/brick_mx_1.glb",
+      "position": [-5.0, 0.0, 5.8],
+      "rotation": [0, -0.3, 0],
+      "scale": 1.0,
+      "tier": 2
+    },
+    {
+      "id": "saw-blade-right-wall",
+      "model": "horror/saw_blade_1.glb",
+      "position": [6.3, 3.8, -2.5],
+      "rotation": [0, -1.5708, 0],
+      "scale": 1.2,
+      "tier": 1
+    },
+    {
+      "id": "psx-lamp-front-wall",
+      "model": "horror/lamp_mx_4_off.glb",
+      "modelOn": "horror/lamp_mx_4_on.glb",
+      "position": [0.0, 2.8, 6.2],
+      "rotation": [0, 3.1416, 0],
+      "scale": 1.0,
+      "tier": 1,
+      "flickerInterval": [1.8, 4.5]
+    },
+    {
+      "id": "wires-right-ceiling",
+      "model": "horror/wires_hr_1.glb",
+      "position": [4.5, 5.1, -1.0],
+      "rotation": [0, -0.5, 0],
+      "scale": 0.9,
+      "tier": 2
     }
   ]
 }

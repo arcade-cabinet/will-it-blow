@@ -19,8 +19,8 @@
       "lightDef": {
         "type": "point",
         "color": 15466470,
-        "intensity": 3.0,
-        "distance": 10,
+        "intensity": 5.0,
+        "distance": 14,
         "decay": 2
       },
       "behaviors": {

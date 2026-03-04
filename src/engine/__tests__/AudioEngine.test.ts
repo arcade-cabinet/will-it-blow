@@ -555,3 +555,182 @@ describe('gameStore — spatialAudioEnabled', () => {
     expect(src).toContain('spatialAudioEnabled: state.spatialAudioEnabled');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Victory/defeat/enemy track support in startChallengeTrack
+// ---------------------------------------------------------------------------
+
+describe('AudioEngine.web.ts — special track key fallback', () => {
+  let src: string;
+
+  beforeAll(() => {
+    src = readSource('src/engine/AudioEngine.web.ts');
+  });
+
+  it('falls back to victoryTrack for "victory" key', () => {
+    expect(src).toContain("challengeType === 'victory'");
+    expect(src).toContain('config.audio.victoryTrack');
+  });
+
+  it('falls back to enemyTrack for "enemy" key', () => {
+    expect(src).toContain("challengeType === 'enemy'");
+    expect(src).toContain('config.audio.enemyTrack');
+  });
+
+  it('falls back to defeatTrack for "defeat" key', () => {
+    expect(src).toContain("challengeType === 'defeat'");
+    expect(src).toContain('config.audio.defeatTrack');
+  });
+});
+
+describe('AudioEngine.ts (native) — special track key fallback', () => {
+  let src: string;
+
+  beforeAll(() => {
+    src = readSource('src/engine/AudioEngine.ts');
+  });
+
+  it('falls back to victoryTrack for "victory" key', () => {
+    expect(src).toContain("challengeType === 'victory'");
+    expect(src).toContain('config.audio.victoryTrack');
+  });
+
+  it('falls back to defeatTrack for "defeat" key', () => {
+    expect(src).toContain("challengeType === 'defeat'");
+    expect(src).toContain('config.audio.defeatTrack');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Audio config JSON — victoryTrack
+// ---------------------------------------------------------------------------
+
+describe('src/config/audio.json — victoryTrack', () => {
+  let cfg: Record<string, unknown>;
+
+  beforeAll(() => {
+    cfg = readJson('src/config/audio.json') as Record<string, unknown>;
+  });
+
+  it('has victoryTrack', () => {
+    expect(cfg.victoryTrack).toBeDefined();
+  });
+
+  it('victoryTrack has file and volume', () => {
+    const track = cfg.victoryTrack as {file: string; volume: number};
+    expect(typeof track.file).toBe('string');
+    expect(typeof track.volume).toBe('number');
+  });
+
+  it('all track files use music/ subdirectory', () => {
+    const tracks = cfg.challengeTracks as Record<string, {file: string}>;
+    for (const [, track] of Object.entries(tracks)) {
+      expect(track.file).toMatch(/^music\//);
+    }
+    const victory = cfg.victoryTrack as {file: string};
+    expect(victory.file).toMatch(/^music\//);
+    const enemy = cfg.enemyTrack as {file: string};
+    expect(enemy.file).toMatch(/^music\//);
+    const defeat = cfg.defeatTrack as {file: string};
+    expect(defeat.file).toMatch(/^music\//);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Music files exist on disk
+// ---------------------------------------------------------------------------
+
+describe('public/audio/music/ — track files exist', () => {
+  // Music files live in public/audio/music/ but are NOT committed to git
+  // (large binary assets hosted externally). Skip in CI where they don't exist.
+  const musicDir = path.join(ROOT, 'public/audio/music');
+  const hasMusicDir = fs.existsSync(musicDir);
+
+  (hasMusicDir ? it : it.skip)('all config-referenced tracks exist on disk', () => {
+    const cfg = readJson('src/config/audio.json') as Record<string, unknown>;
+    const allFiles: string[] = [];
+
+    const tracks = cfg.challengeTracks as Record<string, {file: string}>;
+    for (const t of Object.values(tracks)) allFiles.push(t.file);
+    allFiles.push((cfg.victoryTrack as {file: string}).file);
+    allFiles.push((cfg.enemyTrack as {file: string}).file);
+    allFiles.push((cfg.defeatTrack as {file: string}).file);
+
+    for (const file of allFiles) {
+      const fullPath = path.join(ROOT, 'public/audio', file);
+      expect(fs.existsSync(fullPath)).toBe(true);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// useChallengeMusic hook — source analysis
+// ---------------------------------------------------------------------------
+
+describe('src/hooks/useChallengeMusic.ts — hook structure', () => {
+  let src: string;
+
+  beforeAll(() => {
+    src = readSource('src/hooks/useChallengeMusic.ts');
+  });
+
+  it('imports audioEngine', () => {
+    expect(src).toContain("from '../engine/AudioEngine'");
+  });
+
+  it('imports CHALLENGE_ORDER from ChallengeManifest', () => {
+    expect(src).toContain("from '../engine/ChallengeManifest'");
+  });
+
+  it('imports useGameStore', () => {
+    expect(src).toContain("from '../store/gameStore'");
+  });
+
+  it('calls startAmbientDrone when game begins', () => {
+    expect(src).toContain('audioEngine.startAmbientDrone()');
+  });
+
+  it('calls startChallengeTrack with challenge ID', () => {
+    expect(src).toContain('audioEngine.startChallengeTrack(challengeId)');
+  });
+
+  it('calls stopChallengeTrack on challenge completion', () => {
+    expect(src).toContain('audioEngine.stopChallengeTrack()');
+  });
+
+  it('handles victory game status', () => {
+    expect(src).toContain("gameStatus === 'victory'");
+  });
+
+  it('handles defeat game status', () => {
+    expect(src).toContain("gameStatus === 'defeat'");
+  });
+
+  it('plays victory track on victory', () => {
+    expect(src).toContain("startChallengeTrack('victory')");
+  });
+
+  it('plays defeat track on defeat', () => {
+    expect(src).toContain("startChallengeTrack('defeat')");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GameWorld wires useChallengeMusic
+// ---------------------------------------------------------------------------
+
+describe('GameWorld.tsx — useChallengeMusic wiring', () => {
+  let src: string;
+
+  beforeAll(() => {
+    src = readSource('src/components/GameWorld.tsx');
+  });
+
+  it('imports useChallengeMusic', () => {
+    expect(src).toContain("from '../hooks/useChallengeMusic'");
+  });
+
+  it('calls useChallengeMusic() in SceneContent', () => {
+    expect(src).toContain('useChallengeMusic()');
+  });
+});

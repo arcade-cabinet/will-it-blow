@@ -230,6 +230,97 @@ function FloorDrain({
 }
 
 // ---------------------------------------------------------------------------
+// BoardedDoorway — sealed doorframe with crossed wooden planks on front wall
+// ---------------------------------------------------------------------------
+
+/**
+ * A boarded-up doorway on the front wall (+Z side). Sells the horror
+ * "sealed room" atmosphere — the player can see there WAS a door here
+ * but it's been nailed shut with planks. Procedural geometry: metal
+ * doorframe, dark recessed void, and angled wooden boards.
+ */
+function BoardedDoorway({
+  room,
+  darkMetal,
+}: {
+  room: BasementStructureProps['room'];
+  darkMetal: THREE.MeshStandardMaterial;
+}) {
+  const halfD = room.d / 2;
+  const dw = bc.doorway;
+  const doorX = dw.xOffset;
+  const doorZ = halfD - 0.01; // flush against front wall interior
+
+  // Wood material for the planks — brownish, rough
+  const woodMat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: new THREE.Color('#4a3728'),
+        roughness: 0.9,
+        metalness: 0.05,
+      }),
+    [],
+  );
+
+  const halfW = dw.width / 2;
+  const halfH = dw.height / 2;
+  const ft = dw.frameThickness;
+
+  // Plank angles — alternating diagonals for a crossed-boards look
+  const plankAngles = useMemo(() => {
+    const angles: number[] = [];
+    for (let i = 0; i < dw.plankCount; i++) {
+      angles.push(i % 2 === 0 ? 0.25 : -0.2);
+    }
+    return angles;
+  }, []);
+
+  return (
+    <group position={[doorX, 0, doorZ]} rotation={[0, Math.PI, 0]}>
+      {/* Dark void behind the door — suggests a sealed passage */}
+      <mesh position={[0, halfH, -0.03]}>
+        <planeGeometry args={[dw.width - ft, dw.height - ft]} />
+        <meshStandardMaterial color="#050505" roughness={1.0} metalness={0.0} />
+      </mesh>
+
+      {/* Doorframe — 4 metal bars forming a rectangle */}
+      {/* Top bar */}
+      <mesh position={[0, dw.height, 0]}>
+        <boxGeometry args={[dw.width + ft, ft, ft]} />
+        <primitive object={darkMetal} attach="material" />
+      </mesh>
+      {/* Bottom bar (threshold) */}
+      <mesh position={[0, 0, 0]}>
+        <boxGeometry args={[dw.width + ft, ft, ft]} />
+        <primitive object={darkMetal} attach="material" />
+      </mesh>
+      {/* Left jamb */}
+      <mesh position={[-halfW, halfH, 0]}>
+        <boxGeometry args={[ft, dw.height, ft]} />
+        <primitive object={darkMetal} attach="material" />
+      </mesh>
+      {/* Right jamb */}
+      <mesh position={[halfW, halfH, 0]}>
+        <boxGeometry args={[ft, dw.height, ft]} />
+        <primitive object={darkMetal} attach="material" />
+      </mesh>
+
+      {/* Wooden planks nailed across — alternating angles */}
+      {plankAngles.map((angle, i) => {
+        const yFrac = (i + 0.5) / dw.plankCount;
+        const plankY = dw.height * yFrac;
+        return (
+          <mesh key={`plank_${i}`} position={[0, plankY, 0.02]} rotation={[0, 0, angle]}>
+            <boxGeometry args={[dw.width * 1.1, dw.plankWidth, dw.plankThickness]} />
+            <primitive object={woodMat} attach="material" />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // BasementStructure — top-level export
 // ---------------------------------------------------------------------------
 
@@ -264,6 +355,9 @@ export function BasementStructure({room}: BasementStructureProps): React.ReactEl
 
       {/* Floor drain — center-right of room */}
       <FloorDrain room={room} darkMetal={darkMetal} />
+
+      {/* Boarded doorway — sealed exit on front wall */}
+      <BoardedDoorway room={room} darkMetal={darkMetal} />
     </group>
   );
 }

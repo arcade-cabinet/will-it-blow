@@ -1,4 +1,5 @@
 import {config} from '../../../config';
+import {TOTAL_CHALLENGES} from '../../../engine/ChallengeManifest';
 import {CHALLENGE_ORDER, pickVariant} from '../../../engine/ChallengeRegistry';
 
 describe('ChoppingOrchestrator', () => {
@@ -67,10 +68,23 @@ describe('ChoppingOrchestrator', () => {
     expect(source).toContain('knifeRef');
   });
 
-  it('TOTAL_CHALLENGES is now 7 in store (ingredients, chopping, grinding, stuffing, cooking, blowout, tasting)', () => {
+  it('TOTAL_CHALLENGES is derived from manifest (not hardcoded) in store', () => {
     const fs = require('node:fs');
     const path = require('node:path');
-    const source = fs.readFileSync(path.resolve(__dirname, '../../../store/gameStore.ts'), 'utf8');
-    expect(source).toContain('TOTAL_CHALLENGES = 7');
+    const storeSource = fs.readFileSync(
+      path.resolve(__dirname, '../../../store/gameStore.ts'),
+      'utf8',
+    );
+    // TOTAL_CHALLENGES must be imported from ChallengeManifest, not hardcoded
+    expect(storeSource).toContain('TOTAL_CHALLENGES');
+    expect(storeSource).toContain('ChallengeManifest');
+    expect(storeSource).not.toContain('TOTAL_CHALLENGES = 7');
+    // Verify the manifest has the expected number of challenges
+    const manifestSource = fs.readFileSync(
+      path.resolve(__dirname, '../../../config/challenges/manifest.json'),
+      'utf8',
+    );
+    const manifest = JSON.parse(manifestSource);
+    expect(manifest.challenges).toHaveLength(TOTAL_CHALLENGES);
   });
 });

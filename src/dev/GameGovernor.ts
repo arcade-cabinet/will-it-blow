@@ -33,20 +33,27 @@ const CHALLENGE_STATIONS = config.scene.challengeSequence.stations;
  * - personal-space clearance (~0.9m)
  */
 const MIN_STANDOFF = 2.0;
-function playerStandPos(stationName: string): [number, number, number] {
+function playerStandPos(stationName: string): {pos: [number, number, number]; yaw: number} {
   const target = TARGETS[stationName];
-  if (!target) return [0, 1.6, 0];
+  if (!target) return {pos: [0, 1.6, 0], yaw: Math.PI};
   const [sx, , sz] = target.position;
   // Direction from station toward room center (XZ plane only)
   const dx = 0 - sx;
   const dz = 0 - sz;
   const len = Math.sqrt(dx * dx + dz * dz) || 1;
   const dist = Math.max(MIN_STANDOFF, target.triggerRadius * 0.75);
-  return [
-    sx + (dx / len) * dist,
-    1.6, // always eye height
-    sz + (dz / len) * dist,
-  ];
+  const standX = sx + (dx / len) * dist;
+  const standZ = sz + (dz / len) * dist;
+  // Yaw to face the station from the stand position.
+  // Three.js YXZ Euler: camera looks in direction (-sin θ, 0, -cos θ).
+  // To look toward (stationX - standX, stationZ - standZ) we need atan2(-dx, -dz).
+  const faceDx = sx - standX;
+  const faceDz = sz - standZ;
+  const yaw = Math.atan2(-faceDx, -faceDz);
+  return {
+    pos: [standX, 1.6, standZ],
+    yaw,
+  };
 }
 
 export interface GameGov {
@@ -119,6 +126,9 @@ export interface GameGov {
   /** Teleport the player to an arbitrary world position */
   movePlayerTo: (x: number, y: number, z: number) => void;
 
+  /** Teleport + set camera yaw. Used by E2E visual sweep scripts. */
+  setCamera: (pos: [number, number, number], yaw: number) => void;
+
   /** Manually trigger the current challenge (simulates player arriving at station) */
   triggerCurrentChallenge: () => void;
 
@@ -149,6 +159,24 @@ export interface GameGov {
     visible: boolean;
     childCount: number;
   }[];
+
+  /** Debug: dump all meshes with world bounding boxes */
+  debugMeshes?: () => {
+    name: string;
+    parent: string;
+    wx: number;
+    wy: number;
+    wz: number;
+    visible: boolean;
+    worldBBMin?: number[];
+    worldBBMax?: number[];
+    worldBBSize?: number[];
+    color?: string;
+    side?: number;
+  }[];
+
+  /** Debug: set scene background color */
+  setSceneBg?: (r: number, g: number, b: number) => void;
 }
 
 function createGovernor(): GameGov {
@@ -193,6 +221,12 @@ function createGovernor(): GameGov {
 
     startGameDirect() {
       store.getState().startNewGame();
+      // Teleport to the first station so the camera faces it
+      const firstStation = CHALLENGE_STATIONS[0];
+      if (firstStation) {
+        const stand = playerStandPos(firstStation.stationName);
+        store.getState().requestTeleport(stand.pos, stand.yaw);
+      }
       store.getState().triggerChallenge();
     },
 
@@ -203,7 +237,8 @@ function createGovernor(): GameGov {
         const nextIdx = store.getState().currentChallenge;
         const nextStation = CHALLENGE_STATIONS[nextIdx];
         if (nextStation) {
-          store.getState().requestTeleport(playerStandPos(nextStation.stationName));
+          const stand = playerStandPos(nextStation.stationName);
+          store.getState().requestTeleport(stand.pos, stand.yaw);
         }
         store.getState().triggerChallenge();
       }
@@ -219,7 +254,8 @@ function createGovernor(): GameGov {
       }
       const station = CHALLENGE_STATIONS[index];
       if (station) {
-        store.getState().requestTeleport(playerStandPos(station.stationName));
+        const stand = playerStandPos(station.stationName);
+        store.getState().requestTeleport(stand.pos, stand.yaw);
       }
       store.getState().triggerChallenge();
     },
@@ -234,7 +270,8 @@ function createGovernor(): GameGov {
       }
       const station = CHALLENGE_STATIONS[index];
       if (station) {
-        store.getState().requestTeleport(playerStandPos(station.stationName));
+        const stand = playerStandPos(station.stationName);
+        store.getState().requestTeleport(stand.pos, stand.yaw);
       }
       store.getState().triggerChallenge();
     },
@@ -339,6 +376,11 @@ function createGovernor(): GameGov {
       // requestTeleport is consumed by FPSController on the next frame, moving both
       // posRef and camera. setPlayerPosition alone only updates the store, not the camera.
       store.getState().requestTeleport([x, y, z]);
+    },
+
+    /** Teleport + set camera yaw. Used by E2E visual sweep scripts. */
+    setCamera(pos: [number, number, number], yaw: number) {
+      store.getState().requestTeleport(pos, yaw);
     },
 
     triggerCurrentChallenge() {

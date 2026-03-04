@@ -19,18 +19,8 @@
 
 import {useEffect, useRef} from 'react';
 import {Animated, StyleSheet, Text, View} from 'react-native';
+import {getTransitionQuip} from '../../engine/ChallengeManifest';
 import {CHALLENGE_ORDER, getChallengeConfig} from '../../engine/ChallengeRegistry';
-
-/** Mr. Sausage quips that play during station transitions. */
-const TRANSITION_QUIPS: Record<number, string> = {
-  0: "Let's see what you're made of...",
-  1: 'Time to grind. And I mean that literally.',
-  2: "Stuff it. Carefully. Or it's YOUR casing next.",
-  3: "Fire it up. Don't burn my kitchen.",
-  4: 'Cook my sausage to perfection.',
-  5: 'Tie it off. One wrong move and... BOOM.',
-  6: 'Now I taste. And I judge.',
-};
 
 interface ChallengeTransitionProps {
   challengeIndex: number;
@@ -48,7 +38,8 @@ export function ChallengeTransition({challengeIndex, onComplete}: ChallengeTrans
 
   const challengeId = CHALLENGE_ORDER[challengeIndex];
   const config = challengeId ? getChallengeConfig(challengeId) : null;
-  const quip = TRANSITION_QUIPS[challengeIndex] ?? '';
+  // Each challenge's quip describes THAT challenge (Mr. Sausage taunting about what's next).
+  const quip = getTransitionQuip(challengeIndex);
 
   useEffect(() => {
     // Phase 1: Fade in overlay + title

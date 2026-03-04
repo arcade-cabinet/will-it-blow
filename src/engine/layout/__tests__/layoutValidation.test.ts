@@ -32,7 +32,7 @@ describe('layout spatial sanity', () => {
 
   it('no target is below the floor', () => {
     for (const [name, target] of Object.entries(targets)) {
-      // Allow small negative for very thin items (floor adhesion = half height)
+      // Floor items sit at Y=0 (no adhesion); small negative from rounding ok
       expect(target.position[1]).toBeGreaterThanOrEqual(-0.5);
       if (target.position[1] < -0.1) {
         throw new Error(`"${name}" at Y=${target.position[1].toFixed(2)} is below floor`);

@@ -21,6 +21,11 @@ import {createJSONStorage, persist} from 'zustand/middleware';
 import type {Reaction} from '../components/characters/reactions';
 import {computeBlendProperties as computeBlend} from '../engine/BlendCalculator';
 import {
+  CHALLENGE_INDEX_BOWL_DONE,
+  CHALLENGE_INDEX_BOWL_GRINDER_OUTPUT,
+  TOTAL_CHALLENGES,
+} from '../engine/ChallengeManifest';
+import {
   DEFAULT_DIFFICULTY,
   type DifficultyTier,
   loadDifficultyTier,
@@ -157,7 +162,7 @@ export interface GameState {
   /** Player's current [x, y, z] position in the kitchen (FPS controller writes this). */
   playerPosition: [number, number, number];
   /** One-shot teleport target for FPSController. Set by GameGovernor, consumed + cleared by FPS. */
-  pendingTeleport: [number, number, number] | null;
+  pendingTeleport: {pos: [number, number, number]; yaw?: number} | null;
   /** Flipped to `true` when the player enters the current challenge station's trigger radius. */
   challengeTriggered: boolean;
 
@@ -337,7 +342,7 @@ export interface GameState {
   /** Update the player's world-space position (written by FPS controller every frame). */
   setPlayerPosition: (pos: [number, number, number]) => void;
   /** Request a one-shot camera teleport (consumed and cleared by FPSController). */
-  requestTeleport: (pos: [number, number, number]) => void;
+  requestTeleport: (pos: [number, number, number], yaw?: number) => void;
   /** Clear the pending teleport after FPSController has applied it. */
   clearTeleport: () => void;
   /** Signal that the player has entered the current challenge station's trigger zone. */
@@ -409,7 +414,7 @@ export interface GameState {
 }
 
 /** Number of sequential challenges in a full game (ingredients through blowout through tasting). */
-const TOTAL_CHALLENGES = 7;
+// TOTAL_CHALLENGES imported from ChallengeManifest — derived from manifest.json length
 
 /** The default difficulty tier, loaded once at module init. */
 const DEFAULT_TIER = loadDifficultyTier(DEFAULT_DIFFICULTY);
@@ -473,7 +478,7 @@ export const INITIAL_GAME_STATE = {
   fridgeHoveredIndex: null as number | null,
   fridgeDoorProgress: 0,
   playerPosition: [0, 1.6, 0] as [number, number, number],
-  pendingTeleport: null as [number, number, number] | null,
+  pendingTeleport: null as {pos: [number, number, number]; yaw?: number} | null,
   challengeTriggered: false,
   mrSausageDemands: null as MrSausageDemands | null,
   playerDecisions: {
@@ -633,16 +638,14 @@ export const useGameStore = create<GameState>()(
           const scores = [...state.challengeScores, score];
           const isLastChallenge = nextChallenge >= TOTAL_CHALLENGES;
 
-          // Bowl/sausage transitions per challenge completion:
-          // Challenge 0 (ingredients) → bowl stays at fridge, player carries to grinder
-          // Challenge 1 (chopping) → no bowl transition (prep station)
-          // Challenge 2 (grinding) → ground meat bowl appears at grinder output
-          // Challenge 3 (stuffing) → bowl done, sausage spawns at stuffer output
+          // Bowl/sausage transitions — driven by manifest bowlMilestone fields.
+          // CHALLENGE_INDEX_BOWL_GRINDER_OUTPUT = grinding (2): bowl → grinder-output
+          // CHALLENGE_INDEX_BOWL_DONE = stuffing (3): bowl → done, sausage reset
           let bowlPosition = state.bowlPosition;
           let sausagePlaced = state.sausagePlaced;
-          if (state.currentChallenge === 2) {
+          if (state.currentChallenge === CHALLENGE_INDEX_BOWL_GRINDER_OUTPUT) {
             bowlPosition = 'grinder-output';
-          } else if (state.currentChallenge === 3) {
+          } else if (state.currentChallenge === CHALLENGE_INDEX_BOWL_DONE) {
             bowlPosition = 'done';
             sausagePlaced = false;
           }
@@ -766,7 +769,8 @@ export const useGameStore = create<GameState>()(
       updateBlendProperties: () => set(state => mapBlendToStore(state.bowlContents)),
 
       setPlayerPosition: (pos: [number, number, number]) => set({playerPosition: pos}),
-      requestTeleport: (pos: [number, number, number]) => set({pendingTeleport: pos}),
+      requestTeleport: (pos: [number, number, number], yaw?: number) =>
+        set({pendingTeleport: {pos, yaw}}),
       clearTeleport: () => set({pendingTeleport: null}),
       triggerChallenge: () => set({challengeTriggered: true}),
 

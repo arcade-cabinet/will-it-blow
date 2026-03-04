@@ -16,6 +16,7 @@ import type {
   IngredientVariant,
   StuffingVariant,
 } from '../config/types';
+import {getChallengeAt, CHALLENGE_ORDER as MANIFEST_CHALLENGE_ORDER} from './ChallengeManifest';
 
 const INGREDIENT_VARIANTS = config.variants.ingredients;
 const CHOPPING_VARIANTS = config.variants.chopping;
@@ -34,15 +35,10 @@ export type ChallengeId =
   | 'tasting';
 
 /** The fixed sequence of challenges. Index matches `currentChallenge` in the store. */
-export const CHALLENGE_ORDER: ChallengeId[] = [
-  'ingredients',
-  'chopping',
-  'grinding',
-  'stuffing',
-  'cooking',
-  'blowout',
-  'tasting',
-];
+export const CHALLENGE_ORDER: ChallengeId[] = MANIFEST_CHALLENGE_ORDER as ChallengeId[];
+
+/** Total number of challenges — re-exported from ChallengeManifest for convenience. */
+export {TOTAL_CHALLENGES} from './ChallengeManifest';
 
 /** Static configuration for a single challenge (metadata, not gameplay params). */
 export interface ChallengeConfig {
@@ -58,57 +54,24 @@ export interface ChallengeConfig {
   description: string;
 }
 
-const CHALLENGE_CONFIGS: Record<ChallengeId, ChallengeConfig> = {
-  ingredients: {
-    id: 'ingredients',
-    name: 'Ingredient Selection',
-    station: 'fridge',
-    cameraOffset: [0, 0, 1],
-    description: "Choose ingredients that satisfy Mr. Sausage's demands.",
-  },
-  chopping: {
-    id: 'chopping',
-    name: 'Chopping',
-    station: 'cutting-board',
-    cameraOffset: [0, 0.3, 0.6],
-    description: 'Chop ingredients with precise timing.',
-  },
-  grinding: {
-    id: 'grinding',
-    name: 'Grinding',
-    station: 'grinder',
-    cameraOffset: [0, 0.3, 0.5],
-    description: 'Grind the ingredients at the right speed.',
-  },
-  stuffing: {
-    id: 'stuffing',
-    name: 'Stuffing',
-    station: 'stuffer',
-    cameraOffset: [0, 0.2, 0.8],
-    description: 'Stuff the casing without letting pressure burst it.',
-  },
-  cooking: {
-    id: 'cooking',
-    name: 'Cooking',
-    station: 'stove',
-    cameraOffset: [0, 0.5, 0.5],
-    description: 'Cook the sausage to the perfect temperature.',
-  },
-  blowout: {
-    id: 'blowout',
-    name: 'Blowout',
-    station: 'dining-table',
-    cameraOffset: [0, 0.3, 0.8],
-    description: 'Aim at the cereal box and tie the casing before pressure builds.',
-  },
-  tasting: {
-    id: 'tasting',
-    name: 'Tasting',
-    station: 'center',
-    cameraOffset: [0, 0, 0],
-    description: 'Mr. Sausage renders his final verdict.',
-  },
-};
+/** Build CHALLENGE_CONFIGS from the manifest — single source of truth. */
+const CHALLENGE_CONFIGS: Record<ChallengeId, ChallengeConfig> = {} as Record<
+  ChallengeId,
+  ChallengeConfig
+>;
+for (let i = 0; i < MANIFEST_CHALLENGE_ORDER.length; i++) {
+  const entry = getChallengeAt(i);
+  if (entry) {
+    const id = entry.id as ChallengeId;
+    CHALLENGE_CONFIGS[id] = {
+      id,
+      name: entry.name,
+      station: entry.station,
+      cameraOffset: entry.cameraOffset,
+      description: entry.description,
+    };
+  }
+}
 
 /**
  * Returns the challenge config for the given id, or throws if invalid.
@@ -118,11 +81,11 @@ const CHALLENGE_CONFIGS: Record<ChallengeId, ChallengeConfig> = {
  * @throws {Error} If the id does not match any known challenge
  */
 export function getChallengeConfig(id: ChallengeId): ChallengeConfig {
-  const config = CHALLENGE_CONFIGS[id];
-  if (!config) {
+  const cfg = CHALLENGE_CONFIGS[id];
+  if (!cfg) {
     throw new Error(`Invalid challenge id: ${id}`);
   }
-  return config;
+  return cfg;
 }
 
 /**

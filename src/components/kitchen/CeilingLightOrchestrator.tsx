@@ -25,7 +25,20 @@ export function CeilingLightOrchestrator() {
   useEffect(() => {
     const allEntities: Entity[][] = [];
     for (let i = 0; i < panelPositions.length; i++) {
-      allEntities.push(spawnMachine(panelArchetype));
+      const entities = spawnMachine(panelArchetype);
+
+      // LightRenderer renders at the scene root (not inside DisplayHousing's group),
+      // so light entity positions must be in world space. Offset them by the panel's
+      // world position. The tiny marker sphere is invisible so double-offset is fine.
+      const [px, py, pz] = panelPositions[i].position;
+      for (const entity of entities) {
+        if (entity.lightDef && entity.transform) {
+          const [lx, ly, lz] = entity.transform.position;
+          entity.transform.position = [lx + px, ly + py, lz + pz];
+        }
+      }
+
+      allEntities.push(entities);
     }
     setPanels(allEntities);
 

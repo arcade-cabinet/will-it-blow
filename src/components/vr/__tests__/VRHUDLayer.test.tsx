@@ -35,6 +35,10 @@ describe('VRHUDLayer module structure', () => {
   it('imports VRPanel for world-space rendering', () => {
     expect(SOURCE).toContain("from './VRPanel'");
   });
+
+  it('imports getChallengeIndex for manifest-driven routing', () => {
+    expect(SOURCE).toContain("from '../../engine/ChallengeManifest'");
+  });
 });
 
 // ===========================================================================
@@ -63,32 +67,32 @@ describe('challenge HUD routing', () => {
     );
   });
 
-  it('renders VRChoppingHUD for challenge index 1', () => {
-    expect(SOURCE).toMatch(/currentChallenge === 1 && <VRChoppingHUD/);
+  it('renders VRChoppingHUD for chopping challenge', () => {
+    expect(SOURCE).toMatch(/currentChallenge === IDX_CHOPPING && <VRChoppingHUD/);
   });
 
-  it('renders VRGrindingHUD for challenge index 2', () => {
-    expect(SOURCE).toMatch(/currentChallenge === 2 && <VRGrindingHUD/);
+  it('renders VRGrindingHUD for grinding challenge', () => {
+    expect(SOURCE).toMatch(/currentChallenge === IDX_GRINDING && <VRGrindingHUD/);
   });
 
-  it('renders VRStuffingHUD for challenge index 3', () => {
-    expect(SOURCE).toMatch(/currentChallenge === 3 && <VRStuffingHUD/);
+  it('renders VRStuffingHUD for stuffing challenge', () => {
+    expect(SOURCE).toMatch(/currentChallenge === IDX_STUFFING && <VRStuffingHUD/);
   });
 
-  it('renders VRCookingHUD for challenge index 4', () => {
-    expect(SOURCE).toMatch(/currentChallenge === 4 && <VRCookingHUD/);
+  it('renders VRCookingHUD for cooking challenge', () => {
+    expect(SOURCE).toMatch(/currentChallenge === IDX_COOKING && <VRCookingHUD/);
   });
 
-  it('renders VRBlowoutHUD for challenge index 5', () => {
-    expect(SOURCE).toMatch(/currentChallenge === 5 && <VRBlowoutHUD/);
+  it('renders VRBlowoutHUD for blowout challenge', () => {
+    expect(SOURCE).toMatch(/currentChallenge === IDX_BLOWOUT && <VRBlowoutHUD/);
   });
 
-  it('skips ingredients (challenge 0) — uses bridge pattern', () => {
-    expect(SOURCE).toMatch(/currentChallenge === 0 && null/);
+  it('skips ingredients — uses bridge pattern', () => {
+    expect(SOURCE).toMatch(/currentChallenge === IDX_INGREDIENTS && null/);
   });
 
-  it('skips tasting (challenge 6) — uses bridge pattern', () => {
-    expect(SOURCE).toMatch(/currentChallenge === 6 && null/);
+  it('skips tasting — uses bridge pattern', () => {
+    expect(SOURCE).toMatch(/currentChallenge === IDX_TASTING && null/);
   });
 
   it('renders VRGameOverPanel unconditionally (it self-gates on gameStatus)', () => {

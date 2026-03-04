@@ -28,6 +28,7 @@ import kitchenPlacements from './layout/placements.json';
 import kitchenRails from './layout/rails.json';
 import kitchenRoom from './layout/room.json';
 // --- Machine definitions (Tier 3) ---
+import blowoutMachine from './machines/blowout.json';
 import crtTvMachine from './machines/crt-tv.json';
 import fluorescentPanel from './machines/fluorescent-panel.json';
 import grinderMachine from './machines/grinder.json';
@@ -51,6 +52,7 @@ import type {
   AudioConfig,
   BasementSceneConfig,
   BlowoutGameplayConfig,
+  BlowoutMachineConfig,
   CasingSceneConfig,
   ChallengeSequenceConfig,
   ChoppingGameplayConfig,
@@ -75,6 +77,7 @@ import variantsData from './variants.json';
 
 export const config = {
   machines: {
+    blowout: blowoutMachine as unknown as BlowoutMachineConfig,
     grinder: grinderMachine as unknown as MachineConfig,
     stuffer: stufferMachine as unknown as MachineConfig,
     stove: stoveMachine as unknown as MachineConfig,
@@ -123,6 +126,7 @@ export type {
   AudioConfig,
   BasementSceneConfig,
   BlowoutGameplayConfig,
+  BlowoutMachineConfig,
   CasingSceneConfig,
   ChallengeSequenceConfig,
   ChoppingGameplayConfig,

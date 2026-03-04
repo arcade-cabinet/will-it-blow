@@ -22,5 +22,14 @@
     "zFraction": 0.1,
     "innerRadius": 0.15,
     "outerRadius": 0.3
+  },
+  "doorway": {
+    "xOffset": -2.0,
+    "width": 1.1,
+    "height": 2.3,
+    "frameThickness": 0.12,
+    "plankCount": 4,
+    "plankThickness": 0.04,
+    "plankWidth": 0.18
   }
 }

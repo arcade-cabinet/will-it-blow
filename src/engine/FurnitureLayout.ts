@@ -46,7 +46,7 @@ export interface Target {
 export interface FurnitureRule {
   /** GLB filename (resolved at runtime via getAssetUrl) */
   glb: string;
-  /** Name of the target from resolveTargets() to position this GLB at */
+  /** Name of the target from resolveLayout() to position this GLB at */
   target: string;
   /** If true, the GLB contains animations that FurnitureLoader should play */
   animated?: boolean;
@@ -88,18 +88,18 @@ export const DEFAULT_ROOM: RoomDimensions = computeRoom(1);
  */
 export const STATION_TARGET_NAMES = config.scene.challengeSequence.stations.map(s => s.stationName);
 
-// resolveTargets() has been replaced by the seam-based layout system.
-// Use resolveLayout() from src/engine/layout/ with the hierarchical config.
+// resolveLayout() from src/engine/layout/ is the seam-based layout system.
+// Use mergeLayoutConfigs() + resolveLayout() with the hierarchical JSON config.
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 /**
- * Returns the target for the given challenge index (0-5), or undefined if invalid.
+ * Returns the target for the given challenge index (0-6), or undefined if invalid.
  *
- * @param targets - The full targets map from resolveTargets()
- * @param challengeIndex - Challenge number (0=fridge, 1=cutting-board, 2=grinder, 3=stuffer, 4=stove, 5=crt-tv)
+ * @param targets - The full targets map from resolveLayout()
+ * @param challengeIndex - Challenge number (0=ingredients, 1=chopping, 2=grinding, 3=stuffing, 4=cooking, 5=blowout, 6=tasting)
  * @returns The station Target, or `undefined` if the index is out of range
  */
 export function getStationTarget(
@@ -156,6 +156,12 @@ export const FURNITURE_RULES: FurnitureRule[] = [
   {glb: 'cutlery_fork.glb', target: 'cutlery-fork'},
   {glb: 'cutlery_spoon.glb', target: 'cutlery-spoon'},
   {glb: 'chair_styloo.glb', target: 'chair-extra'},
+
+  // Right-wall furniture (reuses left-wall GLBs via scene cloning)
+  {glb: 'workplan.glb', target: 'r-counter'},
+  {glb: 'workplan_001.glb', target: 'r-counter-ext'},
+  {glb: 'kitchen_cabinet1.glb', target: 'r-upper-cabinets'},
+  {glb: 'kitchen_cabinet2.glb', target: 'r-upper-cabinets-2'},
 
   // Horror props (NEW — atmospheric horror)
   {glb: 'beartrap_open.glb', target: 'bear-trap'},

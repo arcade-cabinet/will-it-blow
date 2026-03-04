@@ -5,7 +5,7 @@
  *
  * Each piece of furniture is a separate GLB file (fridge.glb, etc.)
  * loaded via drei's `useGLTF` and `useAnimations`.
- * Positions and rotations come from `resolveTargets()` — no hardcoded
+ * Positions and rotations come from `resolveLayout()` — no hardcoded
  * coordinates in this file.
  *
  * Pieces marked `ecsManaged: true` in FURNITURE_RULES are skipped —
@@ -56,19 +56,45 @@ function resolveGlbUrl(glb: string): string {
 function FurniturePiece({
   rule,
   target,
+  room,
   grinderCranking,
 }: {
   rule: FurnitureRule;
   target: Target;
+  room: RoomDimensions;
   grinderCranking: boolean;
 }) {
   const url = resolveGlbUrl(rule.glb);
-  const {scene, animations} = useGLTF(url);
+  const {scene: originalScene, animations} = useGLTF(url);
   const groupRef = useRef<THREE.Group>(null);
+
+  // Deep-clone the scene so multiple FurniturePieces can reuse the same GLB
+  // (e.g. workplan.glb on both left and right walls). Three.js Object3D can
+  // only have one parent — without cloning, the second <primitive> steals
+  // the scene graph from the first.
+  const scene = useMemo(() => originalScene.clone(true), [originalScene]);
+
   const {actions} = useAnimations(animations, groupRef);
 
-  // Apply material fixes once on load (backface culling + tame envMapIntensity)
+  // Apply material fixes + cull GLB artifact meshes that extend past room walls.
+  // Some Blender-exported GLBs contain helper/collision meshes (named CubeXXX) with
+  // huge local offsets. When <primitive object={scene}/> renders ALL sub-meshes,
+  // these giant black meshes occlude the camera view. We hide any mesh whose
+  // world-space bounding box extends far past the room envelope.
   useEffect(() => {
+    // Compute transforms within the GLB hierarchy so mesh.matrixWorld is valid
+    scene.updateMatrixWorld(true);
+
+    // Placement transform matching <group position={pos} rotation={[0, rotY, 0]}>
+    const placementMat = new THREE.Matrix4().makeRotationY(target.rotationY);
+    placementMat.setPosition(target.position[0], target.position[1], target.position[2]);
+
+    // Room boundary limits — 2m margin to avoid clipping legitimate wall-flush furniture
+    const CULL_MARGIN = 2.0;
+    const limX = room.w / 2 + CULL_MARGIN;
+    const limZ = room.d / 2 + CULL_MARGIN;
+    const limY = room.h + CULL_MARGIN;
+
     traverseMeshes(scene, mesh => {
       const mat = mesh.material;
       if (Array.isArray(mat)) return;
@@ -76,8 +102,25 @@ function FurniturePiece({
       if (mat instanceof THREE.MeshStandardMaterial) {
         mat.envMapIntensity = 0.05;
       }
+
+      // Cull artifact meshes outside room envelope
+      if (mesh.geometry) {
+        mesh.geometry.computeBoundingBox();
+        const bb = mesh.geometry.boundingBox;
+        if (bb) {
+          const worldBB = bb.clone().applyMatrix4(placementMat.clone().multiply(mesh.matrixWorld));
+          const outOfBounds =
+            worldBB.max.x > limX ||
+            worldBB.min.x < -limX ||
+            worldBB.max.z > limZ ||
+            worldBB.min.z < -limZ ||
+            worldBB.max.y > limY ||
+            worldBB.min.y < -CULL_MARGIN;
+          mesh.visible = !outOfBounds;
+        }
+      }
     });
-  }, [scene]);
+  }, [scene, target.position, target.rotationY, room]);
 
   // Fridge door animation — driven by store fridgeDoorProgress (0-1)
   const isFridge = rule.glb === 'fridge.glb';
@@ -249,9 +292,10 @@ export function FurnitureLoader({
 
         return (
           <FurniturePiece
-            key={rule.glb}
+            key={rule.target}
             rule={rule}
             target={target}
+            room={room}
             grinderCranking={grinderCranking}
           />
         );

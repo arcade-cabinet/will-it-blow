@@ -60,9 +60,18 @@ export function getSurfaceNormal(surfaceId: string): Vec3 {
 
 /**
  * Get the adhesion offset for an object placed on a surface.
- * This is half the minBounds extent along the surface's inward normal axis.
+ *
+ * Wall surfaces: offset = half minBounds extent along the inward normal,
+ * so the object's back face sits flush against the wall.
+ *
+ * Floor / ceiling: no offset. GLB models have their origin at the base
+ * (bottom for floor items, top for ceiling-mounted items), so the surface
+ * plane coordinate is already correct.
  */
 export function getAdhesionOffset(surfaceId: string, bounds: Bounds): Vec3 {
+  // Horizontal surfaces don't need adhesion — models sit at the surface origin
+  if (surfaceId === 'floor' || surfaceId === 'ceiling') return [0, 0, 0];
+
   const normal = getSurfaceNormal(surfaceId);
   // bounds = [width(x), height(y), depth(z)]
   // Pick the bounds dimension that aligns with the normal's non-zero axis

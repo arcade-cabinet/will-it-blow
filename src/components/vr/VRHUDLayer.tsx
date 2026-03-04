@@ -13,9 +13,19 @@
  * - Uses VRHtmlWrapper to render RN components as HTML in 3D space
  */
 
+import {getChallengeIndex} from '../../engine/ChallengeManifest';
 import {useXRMode} from '../../hooks/useXRMode';
 import {useGameStore} from '../../store/gameStore';
 import {VRPanel} from './VRPanel';
+
+// Challenge index constants — derived from manifest, no magic numbers
+const IDX_INGREDIENTS = getChallengeIndex('ingredients');
+const IDX_CHOPPING = getChallengeIndex('chopping');
+const IDX_GRINDING = getChallengeIndex('grinding');
+const IDX_STUFFING = getChallengeIndex('stuffing');
+const IDX_COOKING = getChallengeIndex('cooking');
+const IDX_BLOWOUT = getChallengeIndex('blowout');
+const IDX_TASTING = getChallengeIndex('tasting');
 
 /**
  * VR-specific timer display — renders a simple countdown in the VR panel.
@@ -430,13 +440,13 @@ export function VRHUDLayer() {
   return (
     <>
       {/* Active challenge HUDs */}
-      {showChallenge && currentChallenge === 0 && null /* Ingredients uses bridge pattern */}
-      {showChallenge && currentChallenge === 1 && <VRChoppingHUD />}
-      {showChallenge && currentChallenge === 2 && <VRGrindingHUD />}
-      {showChallenge && currentChallenge === 3 && <VRStuffingHUD />}
-      {showChallenge && currentChallenge === 4 && <VRCookingHUD />}
-      {showChallenge && currentChallenge === 5 && <VRBlowoutHUD />}
-      {showChallenge && currentChallenge === 6 && null /* Tasting uses bridge pattern */}
+      {showChallenge && currentChallenge === IDX_INGREDIENTS && null /* bridge pattern */}
+      {showChallenge && currentChallenge === IDX_CHOPPING && <VRChoppingHUD />}
+      {showChallenge && currentChallenge === IDX_GRINDING && <VRGrindingHUD />}
+      {showChallenge && currentChallenge === IDX_STUFFING && <VRStuffingHUD />}
+      {showChallenge && currentChallenge === IDX_COOKING && <VRCookingHUD />}
+      {showChallenge && currentChallenge === IDX_BLOWOUT && <VRBlowoutHUD />}
+      {showChallenge && currentChallenge === IDX_TASTING && null /* bridge pattern */}
 
       {/* Game over / victory */}
       <VRGameOverPanel />

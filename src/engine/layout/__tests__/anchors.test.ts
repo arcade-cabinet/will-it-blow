@@ -36,10 +36,14 @@ describe('getAdhesionOffset', () => {
     expect(offset[2]).toBeCloseTo(0);
   });
 
-  it('offsets upward for floor placement', () => {
-    // Object on floor: normal [0,+1,0], bounds [1, 0.5, 1]
+  it('returns zero offset for floor (models have base-origin)', () => {
     const offset = getAdhesionOffset('floor', [1, 0.5, 1]);
-    expect(offset).toEqual([0, 0.25, 0]);
+    expect(offset).toEqual([0, 0, 0]);
+  });
+
+  it('returns zero offset for ceiling (models hang from surface)', () => {
+    const offset = getAdhesionOffset('ceiling', [1, 0.5, 1]);
+    expect(offset).toEqual([0, 0, 0]);
   });
 
   it('offsets inward for back-wall placement', () => {

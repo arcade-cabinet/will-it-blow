@@ -75,7 +75,7 @@ menu → loading → playing (challenge 0→1→2→3→4) → victory/defeat �
 
 All furniture, stations, triggers, and waypoints reference named targets — never hardcoded coordinates.
 
-- `FurnitureLayout.ts` defines `resolveTargets(room)` — computes positions from room dimensions
+- `resolveLayout()` (from `src/engine/layout/`) computes positions from room dimensions and JSON config
 - `FURNITURE_RULES` maps furniture pieces to target names
 - If room dimensions change, everything follows automatically
 
