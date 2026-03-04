@@ -86,6 +86,12 @@ describe('SwipeFPSControls', () => {
       expect(source).toContain('pendingInteractRef');
     });
 
+    it('uses callback ref for onLookDrag to avoid stale PanResponder closure', () => {
+      expect(source).toContain('onLookDragRef');
+      expect(source).toContain('onLookDragRef.current = onLookDrag');
+      expect(source).toContain('onLookDragRef.current?.(dx, dy)');
+    });
+
     it('tracks max distance for look zone tap detection (not end-to-end)', () => {
       expect(source).toContain('lookMaxDistRef');
       expect(source).toContain('Math.max(lookMaxDistRef.current, fromStartDist)');

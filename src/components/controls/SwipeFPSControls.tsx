@@ -48,6 +48,11 @@ export function SwipeFPSControls({joystickRef, onLookDrag}: SwipeFPSControlsProp
   const lookStartTimeRef = useRef(0);
   const lookStartPosRef = useRef({x: 0, y: 0});
   const lookMaxDistRef = useRef(0);
+  // Keep callback ref fresh to avoid stale closure in PanResponder
+  const onLookDragRef = useRef(onLookDrag);
+  useEffect(() => {
+    onLookDragRef.current = onLookDrag;
+  }, [onLookDrag]);
 
   // ── Shared tap helper ──
   const pendingInteractRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -157,7 +162,7 @@ export function SwipeFPSControls({joystickRef, onLookDrag}: SwipeFPSControlsProp
         const fromStartDy = touch.pageY - lookStartPosRef.current.y;
         const fromStartDist = Math.sqrt(fromStartDx * fromStartDx + fromStartDy * fromStartDy);
         lookMaxDistRef.current = Math.max(lookMaxDistRef.current, fromStartDist);
-        onLookDrag?.(dx, dy);
+        onLookDragRef.current?.(dx, dy);
       },
 
       onPanResponderRelease: () => {
