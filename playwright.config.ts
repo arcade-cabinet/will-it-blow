@@ -1,4 +1,11 @@
-import {defineConfig} from '@playwright/test';
+import {defineConfig, devices} from '@playwright/test';
+
+// Extract viewport/touch/UA from device profiles without their browserName
+// (we force Chrome channel for WebGL support across all profiles)
+function chromeDevice(deviceName: string) {
+  const {browserName: _, defaultBrowserType: __, ...rest} = devices[deviceName] as any;
+  return {channel: 'chrome' as const, ...rest};
+}
 
 export default defineConfig({
   testDir: './e2e',
@@ -17,13 +24,31 @@ export default defineConfig({
   },
 
   projects: [
+    // Desktop — default
     {
       name: 'chrome',
       use: {
-        // Use installed Chrome (not bundled Chromium) for WebGL/WebGPU support.
-        // Three.js/R3F needs GPU rendering that bundled Chromium doesn't support.
         channel: 'chrome',
         viewport: {width: 1280, height: 720},
+      },
+    },
+
+    // ── Mobile viewport profiles (touch-enabled, Chrome for WebGL) ──
+
+    {name: 'iphone-14', use: chromeDevice('iPhone 14')},
+    {name: 'iphone-se', use: chromeDevice('iPhone SE')},
+    {name: 'pixel-7', use: chromeDevice('Pixel 7')},
+    {name: 'ipad-mini', use: chromeDevice('iPad Mini')},
+    {
+      name: 'galaxy-fold',
+      use: {
+        channel: 'chrome',
+        viewport: {width: 280, height: 653},
+        deviceScaleFactor: 3,
+        isMobile: true,
+        hasTouch: true,
+        userAgent:
+          'Mozilla/5.0 (Linux; Android 13; SM-F926B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
       },
     },
   ],

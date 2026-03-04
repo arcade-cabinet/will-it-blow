@@ -190,9 +190,9 @@ export function SwipeFPSControls({joystickRef, onLookDrag}: SwipeFPSControlsProp
   ).current;
 
   return (
-    <View style={styles.touchSurface}>
-      <View style={styles.moveZone} {...movePanResponder.panHandlers} />
-      <View style={styles.lookZone} {...lookPanResponder.panHandlers} />
+    <View style={styles.touchSurface} testID="touch-surface">
+      <View style={styles.moveZone} testID="move-zone" {...movePanResponder.panHandlers} />
+      <View style={styles.lookZone} testID="look-zone" {...lookPanResponder.panHandlers} />
     </View>
   );
 }
