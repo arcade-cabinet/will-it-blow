@@ -157,6 +157,12 @@ export const FURNITURE_RULES: FurnitureRule[] = [
   {glb: 'cutlery_spoon.glb', target: 'cutlery-spoon'},
   {glb: 'chair_styloo.glb', target: 'chair-extra'},
 
+  // Right-wall furniture (reuses left-wall GLBs via scene cloning)
+  {glb: 'workplan.glb', target: 'r-counter'},
+  {glb: 'workplan_001.glb', target: 'r-counter-ext'},
+  {glb: 'kitchen_cabinet1.glb', target: 'r-upper-cabinets'},
+  {glb: 'kitchen_cabinet2.glb', target: 'r-upper-cabinets-2'},
+
   // Horror props (NEW — atmospheric horror)
   {glb: 'beartrap_open.glb', target: 'bear-trap'},
   {glb: 'worm.glb', target: 'worm'},

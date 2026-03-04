@@ -63,8 +63,15 @@ function FurniturePiece({
   grinderCranking: boolean;
 }) {
   const url = resolveGlbUrl(rule.glb);
-  const {scene, animations} = useGLTF(url);
+  const {scene: originalScene, animations} = useGLTF(url);
   const groupRef = useRef<THREE.Group>(null);
+
+  // Deep-clone the scene so multiple FurniturePieces can reuse the same GLB
+  // (e.g. workplan.glb on both left and right walls). Three.js Object3D can
+  // only have one parent — without cloning, the second <primitive> steals
+  // the scene graph from the first.
+  const scene = useMemo(() => originalScene.clone(true), [originalScene]);
+
   const {actions} = useAnimations(animations, groupRef);
 
   // Apply material fixes + cull GLB artifact meshes that extend past room walls.
@@ -285,7 +292,7 @@ export function FurnitureLoader({
 
         return (
           <FurniturePiece
-            key={rule.glb}
+            key={rule.target}
             rule={rule}
             target={target}
             grinderCranking={grinderCranking}

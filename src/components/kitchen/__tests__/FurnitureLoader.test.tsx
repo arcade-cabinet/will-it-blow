@@ -32,9 +32,18 @@ const mockTraverse = jest.fn((cb: (child: any) => void) => {
 
 let mockActions: Record<string, any> = {};
 
+const mockScene = {
+  traverse: mockTraverse,
+  clone: jest.fn(() => ({
+    traverse: mockTraverse,
+    updateMatrixWorld: jest.fn(),
+  })),
+  updateMatrixWorld: jest.fn(),
+};
+
 jest.mock('@react-three/drei', () => ({
   useGLTF: jest.fn(() => ({
-    scene: {traverse: mockTraverse},
+    scene: mockScene,
     animations: [],
   })),
   useAnimations: jest.fn(() => ({

@@ -693,6 +693,15 @@ export interface BasementSceneConfig {
     innerRadius: number;
     outerRadius: number;
   };
+  doorway: {
+    xOffset: number;
+    width: number;
+    height: number;
+    frameThickness: number;
+    plankCount: number;
+    plankThickness: number;
+    plankWidth: number;
+  };
 }
 
 // ---------------------------------------------------------------------------
