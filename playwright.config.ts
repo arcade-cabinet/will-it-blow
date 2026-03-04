@@ -20,7 +20,7 @@ export default defineConfig({
     baseURL: 'http://localhost:8082',
     screenshot: 'off',
     trace: 'on-first-retry',
-    headless: !!process.env.CI,
+    headless: false,
   },
 
   projects: [
