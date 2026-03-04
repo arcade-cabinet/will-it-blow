@@ -69,6 +69,9 @@ export class InputManager {
   private xrInput: XRInputState | null = null;
   private xrActions = new Map<string, boolean>();
 
+  // Touch gesture actions (set by SwipeFPSControls)
+  private touchActions = new Map<string, boolean>();
+
   // Action press tracking (edge detection)
   private actionPressed = new Map<string, boolean>();
 
@@ -142,6 +145,11 @@ export class InputManager {
   /** Set XR action button state (edge-detected by XRInputSystem). */
   setXRActionPressed(action: string, pressed: boolean): void {
     this.xrActions.set(action, pressed);
+  }
+
+  /** Set touch gesture action state (e.g., tap-to-interact from SwipeFPSControls). */
+  setTouchActionPressed(action: string, pressed: boolean): void {
+    this.touchActions.set(action, pressed);
   }
 
   /** Read the current XR trigger value (0-1). Useful for grab force. */
@@ -273,6 +281,8 @@ export class InputManager {
     }
     // XR action buttons (edge-detected by XRInputSystem)
     if (this.xrActions.get(action)) return true;
+    // Touch gesture actions (tap-to-interact from SwipeFPSControls)
+    if (this.touchActions.get(action)) return true;
     return false;
   }
 
@@ -293,6 +303,7 @@ export class InputManager {
     this.gamepadIndex = null;
     this.xrInput = null;
     this.xrActions.clear();
+    this.touchActions.clear();
     InputManager.instance = null;
   }
 

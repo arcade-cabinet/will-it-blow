@@ -211,3 +211,30 @@ describe('GameWorld AR support', () => {
     expect(source).toContain('alpha: arEnabled');
   });
 });
+
+describe('GameWorld loading flash prevention', () => {
+  it('contains FirstFrameSignal component that calls setSceneReady', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
+    expect(source).toContain('FirstFrameSignal');
+    expect(source).toContain('setSceneReady');
+  });
+
+  it('renders FirstFrameSignal inside SceneContent', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
+    expect(source).toContain('<FirstFrameSignal');
+  });
+
+  it('FirstFrameSignal uses useFrame to detect first render', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../GameWorld.tsx'), 'utf8');
+    // Should use useFrame from R3F
+    expect(source).toContain('useFrame');
+    // Should have a guard to only fire once
+    expect(source).toContain('called.current');
+  });
+});

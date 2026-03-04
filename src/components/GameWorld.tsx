@@ -102,6 +102,30 @@ const CHALLENGE_IDX_BLOWOUT = getChallengeIndex('blowout');
 const CHALLENGE_IDX_TASTING = getChallengeIndex('tasting');
 
 // -----------------------------------------------------------------
+// FirstFrameSignal — signals that the Canvas has rendered its first frame
+// -----------------------------------------------------------------
+
+/**
+ * Calls `setSceneReady(true)` on the first useFrame tick.
+ * This bridges the gap between React mounting the Canvas and the
+ * renderer actually producing a visible frame — used by SceneReadyGate
+ * in App.tsx to prevent the black flash during loading transitions.
+ */
+function FirstFrameSignal() {
+  const called = useRef(false);
+  const setSceneReady = useGameStore(s => s.setSceneReady);
+
+  useFrame(() => {
+    if (!called.current) {
+      called.current = true;
+      setSceneReady(true);
+    }
+  });
+
+  return null;
+}
+
+// -----------------------------------------------------------------
 // PlayerBody — kinematic rigid body that follows the camera
 // -----------------------------------------------------------------
 
@@ -403,6 +427,8 @@ const SceneContent = ({
 
   return (
     <>
+      {/* Signal first frame render to dismiss loading overlay */}
+      <FirstFrameSignal />
       {/* Dim ambient fill (KitchenEnvironment provides the strong fluorescent + fill lights) */}
       <ambientLight intensity={0.7} />
       <SceneIntrospector />

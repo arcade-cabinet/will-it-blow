@@ -89,4 +89,40 @@ describe('InputManager', () => {
     // Second call still no input — still not pressed
     expect(input.isActionJustPressed('flip')).toBe(false);
   });
+
+  describe('touch actions (setTouchActionPressed)', () => {
+    it('setTouchActionPressed makes isActionHeld return true', () => {
+      const input = InputManager.getInstance();
+      expect(input.isActionHeld('interact')).toBe(false);
+      input.setTouchActionPressed('interact', true);
+      expect(input.isActionHeld('interact')).toBe(true);
+    });
+
+    it('releasing touch action makes isActionHeld return false', () => {
+      const input = InputManager.getInstance();
+      input.setTouchActionPressed('interact', true);
+      expect(input.isActionHeld('interact')).toBe(true);
+      input.setTouchActionPressed('interact', false);
+      expect(input.isActionHeld('interact')).toBe(false);
+    });
+
+    it('touch action triggers isActionJustPressed rising edge', () => {
+      const input = InputManager.getInstance();
+      // Not pressed initially
+      expect(input.isActionJustPressed('interact')).toBe(false);
+      // Press
+      input.setTouchActionPressed('interact', true);
+      expect(input.isActionJustPressed('interact')).toBe(true);
+      // Second call same state — no longer "just" pressed
+      expect(input.isActionJustPressed('interact')).toBe(false);
+    });
+
+    it('dispose clears touch actions', () => {
+      const input = InputManager.getInstance();
+      input.setTouchActionPressed('interact', true);
+      input.dispose();
+      const input2 = InputManager.getInstance();
+      expect(input2.isActionHeld('interact')).toBe(false);
+    });
+  });
 });
