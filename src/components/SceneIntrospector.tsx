@@ -85,6 +85,63 @@ export function SceneIntrospector() {
       return results;
     };
 
+    /** Debug: dump all meshes with world bounding boxes */
+    gov.debugMeshes = () => {
+      const results: any[] = [];
+      scene.traverse(obj => {
+        if (obj.type !== 'Mesh') return;
+        const mesh = obj as THREE.Mesh;
+        const wp = new THREE.Vector3();
+        mesh.getWorldPosition(wp);
+
+        const info: any = {
+          name: mesh.name || '(unnamed)',
+          parent: mesh.parent?.name || '(root)',
+          wx: +wp.x.toFixed(2),
+          wy: +wp.y.toFixed(2),
+          wz: +wp.z.toFixed(2),
+          visible: mesh.visible,
+        };
+
+        if (mesh.geometry) {
+          mesh.geometry.computeBoundingBox();
+          const bb = mesh.geometry.boundingBox;
+          if (bb) {
+            // Transform bounding box to world space
+            const bbWorld = bb.clone();
+            bbWorld.applyMatrix4(mesh.matrixWorld);
+            info.worldBBMin = [
+              +bbWorld.min.x.toFixed(2),
+              +bbWorld.min.y.toFixed(2),
+              +bbWorld.min.z.toFixed(2),
+            ];
+            info.worldBBMax = [
+              +bbWorld.max.x.toFixed(2),
+              +bbWorld.max.y.toFixed(2),
+              +bbWorld.max.z.toFixed(2),
+            ];
+            info.worldBBSize = [
+              +(bbWorld.max.x - bbWorld.min.x).toFixed(2),
+              +(bbWorld.max.y - bbWorld.min.y).toFixed(2),
+              +(bbWorld.max.z - bbWorld.min.z).toFixed(2),
+            ];
+          }
+        }
+
+        const mat = mesh.material as THREE.MeshStandardMaterial;
+        if (mat?.color) info.color = `#${mat.color.getHexString()}`;
+        if (mat?.side !== undefined) info.side = mat.side;
+
+        results.push(info);
+      });
+      return results;
+    };
+
+    /** Debug: set scene background color */
+    gov.setSceneBg = (r: number, g: number, b: number) => {
+      scene.background = new THREE.Color(r, g, b);
+    };
+
     gov.sceneReady = true;
 
     return () => {
@@ -96,6 +153,8 @@ export function SceneIntrospector() {
         delete g.findObject;
         delete g.getMeshCount;
         delete g.findGroups;
+        delete g.debugMeshes;
+        delete g.setSceneBg;
       }
     };
   }, [scene, camera]);

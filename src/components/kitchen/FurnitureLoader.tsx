@@ -67,8 +67,25 @@ function FurniturePiece({
   const groupRef = useRef<THREE.Group>(null);
   const {actions} = useAnimations(animations, groupRef);
 
-  // Apply material fixes once on load (backface culling + tame envMapIntensity)
+  // Apply material fixes + cull GLB artifact meshes that extend past room walls.
+  // Some Blender-exported GLBs contain helper/collision meshes (named CubeXXX) with
+  // huge local offsets. When <primitive object={scene}/> renders ALL sub-meshes,
+  // these giant black meshes occlude the camera view. We hide any mesh whose
+  // world-space bounding box extends far past the room envelope.
   useEffect(() => {
+    // Compute transforms within the GLB hierarchy so mesh.matrixWorld is valid
+    scene.updateMatrixWorld(true);
+
+    // Placement transform matching <group position={pos} rotation={[0, rotY, 0]}>
+    const placementMat = new THREE.Matrix4().makeRotationY(target.rotationY);
+    placementMat.setPosition(target.position[0], target.position[1], target.position[2]);
+
+    // Room boundary limits — 2m margin to avoid clipping legitimate wall-flush furniture
+    const CULL_MARGIN = 2.0;
+    const limX = DEFAULT_ROOM.w / 2 + CULL_MARGIN;
+    const limZ = DEFAULT_ROOM.d / 2 + CULL_MARGIN;
+    const limY = DEFAULT_ROOM.h + CULL_MARGIN;
+
     traverseMeshes(scene, mesh => {
       const mat = mesh.material;
       if (Array.isArray(mat)) return;
@@ -76,8 +93,27 @@ function FurniturePiece({
       if (mat instanceof THREE.MeshStandardMaterial) {
         mat.envMapIntensity = 0.05;
       }
+
+      // Cull artifact meshes outside room envelope
+      if (mesh.geometry) {
+        mesh.geometry.computeBoundingBox();
+        const bb = mesh.geometry.boundingBox;
+        if (bb) {
+          const worldBB = bb.clone().applyMatrix4(placementMat.clone().multiply(mesh.matrixWorld));
+          if (
+            worldBB.max.x > limX ||
+            worldBB.min.x < -limX ||
+            worldBB.max.z > limZ ||
+            worldBB.min.z < -limZ ||
+            worldBB.max.y > limY ||
+            worldBB.min.y < -CULL_MARGIN
+          ) {
+            mesh.visible = false;
+          }
+        }
+      }
     });
-  }, [scene]);
+  }, [scene, target.position, target.rotationY]);
 
   // Fridge door animation — driven by store fridgeDoorProgress (0-1)
   const isFridge = rule.glb === 'fridge.glb';

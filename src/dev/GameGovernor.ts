@@ -126,6 +126,9 @@ export interface GameGov {
   /** Teleport the player to an arbitrary world position */
   movePlayerTo: (x: number, y: number, z: number) => void;
 
+  /** Teleport + set camera yaw. Used by E2E visual sweep scripts. */
+  setCamera: (pos: [number, number, number], yaw: number) => void;
+
   /** Manually trigger the current challenge (simulates player arriving at station) */
   triggerCurrentChallenge: () => void;
 
@@ -156,6 +159,24 @@ export interface GameGov {
     visible: boolean;
     childCount: number;
   }[];
+
+  /** Debug: dump all meshes with world bounding boxes */
+  debugMeshes?: () => {
+    name: string;
+    parent: string;
+    wx: number;
+    wy: number;
+    wz: number;
+    visible: boolean;
+    worldBBMin?: number[];
+    worldBBMax?: number[];
+    worldBBSize?: number[];
+    color?: string;
+    side?: number;
+  }[];
+
+  /** Debug: set scene background color */
+  setSceneBg?: (r: number, g: number, b: number) => void;
 }
 
 function createGovernor(): GameGov {
@@ -355,6 +376,11 @@ function createGovernor(): GameGov {
       // requestTeleport is consumed by FPSController on the next frame, moving both
       // posRef and camera. setPlayerPosition alone only updates the store, not the camera.
       store.getState().requestTeleport([x, y, z]);
+    },
+
+    /** Teleport + set camera yaw. Used by E2E visual sweep scripts. */
+    setCamera(pos: [number, number, number], yaw: number) {
+      store.getState().requestTeleport(pos, yaw);
     },
 
     triggerCurrentChallenge() {
