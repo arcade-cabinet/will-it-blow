@@ -191,7 +191,7 @@ const SceneReadyGate = () => {
         useNativeDriver: true,
       }).start(() => setVisible(false));
     }
-  }, [sceneReady]);
+  }, [sceneReady, opacity]);
 
   if (!visible) return null;
 
