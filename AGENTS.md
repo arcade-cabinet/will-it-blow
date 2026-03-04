@@ -47,7 +47,7 @@ Each challenge = overlay (`challenges/`) + 3D station (`kitchen/`) + dialogue (`
 
 ### Target-Based Placement
 
-`FurnitureLayout.ts` defines named targets computed from room dimensions. All furniture, stations, triggers, and waypoint markers reference targets by name — no hardcoded coordinates. `resolveLayout()` (from `src/engine/layout/`) is the single source of truth.
+`resolveLayout()` (from `src/engine/layout/`) is the single source of truth for named targets computed from room dimensions. All furniture, stations, triggers, and waypoint markers reference those targets by name — no hardcoded coordinates.
 
 ### Game Flow
 

@@ -13,8 +13,8 @@ import {useGameStore} from '../store/gameStore';
 /**
  * Subscribes to game state and drives AudioEngine music transitions:
  * - Starts ambient drone when gameStatus becomes 'playing'
- * - Crossfades to challenge track when challengeTriggered becomes true
- * - Crossfades back to ambient when challenge completes (currentChallenge advances)
+ * - Hard-cuts to challenge track when challengeTriggered becomes true
+ * - Hard-cuts back to ambient when challenge completes (currentChallenge advances)
  * - Plays victory/defeat track on game end
  *
  * Call this hook once from the main game scene component.

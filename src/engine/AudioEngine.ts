@@ -194,7 +194,7 @@ class AudioEngine {
     }
   }
 
-  /** Start a music track for the current challenge with crossfade from ambient.
+  /** Start a music track for the current challenge with hard-cut from ambient.
    *  Also supports special keys: 'victory', 'enemy', 'defeat'. */
   startChallengeTrack(challengeType: string): void {
     if (!this.isInitialized) return;

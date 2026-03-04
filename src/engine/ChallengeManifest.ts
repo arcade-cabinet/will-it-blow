@@ -77,7 +77,7 @@ export function getChallengeById(id: string): ChallengeEntry | undefined {
 
 /**
  * Get the index of a challenge by ID.
- * Throws at module load time if the ID is missing — fail-fast prevents silent
+ * Throws when called if the ID is missing — fail-fast prevents silent
  * -1 propagation into challenge routing logic.
  */
 export function getChallengeIndex(id: string): number {

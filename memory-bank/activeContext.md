@@ -22,6 +22,7 @@ Phase 2 Sprints 1-3 are complete. All major gameplay systems are implemented. Cu
 ## Recent Work
 
 ### Task #20: JSDoc cleanup + progress.md update (2026-03-03) — COMPLETE
+
 - Replaced all `resolveTargets()` references with `resolveLayout()` in JSDoc/comments:
   - `src/engine/FurnitureLayout.ts` (FurnitureRule.target doc + getStationTarget params + stale comment)
   - `src/components/kitchen/FurnitureLoader.tsx` (module doc)
@@ -32,11 +33,13 @@ Phase 2 Sprints 1-3 are complete. All major gameplay systems are implemented. Cu
 - Updated `memory-bank/progress.md` to reflect Phase 2 Sprints 1–3 completion, 1529 tests, 100% CI/CD
 
 ### Task #14: Replace `as any` traversals (2026-03-03) — COMPLETE
+
 - Created `src/engine/threeUtils.ts` with typed `traverseMeshes(root, callback)` utility
 - Updated `FurnitureLoader.tsx` and `HorrorPropsLoader.tsx` to use it
 - Added `RapierRigidBody` + `RapierObject3D` typed interfaces in `GrabSystem.tsx`
 
 ### Phase 2 Sprint 3 (2026-03-03) — COMPLETE
+
 - Blowout challenge: TieGesture, BlowoutOrchestrator (ECS), CerealBox splat, PlaceSetting, BlowoutHUD
 - Multi-round loop: RoundManager (C(12,3) combo tracking), TrapDoorAnimation, RoundTransition UI
 - Hidden objects: CabinetDrawer (spring animations), KitchenAssembly, HiddenObjectOverlay
@@ -44,12 +47,14 @@ Phase 2 Sprints 1-3 are complete. All major gameplay systems are implemented. Cu
 - CI/CD: Fully hardened with parallel lint, typecheck, test, build jobs
 
 ### Phase 2 Sprint 2 (2026-03-02) — COMPLETE
+
 - Enemy encounter system: 5 enemy types, 5 weapons, 4 spawn cabinets
 - ECS: EnemySpawnSystem + CombatSystem + CabinetBurst + CombatHUD
 - AI state machine: spawning→approaching→attacking→stunned→dying→dead
 - Difficulty-scaled spawn probability
 
 ### Phase 2 Sprint 1 (2026-03-02) — COMPLETE
+
 - Difficulty system: 5 tiers (Rare→Well Done), JSON config-driven
 - Horror scene dressing: 21 PSX GLBs via tiered HorrorPropsLoader
 - InputManager: Universal input with JSON bindings, keyboard/mouse/gamepad/touch

@@ -79,7 +79,7 @@ describe('ChoppingOrchestrator', () => {
     expect(storeSource).toContain('TOTAL_CHALLENGES');
     expect(storeSource).toContain('ChallengeManifest');
     expect(storeSource).not.toContain('TOTAL_CHALLENGES = 7');
-    // Verify the manifest itself has 7 challenges
+    // Verify the manifest has the expected number of challenges
     const manifestSource = fs.readFileSync(
       path.resolve(__dirname, '../../../config/challenges/manifest.json'),
       'utf8',
