@@ -1,5 +1,5 @@
 import {lazy, Suspense, useCallback, useEffect, useRef, useState} from 'react';
-import {Platform, SafeAreaView, StyleSheet, View} from 'react-native';
+import {Animated, Platform, SafeAreaView, StyleSheet, View} from 'react-native';
 import {ChallengeHeader} from './src/components/ui/ChallengeHeader';
 import {ChallengeTransition} from './src/components/ui/ChallengeTransition';
 import {LoadingScreen} from './src/components/ui/LoadingScreen';
@@ -172,9 +172,36 @@ const GameUI = () => {
   );
 };
 
-const MobileJoystick = lazy(() =>
-  import('./src/components/controls/MobileJoystick').then(m => ({default: m.MobileJoystick})),
+const SwipeFPSControls = lazy(() =>
+  import('./src/components/controls/SwipeFPSControls').then(m => ({default: m.SwipeFPSControls})),
 );
+
+/** Dark overlay that fades out once the 3D scene renders its first frame.
+ *  Prevents the black flash between LoadingScreen unmount and Canvas init. */
+const SceneReadyGate = () => {
+  const sceneReady = useGameStore(s => s.sceneReady);
+  const opacity = useRef(new Animated.Value(1)).current;
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    if (sceneReady) {
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => setVisible(false));
+    }
+  }, [sceneReady, opacity]);
+
+  if (!visible) return null;
+
+  return (
+    <Animated.View
+      style={[styles.sceneReadyGate, {opacity}]}
+      pointerEvents={sceneReady ? 'none' : 'auto'}
+    />
+  );
+};
 
 export default function App() {
   const appPhase = useGameStore(s => s.appPhase);
@@ -219,8 +246,9 @@ export default function App() {
             lookDeltaRef={isTouchDevice ? lookDeltaRef : undefined}
           />
           <GameUI />
+          <SceneReadyGate />
           {isTouchDevice && gameStatus === 'playing' && (
-            <MobileJoystick
+            <SwipeFPSControls
               joystickRef={joystickRef}
               onLookDrag={(dx, dy) => {
                 lookDeltaRef.current.dx += dx;
@@ -246,5 +274,10 @@ const styles = StyleSheet.create({
   chunkFallback: {
     flex: 1,
     backgroundColor: '#0a0a0a',
+  },
+  sceneReadyGate: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#0a0a0a',
+    zIndex: 100,
   },
 });

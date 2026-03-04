@@ -564,3 +564,28 @@ describe('startNewGame demand integration', () => {
     expect(store().mrSausageDemands!.desiredIngredients.length).toBeGreaterThanOrEqual(2);
   });
 });
+
+describe('sceneReady', () => {
+  it('starts as false', () => {
+    expect(store().sceneReady).toBe(false);
+  });
+
+  it('setSceneReady(true) sets it to true', () => {
+    store().setSceneReady(true);
+    expect(store().sceneReady).toBe(true);
+  });
+
+  it('startNewGame resets sceneReady to false', () => {
+    store().setSceneReady(true);
+    expect(store().sceneReady).toBe(true);
+    store().startNewGame();
+    expect(store().sceneReady).toBe(false);
+  });
+
+  it('returnToMenu resets sceneReady to false', () => {
+    store().setSceneReady(true);
+    expect(store().sceneReady).toBe(true);
+    store().returnToMenu();
+    expect(store().sceneReady).toBe(false);
+  });
+});

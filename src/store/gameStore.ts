@@ -279,6 +279,11 @@ export interface GameState {
   /** Whether the kitchen has been placed in the real world via AR hit-test */
   arPlaced: boolean;
 
+  // ---- Scene lifecycle ----
+
+  /** True once the 3D Canvas has rendered its first frame. Used by SceneReadyGate to prevent loading flash. */
+  sceneReady: boolean;
+
   // ---- Actions ----
 
   /** Change the difficulty tier by ID. Persisted across sessions. */
@@ -371,6 +376,8 @@ export interface GameState {
   setArEnabled: (enabled: boolean) => void;
   /** Set whether the kitchen has been placed in AR via hit-test. */
   setArPlaced: (placed: boolean) => void;
+  /** Signal that the 3D scene has rendered its first frame (used by FirstFrameSignal). */
+  setSceneReady: (ready: boolean) => void;
   /** Generate Mr. Sausage's secret demands from the given ingredient pool. */
   generateDemands: (ingredientPool: string[]) => void;
   /** Record a twist at a normalized position (0-1) along the sausage extrusion. */
@@ -517,6 +524,7 @@ export const INITIAL_GAME_STATE = {
   spatialAudioEnabled: true,
   arEnabled: false,
   arPlaced: false,
+  sceneReady: false,
 };
 
 /**
@@ -581,6 +589,7 @@ export const useGameStore = create<GameState>()(
           openDrawers: [],
           assembledParts: [],
           stationCleanliness: {},
+          sceneReady: false,
           playerDecisions: {
             selectedIngredients: [],
             twistPoints: [],
@@ -930,6 +939,7 @@ export const useGameStore = create<GameState>()(
       setArEnabled: (enabled: boolean) =>
         set({arEnabled: enabled, xrEnabled: enabled ? false : undefined}),
       setArPlaced: (placed: boolean) => set({arPlaced: placed}),
+      setSceneReady: (ready: boolean) => set({sceneReady: ready}),
       setSnapTurnAngle: (angle: 0 | 30 | 45 | 90) => set({snapTurnAngle: angle}),
       setComfortVignette: (enabled: boolean) => set({comfortVignette: enabled}),
       setXrSeatedMode: (seated: boolean) => set({xrSeatedMode: seated}),
@@ -982,6 +992,7 @@ export const useGameStore = create<GameState>()(
           assembledParts: [],
           stationCleanliness: {},
           mrSausageDemands: null,
+          sceneReady: false,
           playerDecisions: {
             selectedIngredients: [],
             twistPoints: [],
