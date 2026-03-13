@@ -127,4 +127,3 @@ Every `.md` file under `docs/` carries YAML frontmatter (`---` delimiters). Fiel
 | `docs/plans/` | Active | New plans added, active plans updated |
 | `docs/plans/archive/` | Frozen | Historical record, never modified |
 | `docs/api/` | Generated | TypeDoc output, regenerated via `pnpm docs:build` |
-| `docs/poc/` | Frozen | Archived POC implementations |

@@ -253,6 +253,28 @@ Config in `src/config/enemies.json`:
 - **ProceduralSink**: Procedural lathe/cylinder sink geometry
 - **CleanupManager + CleanupHUD**: Station cleanliness tracking between rounds
 
+## POC Station Interaction Flow (Reference)
+
+The original Gemini-developed POC ([conversation log](https://gemini.google.com/app/5546a3ed9463e9b0)) proved a 9-phase sequential station flow that is the blueprint for the production game:
+
+```text
+0: FILL_GRINDER     Click meat chunks in bowl → tray → chute
+1: GRINDING          Click dial to turn on motor; drag plunger down chute
+2: MOVE_BOWL         Click filled bowl → auto-slide to stuffer
+3: ATTACH_CASING     Drag translucent casing from water bowl → snap onto nozzle
+4: STUFFING          Hold crank + drag mouse → extrude sausage
+5: MOVE_SAUSAGE      Click sausage tray → transfer to frying pan
+6: MOVE_PAN          Drag pan from back-right burner → front-left burner
+7: COOKING           Click left dial → heat on; FBO fluid dynamics + color interpolation
+8: DONE              Sausage fully cooked
+```
+
+Key interaction patterns proven in POC:
+- **Invisible hitbox meshes** for larger click areas (plunger, crank, dial)
+- **Plane intersection** for mouse-to-3D coordinate mapping during drag operations
+- **State-gated interactions** — each phase enables only its relevant handlers
+- **Animated transitions** (anime.js in POC → `useFrame` lerp in production) between phases
+
 ## Remaining Unimplemented Features
 
 These are referenced in design docs or have stub code but are not functional:

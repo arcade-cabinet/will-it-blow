@@ -87,7 +87,7 @@ menu → loading → playing (challenge 0→1→2→3→4→5→6) → victory/d
 
 ## Sausage Physics (Rapier)
 
-Ported from the POC — bone-chain sausage body with spring forces:
+Bone-chain sausage body with spring forces:
 
 - `Sausage.tsx` — SkinnedMesh with Rapier rigid bodies per bone segment
 - Spring forces tie Rapier bodies to sausage bones (custom `useFrame` hook)

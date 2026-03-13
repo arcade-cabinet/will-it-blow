@@ -61,6 +61,12 @@ OGG sample-based audio replaces the previous pure Tone.js synthesis approach:
 - Rating songs per verdict rank
 - Binary audio assets tracked via Git LFS
 
+## Design Origins
+
+The factory mechanics were prototyped through an iterative conversation with Gemini AI, building a self-contained Three.js + Rapier3D proof-of-concept across 14 exchanges. The POC proved bone-chain sausage physics, FBO fluid dynamics, drag-and-drop casing attachment, and the full grind→stuff→cook sequential flow. All mechanics have been ported to production R3F components.
+
+- **Original Gemini conversation:** https://gemini.google.com/app/5546a3ed9463e9b0
+
 ## Aesthetic
 
 - Grimy basement kitchen with PBR textures (tile walls, concrete ceiling, grime decals)

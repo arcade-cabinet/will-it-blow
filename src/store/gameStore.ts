@@ -36,7 +36,7 @@ interface GameState {
   totalRounds: number;
   usedIngredientCombos: string[][];
 
-  // POC Gameplay State
+  // Station Gameplay State
   gamePhase: GamePhase;
   groundMeatVol: number; // 0.0 to 1.0
   stuffLevel: number; // 0.0 to 1.0

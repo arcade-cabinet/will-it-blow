@@ -225,6 +225,10 @@ Source textures: AmbientCG 1K-JPG sets (not in repo, downloaded separately per m
 6. **Three.js ESM in Jest:** `three` and `@react-three` must be in the `transformIgnorePatterns` allowlist in jest.config.js.
 7. **GLSL ShaderMaterial with WebGPU:** The WebGPU renderer does not support raw GLSL `ShaderMaterial`. Use TSL `NodeMaterial` instead — import node functions from `'three/tsl'` and `NodeMaterial` from `'three/webgpu'`.
 8. **Metro WebGPU resolver:** On native, bare `'three'` imports are remapped to `'three/webgpu'` by `metro.config.js`. Direct `'three/webgpu'` imports work on all platforms.
+9. **Physics collider overlap explosions:** When initializing many bones in a SkinnedMesh, ensure Rapier rigid body colliders don't overlap. Using radius 0.64 for link sausages (bones spaced 0.8 units apart) causes violent repulsion. Solution: reduce collider radius to ~0.15 — the visual mesh is held in place by spring forces anyway.
+10. **Physics body singularity (NaN explosion):** Never initialize multiple rigid bodies at the exact same coordinate. Spawning 300 overlapping spheres at one point causes Rapier to produce NaN, corrupting bone matrices and stretching the SkinnedMesh across the universe. Space initial positions along the expected curve path.
+11. **Vertex displacement axis after `rotateX`:** After calling `geometry.rotateX(-Math.PI/2)` to lay a plane flat, the vertical displacement axis becomes Y (not Z). Applying displacement to Z causes horizontal squashing instead of vertical rippling. This affects all FBO heightfield shaders that displace grease/fluid surfaces.
+12. **Square `PlaneGeometry` in circular containers:** PlaneGeometry corners protrude through circular containers (frying pans, bowls). Fix by iterating vertices at initialization and snapping any outside a radius threshold inward to a circular boundary. This preserves the dense grid needed for FBO wave simulation while fitting circular cookware.
 
 ## Planned Work
 

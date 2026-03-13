@@ -206,13 +206,23 @@ The Zustand store is the single source of truth. 3D stations and UI overlays bot
 
 ## Planned Work
 
-### POC Factory Mechanics Port
-- Procedural station components planned: Grinder mechanics (InstancedMesh chunks, ground meat particles), Stuffer mechanics (TubeGeometry casing growth, SquigglyCurve), Cooking mechanics (FBO grease wave simulation, steam particles, temperature dial)
-- Bone-chain sausage body with Rapier rigid bodies per bone segment (spring constant 80, damping 10) — currently SausageBody.ts has SkinnedMesh but no physics
-- `@react-spring/three` planned for declarative object transitions (bowl slides, sausage carries) alongside existing `useFrame` procedural animations
-- See `docs/plans/2026-03-01-sausage-factory-kitchen-design.md` for full design
+### Factory Mechanics (Ported from POC)
+All core POC factory mechanics have been ported to production R3F components:
+
+| Mechanic | POC Origin | Production File | Status |
+|----------|-----------|-----------------|--------|
+| Bone-chain sausage physics | Rapier rigid bodies per bone, spring forces (K=80, damp=10) | `src/components/sausage/Sausage.tsx` | Ported |
+| Procedural meat textures | Canvas API `generateMeatTexture(color, fatRatio)` | `src/components/sausage/SausageGeometry.ts` | Ported |
+| FBO grease wave simulation | Ping-pong heightfield shader (256×256, damping 0.98) | `src/components/stations/Stove.tsx` | Ported |
+| Grinder particle system | InstancedMesh (300 max particles) ground meat output | `src/components/stations/Grinder.tsx` | Ported |
+| Stuffer casing extrusion | SquigglyCurve (bunched) + QuadraticBezierCurve3 (dragged) | `src/components/stations/Stuffer.tsx` | Ported |
+| Station state machine | 9-phase: FILL_GRINDER → GRINDING → MOVE_BOWL → ATTACH_CASING → STUFFING → MOVE_SAUSAGE → MOVE_PAN → COOKING → DONE | `gamePhase` in Zustand store | Ported |
+
+Remaining polish:
+- `@react-spring/three` for declarative object transitions (bowl slides, sausage carries) alongside existing `useFrame` procedural animations
+- See `docs/plans/2026-03-01-sausage-factory-kitchen-design.md` for full design rationale
 
 ### Extended Game Flow State Machine
-- Design calls for expanding from 7-challenge sequence to a 12+ state machine: MENU -> LOADING -> INTRO_DIALOGUE -> OPEN_FRIDGE -> PICK_INGREDIENTS -> CLOSE_FRIDGE -> FILL_GRINDER -> GRINDING -> MOVE_BOWL -> ATTACH_CASING -> STUFFING -> MOVE_SAUSAGE -> MOVE_PAN -> COOKING -> TASTING -> VERDICT -> GAME_OVER
+- Design calls for expanding from the 9-phase POC flow + 7-challenge sequence into a unified 12+ state machine: MENU -> LOADING -> INTRO_DIALOGUE -> OPEN_FRIDGE -> PICK_INGREDIENTS -> CLOSE_FRIDGE -> FILL_GRINDER -> GRINDING -> MOVE_BOWL -> ATTACH_CASING -> STUFFING -> MOVE_SAUSAGE -> MOVE_PAN -> COOKING -> TASTING -> VERDICT -> GAME_OVER
 - Waypoint markers and proximity sensors guide player between expanded stations
 - See `docs/plans/2026-03-01-sausage-factory-kitchen-plan.md` for implementation tasks
