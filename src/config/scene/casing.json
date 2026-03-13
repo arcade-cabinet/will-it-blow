@@ -1,8 +1,0 @@
-{
-  "casingLength": 1.2,
-  "casingBaseRadius": 0.075,
-  "maxInflate": 3.5,
-  "pulseThreshold": 0.7,
-  "pulseSpeed": 8,
-  "pulseAmplitude": 0.15
-}

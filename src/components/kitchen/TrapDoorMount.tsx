@@ -1,40 +1,28 @@
-/**
- * @module TrapDoorMount
- * Ceiling-mounted trap door — the only entrance/exit to the sealed basement.
- *
- * Uses ECS bare machine for the brushed steel panel, mounted in a
- * DisplayHousing ceiling bracket. Position from resolveLayout() targets map ('trap-door' key).
- */
-
-import {useEffect, useState} from 'react';
-import {config} from '../../config';
-import {buildMachineArchetype} from '../../ecs/archetypes/buildMachineArchetype';
-import {despawnMachine, spawnMachine} from '../../ecs/archetypes/spawnMachine';
-import {MachineEntitiesRenderer} from '../../ecs/renderers/ECSScene';
-import type {Entity} from '../../ecs/types';
-import {DisplayHousing} from './DisplayHousing';
-
-const trapDoorArchetype = buildMachineArchetype(config.machines['trap-door']);
-const housingConfig = config.fixtures.ceilingTrapdoorHousing;
+import { useGLTF } from '@react-three/drei';
+import { RigidBody } from '@react-three/rapier';
 
 interface TrapDoorMountProps {
   position: [number, number, number];
 }
 
-export function TrapDoorMount({position}: TrapDoorMountProps) {
-  const [entities, setEntities] = useState<Entity[]>([]);
+export function TrapDoorMount({ position }: TrapDoorMountProps) {
+  const { nodes } = useGLTF('/models/Traps.glb') as any;
 
-  useEffect(() => {
-    const spawned = spawnMachine(trapDoorArchetype);
-    setEntities(spawned);
-    return () => {
-      despawnMachine(spawned);
-    };
-  }, []);
+  // Verify the node exists in the specific GLB we're using
+  // If not, we fallback to a safe primitive or nothing
+  const trapDoorNode = nodes.Base || nodes.Trapdoor || nodes.Cube || Object.values(nodes).find((n: any) => n.isMesh);
 
   return (
-    <DisplayHousing config={housingConfig} position={position}>
-      <MachineEntitiesRenderer entities={entities} />
-    </DisplayHousing>
+    <group position={position} rotation={[Math.PI, 0, 0]}>
+      {trapDoorNode && (
+        <RigidBody type="fixed" colliders="cuboid">
+          <mesh geometry={trapDoorNode.geometry} material={trapDoorNode.material} scale={[1.5, 1.0, 1.5]}>
+            <meshStandardMaterial color="#444" metalness={0.8} roughness={0.2} />
+          </mesh>
+        </RigidBody>
+      )}
+    </group>
   );
 }
+
+useGLTF.preload('/models/Traps.glb');
