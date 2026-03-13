@@ -1,90 +1,36 @@
 import {useEffect, useRef} from 'react';
 import {type GestureResponderEvent, PanResponder, StyleSheet, View} from 'react-native';
-import {InputManager} from '../../input/InputManager';
 
-// ── Constants ────────────────────────────────────────────────────
-
-/** Max duration (ms) for a tap gesture. */
 const TAP_MAX_DURATION = 250;
-/** Max travel (px) for a tap gesture. */
 const TAP_MAX_DISTANCE = 10;
-/** Radius (px) at which left-zone drag reaches full joystick magnitude. */
 const MOVE_ZONE_RADIUS = 80;
 
-// ── Props ────────────────────────────────────────────────────────
-
 interface SwipeFPSControlsProps {
-  /** Shared ref that FPSController reads for movement input (normalized [-1,1]). */
   joystickRef: React.RefObject<{x: number; y: number}>;
-  /** Callback for look drag (deltaX, deltaY in pixels). */
   onLookDrag?: (dx: number, dy: number) => void;
+  onInteract?: () => void;
 }
 
-// ── Component ────────────────────────────────────────────────────
-
-/**
- * SwipeFPSControls — dual-zone invisible touch surface for mobile FPS navigation.
- *
- * Layout:
- * ┌─────────────┬─────────────┐
- * │  MOVE ZONE  │  LOOK ZONE  │
- * │  (left 50%) │  (right 50%)│
- * └─────────────┴─────────────┘
- *
- * Gesture model:
- * - Left half drag: Move — invisible virtual joystick centered on touch-start
- * - Left half release: Stop moving — zero joystickRef
- * - Right half drag: Look around — continuous delta → onLookDrag(dx, dy)
- * - Tap (either side): Interact — fires setTouchActionPressed('interact', true) pulse
- */
-export function SwipeFPSControls({joystickRef, onLookDrag}: SwipeFPSControlsProps) {
-  // ── Move zone (left half) state ──
+export function SwipeFPSControls({joystickRef, onLookDrag, onInteract}: SwipeFPSControlsProps) {
   const moveStartRef = useRef({x: 0, y: 0});
   const moveStartTimeRef = useRef(0);
   const moveTotalDistRef = useRef(0);
 
-  // ── Look zone (right half) state ──
   const lookLastRef = useRef({x: 0, y: 0});
   const lookStartTimeRef = useRef(0);
   const lookStartPosRef = useRef({x: 0, y: 0});
   const lookMaxDistRef = useRef(0);
-  // Keep callback ref fresh to avoid stale closure in PanResponder
+
   const onLookDragRef = useRef(onLookDrag);
   useEffect(() => {
     onLookDragRef.current = onLookDrag;
   }, [onLookDrag]);
 
-  // ── Shared tap helper ──
-  const pendingInteractRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const fireTapInteract = () => {
-    const input = InputManager.getInstance();
-    // Clear any existing timeout to prevent overlapping pulses
-    if (pendingInteractRef.current !== null) {
-      clearTimeout(pendingInteractRef.current);
-    }
-    input.setTouchActionPressed('interact', true);
-    pendingInteractRef.current = setTimeout(() => {
-      input.setTouchActionPressed('interact', false);
-      pendingInteractRef.current = null;
-    }, 50);
-  };
-
-  // Cleanup on unmount: zero joystick, cancel pending interact, reset input state
+  const onInteractRef = useRef(onInteract);
   useEffect(() => {
-    return () => {
-      if (pendingInteractRef.current !== null) {
-        clearTimeout(pendingInteractRef.current);
-        pendingInteractRef.current = null;
-        InputManager.getInstance().setTouchActionPressed('interact', false);
-      }
-      if (joystickRef.current) {
-        joystickRef.current.x = 0;
-        joystickRef.current.y = 0;
-      }
-    };
-  }, [joystickRef]);
+    onInteractRef.current = onInteract;
+  }, [onInteract]);
 
-  // ── Move zone PanResponder (left half) ──
   const movePanResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -96,7 +42,6 @@ export function SwipeFPSControls({joystickRef, onLookDrag}: SwipeFPSControlsProp
         moveStartRef.current.y = touch.pageY;
         moveStartTimeRef.current = performance.now();
         moveTotalDistRef.current = 0;
-        // Zero joystick on new touch
         if (joystickRef.current) {
           joystickRef.current.x = 0;
           joystickRef.current.y = 0;
@@ -112,35 +57,30 @@ export function SwipeFPSControls({joystickRef, onLookDrag}: SwipeFPSControlsProp
 
         if (!joystickRef.current) return;
 
-        // Normalize by MOVE_ZONE_RADIUS, clamp to [-1, 1]
         const scale = Math.min(dist, MOVE_ZONE_RADIUS) / MOVE_ZONE_RADIUS;
         if (dist < 1) {
           joystickRef.current.x = 0;
           joystickRef.current.y = 0;
         } else {
-          const nx = dx / dist; // unit direction
+          const nx = dx / dist;
           const ny = dy / dist;
           joystickRef.current.x = nx * scale;
-          // Negate Y: screen-down = forward = negative Z in game
           joystickRef.current.y = -(ny * scale);
         }
       },
 
       onPanResponderRelease: () => {
-        // Zero joystick on release
         if (joystickRef.current) {
           joystickRef.current.x = 0;
           joystickRef.current.y = 0;
         }
-        // Check for tap
         const duration = performance.now() - moveStartTimeRef.current;
         if (duration < TAP_MAX_DURATION && moveTotalDistRef.current < TAP_MAX_DISTANCE) {
-          fireTapInteract();
+          onInteractRef.current?.();
         }
       },
 
       onPanResponderTerminate: () => {
-        // OS interrupted the gesture — zero joystick to prevent stuck movement
         if (joystickRef.current) {
           joystickRef.current.x = 0;
           joystickRef.current.y = 0;
@@ -149,7 +89,6 @@ export function SwipeFPSControls({joystickRef, onLookDrag}: SwipeFPSControlsProp
     }),
   ).current;
 
-  // ── Look zone PanResponder (right half) ──
   const lookPanResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -171,7 +110,6 @@ export function SwipeFPSControls({joystickRef, onLookDrag}: SwipeFPSControlsProp
         const dy = touch.pageY - lookLastRef.current.y;
         lookLastRef.current.x = touch.pageX;
         lookLastRef.current.y = touch.pageY;
-        // Track max distance from start for robust tap detection
         const fromStartDx = touch.pageX - lookStartPosRef.current.x;
         const fromStartDy = touch.pageY - lookStartPosRef.current.y;
         const fromStartDist = Math.sqrt(fromStartDx * fromStartDx + fromStartDy * fromStartDy);
@@ -180,10 +118,9 @@ export function SwipeFPSControls({joystickRef, onLookDrag}: SwipeFPSControlsProp
       },
 
       onPanResponderRelease: () => {
-        // Check for tap (max distance, not end-to-end, to reject circular gestures)
         const duration = performance.now() - lookStartTimeRef.current;
         if (duration < TAP_MAX_DURATION && lookMaxDistRef.current < TAP_MAX_DISTANCE) {
-          fireTapInteract();
+          onInteractRef.current?.();
         }
       },
     }),
@@ -217,5 +154,4 @@ const styles = StyleSheet.create({
   },
 });
 
-// Exported for testing
 export {TAP_MAX_DURATION, TAP_MAX_DISTANCE, MOVE_ZONE_RADIUS};

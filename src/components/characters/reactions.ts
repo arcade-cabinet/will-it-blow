@@ -20,7 +20,9 @@ export type Reaction =
   | 'excitement'
   | 'nervous'
   | 'nod'
-  | 'talk';
+  | 'talk'
+  | 'eating'
+  | 'judging';
 
 /**
  * Procedural animation target values for a single reaction.
@@ -48,4 +50,6 @@ export const REACTIONS: Record<Reaction, ReactionTargets> = {
   nervous: {bodyRotZ: 0.05, shakeIntensity: 0.03, duration: 1000, loop: true},
   nod: {headRotX: 0.3, duration: 300},
   talk: {shakeIntensity: 0.02, duration: 400, loop: true},
+  eating: {bodyY: -0.1, headRotX: -0.2, shakeIntensity: 0.1, duration: 600, loop: true},
+  judging: {bodyRotZ: 0.1, headRotX: 0.1, armLRotZ: -0.5, duration: 1500},
 };

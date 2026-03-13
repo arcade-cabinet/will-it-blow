@@ -1,20 +1,16 @@
 # CLAUDE.md — Will It Blow?
 
-Claude Code-specific instructions. For shared project knowledge, read the cross-agent docs below.
+Claude Code-specific instructions. All shared project knowledge lives in AGENTS.md and docs/.
 
-## Required Reading (in order)
+## Required Reading (MANDATORY — every session)
 
-1. **`AGENTS.md`** — Project overview, architecture, key files, commands, critical rules
-2. **`memory-bank/activeContext.md`** — Current session state and recent changes
-3. **`memory-bank/systemPatterns.md`** — Architecture patterns and conventions
-4. **`memory-bank/techContext.md`** — Tech stack, dependencies, CI/CD, and **common pitfalls**
-5. **`docs/AGENTS.md`** — Documentation index (frontmatter schema, agent routing)
+1. **`AGENTS.md`** — Project overview, architecture, commands, rules
+2. **`docs/AGENTS.md`** — Full documentation index, frontmatter schema, agent routing
+3. **`docs/memory-bank/AGENTS.md`** — Memory bank protocol, session context
 
-Read these before doing any substantive work. All project knowledge lives there, not here.
+Read these before doing any substantive work.
 
-## Claude Code Tools
-
-### Slash Commands (`.claude/commands/`)
+## Slash Commands
 
 | Command | Purpose |
 |---------|---------|
@@ -22,17 +18,7 @@ Read these before doing any substantive work. All project knowledge lives there,
 | `/lint-and-test` | Run full Biome lint + Jest test suite |
 | `/update-docs` | Regenerate TypeDoc and update status.md |
 
-### Specialized Agents (`.claude/agents/`)
-
-| Agent | Role |
-|-------|------|
-| `scene-architect` | 3D scene, R3F components, furniture layout, lighting, materials |
-| `challenge-dev` | Challenge overlays, 3D stations, scoring, gameplay mechanics |
-| `store-warden` | Zustand store integrity, state machine transitions, action correctness |
-| `asset-pipeline` | GLB models, textures, Blender MCP, model optimization, asset URLs |
-| `doc-keeper` | Documentation maintenance, JSDoc, frontmatter, AGENTS.md, TypeDoc |
-
-### Quick Commands
+## Quick Commands
 
 ```bash
 pnpm test                     # Jest tests
@@ -48,3 +34,16 @@ npx expo start --web          # Dev server
 - **Mock `useGLTF`** in any new test file that touches R3F components loading GLBs
 - **Use `pnpm`** for all package operations (not npm/yarn)
 - **Use `pnpm format`** before committing to satisfy Biome checks
+- **Biome 2.4** for all linting/formatting (not ESLint/Prettier)
+- **Feature branches** — never push directly to main; use feat/* branches + PRs
+- **Squash merge** — preferred merge strategy
+
+## Agent Definitions (`.claude/agents/`)
+
+| Agent | Role |
+|-------|------|
+| `scene-architect` | 3D scene, R3F components, furniture layout, lighting, materials |
+| `challenge-dev` | Challenge overlays, 3D stations, scoring functions, gameplay mechanics |
+| `store-warden` | Zustand store integrity, state machine transitions, action correctness |
+| `asset-pipeline` | GLB models, textures, asset URLs, model optimization |
+| `doc-keeper` | Documentation maintenance, JSDoc, frontmatter, AGENTS.md, TypeDoc |

@@ -1,51 +1,16 @@
-/**
- * @module TieGesture
- * 2D overlay that prompts the player to tie both ends of the sausage casing
- * before the blowout challenge begins.
- *
- * Both tie points are rendered as interactive spheres. Clicking/tapping
- * each one "constricts" it (scale animation) and spawns a knot indicator.
- * When both ends are tied, the component calls setCasingTied(true) and
- * recordFlairPoint for fast ties.
- *
- * Pattern: this is a bridge-style overlay (like IngredientChallenge), not
- * an ECS orchestrator. The tie interaction is pure 2D — no 3D station needed.
- */
-
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {Animated, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {useGameStore} from '../../store/gameStore';
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface TieGestureProps {
-  /** Called when both ends are tied and the overlay should be dismissed. */
-  onComplete: () => void;
-}
-
-// ---------------------------------------------------------------------------
-// TieGesture
-// ---------------------------------------------------------------------------
-
-/**
- * Overlay component for tying both ends of the sausage casing.
- * Renders two "tie point" buttons. Each must be pressed to proceed.
- * Fast ties earn a flair bonus.
- */
-export function TieGesture({onComplete}: TieGestureProps) {
+export function TieGesture({onComplete}: {onComplete: () => void}) {
   const setCasingTied = useGameStore(s => s.setCasingTied);
-  const recordFlairPoint = useGameStore(s => s.recordFlairPoint);
 
   const [leftTied, setLeftTied] = useState(false);
   const [rightTied, setRightTied] = useState(false);
 
-  const startTimeRef = useRef(Date.now());
   const leftScaleRef = useRef(new Animated.Value(1));
   const rightScaleRef = useRef(new Animated.Value(1));
 
-  /** Animate a tie point constriction and mark it as tied. */
   const animateTie = useCallback((scaleAnim: Animated.Value, onDone: () => void) => {
     Animated.sequence([
       Animated.timing(scaleAnim, {
@@ -71,43 +36,30 @@ export function TieGesture({onComplete}: TieGestureProps) {
     animateTie(rightScaleRef.current, () => setRightTied(true));
   }, [rightTied, animateTie]);
 
-  // When both ends are tied, check for fast-tie flair then complete
   useEffect(() => {
     if (!leftTied || !rightTied) return;
-
-    const elapsed = Date.now() - startTimeRef.current;
-    if (elapsed < 2500) {
-      recordFlairPoint('fast-tie', 5);
-    }
-
     setCasingTied(true);
-
     const timeout = setTimeout(() => {
       onComplete();
     }, 600);
-
     return () => clearTimeout(timeout);
-  }, [leftTied, rightTied, setCasingTied, recordFlairPoint, onComplete]);
+  }, [leftTied, rightTied, setCasingTied, onComplete]);
 
   const bothTied = leftTied && rightTied;
 
   return (
     <View style={styles.container} pointerEvents="box-none">
-      {/* Instruction banner */}
       <View style={styles.instructionBanner}>
         <Text style={styles.instructionText}>TIE THE CASING</Text>
         <Text style={styles.subText}>Tap each end to tie a knot</Text>
       </View>
 
-      {/* Sausage diagram with tie points */}
       <View style={styles.sausageRow}>
-        {/* Left tie point */}
         <TouchableOpacity
           style={styles.tiePointWrapper}
           onPress={handleLeftTie}
           activeOpacity={0.7}
           disabled={leftTied}
-          testID="tie-left"
         >
           <Animated.View
             style={[
@@ -120,7 +72,6 @@ export function TieGesture({onComplete}: TieGestureProps) {
           </Animated.View>
         </TouchableOpacity>
 
-        {/* Casing body visual */}
         <View style={styles.casingBody}>
           {(leftTied || rightTied) && (
             <View
@@ -133,13 +84,11 @@ export function TieGesture({onComplete}: TieGestureProps) {
           )}
         </View>
 
-        {/* Right tie point */}
         <TouchableOpacity
           style={styles.tiePointWrapper}
           onPress={handleRightTie}
           activeOpacity={0.7}
           disabled={rightTied}
-          testID="tie-right"
         >
           <Animated.View
             style={[
@@ -153,7 +102,6 @@ export function TieGesture({onComplete}: TieGestureProps) {
         </TouchableOpacity>
       </View>
 
-      {/* Status label */}
       {bothTied ? (
         <View style={styles.completeBanner}>
           <Text style={styles.completeText}>CASING SECURED</Text>
@@ -171,10 +119,6 @@ export function TieGesture({onComplete}: TieGestureProps) {
     </View>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Styles
-// ---------------------------------------------------------------------------
 
 const styles = StyleSheet.create({
   container: {
@@ -196,13 +140,11 @@ const styles = StyleSheet.create({
   instructionText: {
     fontSize: 28,
     fontWeight: '900',
-    fontFamily: 'Bangers',
     color: '#FFC832',
     letterSpacing: 4,
   },
   subText: {
     fontSize: 14,
-    fontFamily: 'Bangers',
     color: '#AAA',
     letterSpacing: 1,
     marginTop: 2,
@@ -232,7 +174,6 @@ const styles = StyleSheet.create({
   tiePointLabel: {
     fontSize: 16,
     fontWeight: '900',
-    fontFamily: 'Bangers',
     color: '#FFC832',
     letterSpacing: 2,
   },
@@ -267,7 +208,6 @@ const styles = StyleSheet.create({
   },
   statusDot: {
     fontSize: 18,
-    fontFamily: 'Bangers',
     color: '#555',
     letterSpacing: 2,
   },
@@ -285,7 +225,6 @@ const styles = StyleSheet.create({
   completeText: {
     fontSize: 22,
     fontWeight: '900',
-    fontFamily: 'Bangers',
     color: '#4CAF50',
     letterSpacing: 4,
   },

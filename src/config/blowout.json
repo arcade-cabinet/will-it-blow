@@ -1,0 +1,13 @@
+{
+  "maxSplatters": 50,
+  "pressureRate": 0.5,
+  "cameraShakeMultiplier": 0.05,
+  "phaseTransitionDelay": 1500,
+  "canvasSize": 512,
+  "splat": {
+    "radiusRange": [10, 30],
+    "velocityZ": [-5, -10],
+    "velocityXY": 2,
+    "gravity": 9.8
+  }
+}

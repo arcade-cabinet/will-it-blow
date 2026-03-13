@@ -1,0 +1,30 @@
+{
+  "picksPerRound": 3,
+  "roundsByDifficulty": {
+    "rare": 3,
+    "medium-rare": 3,
+    "medium": 5,
+    "medium-well": 7,
+    "well-done": 10
+  },
+  "defaultRounds": 5,
+  "reactionQuips": {
+    "excellent": {
+      "threshold": 90,
+      "text": "Adequate. BARELY."
+    },
+    "good": {
+      "threshold": 75,
+      "text": "You're improving. Don't get comfortable."
+    },
+    "mediocre": {
+      "threshold": 50,
+      "text": "Mediocre sausage for a mediocre worker."
+    },
+    "terrible": {
+      "threshold": 0,
+      "text": "Disgusting. Do it again."
+    }
+  },
+  "emptyScoresQuip": "Get to work."
+}

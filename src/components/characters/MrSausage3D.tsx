@@ -1,6 +1,6 @@
 import {useFrame, useThree} from '@react-three/fiber';
 import {useMemo, useRef} from 'react';
-import * as THREE from 'three/webgpu';
+import * as THREE from 'three';
 import {REACTIONS, type Reaction} from './reactions';
 
 interface MrSausage3DProps {
@@ -354,7 +354,7 @@ export const MrSausage3D = ({
       {/* ========== HEAD ========== */}
       <mesh ref={headRef} scale={[1.0, 1.05, 0.95]}>
         <sphereGeometry args={[1.8, 24, 24]} />
-        <meshBasicMaterial color={[0.92, 0.62, 0.35]} />
+        <meshStandardMaterial color={[0.92, 0.62, 0.35]} />
       </mesh>
 
       {/* ========== LEFT EYE GROUP ========== */}
@@ -362,22 +362,22 @@ export const MrSausage3D = ({
         {/* Sclera */}
         <mesh scale={[1.0, 0.85, 0.4]}>
           <sphereGeometry args={[0.25, 12, 12]} />
-          <meshBasicMaterial color={[0.95, 0.95, 0.92]} />
+          <meshStandardMaterial color={[0.95, 0.95, 0.92]} />
         </mesh>
         {/* Iris */}
         <mesh ref={irisLRef} position={[0, 0, -0.12]} scale={[1.0, 1.0, 0.3]}>
           <sphereGeometry args={[0.11, 10, 10]} />
-          <meshBasicMaterial color={[0.25, 0.55, 0.3]} />
+          <meshStandardMaterial color={[0.25, 0.55, 0.3]} />
         </mesh>
         {/* Pupil */}
         <mesh ref={pupilLRef} position={[0, 0, -0.15]} scale={[1.0, 1.0, 0.3]}>
           <sphereGeometry args={[0.06, 8, 8]} />
-          <meshBasicMaterial color={[0.02, 0.02, 0.02]} />
+          <meshStandardMaterial color={[0.02, 0.02, 0.02]} />
         </mesh>
         {/* Eyelid */}
         <mesh ref={lidLRef} position={[0, 0.12, -0.02]} scale={[1.05, 0.0, 0.45]}>
           <sphereGeometry args={[0.27, 10, 10]} />
-          <meshBasicMaterial color={[0.85, 0.55, 0.3]} />
+          <meshStandardMaterial color={[0.85, 0.55, 0.3]} />
         </mesh>
       </group>
 
@@ -386,22 +386,22 @@ export const MrSausage3D = ({
         {/* Sclera */}
         <mesh scale={[1.0, 0.85, 0.4]}>
           <sphereGeometry args={[0.25, 12, 12]} />
-          <meshBasicMaterial color={[0.95, 0.95, 0.92]} />
+          <meshStandardMaterial color={[0.95, 0.95, 0.92]} />
         </mesh>
         {/* Iris */}
         <mesh ref={irisRRef} position={[0, 0, -0.12]} scale={[1.0, 1.0, 0.3]}>
           <sphereGeometry args={[0.11, 10, 10]} />
-          <meshBasicMaterial color={[0.25, 0.55, 0.3]} />
+          <meshStandardMaterial color={[0.25, 0.55, 0.3]} />
         </mesh>
         {/* Pupil */}
         <mesh ref={pupilRRef} position={[0, 0, -0.15]} scale={[1.0, 1.0, 0.3]}>
           <sphereGeometry args={[0.06, 8, 8]} />
-          <meshBasicMaterial color={[0.02, 0.02, 0.02]} />
+          <meshStandardMaterial color={[0.02, 0.02, 0.02]} />
         </mesh>
         {/* Eyelid */}
         <mesh ref={lidRRef} position={[0, 0.12, -0.02]} scale={[1.05, 0.0, 0.45]}>
           <sphereGeometry args={[0.27, 10, 10]} />
-          <meshBasicMaterial color={[0.85, 0.55, 0.3]} />
+          <meshStandardMaterial color={[0.85, 0.55, 0.3]} />
         </mesh>
       </group>
 
@@ -409,49 +409,49 @@ export const MrSausage3D = ({
       {/* Left lens */}
       <mesh position={[-0.6, 0.25, -1.45]} scale={[0.95, 0.75, 0.35]}>
         <sphereGeometry args={[0.55, 16, 16]} />
-        <meshBasicMaterial color={[0.06, 0.06, 0.12]} />
+        <meshStandardMaterial color={[0.06, 0.06, 0.12]} />
       </mesh>
       {/* Right lens */}
       <mesh position={[0.6, 0.25, -1.45]} scale={[0.95, 0.75, 0.35]}>
         <sphereGeometry args={[0.55, 16, 16]} />
-        <meshBasicMaterial color={[0.06, 0.06, 0.12]} />
+        <meshStandardMaterial color={[0.06, 0.06, 0.12]} />
       </mesh>
       {/* Bridge */}
       <mesh position={[0, 0.3, -1.55]}>
         <boxGeometry args={[0.5, 0.12, 0.12]} />
-        <meshBasicMaterial color={[0.15, 0.15, 0.18]} />
+        <meshStandardMaterial color={[0.15, 0.15, 0.18]} />
       </mesh>
       {/* Top bar */}
       <mesh position={[0, 0.62, -1.52]}>
         <boxGeometry args={[2.1, 0.15, 0.12]} />
-        <meshBasicMaterial color={[0.15, 0.15, 0.18]} />
+        <meshStandardMaterial color={[0.15, 0.15, 0.18]} />
       </mesh>
       {/* Left temple */}
       <mesh position={[-1.0, 0.55, -1.0]}>
         <boxGeometry args={[0.1, 0.1, 1.0]} />
-        <meshBasicMaterial color={[0.15, 0.15, 0.18]} />
+        <meshStandardMaterial color={[0.15, 0.15, 0.18]} />
       </mesh>
       {/* Right temple */}
       <mesh position={[1.0, 0.55, -1.0]}>
         <boxGeometry args={[0.1, 0.1, 1.0]} />
-        <meshBasicMaterial color={[0.15, 0.15, 0.18]} />
+        <meshStandardMaterial color={[0.15, 0.15, 0.18]} />
       </mesh>
 
       {/* ========== MOUTH ========== */}
       {/* Mouth opening (dark interior) */}
       <mesh ref={mouthRef} position={[0, -0.85, -1.4]} scale={[1.2, 0.0, 0.35]}>
         <sphereGeometry args={[0.35, 12, 12]} />
-        <meshBasicMaterial color={[0.15, 0.04, 0.02]} />
+        <meshStandardMaterial color={[0.15, 0.04, 0.02]} />
       </mesh>
       {/* Upper lip */}
       <mesh position={[0, -0.7, -1.48]}>
         <boxGeometry args={[0.8, 0.06, 0.15]} />
-        <meshBasicMaterial color={[0.75, 0.35, 0.25]} />
+        <meshStandardMaterial color={[0.75, 0.35, 0.25]} />
       </mesh>
       {/* Lower lip */}
       <mesh ref={lowerLipRef} position={[0, -0.88, -1.42]}>
         <boxGeometry args={[0.65, 0.06, 0.12]} />
-        <meshBasicMaterial color={[0.75, 0.35, 0.25]} />
+        <meshStandardMaterial color={[0.75, 0.35, 0.25]} />
       </mesh>
 
       {/* ========== CHEEKS ========== */}
@@ -466,7 +466,7 @@ export const MrSausage3D = ({
       {/* Center block */}
       <mesh ref={stacheCenterRef} position={[0, -0.35, -1.5]}>
         <boxGeometry args={[1.4, 0.35, 0.3]} />
-        <meshBasicMaterial color={[0.35, 0.18, 0.06]} />
+        <meshStandardMaterial color={[0.35, 0.18, 0.06]} />
       </mesh>
       {/* Left curl (torus) */}
       <mesh
@@ -476,12 +476,12 @@ export const MrSausage3D = ({
         scale={[1.0, 1.0, 0.5]}
         geometry={torusGeo}
       >
-        <meshBasicMaterial color={[0.35, 0.18, 0.06]} />
+        <meshStandardMaterial color={[0.35, 0.18, 0.06]} />
       </mesh>
       {/* Left curl tip */}
       <mesh position={[-1.55, -0.2, -1.35]}>
         <sphereGeometry args={[0.16, 10, 10]} />
-        <meshBasicMaterial color={[0.35, 0.18, 0.06]} />
+        <meshStandardMaterial color={[0.35, 0.18, 0.06]} />
       </mesh>
       {/* Right curl (torus) */}
       <mesh
@@ -491,48 +491,48 @@ export const MrSausage3D = ({
         scale={[1.0, 1.0, 0.5]}
         geometry={torusGeo}
       >
-        <meshBasicMaterial color={[0.35, 0.18, 0.06]} />
+        <meshStandardMaterial color={[0.35, 0.18, 0.06]} />
       </mesh>
       {/* Right curl tip */}
       <mesh position={[1.55, -0.2, -1.35]}>
         <sphereGeometry args={[0.16, 10, 10]} />
-        <meshBasicMaterial color={[0.35, 0.18, 0.06]} />
+        <meshStandardMaterial color={[0.35, 0.18, 0.06]} />
       </mesh>
 
       {/* ========== CHEF HAT (TOQUE) ========== */}
       {/* Brim */}
       <mesh position={[0, 1.4, 0]}>
         <cylinderGeometry args={[1.4, 1.4, 0.3, 28]} />
-        <meshBasicMaterial color={[0.88, 0.88, 0.85]} />
+        <meshStandardMaterial color={[0.88, 0.88, 0.85]} />
       </mesh>
       {/* Body */}
       <mesh position={[0, 2.2, 0]}>
         <cylinderGeometry args={[0.9, 1.15, 1.3, 24]} />
-        <meshBasicMaterial color={[0.95, 0.95, 0.95]} />
+        <meshStandardMaterial color={[0.95, 0.95, 0.95]} />
       </mesh>
       {/* Pleats */}
       {pleatPositions.map((pos, i) => (
         <mesh key={`pleat_${i}`} position={pos}>
           <boxGeometry args={[0.06, 1.2, 0.06]} />
-          <meshBasicMaterial color={[0.88, 0.88, 0.85]} />
+          <meshStandardMaterial color={[0.88, 0.88, 0.85]} />
         </mesh>
       ))}
       {/* Puff top */}
       <mesh position={[0, 2.95, 0]} scale={[1.0, 0.6, 1.0]}>
         <sphereGeometry args={[1.1, 18, 18]} />
-        <meshBasicMaterial color={[0.95, 0.95, 0.95]} />
+        <meshStandardMaterial color={[0.95, 0.95, 0.95]} />
       </mesh>
       {/* Secondary puff */}
       <mesh position={[0.3, 3.1, -0.2]} scale={[1.0, 0.5, 0.8]}>
         <sphereGeometry args={[0.6, 12, 12]} />
-        <meshBasicMaterial color={[0.95, 0.95, 0.95]} />
+        <meshStandardMaterial color={[0.95, 0.95, 0.95]} />
       </mesh>
 
       {/* ========== MUSTARD ZIGZAG ========== */}
       {mustardPositions.map((pos, i) => (
         <mesh key={`mustard_${i}`} position={pos}>
           <sphereGeometry args={[0.1, 8, 8]} />
-          <meshBasicMaterial color={[1.0, 0.82, 0.05]} />
+          <meshStandardMaterial color={[1.0, 0.82, 0.05]} />
         </mesh>
       ))}
     </group>

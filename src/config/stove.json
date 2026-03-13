@@ -1,0 +1,21 @@
+{
+  "fboSize": 256,
+  "cooking": {
+    "heatRate": 0.1,
+    "dialSensitivity": 0.005,
+    "dialRotationMax": 0.8
+  },
+  "grease": {
+    "baseDamping": 0.98,
+    "heatDampingReduction": 0.02,
+    "normalScale": 2.5,
+    "splatThreshold": 0.1,
+    "maxSplatsPerFrame": 5,
+    "splatSizeRange": [0.05, 0.15],
+    "colorRaw": "#cca600",
+    "colorCooked": "#8a5a00"
+  },
+  "pan": {
+    "snapDistance": 0.5
+  }
+}

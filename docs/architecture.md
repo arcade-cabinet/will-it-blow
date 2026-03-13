@@ -1,19 +1,20 @@
-<!--
+---
 title: Architecture Overview
 domain: core
 status: current
-engine: r3f
-last-verified: 2026-03-04
+last-verified: 2026-03-13
 depends-on: [state-management, 3d-rendering, game-design]
 agent-context: scene-architect, challenge-dev
-summary: System design, directory structure, data flow for R3F/WebGPU game
--->
+summary: System design, directory structure, data flow for greenfield R3F game
+---
 
 # Architecture Overview
 
 ## System Design
 
-Will It Blow? is a first-person horror sausage-making mini-game. The player is trapped in a grimy basement kitchen and must complete 7 sequential challenges under the watchful eye of Mr. Sausage, a menacing sentient sausage displayed on a CRT television.
+Will It Blow? is a first-person horror sausage-making mini-game. The player is trapped in a grimy basement kitchen and must complete sequential challenges under the watchful eye of Mr. Sausage, a menacing sentient sausage displayed on a CRT television.
+
+**Tone:** SAW meets cooking show. Dark humor. The horror is played for laughs but the atmosphere is genuinely unsettling.
 
 ### Two-Layer Rendering Stack
 
@@ -23,52 +24,50 @@ Will It Blow? is a first-person horror sausage-making mini-game. The player is t
 │  (StyleSheet.absoluteFillObject, z=10)   │
 ├──────────────────────────────────────────┤
 │  Layer 1: React Three Fiber Canvas       │  ← Kitchen GLB, stations, lighting
-│  (Three.js WebGPU via R3F reconciler)    │
+│  (Three.js via R3F reconciler)           │
 ├──────────────────────────────────────────┤
 │  Root: SafeAreaView (React Native)       │  ← Root container, flex: 1
 └──────────────────────────────────────────┘
 ```
 
 - **Root** provides the container and background color (#0a0a0a).
-- **Layer 1** is the R3F `<Canvas>` rendering Three.js via `WebGPURenderer`. On web, this uses browser-native WebGPU. On native, `react-native-wgpu` provides a Dawn-based WebGPU surface. WebXR support is available on web via `@react-three/xr`. It renders the 3D kitchen environment, station meshes, and CRT TV.
-- **Layer 2** is React Native overlays (`pointerEvents="box-none"`) that float above the 3D scene. All game UI lives here: challenge controls, dialogue, menus, results.
+- **Layer 1** is the R3F `<Canvas>` rendering Three.js. It renders the 3D kitchen environment, procedural station meshes, and sausage physics.
+- **Layer 2** is React Native overlays (`pointerEvents="box-none"`) that float above the 3D scene. Game UI lives here: dialogue, menus, difficulty selection.
+
+Both layers subscribe independently to the Zustand store — no direct communication between them.
 
 ### Platform Strategy
 
 The app targets web (primary), iOS, and Android via Expo SDK 55 + React Native 0.83.
 
-A single `GameWorld.tsx` works on all platforms — R3F's `<Canvas>` uses `WebGPURenderer` with `react-native-wgpu` on native and browser WebGPU on web. Metro config has a WebGPU resolver that maps bare `'three'` imports to `'three/webgpu'` on native. No platform-specific file splitting for the 3D layer.
+A single `GameWorld.tsx` works on all platforms — R3F's `<Canvas>` handles rendering. No platform-specific file splitting for the 3D layer.
 
-Only remaining platform split:
-- `AudioEngine.web.ts` — Full Tone.js synthesis
-- `AudioEngine.ts` — Native stub (no-op placeholder)
+Single audio file: `AudioEngine.ts` (Tone.js synthesis, works on web).
 
 ### Key Technology Choices
 
 | Technology | Version | Role |
 |-----------|---------|------|
 | React Native | 0.83.2 | UI framework, cross-platform |
-| Three.js | 0.183.1 | 3D engine (WebGPU renderer, TSL shaders) |
-| React Three Fiber | 9.5.0 | React reconciler for Three.js (declarative JSX scene graph) |
+| Three.js | 0.183.1 | 3D engine |
+| React Three Fiber | 9.5.0 | React reconciler for Three.js |
 | @react-three/drei | 10.7.7 | Helpers: useGLTF, Environment, etc. |
-| @react-three/xr | 6.6.29 | WebXR support (web only) |
-| @react-three/cannon | 6.6.0 | Physics (optional, available) |
-| react-native-wgpu | 0.5.7 | Dawn-based WebGPU surface for native (iOS/Android) |
-| Zustand | 5.0.11 | State management (replaces React Context) |
-| Tone.js | 15.1.22 | Web audio synthesis (procedural SFX) |
-| Expo | 55.0.0 | Build toolchain, dev server, deployment |
+| @react-three/rapier | — | Physics (sausage bone-chain) |
+| Zustand | 5.0.11 | State management |
+| Tone.js | 15.1.22 | Web audio synthesis |
+| Expo | 55.0.0 | Build toolchain, dev server |
 
 ## App Lifecycle
 
 ```text
 App.tsx
   └─ useGameStore(s => s.appPhase)
-     ├─ 'menu'    → <TitleScreen />           Pure 2D, no R3F Canvas mounted
-     ├─ 'loading' → <LoadingScreen />          Preloads kitchen.glb via fetch()
-     └─ 'playing' → <GameWorld /> + <GameUI /> R3F Canvas + overlay stack
+     ├─ 'title'   → <TitleScreen />           Start menu (pure 2D)
+     ├─ 'playing'  → <GameWorld /> + overlays  R3F Canvas + UI stack
+     └─ 'results'  → (NOT YET IMPLEMENTED)    No GameOverScreen exists
 ```
 
-The `appPhase` state machine prevents the heavy R3F Canvas and GLB model from mounting until the player actually starts a game. This keeps the menu fast and avoids loading delays on first paint.
+**Note:** The `appPhase` type includes `'results'` but App.tsx has no rendering path for it. Game completion shows verdict dialogue inline but cannot return to menu.
 
 ## Directory Structure
 
@@ -77,130 +76,147 @@ will-it-blow/
 ├── App.tsx                          Root layout (SafeAreaView → phase routing)
 ├── src/
 │   ├── store/
-│   │   └── gameStore.ts             Zustand store (all game state + actions)
+│   │   ├── gameStore.ts             Zustand store (236 lines, all game state + actions)
+│   │   └── __tests__/gameStore.test.ts
 │   ├── engine/
-│   │   ├── ChallengeRegistry.ts     Challenge configs, variant selection, verdict
-│   │   ├── Ingredients.ts           25 ingredients with stats
-│   │   ├── IngredientMatcher.ts     Tag/criteria matching for ingredient selection
-│   │   ├── SausagePhysics.ts        Pure scoring functions
-│   │   ├── DialogueEngine.ts        Dialogue tree walker
-│   │   ├── AudioEngine.ts           Native audio stub (no-op)
-│   │   └── AudioEngine.web.ts       Tone.js synthesis engine
-│   ├── ecs/
-│   │   ├── types.ts                  Entity type — all components as optional fields
-│   │   ├── world.ts                  World + queries (vibrating, rotating, orbiting, cookable, etc.)
-│   │   ├── systems/                  7 behavior systems (pure update fn + React component)
-│   │   ├── renderers/                MeshRenderer, LightRenderer, LatheRenderer + ECSScene
-│   │   └── orchestrators/            GrinderOrchestrator, StufferOrchestrator, CookingOrchestrator, BlowoutOrchestrator
-│   ├── input/
-│   │   ├── InputManager.ts           Universal input with JSON bindings (keyboard/mouse/gamepad/touch)
-│   │   └── InputActions.ts           Engine-agnostic input abstraction
+│   │   ├── GameOrchestrator.tsx     Phase navigation + dev shortcuts (n/p keys)
+│   │   ├── DemandScoring.ts        Demand bonus calculation
+│   │   ├── IngredientMatcher.ts    Tag-based ingredient matching
+│   │   ├── RoundManager.ts         Multi-round loop, C(12,3) combo tracking
+│   │   ├── DifficultyConfig.ts     Difficulty tier configuration
+│   │   ├── DialogueEngine.ts       Dialogue tree walker
+│   │   ├── AudioEngine.ts          Tone.js synthesis (single file, no platform split)
+│   │   ├── Ingredients.ts          25 ingredients with stats
+│   │   └── __tests__/              DemandScoring, DifficultyConfig, RoundManager tests
 │   ├── config/
-│   │   ├── difficulty.json           5 tiers (Rare→Well Done): hints/strikes/timePressure/enemyChance
-│   │   ├── enemies.json              5 enemy types, 5 weapons, 4 spawn cabinets
-│   │   └── blowout.json              Blowout challenge config
+│   │   └── difficulty.json         5 difficulty tiers (only config file)
 │   ├── components/
-│   │   ├── GameWorld.tsx             R3F Canvas, FPSController, station orchestrator
+│   │   ├── GameWorld.tsx            R3F Canvas, station mounting, camera
+│   │   ├── stations/               Procedural station components (9 files)
+│   │   │   ├── Grinder.tsx         Grind mechanics + crank animation
+│   │   │   ├── Stuffer.tsx         Casing fill + pressure
+│   │   │   ├── Stove.tsx           Heat control + FBO grease simulation
+│   │   │   ├── ChoppingBlock.tsx   Knife gesture mechanics
+│   │   │   ├── BlowoutStation.tsx  Casing tie-off and blowout
+│   │   │   ├── TV.tsx              CRT television with Mr. Sausage
+│   │   │   ├── Sink.tsx            Cleanup between rounds
+│   │   │   ├── ChestFreezer.tsx    Ingredient selection (stub)
+│   │   │   └── PhysicsFreezerChest.tsx  Physics freezer (partial)
+│   │   ├── camera/
+│   │   │   ├── CameraRail.tsx      Camera interpolation between stations
+│   │   │   ├── IntroSequence.tsx   Opening camera tour
+│   │   │   ├── FirstPersonControls.tsx  Limited look-around
+│   │   │   └── PlayerHands.tsx     First-person hand rendering
+│   │   ├── sausage/
+│   │   │   ├── Sausage.tsx         SkinnedMesh + Rapier bone-chain physics
+│   │   │   └── SausageGeometry.ts  Procedural tube geometry
 │   │   ├── characters/
-│   │   │   ├── MrSausage3D.tsx       Procedural 3D character (meshBasicMaterial, self-lit)
-│   │   │   └── __tests__/MrSausage3D.test.tsx
+│   │   │   ├── MrSausage3D.tsx     Procedural 3D character (self-lit)
+│   │   │   └── reactions.ts        9 reaction animation types
+│   │   ├── environment/
+│   │   │   ├── Kitchen.tsx         Kitchen GLB loader (STUB — empty fragment)
+│   │   │   ├── BasementRoom.tsx    Room enclosure
+│   │   │   ├── SurrealText.tsx     Diegetic in-world text
+│   │   │   ├── ScatterProps.tsx    Horror scene dressing placement
+│   │   │   └── Prop.tsx            Individual prop rendering
 │   │   ├── kitchen/
-│   │   │   ├── KitchenEnvironment.tsx Room: walls, floor, ceiling, GLB model, lighting
-│   │   │   ├── FridgeStation.tsx      3D fridge with ingredient meshes (onClick picking)
-│   │   │   ├── GrinderStation.tsx     3D grinder with crank animation
-│   │   │   ├── StufferStation.tsx     3D stuffer with pressure visualization
-│   │   │   ├── StoveStation.tsx       3D stove with temperature glow
-│   │   │   ├── CrtTelevision.tsx      CRT TV with Mr. Sausage + shader
-│   │   │   └── __tests__/            Tests for all station components
-│   │   ├── effects/
-│   │   │   ├── CrtShader.ts          TSL NodeMaterial (chromatic aberration, WGSL/GLSL)
-│   │   │   └── __tests__/CrtShader.test.ts
-│   │   ├── ingredients/
-│   │   │   ├── Ingredient3D.tsx      Shape-based ingredient meshes (8 types)
-│   │   │   └── __tests__/Ingredient3D.test.tsx
+│   │   │   ├── KitchenSetPieces.tsx  Equipment/furniture placement
+│   │   │   ├── LiquidPourer.tsx    Liquid pour effects
+│   │   │   ├── ProceduralIngredients.tsx  Ingredient meshes (partial)
+│   │   │   ├── TrapDoorAnimation.tsx  Escape sequence
+│   │   │   └── TrapDoorMount.tsx   Trap door mounting point
 │   │   ├── challenges/
-│   │   │   ├── IngredientChallenge.tsx Fridge: pick matching ingredients (bridge pattern)
-│   │   │   ├── ChoppingChallenge.tsx   Chopping: knife-work mechanic
-│   │   │   ├── GrindingHUD.tsx         Grinder: thin read-only HUD (ECS orchestrator drives logic)
-│   │   │   ├── StuffingHUD.tsx         Stuffer: thin read-only HUD (ECS orchestrator drives logic)
-│   │   │   ├── CookingHUD.tsx          Stove: thin read-only HUD (ECS orchestrator drives logic)
-│   │   │   ├── BlowoutHUD.tsx          Blowout: tie gesture + scoring HUD
-│   │   │   └── TastingChallenge.tsx    Verdict: score reveal + rank (bridge pattern)
-│   │   ├── ui/
-│   │   │   ├── TitleScreen.tsx         Butcher shop menu + continue button
-│   │   │   ├── LoadingScreen.tsx       Asset preload + progress
-│   │   │   ├── DifficultySelector.tsx  "Choose Your Doneness" screen (5 tiers)
-│   │   │   ├── ChallengeHeader.tsx     "CHALLENGE N/7" header
-│   │   │   ├── StrikeCounter.tsx       3 lives display
-│   │   │   ├── HintButton.tsx          Hint trigger (stub)
-│   │   │   ├── ProgressGauge.tsx       Animated progress bar
-│   │   │   ├── DialogueOverlay.tsx     Typewriter text + choices
-│   │   │   ├── CombatHUD.tsx           Enemy encounter HUD
-│   │   │   ├── HiddenObjectOverlay.tsx Cabinet drawer + assembly parts
-│   │   │   ├── RoundTransition.tsx     Multi-round transition UI
-│   │   │   └── GameOverScreen.tsx      Victory/defeat + rank badge
-│   │   └── __tests__/GameWorld.test.tsx
-│   ├── e2e/
-│   │   └── *.spec.ts                 Playwright E2E tests (headed, system Chrome)
+│   │   │   └── TieGesture.tsx      Swipe-to-tie mechanic
+│   │   ├── controls/
+│   │   │   └── SwipeFPSControls.tsx  Touch swipe for mobile look
+│   │   └── ui/
+│   │       ├── TitleScreen.tsx     Start menu
+│   │       ├── DifficultySelector.tsx  "Choose Your Doneness" (5 tiers)
+│   │       └── DialogueOverlay.tsx Typewriter text + choices
 │   └── data/
-│       ├── challenges/
-│       │   └── variants.ts            6 ingredient + 3 grinding + 3 stuffing + 3 cooking variants
-│       └── dialogue/
-│           ├── intro.ts               Opening dialogue
-│           ├── ingredients.ts         Fridge phase dialogue
-│           ├── grinding.ts            Grinder phase dialogue
-│           ├── stuffing.ts            Stuffer phase dialogue
-│           ├── cooking.ts             Stove phase dialogue
-│           └── verdict.ts             Rank-specific verdict dialogue
+│       └── dialogue/               8 dialogue trees (intro, per-station, verdict)
+├── __tests__/
+│   └── IngredientMatcher.test.ts
 ├── public/
-│   ├── models/
-│   │   ├── kitchen.glb               PBR-textured kitchen (15.5 MB, Blender bake)
-│   │   ├── kitchen-original.glb      Original untextured GLB (970 KB)
-│   │   └── sausage.glb               Legacy sausage model (unused, 1 MB)
-│   └── textures/
-│       ├── environment.env            Prefiltered IBL cubemap
-│       ├── concrete_*.jpg             Concrete PBR set (color, normal, roughness)
-│       ├── tile_floor_*.jpg           Floor tile PBR set
-│       ├── tile_wall_*.jpg + ao       Wall tile PBR set (with ambient occlusion)
-│       ├── grime_drip_*.jpg           Drip overlay (color, normal, opacity, roughness)
-│       └── grime_base_*.jpg           Baseboard mold overlay
-├── __tests__/                        Jest test files (pure logic)
-├── docs/plans/                       Design & implementation documents
+│   ├── models/kitchen.glb          PBR-textured kitchen (Git LFS)
+│   ├── audio/sfx/                  OGG sound effects (Git LFS)
+│   ├── audio/music/                Background music (Git LFS)
+│   └── textures/                   PBR texture sets
+├── e2e/
+│   └── greenfield-playthrough.spec.ts  Playwright E2E (not committed)
 ├── .github/workflows/
-│   ├── ci.yml                        Tests on push (main + feat/**)
-│   └── cd.yml                        Web export → GitHub Pages deploy
-└── CLAUDE.md                         AI assistant instructions
+│   ├── ci.yml                      Tests on push (main + feat/**)
+│   └── cd.yml                      Web export → GitHub Pages
+└── CLAUDE.md                       AI assistant instructions
 ```
 
 ## Data Flow
 
-### Bridge Pattern (Ingredients, Tasting)
+### Procedural Station Pattern (All Stations)
+
+In the greenfield rebuild, stations are self-contained R3F components. There are no ECS orchestrators — each station owns its own game logic:
 
 ```text
-User Input (touch/click)
-  → React Native event handler (challenge overlay)
-    → Zustand store action (setChallengeProgress, addStrike, etc.)
-      → React re-render
-        → GameWorld reads store → updates 3D station visuals (via useFrame)
-        → Challenge overlay reads store → updates UI (progress bar, strikes)
-        → On completeChallenge(score):
-          → Store advances currentChallenge
-          → FPSController animates camera to next station
-          → Next challenge overlay mounts
+User Input (touch/click on 3D mesh)
+  → R3F onPointerDown / onPointerMove on mesh
+    → Station component internal logic (useFrame loop)
+      → Zustand store action (setGamePhase, setGroundMeatVol, etc.)
+        → Other components re-render via store subscriptions
+        → UI overlays read store for display values
 ```
 
-### ECS Orchestrator Pattern (Grinding, Stuffing, Cooking, Blowout)
+### GameOrchestrator
 
 ```text
-ECS Orchestrator (useFrame loop)
-  → Spawns/despawns entities via miniplex world
-  → Runs game logic (timers, scoring, zone detection)
-  → Writes bridge fields to Zustand (challengeTimeRemaining, challengeSpeedZone, challengePhase)
-    → Thin HUD component reads bridge fields from store (ZERO input handling)
-    → HUD renders read-only progress bars, timers, zone indicators
-  → On completeChallenge(score):
-    → Store advances currentChallenge
-    → Orchestrator unmounts, entities despawn automatically
+GameOrchestrator.tsx (React component, renders null)
+  → On mount: generates Mr. Sausage demands
+  → On DONE phase: calculates final score
+  → Dev shortcuts: 'n' key advances phase, 'p' key goes back
+  → PHASES array: 11 of 13 GamePhase values (missing TIE_CASING, BLOWOUT)
 ```
 
-The Zustand store is the single source of truth. 3D stations and UI overlays both subscribe to it independently. There is no direct communication between the 3D layer and the UI layer — they coordinate through the store. ECS orchestrators own game logic for their challenges and write bridge fields to the store for thin HUDs to read.
+### State Flow
+
+```text
+appPhase: 'title' → 'playing' → 'results' (results NOT rendered)
+gamePhase: SELECT_INGREDIENTS → CHOPPING → FILL_GRINDER → GRINDING → MOVE_BOWL →
+           ATTACH_CASING → STUFFING → TIE_CASING → BLOWOUT → MOVE_SAUSAGE →
+           MOVE_PAN → COOKING → DONE
+```
+
+The Zustand store is the single source of truth. 3D stations and UI overlays both subscribe independently. There is no direct communication between the 3D layer and the UI layer.
+
+## Factory Mechanics (Ported from POC)
+
+All core POC factory mechanics have been ported to production R3F components:
+
+| Mechanic | Production File | Status |
+|----------|-----------------|--------|
+| Bone-chain sausage physics (Rapier rigid bodies, spring forces K=80, damp=10) | `src/components/sausage/Sausage.tsx` | Ported |
+| Procedural meat textures (Canvas API `generateMeatTexture`) | `src/components/sausage/SausageGeometry.ts` | Ported |
+| FBO grease wave simulation (ping-pong heightfield 256×256, damping 0.98) | `src/components/stations/Stove.tsx` | Ported |
+| Grinder particle system (InstancedMesh, 300 max particles) | `src/components/stations/Grinder.tsx` | Ported |
+| Stuffer casing extrusion (SquigglyCurve + QuadraticBezierCurve3) | `src/components/stations/Stuffer.tsx` | Ported |
+| Station state machine (13-phase GamePhase) | `gamePhase` in Zustand store | Ported |
+
+## Planned Work
+
+### Missing UI Components
+- `GameOverScreen` — Results screen with rank badge (S/A/B/F)
+- `LoadingScreen` — Asset preload progress
+- `ChallengeHeader` — "CHALLENGE N/7" display
+- `StrikeCounter` — Lives display
+- `ProgressGauge` — Animated progress bar
+- Per-station HUDs (grinding, stuffing, cooking, blowout)
+- `TastingChallenge` — Verdict with demand breakdown
+
+### Missing Engine Modules
+- `ChallengeRegistry.ts` — Variant selection, challenge configs
+- `SausagePhysics.ts` — Pure scoring functions
+- `assetUrl.ts` — Dynamic asset URL resolution for GitHub Pages
+
+### Store Improvements
+- Type `finalScore` with proper interface
+- Remove dead fields (`dialogueActive`, `currentDialogueLine`)
+- Add `returnToMenu()` full game reset action
+- Add missing phases to GameOrchestrator PHASES array

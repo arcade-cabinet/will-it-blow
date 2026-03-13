@@ -1,13 +1,12 @@
-<!--
+---
 title: Game Design
 domain: core
 status: current
-engine: r3f
-last-verified: 2026-03-04
+last-verified: 2026-03-13
 depends-on: [state-management, 3d-rendering, audio]
 agent-context: challenge-dev, scene-architect
 summary: Gameplay mechanics, scoring, challenges, Mr. Sausage
--->
+---
 
 # Game Design
 
@@ -80,7 +79,7 @@ The player controls grind speed by dragging/flinging. Too slow = bad texture. To
 - EMA (exponential moving average) smoothing on angular velocity
 - Score based on time spent in good zone
 
-**Note:** Grinding, Stuffing, and Cooking use the ECS orchestrator pattern -- the orchestrator owns game logic, and a thin HUD (GrindingHUD, StuffingHUD, CookingHUD) reads bridge fields from the store with zero input handling.
+**Note:** On the greenfield `feat/poc-exploration` branch, grinding, stuffing, and cooking are self-contained procedural R3F components (Grinder.tsx, Stuffer.tsx, Stove.tsx) that own their own game logic. The ECS orchestrator pattern from main is deleted. Per-station HUDs are not yet implemented.
 
 ### Challenge 3: Stuffing
 
@@ -107,7 +106,7 @@ Control heat level to keep temperature in a target range. Heat overshoots cause 
 
 **Station:** Table (center)
 
-The titular "Will It Blow?" moment. The player must tie off the sausage casing with a TieGesture before internal pressure causes a blowout. Managed by BlowoutOrchestrator (ECS pattern).
+The titular "Will It Blow?" moment. The player must tie off the sausage casing with a TieGesture before internal pressure causes a blowout. Implemented as BlowoutStation.tsx (self-contained procedural component).
 
 - TieGesture: swipe-to-tie mechanic under time pressure
 - CerealBox: CanvasTexture splat effect on blowout failure
@@ -254,6 +253,28 @@ Config in `src/config/enemies.json`:
 - **ProceduralSink**: Procedural lathe/cylinder sink geometry
 - **CleanupManager + CleanupHUD**: Station cleanliness tracking between rounds
 
+## POC Station Interaction Flow (Reference)
+
+The original Gemini-developed POC ([conversation log](https://gemini.google.com/app/5546a3ed9463e9b0)) proved a 9-phase sequential station flow that is the blueprint for the production game:
+
+```text
+0: FILL_GRINDER     Click meat chunks in bowl → tray → chute
+1: GRINDING          Click dial to turn on motor; drag plunger down chute
+2: MOVE_BOWL         Click filled bowl → auto-slide to stuffer
+3: ATTACH_CASING     Drag translucent casing from water bowl → snap onto nozzle
+4: STUFFING          Hold crank + drag mouse → extrude sausage
+5: MOVE_SAUSAGE      Click sausage tray → transfer to frying pan
+6: MOVE_PAN          Drag pan from back-right burner → front-left burner
+7: COOKING           Click left dial → heat on; FBO fluid dynamics + color interpolation
+8: DONE              Sausage fully cooked
+```
+
+Key interaction patterns proven in POC:
+- **Invisible hitbox meshes** for larger click areas (plunger, crank, dial)
+- **Plane intersection** for mouse-to-3D coordinate mapping during drag operations
+- **State-gated interactions** — each phase enables only its relevant handlers
+- **Animated transitions** (anime.js in POC → `useFrame` lerp in production) between phases
+
 ## Remaining Unimplemented Features
 
 These are referenced in design docs or have stub code but are not functional:
@@ -261,3 +282,35 @@ These are referenced in design docs or have stub code but are not functional:
 1. **Hint glow** — HintButton triggers a store action but the 3D scene doesn't respond with a visual glow on matching ingredients.
 2. **Background music** — No ambient horror audio or background music. Only procedural SFX per challenge.
 3. **Sound effects from asset pack** — `Kitchen Sound Effects.zip` is downloaded but not integrated.
+
+## Planned Work
+
+### Diegetic UI System (DS-Text)
+- Replace traditional 2D HUD instructions with "Surreal Text" physically painted on room surfaces (blood, grease, grime)
+- Contextual surface awareness: text anchors to ceiling (prone), dominant wall (standing), or countertops (workstations)
+- View/perspective centering with `maxWidth` wrapping to fit player FOV
+- Obstacle avoidance: exclusionary zones around CRT TV, trap door, cabinets — text flows around them
+- "Sliding Dismissal" mechanic: old messages slide along surface, wrap around corners, fade into shadows
+- `SurrealOrchestrator` calculates raycasts for dominant surface detection
+- See `docs/plans/2026-03-10-diegetic-ui-system.md` for full design
+
+### Phase 2 Expanded Mechanics
+- **"Will It Blow" namesake mechanic**: after stuffing, player ties off casing (two-finger pinch gesture), detaches tube from stuffer, blows remaining contents onto a procedural cereal box on the dining table
+- Flair scoring on blowout: distance bonus, coverage bonus, style bonus, speed bonus
+- Cereal box with "Mr. Sausage's Own" procedural CanvasTexture, accumulates stain splatter across rounds
+- Tube physics: CylinderGeometry with translucent MeshPhysicalMaterial (transmission: 0.7), air pressure simulation
+- See `docs/plans/2026-03-01-phase2-will-it-blow-design.md` Sections 1-2
+
+### True Win Condition
+- Track all unique ingredient combos across rounds: C(12,3) = 220 unique combos
+- When all combos completed: trap door in ceiling swings open, light floods in, camera rises — "THE SAUSAGE KING ESCAPES"
+- Marathon-length completion (~8-11 hours at 2-3 min/round) — the horror IS the grind
+- Kitchen resets between rounds at higher difficulties (cleanup mechanics gate progression)
+- See `docs/plans/2026-03-01-phase2-will-it-blow-design.md` Section 3
+
+### Audio Expansion
+- Per-challenge music tracks from horror music library (Dark, Violence, Revenge, etc.)
+- Enemy encounter SFX: cabinet burst (wood crack + metal clang), per-type screeches, weapon hits
+- Layered ambient: base drone + random one-shots (drips, creaks, distant screams)
+- Track switching system with crossfade between challenge tracks
+- See `docs/plans/2026-03-02-comprehensive-phase1-phase2-plan.md` Wave 8

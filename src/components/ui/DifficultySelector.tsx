@@ -12,7 +12,6 @@
 
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {DIFFICULTY_TIERS} from '../../engine/DifficultyConfig';
-import {useKeyboardNav} from '../../hooks/useKeyboardNav';
 
 interface DifficultySelectorProps {
   /** Called when the player selects a difficulty tier. */
@@ -26,9 +25,6 @@ const safeTiers = DIFFICULTY_TIERS.filter(t => !t.permadeath);
 const brutalTiers = DIFFICULTY_TIERS.filter(t => t.permadeath);
 
 export function DifficultySelector({onSelect, onBack}: DifficultySelectorProps) {
-  // Escape goes back to the title screen
-  useKeyboardNav({onEscape: onBack});
-
   return (
     <View style={styles.container}>
       <View style={styles.panel} accessibilityLabel="Difficulty selection">

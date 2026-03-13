@@ -1,36 +1,24 @@
 /**
  * @module RoundManager
- * Pure functions for multi-round gameplay loop management.
- *
- * No React, no store imports — all logic is deterministic and testable
- * in isolation. Consumers (store actions, UI components) call these
- * functions and write results back to Zustand themselves.
- *
- * The full ingredient pool has 26 items; each round picks 3.
- * Total unique combos = C(26,3) = 2600, but the fridge only shows 12
- * at a time, so in practice the playable combo space per session is
- * C(12,3) = 220.
+ * Manages the multi-round gameplay loop with C(12,3) ingredient combination
+ * tracking to ensure variety across rounds. Provides combo deduplication,
+ * difficulty-to-rounds mapping, escape conditions, and reaction quips.
  */
-
 import type {DifficultyTier} from './DifficultyConfig';
-import {INGREDIENTS} from './Ingredients';
+import {INGREDIENT_MODELS} from './Ingredients';
 
-/** Total ingredients in the full pool (26 — Ingredients.ts header says 25 but 26 are defined). */
-const POOL_SIZE = INGREDIENTS.length;
+/** Total ingredients in the full pool (20 defined). */
+export const POOL_SIZE = INGREDIENT_MODELS.length;
 
 /** Number of ingredients the player selects per round. */
-const PICKS_PER_ROUND = 3;
+export const PICKS_PER_ROUND = 3;
 
 /**
  * Generate all C(n, k) combinations of indices [0..n-1].
- * Returns each combo as a sorted array of ingredient names.
- *
- * @param names - The full list of ingredient names to combine
- * @param k - Number of items to pick per combo
  */
-function generateAllCombos(names: string[], k: number): string[][] {
+function generateAllCombos(ids: string[], k: number): string[][] {
   const combos: string[][] = [];
-  const n = names.length;
+  const n = ids.length;
 
   function backtrack(start: number, current: string[]) {
     if (current.length === k) {
@@ -38,7 +26,7 @@ function generateAllCombos(names: string[], k: number): string[][] {
       return;
     }
     for (let i = start; i < n; i++) {
-      current.push(names[i]);
+      current.push(ids[i]);
       backtrack(i + 1, current);
       current.pop();
     }
@@ -48,60 +36,56 @@ function generateAllCombos(names: string[], k: number): string[][] {
   return combos;
 }
 
-/** All C(25,3) = 2300 unique sorted combos from the full ingredient pool. */
 const ALL_COMBOS: string[][] = generateAllCombos(
-  INGREDIENTS.map(i => i.name),
+  INGREDIENT_MODELS.map(i => i.id),
   PICKS_PER_ROUND,
 );
 
 /**
- * Check whether a given sorted combo has already been used.
- * Comparison is done on sorted arrays so order does not matter.
- *
- * @param combo - The candidate combo (will be sorted internally)
- * @param usedCombos - Previously used combos (each already sorted)
- * @returns true if the combo is in usedCombos
+ * Checks whether a given ingredient combo has already been used this session.
+ * @param combo - Array of ingredient IDs (will be sorted internally).
+ * @param usedCombos - Previously used combos from the store.
+ * @returns `true` if an identical sorted combo exists in `usedCombos`.
  */
 export function isComboUsed(combo: string[], usedCombos: string[][]): boolean {
   const sorted = [...combo].sort();
   return usedCombos.some(
-    used => used.length === sorted.length && used.every((name, i) => name === sorted[i]),
+    used => {
+      const sortedUsed = [...used].sort();
+      return sortedUsed.length === sorted.length && sortedUsed.every((id, i) => id === sorted[i]);
+    }
   );
 }
 
 /**
- * Return all valid combos that have not yet been used this session.
- * Source pool is the full C(25,3) = 2300 combos, not just the 12-item
- * fridge pool — the fridge pool is re-rolled each round from whatever
- * combos remain available.
- *
- * @param usedCombos - Sorted combos already played this session
- * @returns Remaining unused combos (may be empty if all exhausted)
+ * Returns all valid ingredient combos that have not yet been used this session.
+ * @param usedCombos - Previously used combos from the store.
+ * @returns Remaining unused combos from the full C(n, PICKS_PER_ROUND) pool.
  */
 export function getAvailableCombos(usedCombos: string[][]): string[][] {
   return ALL_COMBOS.filter(combo => !isComboUsed(combo, usedCombos));
 }
 
 /**
- * Determine the total number of rounds for this game session based on
- * difficulty. More forgiving difficulties get fewer rounds (shorter game);
- * brutal difficulties extend the loop to increase ingredient variation
- * pressure.
- *
- * Scaling:
- *  - rare        → 3 rounds
- *  - medium-rare → 3 rounds
- *  - medium      → 5 rounds
- *  - medium-well → 7 rounds
- *  - well-done   → 10 rounds
- *
- * @param difficulty - The active difficulty tier
- * @returns Total rounds for the session
+ * Deterministically picks the next combo to display in the fridge.
+ * Returns the first unused combo, or rolls over to the first combo if all are exhausted.
+ * @param usedCombos - Previously used combos from the store.
+ * @returns The next ingredient ID combo for the player to see.
  */
-export function calculateTotalRounds(difficulty: DifficultyTier): number {
-  switch (difficulty.id) {
+export function getNextCombo(usedCombos: string[][]): string[] {
+  const available = getAvailableCombos(usedCombos);
+  if (available.length === 0) return ALL_COMBOS[0]; // Roll over if somehow exhausted
+  return available[0];
+}
+
+/**
+ * Maps a difficulty tier to the number of rounds the player must survive.
+ * @param tier - The selected difficulty tier.
+ * @returns Total rounds: rare/medium-rare=3, medium=5, medium-well=7, well-done=10.
+ */
+export function calculateTotalRounds(tier: DifficultyTier): number {
+  switch (tier.id) {
     case 'rare':
-      return 3;
     case 'medium-rare':
       return 3;
     case 'medium':
@@ -116,26 +100,22 @@ export function calculateTotalRounds(difficulty: DifficultyTier): number {
 }
 
 /**
- * Determine whether the player has completed all required rounds and
- * should trigger the escape sequence.
- *
- * @param currentRound - 1-indexed current round number (after completing it)
- * @param totalRounds - Total rounds required for this session
- * @returns true when currentRound >= totalRounds (all rounds done)
+ * Checks whether the player has completed enough rounds to trigger the escape sequence.
+ * @param currentRound - The round the player just finished (1-indexed).
+ * @param totalRounds - Total rounds required for this difficulty.
+ * @returns `true` if the player has earned escape.
  */
 export function shouldEscape(currentRound: number, totalRounds: number): boolean {
-  return currentRound >= totalRounds;
+  return currentRound >= totalRounds && currentRound > 0;
 }
 
 /**
- * Generate a reaction quip from Mr. Sausage based on average round score.
- * Used by RoundTransition to show performance feedback between rounds.
- *
- * @param scores - Array of challenge scores (0-100) from the completed round
- * @returns A Mr. Sausage quip string
+ * Returns a personalized Mr. Sausage quip based on the player's average score history.
+ * @param scores - Array of per-round scores (0-100).
+ * @returns A taunting string for the round transition screen.
  */
 export function getRoundReactionQuip(scores: number[]): string {
-  if (scores.length === 0) return 'Hmm.';
+  if (scores.length === 0) return 'Get to work.';
   const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
 
   if (avg >= 90) return 'Adequate. BARELY.';
@@ -143,6 +123,3 @@ export function getRoundReactionQuip(scores: number[]): string {
   if (avg >= 50) return 'Mediocre sausage for a mediocre worker.';
   return 'Disgusting. Do it again.';
 }
-
-// Export pool size for tests
-export {POOL_SIZE, PICKS_PER_ROUND};
