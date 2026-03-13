@@ -8,8 +8,6 @@ import {Physics} from '@react-three/rapier';
 import {Suspense, useEffect, useMemo, useRef, useState} from 'react';
 import {StyleSheet, View} from 'react-native';
 import * as THREE from 'three';
-import {CameraRail} from './src/components/camera/CameraRail';
-import {FirstPersonControls} from './src/components/camera/FirstPersonControls';
 import {IntroSequence} from './src/components/camera/IntroSequence';
 import {PlayerHands} from './src/components/camera/PlayerHands';
 import {TieGesture} from './src/components/challenges/TieGesture';
@@ -37,6 +35,8 @@ import {TitleScreen} from './src/components/ui/TitleScreen';
 import {INTRO_DIALOGUE} from './src/data/dialogue/intro';
 import {VERDICT_A, VERDICT_B, VERDICT_F, VERDICT_S} from './src/data/dialogue/verdict';
 import {GameOrchestrator} from './src/engine/GameOrchestrator';
+import {FPSCamera} from './src/player/FPSCamera';
+import {PlayerCapsule} from './src/player/PlayerCapsule';
 import {useGameStore} from './src/store/gameStore';
 
 // --- Console Warning Overrides to keep dev env clean of upstream noise ---
@@ -106,16 +106,19 @@ function GameContent() {
         {/* Ceiling Trapdoor */}
         <TrapDoorAnimation position={[0, 3, 0]} />
 
-        {/* Dynamic Camera Rail */}
-        <CameraRail />
+        {/* Player — physics capsule for walking around the kitchen */}
+        <PlayerCapsule />
 
         {/* State Machine */}
         <GameOrchestrator />
       </Physics>
 
+      {/* FPS Camera — reads player capsule position, applies mouse look */}
+      <FPSCamera />
+
       <PlayerHands />
 
-      {introActive ? <IntroSequence /> : <FirstPersonControls />}
+      {introActive && <IntroSequence />}
     </>
   );
 }
@@ -169,7 +172,7 @@ function UILayer() {
       {/* Dialogue Overlay for Verdict */}
       {verdictLines && (
         <DialogueOverlay
-          key={finalScore.totalScore} // Re-mount if score changes on new round
+          key={finalScore?.totalScore ?? 0} // Re-mount if score changes on new round
           lines={verdictLines}
           onComplete={() => {}}
         />
@@ -202,11 +205,7 @@ export default function App() {
 
       {appPhase === 'playing' && (
         <>
-          <Canvas
-            camera={{position: [2.0, 0.5, 3.0], fov: 75}} // Increased FOV for better first-person perspective
-            shadows={{type: THREE.PCFShadowMap}}
-            gl={{toneMappingExposure: 1.0}}
-          >
+          <Canvas shadows={{type: THREE.PCFShadowMap}} gl={{toneMappingExposure: 1.0}}>
             <color attach="background" args={['#000000']} />
             <fogExp2 attach="fog" args={['#2a2a2a', 0.015]} />
 
