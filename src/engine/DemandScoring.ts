@@ -1,6 +1,30 @@
+/**
+ * @module DemandScoring
+ * Compares player decisions against Mr. Sausage's hidden demands to compute
+ * demand bonuses that adjust the final verdict score.
+ *
+ * Scoring formula:
+ * 1. Base flavor (avgTaste * 10) + base texture (avgTexture * 5)
+ * 2. +25 per desired tag hit, -30 per hated tag hit
+ * 3. +40 for matching cook preference, -10 for mismatch
+ * 4. +blowPower * 10 for explosive bonus
+ * 5. Clamped to [0, 100]
+ */
 import {getIngredientById} from './Ingredients';
 
-// How cooked a sausage is based on the final cookLevel (0.0 to 1.0)
+/** Target cook levels for each doneness preference. */
+export const COOK_TARGETS = {
+  rare: 0.15,
+  medium: 0.45,
+  'well-done': 0.75,
+  charred: 0.95
+};
+
+/**
+ * Maps a continuous cook level to a discrete doneness label.
+ * @param cookLevel - Normalized cook progress from 0.0 (raw) to 1.0 (charred).
+ * @returns The doneness label: 'rare' (<0.25), 'medium' (<0.6), 'well-done' (<0.85), or 'charred'.
+ */
 export function getCookPreference(cookLevel: number): 'rare' | 'medium' | 'well-done' | 'charred' {
   if (cookLevel < 0.25) return 'rare';
   if (cookLevel < 0.6) return 'medium';
@@ -8,6 +32,25 @@ export function getCookPreference(cookLevel: number): 'rare' | 'medium' | 'well-
   return 'charred';
 }
 
+/**
+ * Calculates the demand bonus by comparing the player's ingredient choices and
+ * cooking result against Mr. Sausage's hidden preferences.
+ *
+ * @param demands - Mr. Sausage's desired/hated tags and cook preference for this round.
+ * @param selectedIngredientIds - IDs of the ingredients the player chose.
+ * @param finalCookLevel - Normalized cook level (0.0-1.0) when the player finished cooking.
+ * @returns An object with `totalScore` (0-100) and a human-readable `breakdown` string.
+ *
+ * @example
+ * ```ts
+ * const result = calculateDemandBonus(
+ *   { desiredTags: ['spicy', 'meat'], hatedTags: ['sweet'], cookPreference: 'medium' },
+ *   ['bacon', 'jalapeno', 'pork'],
+ *   0.5,
+ * );
+ * console.log(result.totalScore); // e.g. 78
+ * ```
+ */
 export function calculateDemandBonus(
   demands: {desiredTags: string[]; hatedTags: string[]; cookPreference: string},
   selectedIngredientIds: string[],

@@ -1,13 +1,12 @@
-<!--
+---
 title: Audio System
 domain: core
 status: current
-engine: r3f
-last-verified: 2026-03-01
+last-verified: 2026-03-13
 depends-on: [game-design, development-guide]
 agent-context: scene-architect, challenge-dev
 summary: Tone.js synthesis, sound design, integration points
--->
+---
 
 # Audio System
 
@@ -133,3 +132,16 @@ Three melodies based on score:
 4. **Sound effects from downloaded pack** — `Kitchen Sound Effects.zip` contains pre-recorded SFX but is not integrated. Could replace or supplement synth sounds.
 5. **Audio settings** — No volume control or mute toggle
 6. **Ingredient selection feedback** — No sound on correct/wrong ingredient pick
+
+## Planned Work
+
+### Sound Effect Library Integration
+- 147 WAV files available in `pending-integration/Kitchen Sound Effects.zip`: chop (36), sizzle (24+), peel (23), pour (11), mix (11), pots/pans (13), boiling (5), sizzle loops (2)
+- Station-specific sounds from asset library: fridge (door_open/close, hum), grinder (motor_start/loop, grind_crunch, splat), stuffer (crank_turn, casing_stretch, pressure_hiss), stove (sizzle_oil, fry_loop, boil_over, steam_hiss)
+- See `docs/plans/2026-03-01-sausage-factory-kitchen-design.md` Section 9
+
+### Per-Challenge Music Tracks
+- Horror music library tracks mapped to phases: Menu (Dark), Exploration (Space Horror), Grinding (Violence), Stuffing (16 Bit GEN Death Metal), Cooking (Revenge)
+- Track switching system with crossfade between challenge tracks
+- Spatial audio for enemy positions via Tone.Panner3D
+- See `docs/plans/2026-03-02-comprehensive-phase1-phase2-plan.md` Wave 8

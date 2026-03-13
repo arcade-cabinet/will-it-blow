@@ -1,13 +1,12 @@
-<!--
+---
 title: Testing Strategy
 domain: core
 status: current
-engine: r3f
-last-verified: 2026-03-01
+last-verified: 2026-03-13
 depends-on: [3d-rendering, state-management, development-guide]
 agent-context: doc-keeper, challenge-dev
 summary: Jest testing strategy, R3F test-renderer, coverage
--->
+---
 
 # Testing Strategy
 
@@ -186,3 +185,12 @@ Some station components export pure functions for testability:
 - `StoveStation.tsx` → `sausageColor(progress: number)`
 
 These can be tested directly without the test renderer.
+
+## Planned Work
+
+### Testing Gaps to Close
+- Audio engine testing (requires audio context mock for Tone.js)
+- Visual regression testing via screenshot comparison (Playwright E2E infrastructure exists)
+- Challenge overlay interaction tests (touch/drag handlers, timer logic, sub-phase transitions)
+- Real GLB loading tests (currently all mocked via `useGLTF`)
+- See `docs/plans/2026-03-02-comprehensive-phase1-phase2-plan.md` for critical constraint: test count must never decrease

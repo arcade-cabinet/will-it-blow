@@ -1,13 +1,12 @@
-<!--
+---
 title: Architecture Overview
 domain: core
 status: current
-engine: r3f
-last-verified: 2026-03-04
+last-verified: 2026-03-13
 depends-on: [state-management, 3d-rendering, game-design]
 agent-context: scene-architect, challenge-dev
 summary: System design, directory structure, data flow for R3F/WebGPU game
--->
+---
 
 # Architecture Overview
 
@@ -204,3 +203,16 @@ ECS Orchestrator (useFrame loop)
 ```
 
 The Zustand store is the single source of truth. 3D stations and UI overlays both subscribe to it independently. There is no direct communication between the 3D layer and the UI layer — they coordinate through the store. ECS orchestrators own game logic for their challenges and write bridge fields to the store for thin HUDs to read.
+
+## Planned Work
+
+### POC Factory Mechanics Port
+- Procedural station components planned: Grinder mechanics (InstancedMesh chunks, ground meat particles), Stuffer mechanics (TubeGeometry casing growth, SquigglyCurve), Cooking mechanics (FBO grease wave simulation, steam particles, temperature dial)
+- Bone-chain sausage body with Rapier rigid bodies per bone segment (spring constant 80, damping 10) — currently SausageBody.ts has SkinnedMesh but no physics
+- `@react-spring/three` planned for declarative object transitions (bowl slides, sausage carries) alongside existing `useFrame` procedural animations
+- See `docs/plans/2026-03-01-sausage-factory-kitchen-design.md` for full design
+
+### Extended Game Flow State Machine
+- Design calls for expanding from 7-challenge sequence to a 12+ state machine: MENU -> LOADING -> INTRO_DIALOGUE -> OPEN_FRIDGE -> PICK_INGREDIENTS -> CLOSE_FRIDGE -> FILL_GRINDER -> GRINDING -> MOVE_BOWL -> ATTACH_CASING -> STUFFING -> MOVE_SAUSAGE -> MOVE_PAN -> COOKING -> TASTING -> VERDICT -> GAME_OVER
+- Waypoint markers and proximity sensors guide player between expanded stations
+- See `docs/plans/2026-03-01-sausage-factory-kitchen-plan.md` for implementation tasks

@@ -1,3 +1,11 @@
+---
+title: Project Brief
+domain: memory-bank
+status: current
+last-verified: "2026-03-13"
+summary: "Core identity — SAW meets cooking show, 7 challenges, S-rank victory"
+---
+
 # Project Brief — Will It Blow?
 
 ## Identity
@@ -12,13 +20,15 @@ You're trapped in a filthy basement kitchen. **Mr. Sausage** — a sentient, men
 
 7 sequential challenges, each at a different kitchen station:
 
-1. **Ingredients** (fridge) — Pick 3 ingredients matching Mr. Sausage's criteria from a pool of 10
+1. **Ingredients** (chest freezer) — Pick 3 ingredients matching Mr. Sausage's criteria from a pool of 10
 2. **Chopping** (cutting board) — Chop ingredients with timing-based knife gestures
 3. **Grinding** (grinder) — Control grind speed in the "good zone" via drag/fling
 4. **Stuffing** (stuffer) — Hold to fill casing, manage pressure to avoid bursts
 5. **Cooking** (stove) — Control heat to keep temperature in target range
 6. **Blowout** (place setting) — Tie off casing and manage blowout risk
 7. **Tasting** (CRT TV) — Mr. Sausage delivers his verdict with dramatic score reveals
+
+The camera moves between stations on a rail system, smoothly panning to the next station between challenges.
 
 ## Victory Condition
 

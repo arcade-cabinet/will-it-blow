@@ -1,13 +1,12 @@
-<!--
+---
 title: State Management
 domain: core
 status: current
-engine: r3f
-last-verified: 2026-03-04
+last-verified: 2026-03-13
 depends-on: [architecture, game-design]
 agent-context: store-warden, challenge-dev
 summary: Zustand store schema, actions, state flow
--->
+---
 
 # State Management
 
@@ -224,3 +223,12 @@ const MAX_STRIKES = 3;
 ## Persistence
 
 State persistence is implemented via AsyncStorage. Progress and settings survive across sessions. The "CONTINUE" button on the title screen restores saved game state.
+
+## Planned Work
+
+### Kitchen State Machine (Hidden Objects)
+- Planned `KitchenState` interface for Medium+ difficulty: `cabinets: boolean[]`, `drawers: boolean[]`, `equipment: Record<string, 'stored'|'found'|'placed'|'assembled'>`, `sinkRunning: boolean`
+- Equipment finding + assembly flow: find part in cabinet -> carry to station -> place -> assemble (bolt sound + visual snap)
+- `KitchenAssembly.ts` engine module: `getRequiredEquipment(difficulty)`, `getEquipmentLocations(difficulty)`, `validateAssembly(state, station)`
+- At "extreme" difficulty, parts scattered randomly among ALL locations
+- See `docs/plans/2026-03-01-phase2-will-it-blow-design.md` Section 4

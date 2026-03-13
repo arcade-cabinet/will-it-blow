@@ -1,3 +1,8 @@
+/**
+ * @module App
+ * Root application component -- manages app phase routing (title -> playing -> results)
+ * and composes the 3D Canvas, physics world, UI overlays, and mobile controls.
+ */
 import {Canvas} from '@react-three/fiber';
 import {Physics} from '@react-three/rapier';
 import {Suspense, useEffect, useMemo, useRef, useState} from 'react';
@@ -57,6 +62,7 @@ console.error = (...args) => {
 };
 // -----------------------------------------------------------------------
 
+/** 3D scene content: physics world, stations, props, camera, and orchestrator. */
 function GameContent() {
   const introActive = useGameStore(state => state.introActive);
   const mrSausageReaction = useGameStore(state => state.mrSausageReaction);
@@ -114,6 +120,7 @@ function GameContent() {
   );
 }
 
+/** 2D overlay layer: dialogue, verdict, mobile touch controls, and tie gesture. */
 function UILayer() {
   const _introActive = useGameStore(state => state.introActive);
   const setIntroActive = useGameStore(state => state.setIntroActive);

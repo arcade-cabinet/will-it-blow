@@ -1,13 +1,12 @@
-<!--
+---
 title: Project Status & Remaining Work
 domain: core
 status: current
-engine: r3f
-last-verified: 2026-03-04
+last-verified: 2026-03-13
 depends-on: [architecture, game-design, testing, deployment]
 agent-context: doc-keeper
 summary: Current completion status reflecting Phase 2 features — ECS orchestrators, difficulty, enemies, multi-round, blowout, dual-zone touch, Playwright E2E
--->
+---
 
 # Project Status & Remaining Work
 
@@ -86,7 +85,7 @@ summary: Current completion status reflecting Phase 2 features — ECS orchestra
 ### Documentation Infrastructure (2026-03-01)
 
 - Frontmatter on all 32 docs (9 core + 21 plans + 2 AGENTS.md)
-- AGENTS.md hierarchy (root, docs/, docs/plans/, memory-bank/) for multi-agent coordination
+- AGENTS.md hierarchy (root, docs/, docs/plans/, docs/memory-bank/) for multi-agent coordination
 - Memory bank (7 files): projectbrief, productContext, systemPatterns, techContext, activeContext, progress, AGENTS.md
 - `.claude/agents/` (5 agents): scene-architect, challenge-dev, store-warden, asset-pipeline, doc-keeper
 - `.claude/commands/` (3 commands): playtest, lint-and-test, update-docs
@@ -161,3 +160,20 @@ Full migration from Babylon.js/reactylon to R3F/Three.js:
 9. **More ingredients** -- Expand from 25 to 50+ for variety.
 10. **Achievements** -- "First S Rank", "Complete without hints", etc.
 11. **XR polish** -- VR/AR foundations exist (@react-three/xr); needs device testing and UX refinement.
+
+## Planned Work
+
+### Architecture Pivot (In Progress)
+- Game is MOBILE FIRST -- current desktop-FPS architecture is unplayable on phones
+- Goal: replace complex layout system with single kitchen GLB that scales to viewport
+- Procedural geometry for EFFECTS ONLY (particles, sausage body, CRT shader, Mr. Sausage)
+- Room/furniture/props should ALL be asset-based (one scene GLB)
+- Asset integration ON HOLD pending playability architecture review
+- See `docs/plans/2026-03-10-asset-inventory.md` for asset status
+
+### Remaining Phase 2 Implementation
+- Phase 2 design covers 8 waves of work across 21+ tasks
+- Wave 0 (Phase 1 gaps): fridge pull gesture, ingredient GLBs, chopping station, hopper tray, sausage physics, pan flip -- partially complete
+- Waves 1-4: difficulty system, Will-It-Blow mechanic, multi-round loop, hidden objects -- mostly complete
+- Waves 5-8: enemy encounters (complete), scene dressing (complete), procedural sink (complete), audio expansion (pending)
+- See `docs/plans/2026-03-02-comprehensive-phase1-phase2-plan.md` for full sprint breakdown

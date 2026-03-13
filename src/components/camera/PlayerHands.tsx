@@ -1,9 +1,18 @@
+/**
+ * @module PlayerHands
+ * First-person hand rendering that follows the camera position with weighted
+ * smoothing. Randomly selects a skin/glove texture on mount for visual variety.
+ */
 import {useGLTF, useTexture} from '@react-three/drei';
 import {useFrame, useThree} from '@react-three/fiber';
 import {useEffect, useMemo, useRef} from 'react';
 import * as THREE from 'three';
 import {useGameStore} from '../../store/gameStore';
 
+/**
+ * Renders first-person hands that track the camera with lerp/slerp smoothing.
+ * Hands bob gently while standing and drop lower when prone.
+ */
 export function PlayerHands() {
   const {camera} = useThree();
   const group = useRef<THREE.Group>(null);
@@ -29,22 +38,32 @@ export function PlayerHands() {
   skinTex.flipY = false;
   skinTex.colorSpace = THREE.SRGBColorSpace;
 
+  const handMat = useMemo(() => new THREE.MeshStandardMaterial({
+    map: skinTex,
+    roughness: 0.6,
+    metalness: 0.1,
+  }), [skinTex]);
+
+  // Cleanup material on unmount
+  useEffect(() => {
+    return () => handMat.dispose();
+  }, [handMat]);
+
   // Apply texture to all meshes in the scene
   useEffect(() => {
     if (handsScene) {
       handsScene.traverse((child: any) => {
         if (child.isMesh) {
-          child.material = new THREE.MeshStandardMaterial({
-            map: skinTex,
-            roughness: 0.6,
-            metalness: 0.1,
-          });
+          child.material = handMat;
           child.castShadow = true;
           child.receiveShadow = true;
         }
       });
     }
-  }, [handsScene, skinTex]);
+  }, [handsScene, handMat]);
+
+  const targetPos = useMemo(() => new THREE.Vector3(), []);
+  const localOffset = useMemo(() => new THREE.Vector3(), []);
 
   useFrame((state, delta) => {
     if (!group.current) return;
@@ -53,12 +72,8 @@ export function PlayerHands() {
     // but with some offset and smoothing for a "weighted" feel
     const t = state.clock.elapsedTime;
 
-    // Base camera transform
-    const camPos = camera.position.clone();
-    const camQuat = camera.quaternion.clone();
-
     // Offset the hands relative to the camera
-    const localOffset = new THREE.Vector3(0, -0.4, -0.6);
+    localOffset.set(0, -0.4, -0.6);
 
     if (posture === 'standing') {
       localOffset.y += Math.sin(t * 2) * 0.02;
@@ -67,11 +82,11 @@ export function PlayerHands() {
       localOffset.y -= 0.2;
     }
 
-    localOffset.applyQuaternion(camQuat);
-    const targetPos = camPos.add(localOffset);
+    localOffset.applyQuaternion(camera.quaternion);
+    targetPos.copy(camera.position).add(localOffset);
 
-    group.current.position.lerp(targetPos, delta * 15.0);
-    group.current.quaternion.slerp(camQuat, delta * 15.0);
+    group.current.position.lerp(targetPos, 1 - Math.pow(0.001, delta));
+    group.current.quaternion.slerp(camera.quaternion, 1 - Math.pow(0.001, delta));
   });
 
   return (

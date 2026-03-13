@@ -1,9 +1,19 @@
+/**
+ * @module LiquidPourer
+ * Liquid pouring mechanics for kitchen station interactions. Renders an
+ * interactive bottle that tilts on pointer-down and streams a translucent
+ * liquid column. Only visible during FILL_GRINDER and ATTACH_CASING phases.
+ */
 import {Cone, Cylinder} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
 import {useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
 import {useGameStore} from '../../store/gameStore';
 
+/**
+ * Interactive liquid bottle with pour animation.
+ * @param position - World-space position to place the bottle group.
+ */
 export function LiquidPourer({position = [0, 0, 0]}: {position?: [number, number, number]}) {
   const [isPouring, setIsPouring] = useState(false);
   const liquidRef = useRef<THREE.Mesh>(null);
@@ -27,19 +37,25 @@ export function LiquidPourer({position = [0, 0, 0]}: {position?: [number, number
     [],
   );
 
-  useFrame(state => {
+  useFrame((state, delta) => {
     if (!bottleRef.current) return;
 
-    // Tilt the bottle when pouring
+    // Tilt the bottle when pouring using delta-based damping
     const targetRotZ = isPouring ? -Math.PI / 2.2 : 0;
-    bottleRef.current.rotation.z += (targetRotZ - bottleRef.current.rotation.z) * 0.1;
+    bottleRef.current.rotation.z = THREE.MathUtils.lerp(
+      bottleRef.current.rotation.z, 
+      targetRotZ, 
+      1 - Math.pow(0.001, delta)
+    );
 
     if (liquidRef.current) {
       if (isPouring) {
         liquidRef.current.visible = true;
-        liquidRef.current.position.y = -0.5 - Math.sin(state.clock.elapsedTime * 30) * 0.05;
-        liquidRef.current.scale.x = 0.8 + Math.random() * 0.4;
-        liquidRef.current.scale.z = 0.8 + Math.random() * 0.4;
+        const t = state.clock.elapsedTime;
+        liquidRef.current.position.y = -0.5 - Math.sin(t * 30) * 0.05;
+        // Use deterministic noise for scaling
+        liquidRef.current.scale.x = 0.9 + Math.sin(t * 40) * 0.1;
+        liquidRef.current.scale.z = 0.9 + Math.cos(t * 45) * 0.1;
       } else {
         liquidRef.current.visible = false;
       }

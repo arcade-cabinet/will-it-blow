@@ -1,13 +1,12 @@
-<!--
+---
 title: Game Design
 domain: core
 status: current
-engine: r3f
-last-verified: 2026-03-04
+last-verified: 2026-03-13
 depends-on: [state-management, 3d-rendering, audio]
 agent-context: challenge-dev, scene-architect
 summary: Gameplay mechanics, scoring, challenges, Mr. Sausage
--->
+---
 
 # Game Design
 
@@ -261,3 +260,35 @@ These are referenced in design docs or have stub code but are not functional:
 1. **Hint glow** — HintButton triggers a store action but the 3D scene doesn't respond with a visual glow on matching ingredients.
 2. **Background music** — No ambient horror audio or background music. Only procedural SFX per challenge.
 3. **Sound effects from asset pack** — `Kitchen Sound Effects.zip` is downloaded but not integrated.
+
+## Planned Work
+
+### Diegetic UI System (DS-Text)
+- Replace traditional 2D HUD instructions with "Surreal Text" physically painted on room surfaces (blood, grease, grime)
+- Contextual surface awareness: text anchors to ceiling (prone), dominant wall (standing), or countertops (workstations)
+- View/perspective centering with `maxWidth` wrapping to fit player FOV
+- Obstacle avoidance: exclusionary zones around CRT TV, trap door, cabinets — text flows around them
+- "Sliding Dismissal" mechanic: old messages slide along surface, wrap around corners, fade into shadows
+- `SurrealOrchestrator` calculates raycasts for dominant surface detection
+- See `docs/plans/2026-03-10-diegetic-ui-system.md` for full design
+
+### Phase 2 Expanded Mechanics
+- **"Will It Blow" namesake mechanic**: after stuffing, player ties off casing (two-finger pinch gesture), detaches tube from stuffer, blows remaining contents onto a procedural cereal box on the dining table
+- Flair scoring on blowout: distance bonus, coverage bonus, style bonus, speed bonus
+- Cereal box with "Mr. Sausage's Own" procedural CanvasTexture, accumulates stain splatter across rounds
+- Tube physics: CylinderGeometry with translucent MeshPhysicalMaterial (transmission: 0.7), air pressure simulation
+- See `docs/plans/2026-03-01-phase2-will-it-blow-design.md` Sections 1-2
+
+### True Win Condition
+- Track all unique ingredient combos across rounds: C(12,3) = 220 unique combos
+- When all combos completed: trap door in ceiling swings open, light floods in, camera rises — "THE SAUSAGE KING ESCAPES"
+- Marathon-length completion (~8-11 hours at 2-3 min/round) — the horror IS the grind
+- Kitchen resets between rounds at higher difficulties (cleanup mechanics gate progression)
+- See `docs/plans/2026-03-01-phase2-will-it-blow-design.md` Section 3
+
+### Audio Expansion
+- Per-challenge music tracks from horror music library (Dark, Violence, Revenge, etc.)
+- Enemy encounter SFX: cabinet burst (wood crack + metal clang), per-type screeches, weapon hits
+- Layered ambient: base drone + random one-shots (drips, creaks, distant screams)
+- Track switching system with crossfade between challenge tracks
+- See `docs/plans/2026-03-02-comprehensive-phase1-phase2-plan.md` Wave 8

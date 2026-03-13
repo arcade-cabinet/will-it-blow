@@ -1,9 +1,16 @@
+/**
+ * @module SurrealText
+ * Diegetic in-world UI text -- renders instructions and state-driven messages
+ * as 3D text meshes in the scene. Messages fade in, pulse with a blood-red
+ * color, and slide/fade out when dismissed.
+ */
 import {Text} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import type * as THREE from 'three';
 import {useGameStore} from '../../store/gameStore';
 
+/** Individual animated message that fades in, pulses, and slides out when dismissed. */
 function SurrealMessage({
   text,
   onDead,
@@ -75,6 +82,11 @@ function SurrealMessage({
 
 let nextId = 0;
 
+/**
+ * Manages the queue of surreal 3D text messages displayed in the scene.
+ * Derives message content from game phase, posture, demands, and score state.
+ * Only one active message is shown at a time; old messages animate out.
+ */
 export function SurrealText() {
   const introActive = useGameStore(state => state.introActive);
   const posture = useGameStore(state => state.posture);
@@ -158,19 +170,17 @@ export function SurrealText() {
     currentRound,
     totalRounds,
   ]);
-
-  useEffect(() => {
-    if (textContent) {
-      // If the text is the same as the current active one, do nothing
-      if (messages.some(m => m.active && m.text === textContent)) return;
-
-      setMessages(prev => {
-        const updated = prev.map(m => ({...m, active: false}));
-        return [...updated, {id: nextId++, text: textContent, active: true}];
-      });
-    } else {
-      setMessages(prev => prev.map(m => ({...m, active: false})));
-    }
+useEffect(() => {
+  if (textContent) {
+    setMessages(prev => {
+      if (prev.some(m => m.active && m.text === textContent)) return prev;
+      const updated = prev.map(m => ({...m, active: false}));
+      return [...updated, {id: nextId++, text: textContent, active: true}];
+    });
+  } else {
+    setMessages(prev => prev.map(m => ({...m, active: false})));
+  }
+}, [textContent]);
   }, [textContent, messages.some]); // Removed messages from dep array to avoid loops
 
   const removeMessage = (id: number) => {

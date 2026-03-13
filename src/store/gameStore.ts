@@ -1,3 +1,8 @@
+/**
+ * @module gameStore
+ * Single Zustand store containing all game state and actions.
+ * No React Context -- components subscribe via selectors (e.g. `useGameStore(s => s.gamePhase)`).
+ */
 import {create} from 'zustand';
 import type {Reaction} from '../components/characters/reactions';
 import {calculateDemandBonus} from '../engine/DemandScoring';
@@ -116,9 +121,21 @@ export const useGameStore = create<GameState>((set, get) => ({
   lookDelta: {x: 0, y: 0},
   interactPulse: 0,
 
+  /** Transition between title, playing, and results screens. */
   setAppPhase: phase => set({appPhase: phase}),
+
+  /**
+   * Set difficulty and reset round tracking for a new game session.
+   * @param diff - Difficulty ID string.
+   * @param total - Total rounds for this difficulty.
+   */
   setDifficulty: (diff, total) =>
     set({difficulty: diff, totalRounds: total, currentRound: 1, usedIngredientCombos: []}),
+
+  /**
+   * Advance to the next round: archives current ingredient combo,
+   * resets all per-round state (cook level, stuff level, etc.).
+   */
   nextRound: () =>
     set(state => {
       if (state.selectedIngredientIds.length > 0) {
@@ -157,9 +174,14 @@ export const useGameStore = create<GameState>((set, get) => ({
   setCurrentDialogueLine: line => set({currentDialogueLine: line}),
   setDialogueActive: active => set({dialogueActive: active}),
 
+  /** Update virtual joystick position from mobile touch controls. */
   setJoystick: (x, y) => set({joystick: {x, y}}),
+
+  /** Accumulate look deltas from touch/swipe; consumed by the camera controller each frame. */
   addLookDelta: (dx, dy) =>
     set(state => ({lookDelta: {x: state.lookDelta.x + dx, y: state.lookDelta.y + dy}})),
+
+  /** Read and reset accumulated look delta (one-shot consumption pattern). */
   consumeLookDelta: () => {
     const delta = get().lookDelta;
     set({lookDelta: {x: 0, y: 0}});
@@ -167,8 +189,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
   triggerInteract: () => set(state => ({interactPulse: state.interactPulse + 1})),
 
+  /** Randomly generate Mr. Sausage's hidden demands (desired/hated tags + cook preference) for this round. */
   generateDemands: () => {
-    // Generate random demands for this round
     const possibleTags = [
       'sweet',
       'savory',
@@ -192,6 +214,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     });
   },
 
+  /** Calculate the final demand bonus score using current ingredients, cook level, and demands. */
   calculateFinalScore: () => {
     const state = get();
     if (!state.mrSausageDemands || state.selectedIngredientIds.length === 0) return;

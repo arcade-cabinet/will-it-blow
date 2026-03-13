@@ -1,3 +1,11 @@
+---
+title: Product Context
+domain: memory-bank
+status: current
+last-verified: "2026-03-13"
+summary: "Why this exists, UX goals, target platforms, input methods"
+---
+
 # Product Context — Will It Blow?
 
 ## Why This Exists
@@ -8,9 +16,9 @@ An arcade cabinet game exploring the horror-comedy crossover in the cooking genr
 
 | Platform | Status | Notes |
 |----------|--------|-------|
-| **Web** | Primary dev target | Deployed to GitHub Pages, WebGPU rendering |
-| **iOS** | Supported via Expo | react-native-wgpu (Dawn), untested on devices |
-| **Android** | Supported via Expo | react-native-wgpu (Dawn), untested on devices |
+| **Web** | Primary dev target | Deployed to GitHub Pages |
+| **iOS** | Supported via Expo | Untested on devices |
+| **Android** | Supported via Expo | Untested on devices |
 
 **Live deployment:** https://arcade-cabinet.github.io/will-it-blow/
 
@@ -19,17 +27,20 @@ An arcade cabinet game exploring the horror-comedy crossover in the cooking genr
 - **Tension** — "Will my sausage explode?" drives engagement through each challenge
 - **Dark humor** — Horror premise played for laughs (Mr. Sausage is both threatening and absurd)
 - **Satisfying mechanics** — Each challenge has distinct feel: picking, dragging, holding, controlling
-- **Replayability** — Variant system (seeded challenge parameters) means different criteria/difficulty each run
+- **Replayability** — Multi-round loop with C(12,3) ingredient combo tracking; demand scoring varies each run
 - **Quick sessions** — Full game loop takes ~5 minutes, encouraging "one more try"
+- **Diegetic immersion** — Instructions and feedback appear as in-world text (SurrealText), not floating HUD
 
 ## Input Methods
 
 | Method | Platform | Implementation |
 |--------|----------|----------------|
-| WASD/Arrow keys + pointer-lock mouse-look | Desktop web | FPSController.tsx |
-| Touch joystick | Mobile | MobileJoystick.tsx |
-| Dual-zone touch (swipe) | Mobile | SwipeFPSControls.tsx — left half movement, right half look/interact |
-| WebXR | Future (web) | @react-three/xr integrated but not fully utilized |
+| Camera rail (automatic) | All | CameraRail.tsx — smooth pan between stations |
+| Touch tap/drag | Mobile | Challenge-specific gestures on 3D meshes |
+| Mouse click/drag | Desktop | R3F `onPointerDown` / `onPointerMove` on meshes |
+| Mobile joystick | Mobile | For free-look within a station's view area |
+
+The POC pivot replaced FPS free-walk (WASD + pointer-lock) with a camera rail system. Players no longer navigate the kitchen freely; the camera moves automatically between stations on a predetermined path.
 
 ## Mr. Sausage Character
 
@@ -42,19 +53,27 @@ The central character experience. He appears on an in-game CRT television and:
 
 The CRT shader (chromatic aberration, scanlines, flicker) reinforces the horror atmosphere.
 
+## Audio
+
+OGG sample-based audio replaces the previous pure Tone.js synthesis approach:
+- Per-station sound effects (grinder, sizzle, squelch, pressure hiss)
+- Ambient horror drone
+- Rating songs per verdict rank
+- Binary audio assets tracked via Git LFS
+
 ## Aesthetic
 
 - Grimy basement kitchen with PBR textures (tile walls, concrete ceiling, grime decals)
 - Fluorescent tube lights with procedural flicker
 - CRT television glow
-- Butcher shop sign aesthetic for menus
+- Diegetic UI: in-world text meshes (SurrealText) for instructions and feedback
 - Red X marks for strikes
-- First-person perspective (standing eye height 1.6 units)
+- First-person perspective on camera rail
 
 ## What Players See
 
 ```
-MENU (butcher shop sign) → LOADING (sausage progress bar) → 7 CHALLENGES → RESULTS (rank badge) → MENU
+MENU → LOADING → INTRO (camera rail tour) → 7 CHALLENGES → RESULTS (rank badge) → MENU
 ```
 
-Camera smoothly walks between stations (~2.5 seconds, ease-in-out) between challenges.
+Camera smoothly rails between stations (~2.5 seconds, ease-in-out) between challenges.
