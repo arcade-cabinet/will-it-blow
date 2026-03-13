@@ -51,11 +51,16 @@ interface GameState {
     hatedTags: string[];
     cookPreference: 'rare' | 'medium' | 'well-done' | 'charred';
   } | null;
-  finalScore: any | null;
+  finalScore: {
+    calculated: boolean;
+    totalScore: number;
+    breakdown: string;
+  } | null;
 
-  // Dialogue State
-  currentDialogueLine: any | null;
-  dialogueActive: boolean;
+  // Player decisions (flair tracking)
+  playerDecisions: {
+    flairPoints: {reason: string; points: number}[];
+  };
 
   // Input State (for mobile controls bridging to 3D)
   joystick: {x: number; y: number};
@@ -81,9 +86,10 @@ interface GameState {
   setMrSausageReaction: (reaction: Reaction) => void;
   generateDemands: () => void;
   calculateFinalScore: () => void;
+  recordFlairPoint: (reason: string, points: number) => void;
 
-  setCurrentDialogueLine: (line: any | null) => void;
-  setDialogueActive: (active: boolean) => void;
+  returnToMenu: () => void;
+  startNewGame: () => void;
 
   setJoystick: (x: number, y: number) => void;
   addLookDelta: (dx: number, dy: number) => void;
@@ -114,8 +120,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   mrSausageDemands: null,
   finalScore: null,
 
-  currentDialogueLine: null,
-  dialogueActive: false,
+  playerDecisions: {flairPoints: []},
 
   joystick: {x: 0, y: 0},
   lookDelta: {x: 0, y: 0},
@@ -138,10 +143,12 @@ export const useGameStore = create<GameState>((set, get) => ({
    */
   nextRound: () =>
     set(state => {
-      if (state.selectedIngredientIds.length > 0) {
-        state.usedIngredientCombos.push([...state.selectedIngredientIds].sort());
-      }
+      const newCombos =
+        state.selectedIngredientIds.length > 0
+          ? [...state.usedIngredientCombos, [...state.selectedIngredientIds].sort()]
+          : state.usedIngredientCombos;
       return {
+        usedIngredientCombos: newCombos,
         currentRound: state.currentRound + 1,
         gamePhase: 'SELECT_INGREDIENTS',
         groundMeatVol: 0,
@@ -171,8 +178,53 @@ export const useGameStore = create<GameState>((set, get) => ({
     set(state => ({selectedIngredientIds: [...state.selectedIngredientIds, id]})),
   setMrSausageReaction: reaction => set({mrSausageReaction: reaction}),
 
-  setCurrentDialogueLine: line => set({currentDialogueLine: line}),
-  setDialogueActive: active => set({dialogueActive: active}),
+  recordFlairPoint: (reason, points) =>
+    set(state => ({
+      playerDecisions: {
+        flairPoints: [...state.playerDecisions.flairPoints, {reason, points}],
+      },
+    })),
+
+  /** Reset everything and go back to title screen. */
+  returnToMenu: () =>
+    set({
+      appPhase: 'title',
+      introActive: true,
+      introPhase: 0,
+      posture: 'prone',
+      idleTime: 0,
+      gamePhase: 'SELECT_INGREDIENTS',
+      groundMeatVol: 0,
+      stuffLevel: 0,
+      casingTied: false,
+      cookLevel: 0,
+      selectedIngredientIds: [],
+      mrSausageReaction: 'idle',
+      mrSausageDemands: null,
+      finalScore: null,
+      currentRound: 1,
+      usedIngredientCombos: [],
+      playerDecisions: {flairPoints: []},
+    }),
+
+  /** Start a new game (reset round state, keep difficulty). */
+  startNewGame: () =>
+    set({
+      appPhase: 'playing',
+      introActive: false,
+      gamePhase: 'SELECT_INGREDIENTS',
+      groundMeatVol: 0,
+      stuffLevel: 0,
+      casingTied: false,
+      cookLevel: 0,
+      selectedIngredientIds: [],
+      mrSausageReaction: 'idle',
+      mrSausageDemands: null,
+      finalScore: null,
+      currentRound: 1,
+      usedIngredientCombos: [],
+      playerDecisions: {flairPoints: []},
+    }),
 
   /** Update virtual joystick position from mobile touch controls. */
   setJoystick: (x, y) => set({joystick: {x, y}}),

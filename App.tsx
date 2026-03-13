@@ -52,14 +52,6 @@ console.warn = (...args) => {
   origWarn(...args);
 };
 
-const origError = console.error;
-console.error = (...args) => {
-  if (typeof args[0] === 'string') {
-    if (args[0].includes('getSnapshot should be cached')) return;
-    if (args[0].includes('Maximum update depth exceeded')) return;
-  }
-  origError(...args);
-};
 // -----------------------------------------------------------------------
 
 /** 3D scene content: physics world, stations, props, camera, and orchestrator. */
@@ -143,15 +135,12 @@ function UILayer() {
 
   const joystickRef = useRef({x: 0, y: 0});
 
-  // Sync joystick ref to store every frame equivalent
+  // Sync joystick ref to store at 30fps (not every frame — avoids render loop)
   useEffect(() => {
-    let animationFrameId: number;
-    const syncJoystick = () => {
+    const interval = setInterval(() => {
       setJoystick(joystickRef.current.x, joystickRef.current.y);
-      animationFrameId = requestAnimationFrame(syncJoystick);
-    };
-    syncJoystick();
-    return () => cancelAnimationFrame(animationFrameId);
+    }, 33);
+    return () => clearInterval(interval);
   }, [setJoystick]);
 
   return (
@@ -169,7 +158,7 @@ function UILayer() {
       {/* Dialogue Overlay for Verdict */}
       {verdictLines && (
         <DialogueOverlay
-          key={finalScore.totalScore} // Re-mount if score changes on new round
+          key={finalScore?.totalScore ?? 0} // Re-mount if score changes on new round
           lines={verdictLines}
           onComplete={() => {}}
         />
