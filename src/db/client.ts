@@ -1,28 +1,92 @@
 /**
  * @module db/client
  * Drizzle ORM client for the Will It Blow? SQLite persistence layer.
- * Uses expo-sqlite as the underlying driver.
+ * Adapted from grovekeeper's db/client.ts pattern.
  *
- * Returns null when SQLite is unavailable (e.g., web platform or test env).
- * All consumers must handle the null case gracefully.
+ * Uses expo-sqlite on ALL platforms including web (via WASM + SharedArrayBuffer).
+ * Web support requires:
+ * - metro.config.js: wasm in assetExts + COEP/COOP middleware
+ * - public/coi-serviceworker.js: enables SharedArrayBuffer on GitHub Pages
+ * - app.json: expo-sqlite plugin
+ *
+ * Only returns null in test environment or if expo-sqlite genuinely fails to init.
  */
 
-let _db: ReturnType<typeof import('drizzle-orm/expo-sqlite').drizzle> | null = null;
+import * as schema from './schema';
+
+type DrizzleDb = ReturnType<typeof import('drizzle-orm/expo-sqlite').drizzle>;
+
+let _db: DrizzleDb | null = null;
+let _initAttempted = false;
 
 /**
- * Returns the Drizzle database instance, lazily initialized.
- * Returns null if expo-sqlite is unavailable (web, tests, etc.).
+ * Raw SQL for creating all 5 tables. Each uses
+ * CREATE TABLE IF NOT EXISTS for idempotency.
  */
-export function getDb() {
+const MIGRATION_SQL = `
+CREATE TABLE IF NOT EXISTS "game_session" (
+  "id" integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+  "started_at" integer NOT NULL,
+  "completed_at" integer,
+  "difficulty" text NOT NULL DEFAULT 'medium',
+  "final_score" real,
+  "rank" text
+);
+
+CREATE TABLE IF NOT EXISTS "round_scores" (
+  "id" integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+  "session_id" integer NOT NULL REFERENCES "game_session"("id"),
+  "round_number" integer NOT NULL,
+  "phase_scores" text,
+  "demand_bonus" real,
+  "round_total" real
+);
+
+CREATE TABLE IF NOT EXISTS "used_combos" (
+  "id" integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+  "session_id" integer NOT NULL REFERENCES "game_session"("id"),
+  "ingredient_combo" text NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS "player_stats" (
+  "id" integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+  "total_games_played" integer NOT NULL DEFAULT 0,
+  "best_score" real,
+  "best_rank" text,
+  "total_play_time" integer NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS "settings" (
+  "key" text PRIMARY KEY NOT NULL,
+  "value" text NOT NULL
+);
+`;
+
+/**
+ * Get the drizzle database instance. Works on native AND web
+ * (web uses expo-sqlite WASM via SharedArrayBuffer).
+ *
+ * On first successful init, runs migration SQL to create all 5 tables.
+ * Returns null only in test environment or if expo-sqlite genuinely
+ * fails to initialize (missing WASM, no SharedArrayBuffer support).
+ */
+export function getDb(): DrizzleDb | null {
   if (_db) return _db;
+  if (_initAttempted) return null;
+  _initAttempted = true;
+
   try {
-    // Dynamic require to avoid bundling errors on web
-    const {openDatabaseSync} = require('expo-sqlite');
     const {drizzle} = require('drizzle-orm/expo-sqlite');
-    const sqlite = openDatabaseSync('willitblow.db');
-    _db = drizzle(sqlite);
+    const {openDatabaseSync} = require('expo-sqlite');
+    const expoDb = openDatabaseSync('willitblow.db');
+
+    // Run migration SQL to create tables (idempotent)
+    expoDb.execSync(MIGRATION_SQL);
+
+    _db = drizzle(expoDb, {schema});
     return _db;
-  } catch {
+  } catch (err) {
+    console.warn('[db] expo-sqlite init failed:', err);
     return null;
   }
 }
@@ -32,4 +96,5 @@ export function getDb() {
  */
 export function resetDbClient(): void {
   _db = null;
+  _initAttempted = false;
 }
