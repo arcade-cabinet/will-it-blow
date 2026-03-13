@@ -1,0 +1,11 @@
+{
+  "crank": {
+    "sensitivity": 0.002,
+    "rotationMultiplier": 10,
+    "rodTravel": 0.8
+  },
+  "casing": {
+    "dragSensitivity": 0.002,
+    "snapDistance": 0.3
+  }
+}

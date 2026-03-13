@@ -1,0 +1,26 @@
+{
+  "maxParticles": 300,
+  "plunger": {
+    "minY": 0.5,
+    "maxY": 1.2,
+    "sensitivity": 0.01,
+    "grindRate": 0.5,
+    "consumeThreshold": 0.8
+  },
+  "physics": {
+    "gravity": 15,
+    "faceplateSpinSpeed": 5,
+    "motorVibrateSpeed": 50,
+    "motorVibrateAmount": 0.02
+  },
+  "particleSpawn": {
+    "countPerFrame": 5,
+    "radiusMax": 0.15,
+    "velocityX": [2, 4],
+    "velocityYZ": 0.5
+  },
+  "audio": {
+    "baseSpeed": 0.2,
+    "speedRange": 0.8
+  }
+}

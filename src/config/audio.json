@@ -1,0 +1,41 @@
+{
+  "samples": {
+    "chop": {
+      "url": "/audio/sfx/chop-1.ogg",
+      "volume": -5
+    },
+    "sizzle": {
+      "url": "/audio/sfx/sizzle-loop.ogg",
+      "volume": -20,
+      "loop": true
+    },
+    "ambient": {
+      "url": "/audio/music/track_boss_horror.ogg",
+      "volume": -25,
+      "loop": true
+    }
+  },
+  "synths": {
+    "grinder": {
+      "harmonicity": 1.5,
+      "modulationIndex": 10,
+      "volume": -15,
+      "envelope": {
+        "attack": 0.1,
+        "decay": 0.2,
+        "sustain": 1.0,
+        "release": 0.5
+      }
+    }
+  },
+  "sizzle": {
+    "baseVolume": -25,
+    "volumeRange": 15,
+    "rampTime": 0.1
+  },
+  "grinderSpeed": {
+    "baseHarmonicity": 1.0,
+    "harmonicityRange": 2.0,
+    "baseNote": "C1"
+  }
+}

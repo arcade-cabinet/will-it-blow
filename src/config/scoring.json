@@ -1,0 +1,26 @@
+{
+  "rankThresholds": {
+    "S": 92,
+    "A": 75,
+    "B": 50
+  },
+  "weights": {
+    "tasteMultiplier": 10,
+    "textureMultiplier": 5,
+    "desiredTagBonus": 25,
+    "hatedTagPenalty": 30,
+    "cookMatchBonus": 40,
+    "cookMismatchPenalty": 10,
+    "blowPowerMultiplier": 10
+  },
+  "scoreRange": {
+    "min": 0,
+    "max": 100
+  },
+  "verdicts": {
+    "S": "THE SAUSAGE KING",
+    "A": "Almost Worthy",
+    "B": "Mediocre",
+    "F": "Unacceptable"
+  }
+}

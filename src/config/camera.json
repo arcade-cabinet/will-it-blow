@@ -1,0 +1,21 @@
+{
+  "hands": {
+    "offset": [0, -0.4, -0.6],
+    "proneDropY": 0.2,
+    "bobSpeed": 2,
+    "bobAmplitudeY": 0.02,
+    "swaySpeed": 1.5,
+    "swayAmplitudeX": 0.01,
+    "smoothingFactor": 0.001,
+    "modelScale": 0.06,
+    "modelOffset": [0, -0.1, 0.2]
+  },
+  "skins": [
+    "/textures/hands/SkinTones/1/base.png",
+    "/textures/hands/SkinTones/2/base.png",
+    "/textures/hands/SkinTones/3/base.png",
+    "/textures/hands/Gloves/1/base_2.png",
+    "/textures/hands/Werewolf/base.png",
+    "/textures/hands/Alien/base.png"
+  ]
+}
