@@ -68,30 +68,55 @@ console.warn = (...args) => {
 // -----------------------------------------------------------------------
 
 /** Error boundary that catches Canvas/Physics crashes and shows a recovery UI. */
+/** Error boundary that auto-retries on Rapier WASM errors (race condition). */
 class SceneErrorBoundary extends React.Component<
   {children: React.ReactNode},
-  {error: Error | null}
+  {error: Error | null; retryCount: number}
 > {
-  state = {error: null as Error | null};
+  state = {error: null as Error | null, retryCount: 0};
 
   static getDerivedStateFromError(error: Error) {
     return {error};
   }
 
+  componentDidUpdate(_: any, prevState: {retryCount: number}) {
+    // Auto-retry Rapier WASM errors up to 5 times with increasing delay
+    if (
+      this.state.error &&
+      this.state.retryCount < 5 &&
+      this.state.error.message.includes('rawshape')
+    ) {
+      const delay = (this.state.retryCount + 1) * 500;
+      setTimeout(() => {
+        this.setState(s => ({error: null, retryCount: s.retryCount + 1}));
+      }, delay);
+    }
+  }
+
   render() {
     if (this.state.error) {
+      // Show retry UI only after exhausting auto-retries
+      if (this.state.retryCount >= 5 || !this.state.error.message.includes('rawshape')) {
+        return (
+          <View style={{flex: 1, backgroundColor: '#0a0a0a', justifyContent: 'center', alignItems: 'center', padding: 24}}>
+            <Text style={{color: '#FF1744', fontSize: 24, fontWeight: '900', marginBottom: 16}}>SCENE CRASHED</Text>
+            <Text style={{color: '#888', fontSize: 14, textAlign: 'center', marginBottom: 24}}>
+              {this.state.error.message.substring(0, 200)}
+            </Text>
+            <TouchableOpacity
+              style={{backgroundColor: '#D2A24C', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 8}}
+              onPress={() => this.setState({error: null, retryCount: 0})}
+            >
+              <Text style={{color: '#1a0a00', fontSize: 18, fontWeight: '900'}}>RETRY</Text>
+            </TouchableOpacity>
+          </View>
+        );
+      }
+      // Auto-retrying — show loading
       return (
-        <View style={{flex: 1, backgroundColor: '#0a0a0a', justifyContent: 'center', alignItems: 'center', padding: 24}}>
-          <Text style={{color: '#FF1744', fontSize: 24, fontWeight: '900', marginBottom: 16}}>SCENE CRASHED</Text>
-          <Text style={{color: '#888', fontSize: 14, textAlign: 'center', marginBottom: 24}}>
-            {this.state.error.message.substring(0, 200)}
-          </Text>
-          <TouchableOpacity
-            style={{backgroundColor: '#D2A24C', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 8}}
-            onPress={() => this.setState({error: null})}
-          >
-            <Text style={{color: '#1a0a00', fontSize: 18, fontWeight: '900'}}>RETRY</Text>
-          </TouchableOpacity>
+        <View style={{flex: 1, backgroundColor: '#0a0a0a', justifyContent: 'center', alignItems: 'center'}}>
+          <Text style={{color: '#FF1744', fontSize: 18, fontWeight: '900'}}>LOADING PHYSICS...</Text>
+          <Text style={{color: '#555', fontSize: 12, marginTop: 8}}>Attempt {this.state.retryCount + 1}/5</Text>
         </View>
       );
     }
@@ -99,23 +124,43 @@ class SceneErrorBoundary extends React.Component<
   }
 }
 
-/** Ensures Rapier WASM is initialized before rendering Physics children. */
+/**
+ * Ensures Rapier WASM is fully initialized before rendering Physics children.
+ * Polls for the WASM rawShapeXxx functions to be available, since the
+ * suspend-react approach inside <Physics> races with child component mounting.
+ */
 function RapierReady({children}: {children: React.ReactNode}) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    let attempts = 0;
+
+    const tryInit = async () => {
       try {
         const RAPIER = await import('@dimforge/rapier3d-compat');
         await RAPIER.init();
-        if (!cancelled) setReady(true);
-      } catch (err) {
-        console.warn('Rapier WASM init failed:', err);
-        // Still set ready to let Physics try its own init
-        if (!cancelled) setReady(true);
+        // Verify WASM is actually loaded by checking for a known function
+        const testDesc = RAPIER.ColliderDesc.ball(1.0);
+        if (testDesc) {
+          if (!cancelled) setReady(true);
+          return;
+        }
+      } catch {
+        // WASM not ready yet
       }
-    })();
+
+      // Retry up to 50 times (5 seconds)
+      attempts++;
+      if (attempts < 50 && !cancelled) {
+        setTimeout(tryInit, 100);
+      } else if (!cancelled) {
+        console.warn('[RapierReady] WASM init timed out after 5s');
+        setReady(true); // Let Physics try anyway
+      }
+    };
+
+    tryInit();
     return () => { cancelled = true; };
   }, []);
 
@@ -130,51 +175,42 @@ function GameContent() {
 
   return (
     <>
-      <RapierReady>
-      <Physics gravity={[0, -20, 0]}>
-        <BasementRoom />
-        <SurrealText />
-        <KitchenSetPieces />
-        <PhysicsFreezerChest />
-        <TV />
-        <ChoppingBlock />
+      {/* Non-physics: camera, UI elements, orchestrator — always render */}
+      <SurrealText />
+      <MrSausage3D
+        position={[-2.4, 0, 0]}
+        rotationY={Math.PI / 2}
+        scale={0.4}
+        trackCamera
+        reaction={mrSausageReaction}
+      />
+      <CameraRail />
+      <GameOrchestrator />
 
-        {/* Stations */}
-        <Grinder />
-        <Stuffer />
-        <Stove />
-        <BlowoutStation />
-        <Sink />
-        <Sausage position={[2.8, 2.0, 0]} />
-        <ProceduralIngredientsList />
-        <LiquidPourer position={[-2.8, 2.2, -2.0]} />
-
-        {/* Horror Props */}
-        <ScatterProps />
-        <Prop name="Saw" position={[2.9, 1.8, -1.0]} rotation={[0, -Math.PI / 2, 0]} />
-        <Prop name="Cleaver" position={[1.5, 0.45, 0]} rotation={[Math.PI / 2, 0.2, 0]} />
-        <Prop name="PS1" position={[-2.8, 0.4, 1.0]} rotation={[0, Math.PI / 4, 0]} />
-        <Prop name="Polaroid" position={[2.6, 0.4, -2.5]} rotation={[0, 0, 0]} />
-
-        {/* Mr. Sausage area */}
-        <MrSausage3D
-          position={[-2.4, 0, 0]}
-          rotationY={Math.PI / 2}
-          scale={0.4}
-          trackCamera
-          reaction={mrSausageReaction}
-        />
-
-        {/* Ceiling Trapdoor */}
-        <TrapDoorAnimation position={[0, 3, 0]} />
-
-        {/* Dynamic Camera Rail */}
-        <CameraRail />
-
-        {/* State Machine */}
-        <GameOrchestrator />
-      </Physics>
-      </RapierReady>
+      {/* Physics world — Suspense boundary lets WASM init complete before mounting */}
+      <Suspense fallback={null}>
+        <Physics gravity={[0, -20, 0]}>
+          <BasementRoom />
+          <KitchenSetPieces />
+          <PhysicsFreezerChest />
+          <TV />
+          <ChoppingBlock />
+          <Grinder />
+          <Stuffer />
+          <Stove />
+          <BlowoutStation />
+          <Sink />
+          <Sausage position={[2.8, 2.0, 0]} />
+          <ProceduralIngredientsList />
+          <LiquidPourer position={[-2.8, 2.2, -2.0]} />
+          <ScatterProps />
+          <Prop name="Saw" position={[2.9, 1.8, -1.0]} rotation={[0, -Math.PI / 2, 0]} />
+          <Prop name="Cleaver" position={[1.5, 0.45, 0]} rotation={[Math.PI / 2, 0.2, 0]} />
+          <Prop name="PS1" position={[-2.8, 0.4, 1.0]} rotation={[0, Math.PI / 4, 0]} />
+          <Prop name="Polaroid" position={[2.6, 0.4, -2.5]} rotation={[0, 0, 0]} />
+          <TrapDoorAnimation position={[0, 3, 0]} />
+        </Physics>
+      </Suspense>
 
       <PlayerHands />
 
@@ -508,7 +544,6 @@ export default function App() {
       {/* Playing state: 3D Canvas + UI Layer */}
       {appPhase === 'playing' && !showLoading && (
         <>
-          <SceneErrorBoundary>
           <Canvas
             camera={{position: [2.0, 0.5, 3.0], fov: 75}}
             shadows={{type: THREE.PCFShadowMap}}
@@ -532,7 +567,6 @@ export default function App() {
               <GameContent />
             </Suspense>
           </Canvas>
-          </SceneErrorBoundary>
           <UILayer />
         </>
       )}
