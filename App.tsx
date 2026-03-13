@@ -48,8 +48,8 @@ import {TastingChallenge} from './src/components/ui/TastingChallenge';
 import {TitleScreen} from './src/components/ui/TitleScreen';
 import {INTRO_DIALOGUE} from './src/data/dialogue/intro';
 import {VERDICT_A, VERDICT_B, VERDICT_F, VERDICT_S} from './src/data/dialogue/verdict';
-import {INGREDIENT_MODELS} from './src/engine/Ingredients';
 import {GameOrchestrator} from './src/engine/GameOrchestrator';
+import {INGREDIENT_MODELS} from './src/engine/Ingredients';
 import {useGameStore} from './src/store/gameStore';
 
 // --- Console Warning Overrides to keep dev env clean of upstream noise ---

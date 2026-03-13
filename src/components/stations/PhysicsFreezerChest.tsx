@@ -62,7 +62,8 @@ export function PhysicsFreezerChest() {
     const list = [];
     // Spawn 25 random items for a totally packed toy chest
     for (let i = 0; i < 25; i++) {
-      const def = FREEZER_INGREDIENT_MODELS[Math.floor(Math.random() * FREEZER_INGREDIENT_MODELS.length)];
+      const def =
+        FREEZER_INGREDIENT_MODELS[Math.floor(Math.random() * FREEZER_INGREDIENT_MODELS.length)];
       list.push({
         id: i,
         ...def,

@@ -40,7 +40,17 @@ export function IngredientChallenge({
   const handleSelect = useCallback(
     (id: string) => {
       if (completed) return;
-      if (selectedIds.includes(id)) return;
+      if (selectedIds.includes(id)) {
+        // Tapping an already-selected ingredient counts as a wrong pick
+        setFlashType('wrong');
+        setFlashId(id);
+        onStrike();
+        setTimeout(() => {
+          setFlashId(null);
+          setFlashType(null);
+        }, 600);
+        return;
+      }
 
       const newSelected = [...selectedIds, id];
       setSelectedIds(newSelected);
@@ -58,7 +68,7 @@ export function IngredientChallenge({
         onComplete(newSelected);
       }
     },
-    [selectedIds, requiredCount, onComplete, completed],
+    [selectedIds, requiredCount, onComplete, onStrike, completed],
   );
 
   return (

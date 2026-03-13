@@ -15,18 +15,18 @@ export function BasementRoom() {
     ceilingNormal,
     ceilingRoughness,
   ] = useTexture([
-    require('../../../public/textures/tile_floor_color.jpg'),
-    require('../../../public/textures/tile_floor_normal.jpg'),
-    require('../../../public/textures/tile_floor_roughness.jpg'),
+    require('../../../assets/textures/tile_floor_color.jpg'),
+    require('../../../assets/textures/tile_floor_normal.jpg'),
+    require('../../../assets/textures/tile_floor_roughness.jpg'),
 
-    require('../../../public/textures/tile_wall_color.jpg'),
-    require('../../../public/textures/tile_wall_normal.jpg'),
-    require('../../../public/textures/tile_wall_roughness.jpg'),
-    require('../../../public/textures/tile_wall_ao.jpg'),
+    require('../../../assets/textures/tile_wall_color.jpg'),
+    require('../../../assets/textures/tile_wall_normal.jpg'),
+    require('../../../assets/textures/tile_wall_roughness.jpg'),
+    require('../../../assets/textures/tile_wall_ao.jpg'),
 
-    require('../../../public/textures/concrete_color.jpg'),
-    require('../../../public/textures/concrete_normal.jpg'),
-    require('../../../public/textures/concrete_roughness.jpg'),
+    require('../../../assets/textures/concrete_color.jpg'),
+    require('../../../assets/textures/concrete_normal.jpg'),
+    require('../../../assets/textures/concrete_roughness.jpg'),
   ]);
 
   // Setup repeating for all textures

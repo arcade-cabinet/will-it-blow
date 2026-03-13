@@ -7,15 +7,15 @@ import {audioEngine} from '../../engine/AudioEngine';
 
 export function Sink() {
   const [metalColor, metalNormal, metalRoughness] = useTexture([
-    require('../../../public/textures/metal_plates_color.jpg'),
-    require('../../../public/textures/metal_plates_normal.jpg'),
-    require('../../../public/textures/metal_plates_roughness.jpg'),
+    require('../../../assets/textures/concrete_color.jpg'),
+    require('../../../assets/textures/concrete_normal.jpg'),
+    require('../../../assets/textures/concrete_roughness.jpg'),
   ]);
 
   const [concreteColor, concreteNormal, concreteRoughness] = useTexture([
-    require('../../../public/textures/concrete_color.jpg'),
-    require('../../../public/textures/concrete_normal.jpg'),
-    require('../../../public/textures/concrete_roughness.jpg'),
+    require('../../../assets/textures/concrete_color.jpg'),
+    require('../../../assets/textures/concrete_normal.jpg'),
+    require('../../../assets/textures/concrete_roughness.jpg'),
   ]);
 
   const waterRef = useRef<THREE.Mesh>(null);

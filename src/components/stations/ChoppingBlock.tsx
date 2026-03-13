@@ -7,9 +7,9 @@ import {useGameStore} from '../../store/gameStore';
 
 export function ChoppingBlock() {
   const [colorMap, normalMap, roughnessMap] = useTexture([
-    require('../../../public/textures/grime_base_color.jpg'),
-    require('../../../public/textures/grime_base_normal.jpg'),
-    require('../../../public/textures/grime_base_roughness.jpg'),
+    require('../../../assets/textures/grime_base_color.jpg'),
+    require('../../../assets/textures/grime_base_normal.jpg'),
+    require('../../../assets/textures/grime_base_roughness.jpg'),
   ]);
 
   const gamePhase = useGameStore(state => state.gamePhase);
