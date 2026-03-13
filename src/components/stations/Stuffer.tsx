@@ -93,8 +93,6 @@ export function Stuffer() {
   const bindCrank = useDrag(({movement: [, my]}) => {
     if (gamePhase !== 'STUFFING') return;
 
-    // Rotate crank and adjust stuff level
-    // `my` maps to vertical drag movement
     const newLevel = Math.max(0, Math.min(1.0, stuffLevel + my * 0.002));
     setStuffLevel(newLevel);
 
@@ -102,12 +100,11 @@ export function Stuffer() {
       crankRef.current.rotation.x = -newLevel * Math.PI * 10;
     }
     if (rodRef.current) {
-      // Base Y = 1.0. Plunge down by 0.8 units at max level
       rodRef.current.position.y = 1.0 - newLevel * 0.8;
     }
 
     if (newLevel >= 1.0) {
-      setGamePhase('MOVE_SAUSAGE');
+      setGamePhase('TIE_CASING');
     }
   });
 
@@ -117,10 +114,8 @@ export function Stuffer() {
     setIsDraggingCasing(active);
 
     if (active) {
-      // Simple screen to world map for the drag target
       setDragTarget(new THREE.Vector3(0.5 + mx * 0.002, 0.2 - my * 0.002, 0));
     } else {
-      // Released. If close enough to nozzle, snap!
       if (dragTarget.distanceTo(new THREE.Vector3(0.4, 0.2, 0)) < 0.3) {
         setGamePhase('STUFFING');
       }
@@ -155,24 +150,20 @@ export function Stuffer() {
 
       {/* Water Bowl and Casing */}
       <group position={[0.5, 0.05, 0]}>
-        {/* Bowl */}
         <mesh receiveShadow castShadow>
           <cylinderGeometry args={[0.2, 0.15, 0.1, 32]} />
           <meshStandardMaterial color="#ffffff" roughness={0.1} />
         </mesh>
-        {/* Water */}
         <mesh position={[0, 0.04, 0]}>
           <cylinderGeometry args={[0.19, 0.19, 0.02, 32]} />
           <meshPhysicalMaterial color="#aaccff" transmission={0.9} opacity={1} ior={1.33} />
         </mesh>
 
-        {/* Draggable Unattached Casing */}
         {(gamePhase === 'ATTACH_CASING' || gamePhase === 'MOVE_BOWL') && !isDraggingCasing && (
-          // @ts-expect-error
           <mesh
             geometry={squigglyGeo}
             material={casingMat}
-            {...bindCasing()}
+            {...(bindCasing() as any)}
             position={[0, 0.05, 0]}
           />
         )}
@@ -204,8 +195,9 @@ export function Stuffer() {
         castShadow
         onClick={handleNozzleClick}
       >
-        {/* Bunched up casing when attached */}
-        {(gamePhase === 'STUFFING' || gamePhase === 'MOVE_SAUSAGE') && (
+        {(gamePhase === 'STUFFING' ||
+          gamePhase === 'MOVE_SAUSAGE' ||
+          gamePhase === 'TIE_CASING') && (
           <mesh
             geometry={bunchedCasingGeo}
             material={casingMat}
@@ -237,8 +229,7 @@ export function Stuffer() {
       </mesh>
 
       {/* Crank */}
-      {/* @ts-ignore */}
-      <group {...bindCrank()} ref={crankRef} position={[0.5, 1.2, 0]}>
+      <group {...(bindCrank() as any)} ref={crankRef} position={[0.5, 1.2, 0]}>
         <Box args={[0.05, 0.4, 0.05]} position={[0, 0.2, 0]} material={metalMat} />
         <Cylinder
           args={[0.03, 0.03, 0.1, 16]}
@@ -247,7 +238,6 @@ export function Stuffer() {
         >
           <meshStandardMaterial color="#111" roughness={0.9} />
         </Cylinder>
-        {/* Invisible hit box for easier grab */}
         <Box args={[0.4, 0.6, 0.4]} position={[0, 0.2, 0]} visible={false} />
       </group>
     </group>

@@ -109,20 +109,26 @@ function FreezerIngredient({def, miscNodes, frostMat}: any) {
 
   const gamePhase = useGameStore(state => state.gamePhase);
   const setGamePhase = useGameStore(state => state.setGamePhase);
-  const setSelectedIngredientId = useGameStore(state => state.setSelectedIngredientId);
+  const addSelectedIngredientId = useGameStore(state => state.addSelectedIngredientId);
+  const selectedIngredientIds = useGameStore(state => state.selectedIngredientIds);
 
   // Allow player to reach in and grab an item
   const bind = useDrag(({active, movement: [x, y]}) => {
     setIsGrabbed(active);
-    if (active && ref.current) {
+    if (active && ref.current && gamePhase === 'SELECT_INGREDIENTS') {
       // Lift the object out of the freezer
-      ref.current.setTranslation({x: -1.5, y: 2.0, z: -2.5}, true);
-      setSelectedIngredientId(def.id);
+      // Stagger positions slightly so they don't overlap exactly
+      const count = selectedIngredientIds.length;
+      ref.current.setTranslation({x: -1.5 + count * 0.2, y: 2.0, z: -2.5}, true);
+      addSelectedIngredientId(def.id);
     }
 
-    // When released, if we were in the selection phase, progress to chopping
+    // When released, if we were in the selection phase and we have 3, progress
     if (!active && gamePhase === 'SELECT_INGREDIENTS') {
-      setGamePhase('CHOPPING');
+      if (selectedIngredientIds.length >= 2) {
+        // length was 2 before this click, so this is the 3rd
+        setGamePhase('CHOPPING');
+      }
     }
   });
 

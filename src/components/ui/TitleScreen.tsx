@@ -1,9 +1,13 @@
-import {useCallback, useEffect, useRef} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {Animated, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {DIFFICULTY_TIERS} from '../../engine/DifficultyConfig';
 import {useGameStore} from '../../store/gameStore';
+import {DifficultySelector} from './DifficultySelector';
 
 export function TitleScreen() {
   const setAppPhase = useGameStore(s => s.setAppPhase);
+  const setDifficulty = useGameStore(s => s.setDifficulty);
+  const [showDifficulty, setShowDifficulty] = useState(false);
 
   // Fade-in animation
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -49,8 +53,26 @@ export function TitleScreen() {
   });
 
   const handleStart = () => {
+    setShowDifficulty(true);
+  };
+
+  const handleDifficultySelect = (tierId: string) => {
+    const tier = DIFFICULTY_TIERS.find(t => t.id === tierId) || DIFFICULTY_TIERS[2];
+    setDifficulty(
+      tierId,
+      tier.id === 'rare' || tier.id === 'medium-rare' ? 3 : tier.id === 'well-done' ? 10 : 5,
+    );
     setAppPhase('playing');
   };
+
+  if (showDifficulty) {
+    return (
+      <DifficultySelector
+        onSelect={handleDifficultySelect}
+        onBack={() => setShowDifficulty(false)}
+      />
+    );
+  }
 
   return (
     <Animated.View

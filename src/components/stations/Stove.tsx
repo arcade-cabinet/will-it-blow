@@ -247,7 +247,6 @@ export function Stove() {
       <group position={[-0.4, 0.9, -0.4]}>
         {/* Frying Pan (Draggable) */}
         {pan.scene && (
-          // @ts-expect-error
           <group {...bindPan()} position={panPos}>
             <primitive object={pan.scene.clone()} scale={0.7} position={[0, -0.02, 0]} />
             {/* Grease Pool inside the pan */}

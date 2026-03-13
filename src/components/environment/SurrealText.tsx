@@ -85,6 +85,8 @@ export function SurrealText() {
 
   const finalScore = useGameStore(state => state.finalScore);
   const mrSausageDemands = useGameStore(state => state.mrSausageDemands);
+  const currentRound = useGameStore(state => state.currentRound);
+  const totalRounds = useGameStore(state => state.totalRounds);
 
   const textContent = useMemo(() => {
     if (introActive) return 'Hey, wake up lazybones';
@@ -104,7 +106,7 @@ export function SurrealText() {
       switch (gamePhase) {
         case 'SELECT_INGREDIENTS':
           if (mrSausageDemands) {
-            return `WANTS: ${mrSausageDemands.desiredTags.join(', ').toUpperCase()} / HATES: ${mrSausageDemands.hatedTags.join(', ').toUpperCase()} / COOK: ${mrSausageDemands.cookPreference.toUpperCase()}`;
+            return `ROUND ${currentRound}/${totalRounds}\nWANTS: ${mrSausageDemands.desiredTags.join(', ').toUpperCase()} / HATES: ${mrSausageDemands.hatedTags.join(', ').toUpperCase()} / COOK: ${mrSausageDemands.cookPreference.toUpperCase()}`;
           }
           return "WHAT'S IN THE BOX?";
         case 'CHOPPING':
@@ -119,6 +121,10 @@ export function SurrealText() {
           return 'PREPARE THE CASING';
         case 'STUFFING':
           return 'FILL IT UP';
+        case 'TIE_CASING':
+          return 'TIE IT OFF';
+        case 'BLOWOUT':
+          return 'WILL IT BLOW? (HOLD TO FIND OUT)';
         case 'MOVE_SAUSAGE':
           return 'TO THE STOVE';
         case 'MOVE_PAN':
@@ -127,7 +133,13 @@ export function SurrealText() {
           return "DON'T LET IT BURN";
         case 'DONE':
           if (finalScore && finalScore.calculated) {
-            return `SCORE: ${finalScore.totalScore}%\n${finalScore.breakdown}\n(CLICK CEREAL BOX TO RESTART)`;
+            if (currentRound >= totalRounds) {
+              return `SCORE: ${finalScore.totalScore}%\n${finalScore.breakdown}\nYOU ESCAPED.`;
+            }
+            if (finalScore.totalScore < 50) {
+              return `SCORE: ${finalScore.totalScore}%\n${finalScore.breakdown}\nYOU ARE MEAT NOW. (GAME OVER)`;
+            }
+            return `SCORE: ${finalScore.totalScore}%\n${finalScore.breakdown}\n(CLICK CEREAL BOX FOR NEXT ROUND)`;
           }
           return 'WILL IT BLOW? (CLICK CEREAL BOX TO RESTART)';
         default:
@@ -136,7 +148,16 @@ export function SurrealText() {
     }
 
     return '';
-  }, [introActive, posture, idleTime, gamePhase, finalScore, mrSausageDemands]);
+  }, [
+    introActive,
+    posture,
+    idleTime,
+    gamePhase,
+    finalScore,
+    mrSausageDemands,
+    currentRound,
+    totalRounds,
+  ]);
 
   useEffect(() => {
     if (textContent) {

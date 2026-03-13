@@ -15,6 +15,8 @@ const STATION_CAMERAS: Record<GamePhase, {pos: THREE.Vector3; target: THREE.Vect
   MOVE_BOWL: {pos: new THREE.Vector3(-0.5, 1.8, -1.0), target: new THREE.Vector3(0, 1.2, -2)}, // Pan middle
   ATTACH_CASING: {pos: new THREE.Vector3(1.0, 1.8, -1.0), target: new THREE.Vector3(2.0, 1.2, -2)}, // Stuffer
   STUFFING: {pos: new THREE.Vector3(1.0, 1.8, -1.0), target: new THREE.Vector3(2.0, 1.2, -2)}, // Stuffer
+  TIE_CASING: {pos: new THREE.Vector3(1.0, 1.8, -1.0), target: new THREE.Vector3(2.0, 1.2, -2)}, // Stuffer
+  BLOWOUT: {pos: new THREE.Vector3(-1.5, 1.8, 1.5), target: new THREE.Vector3(-1.5, 0.5, 3.2)}, // Blowout Table
   MOVE_SAUSAGE: {pos: new THREE.Vector3(1.5, 1.8, 0.0), target: new THREE.Vector3(2.0, 1.0, 1.5)}, // Moving to stove
   MOVE_PAN: {pos: new THREE.Vector3(2.0, 1.8, 1.0), target: new THREE.Vector3(2.5, 1.0, 2.0)}, // Stove
   COOKING: {pos: new THREE.Vector3(2.0, 1.8, 1.0), target: new THREE.Vector3(2.5, 1.0, 2.0)}, // Stove

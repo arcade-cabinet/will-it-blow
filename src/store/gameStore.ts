@@ -11,6 +11,8 @@ export type GamePhase =
   | 'MOVE_BOWL'
   | 'ATTACH_CASING'
   | 'STUFFING'
+  | 'TIE_CASING'
+  | 'BLOWOUT'
   | 'MOVE_SAUSAGE'
   | 'MOVE_PAN'
   | 'COOKING'
@@ -23,14 +25,21 @@ interface GameState {
   posture: Posture;
   idleTime: number;
 
+  // Progression & Difficulty
+  difficulty: string;
+  currentRound: number;
+  totalRounds: number;
+  usedIngredientCombos: string[][];
+
   // POC Gameplay State
   gamePhase: GamePhase;
   groundMeatVol: number; // 0.0 to 1.0
   stuffLevel: number; // 0.0 to 1.0
+  casingTied: boolean;
   cookLevel: number; // 0.0 to 1.0
 
   // Scoring State
-  selectedIngredientId: string | null;
+  selectedIngredientIds: string[];
   mrSausageReaction: Reaction;
   mrSausageDemands: {
     desiredTags: string[];
@@ -49,6 +58,9 @@ interface GameState {
   interactPulse: number;
 
   setAppPhase: (phase: 'title' | 'playing' | 'results') => void;
+  setDifficulty: (diff: string, total: number) => void;
+  nextRound: () => void;
+
   setIntroActive: (active: boolean) => void;
   setIntroPhase: (phase: number) => void;
   setPosture: (posture: Posture) => void;
@@ -57,9 +69,10 @@ interface GameState {
   setGamePhase: (phase: GamePhase) => void;
   setGroundMeatVol: (vol: number | ((prev: number) => number)) => void;
   setStuffLevel: (level: number | ((prev: number) => number)) => void;
+  setCasingTied: (tied: boolean) => void;
   setCookLevel: (level: number | ((prev: number) => number)) => void;
 
-  setSelectedIngredientId: (id: string | null) => void;
+  addSelectedIngredientId: (id: string) => void;
   setMrSausageReaction: (reaction: Reaction) => void;
   generateDemands: () => void;
   calculateFinalScore: () => void;
@@ -80,12 +93,18 @@ export const useGameStore = create<GameState>((set, get) => ({
   posture: 'prone',
   idleTime: 0,
 
+  difficulty: 'medium',
+  currentRound: 1,
+  totalRounds: 3,
+  usedIngredientCombos: [],
+
   gamePhase: 'SELECT_INGREDIENTS',
   groundMeatVol: 0,
   stuffLevel: 0,
+  casingTied: false,
   cookLevel: 0,
 
-  selectedIngredientId: null,
+  selectedIngredientIds: [],
   mrSausageReaction: 'idle',
   mrSausageDemands: null,
   finalScore: null,
@@ -98,6 +117,25 @@ export const useGameStore = create<GameState>((set, get) => ({
   interactPulse: 0,
 
   setAppPhase: phase => set({appPhase: phase}),
+  setDifficulty: (diff, total) =>
+    set({difficulty: diff, totalRounds: total, currentRound: 1, usedIngredientCombos: []}),
+  nextRound: () =>
+    set(state => {
+      if (state.selectedIngredientIds.length > 0) {
+        state.usedIngredientCombos.push([...state.selectedIngredientIds].sort());
+      }
+      return {
+        currentRound: state.currentRound + 1,
+        gamePhase: 'SELECT_INGREDIENTS',
+        groundMeatVol: 0,
+        stuffLevel: 0,
+        casingTied: false,
+        cookLevel: 0,
+        selectedIngredientIds: [],
+        finalScore: null,
+      };
+    }),
+
   setIntroActive: active => set({introActive: active}),
   setIntroPhase: phase => set({introPhase: phase}),
   setPosture: posture => set({posture, idleTime: 0}),
@@ -108,10 +146,12 @@ export const useGameStore = create<GameState>((set, get) => ({
     set(state => ({groundMeatVol: typeof vol === 'function' ? vol(state.groundMeatVol) : vol})),
   setStuffLevel: level =>
     set(state => ({stuffLevel: typeof level === 'function' ? level(state.stuffLevel) : level})),
+  setCasingTied: tied => set({casingTied: tied}),
   setCookLevel: level =>
     set(state => ({cookLevel: typeof level === 'function' ? level(state.cookLevel) : level})),
 
-  setSelectedIngredientId: id => set({selectedIngredientId: id}),
+  addSelectedIngredientId: id =>
+    set(state => ({selectedIngredientIds: [...state.selectedIngredientIds, id]})),
   setMrSausageReaction: reaction => set({mrSausageReaction: reaction}),
 
   setCurrentDialogueLine: line => set({currentDialogueLine: line}),
@@ -154,11 +194,11 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   calculateFinalScore: () => {
     const state = get();
-    if (!state.mrSausageDemands || !state.selectedIngredientId) return;
+    if (!state.mrSausageDemands || state.selectedIngredientIds.length === 0) return;
 
     const result = calculateDemandBonus(
       state.mrSausageDemands,
-      state.selectedIngredientId,
+      state.selectedIngredientIds,
       state.cookLevel,
     );
 

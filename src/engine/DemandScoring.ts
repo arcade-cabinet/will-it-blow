@@ -10,23 +10,31 @@ export function getCookPreference(cookLevel: number): 'rare' | 'medium' | 'well-
 
 export function calculateDemandBonus(
   demands: {desiredTags: string[]; hatedTags: string[]; cookPreference: string},
-  selectedIngredientId: string,
+  selectedIngredientIds: string[],
   finalCookLevel: number,
 ) {
-  const ingredient = getIngredientById(selectedIngredientId);
-  if (!ingredient) return {totalScore: 0, breakdown: 'No ingredient selected.'};
+  if (!selectedIngredientIds || selectedIngredientIds.length === 0)
+    return {totalScore: 0, breakdown: 'No ingredients selected.'};
+
+  const ingredients = selectedIngredientIds
+    .map(id => getIngredientById(id))
+    .filter(i => i !== undefined) as any[];
 
   let score = 0;
   let breakdown = '';
 
-  // 1. Evaluate Ingredient Match (Taste & Texture Base)
-  score += ingredient.tasteMod * 10;
-  score += ingredient.textureMod * 5;
-  breakdown += `Base Flavor: ${ingredient.tasteMod * 10}\nBase Texture: ${ingredient.textureMod * 5}\n`;
+  // 1. Evaluate Ingredient Match (Taste & Texture Base - Averaged)
+  const avgTaste = ingredients.reduce((sum, i) => sum + i.tasteMod, 0) / ingredients.length;
+  const avgTexture = ingredients.reduce((sum, i) => sum + i.textureMod, 0) / ingredients.length;
 
-  // 2. Check Mr. Sausage's Tags
-  const hitDesired = demands.desiredTags.filter(tag => ingredient.tags.includes(tag));
-  const hitHated = demands.hatedTags.filter(tag => ingredient.tags.includes(tag));
+  score += avgTaste * 10;
+  score += avgTexture * 5;
+  breakdown += `Base Flavor: ${Math.round(avgTaste * 10)}\nBase Texture: ${Math.round(avgTexture * 5)}\n`;
+
+  // 2. Check Mr. Sausage's Tags (Accumulated across all ingredients)
+  const allTags = ingredients.flatMap(i => i.tags);
+  const hitDesired = demands.desiredTags.filter(tag => allTags.includes(tag));
+  const hitHated = demands.hatedTags.filter(tag => allTags.includes(tag));
 
   if (hitDesired.length > 0) {
     score += hitDesired.length * 25;
@@ -50,9 +58,9 @@ export function calculateDemandBonus(
   }
 
   // 4. "Will It Blow?" Power (Bonus for exploding the casing)
-  // Higher blow power is riskier but yields more points if it succeeds
-  score += ingredient.blowPower * 10;
-  breakdown += `Explosive Power Bonus: +${ingredient.blowPower * 10}\n`;
+  const maxBlowPower = Math.max(...ingredients.map(i => i.blowPower));
+  score += maxBlowPower * 10;
+  breakdown += `Explosive Power Bonus: +${maxBlowPower * 10}\n`;
 
   // Cap score at 100 max, 0 min
   const totalScore = Math.max(0, Math.min(100, score));

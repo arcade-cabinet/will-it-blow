@@ -7,6 +7,7 @@ import {CameraRail} from './src/components/camera/CameraRail';
 import {FirstPersonControls} from './src/components/camera/FirstPersonControls';
 import {IntroSequence} from './src/components/camera/IntroSequence';
 import {PlayerHands} from './src/components/camera/PlayerHands';
+import {TieGesture} from './src/components/challenges/TieGesture';
 import {MrSausage3D} from './src/components/characters/MrSausage3D';
 import {SwipeFPSControls} from './src/components/controls/SwipeFPSControls';
 import {BasementRoom} from './src/components/environment/BasementRoom';
@@ -156,7 +157,6 @@ function UILayer() {
           }}
         />
       )}
-
       {/* Dialogue Overlay for Verdict */}
       {verdictLines && (
         <DialogueOverlay
@@ -165,15 +165,21 @@ function UILayer() {
           onComplete={() => {}}
         />
       )}
-
       {/* Mobile Touch Surface (only active when game is playing and standing) */}
-      {!showIntroDialogue && !verdictLines && posture === 'standing' && (
-        <SwipeFPSControls
-          joystickRef={joystickRef}
-          onLookDrag={(dx, dy) => addLookDelta(dx, dy)}
-          onInteract={triggerInteract}
-        />
-      )}
+      {!showIntroDialogue &&
+        !verdictLines &&
+        posture === 'standing' &&
+        gamePhase !== 'TIE_CASING' && (
+          <SwipeFPSControls
+            joystickRef={joystickRef}
+            onLookDrag={(dx, dy) => addLookDelta(dx, dy)}
+            onInteract={triggerInteract}
+          />
+        )}
+      {/* Tie Gesture Overlay */}
+      {gamePhase === 'TIE_CASING' && (
+        <TieGesture onComplete={() => useGameStore.getState().setGamePhase('BLOWOUT')} />
+      )}{' '}
     </View>
   );
 }
