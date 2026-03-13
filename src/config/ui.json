@@ -1,0 +1,35 @@
+{
+  "colors": {
+    "background": "#0a0a0a",
+    "primary": "#ff4444",
+    "secondary": "#ffaa00",
+    "success": "#44ff44",
+    "danger": "#ff0000",
+    "text": "#ffffff",
+    "textMuted": "#888888",
+    "overlay": "rgba(0, 0, 0, 0.7)"
+  },
+  "transitions": {
+    "challengeCardDurationMs": 2000,
+    "fadeInMs": 300,
+    "fadeOutMs": 300,
+    "sceneReadyFadeMs": 300
+  },
+  "strikes": {
+    "maxDefault": 3,
+    "iconSize": 24,
+    "activeColor": "#ff4444",
+    "inactiveColor": "#333333"
+  },
+  "loading": {
+    "progressBarHeight": 4,
+    "progressBarColor": "#ff4444",
+    "tipRotationMs": 4000
+  },
+  "gameOver": {
+    "rankFontSize": 72,
+    "titleFontSize": 28,
+    "messageFontSize": 18,
+    "scoreFontSize": 48
+  }
+}

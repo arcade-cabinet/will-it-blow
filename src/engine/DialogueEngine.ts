@@ -1,4 +1,8 @@
-/** Dialogue tree traversal engine with choice selection and effect tracking. */
+/**
+ * Dialogue tree traversal engine with choice selection, effect tracking,
+ * and observable state deltas. Effects from player choices produce
+ * concrete gameplay state changes via applyEffects().
+ */
 
 export type MrSausageReaction =
   | 'idle'
@@ -13,6 +17,29 @@ export type MrSausageReaction =
   | 'judging';
 
 export type DialogueEffect = 'hint' | 'taunt' | 'stall' | 'anger';
+
+/**
+ * Observable state deltas produced by dialogue effects.
+ * Components can read these to apply gameplay consequences.
+ */
+export interface EffectDeltas {
+  /** Bonus seconds added to the next challenge timer (hint reward). */
+  timeBonusSec: number;
+  /** Score penalty applied to the current challenge (negative = penalty). */
+  scorePenalty: number;
+  /** Number of strikes to add (anger consequence). */
+  strikeAdd: number;
+  /** Seconds deducted from the next challenge timer (stall consequence). */
+  timeDeductSec: number;
+}
+
+/** Per-effect constants for delta computation. */
+const EFFECT_DELTAS: Record<DialogueEffect, Partial<EffectDeltas>> = {
+  hint: {timeBonusSec: 5},
+  taunt: {scorePenalty: -10},
+  stall: {timeDeductSec: 3},
+  anger: {strikeAdd: 1},
+};
 
 export interface DialogueChoice {
   text: string;
@@ -88,5 +115,30 @@ export class DialogueEngine {
   reset(): void {
     this.currentIndex = 0;
     this.effects = [];
+  }
+
+  /**
+   * Computes observable state deltas from all recorded effects.
+   * Multiple effects of the same type accumulate (e.g., two hints = 10s bonus).
+   * This is idempotent — calling it multiple times returns the same result
+   * as long as no new effects are recorded between calls.
+   */
+  applyEffects(): EffectDeltas {
+    const deltas: EffectDeltas = {
+      timeBonusSec: 0,
+      scorePenalty: 0,
+      strikeAdd: 0,
+      timeDeductSec: 0,
+    };
+
+    for (const effect of this.effects) {
+      const d = EFFECT_DELTAS[effect];
+      if (d.timeBonusSec) deltas.timeBonusSec += d.timeBonusSec;
+      if (d.scorePenalty) deltas.scorePenalty += d.scorePenalty;
+      if (d.strikeAdd) deltas.strikeAdd += d.strikeAdd;
+      if (d.timeDeductSec) deltas.timeDeductSec += d.timeDeductSec;
+    }
+
+    return deltas;
   }
 }

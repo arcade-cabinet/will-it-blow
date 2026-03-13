@@ -1,0 +1,29 @@
+{
+  "challengeOrder": [
+    "ingredients",
+    "chopping",
+    "grinding",
+    "stuffing",
+    "cooking",
+    "blowout",
+    "tasting"
+  ],
+  "stationMap": {
+    "ingredients": "fridge",
+    "chopping": "cutting-board",
+    "grinding": "grinder",
+    "stuffing": "stuffer",
+    "cooking": "stove",
+    "blowout": "dining-table",
+    "tasting": "crt-tv"
+  },
+  "patterns": {
+    "ingredients": "bridge",
+    "chopping": "ecs-orchestrator",
+    "grinding": "ecs-orchestrator",
+    "stuffing": "ecs-orchestrator",
+    "cooking": "ecs-orchestrator",
+    "blowout": "ecs-orchestrator",
+    "tasting": "bridge"
+  }
+}
