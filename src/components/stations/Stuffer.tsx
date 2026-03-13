@@ -7,6 +7,11 @@ import * as THREE from 'three';
 import {useGameStore} from '../../store/gameStore';
 
 class SquigglyCurve extends THREE.Curve<THREE.Vector3> {
+  // biome-ignore lint/complexity/noUselessConstructor: THREE.Curve has protected constructor
+  constructor() {
+    super();
+  }
+
   getPoint(t: number, target = new THREE.Vector3()) {
     return target.set(
       Math.sin(t * 20) * 0.15,
