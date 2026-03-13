@@ -3,7 +3,7 @@
  * and the new applyEffects() method that produces observable state changes.
  */
 
-import {type DialogueEffect, DialogueEngine, type DialogueLine} from '../DialogueEngine';
+import {DialogueEngine, type DialogueLine} from '../DialogueEngine';
 
 const SIMPLE_LINES: DialogueLine[] = [
   {speaker: 'sausage', text: 'Welcome to the kitchen.', reaction: 'idle'},

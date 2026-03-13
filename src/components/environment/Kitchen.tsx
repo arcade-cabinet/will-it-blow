@@ -1,27 +1,47 @@
-import {Box} from '@react-three/drei';
-import {RigidBody} from '@react-three/rapier';
+/**
+ * @module Kitchen
+ * 3D kitchen environment using useGLTF for model loading.
+ * Provides ambient, hemisphere, and point lighting for the horror kitchen scene.
+ */
 
-export function Kitchen() {
-  const counterHeight = 4;
+import {useGLTF} from '@react-three/drei';
+import {Suspense} from 'react';
 
+interface KitchenProps {
+  /** Path to the kitchen GLB model */
+  modelPath?: string;
+  position?: [number, number, number];
+}
+
+function KitchenModel({modelPath}: {modelPath: string}) {
+  const {scene} = useGLTF(modelPath);
+  return <primitive object={scene} />;
+}
+
+export function Kitchen({modelPath, position = [0, 0, 0]}: KitchenProps) {
   return (
-    <group>
-      {/* Cabinets */}
-      <Box args={[40, counterHeight, 12]} position={[0, counterHeight / 2, 0]} receiveShadow>
-        <meshStandardMaterial color="#3d2314" roughness={0.9} />
-      </Box>
+    <group position={position}>
+      {/* Ambient light - low horror ambiance */}
+      <ambientLight intensity={0.15} color="#1a1a2e" />
 
-      {/* Countertop */}
-      <RigidBody type="fixed" colliders="cuboid">
-        <Box args={[41, 0.4, 13]} position={[0, counterHeight + 0.2, 0]} receiveShadow>
-          <meshStandardMaterial color="#dddddd" roughness={0.2} metalness={0.1} />
-        </Box>
-      </RigidBody>
+      {/* Hemisphere light - cool sky, warm ground */}
+      <hemisphereLight intensity={0.3} color="#4444aa" groundColor="#442200" />
 
-      {/* Backsplash placeholder */}
-      <Box args={[40, 10, 1]} position={[0, counterHeight + 5, -6]} receiveShadow>
-        <meshStandardMaterial color="#f0f0f0" roughness={0.3} />
-      </Box>
+      {/* Overhead point light - fluorescent feel */}
+      <pointLight position={[0, 2.8, 0]} intensity={1.2} color="#ffe8cc" distance={8} decay={2} />
+
+      {/* Secondary point light - corner accent */}
+      <pointLight position={[-2, 2, -1]} intensity={0.4} color="#ff4444" distance={5} decay={2} />
+
+      {/* Emergency light - red horror accent */}
+      <pointLight position={[2, 1.5, 1]} intensity={0.3} color="#ff0000" distance={4} decay={2} />
+
+      {/* Kitchen model (if provided) */}
+      {modelPath && (
+        <Suspense fallback={null}>
+          <KitchenModel modelPath={modelPath} />
+        </Suspense>
+      )}
     </group>
   );
 }
