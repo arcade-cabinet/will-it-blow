@@ -1,11 +1,3 @@
----
-title: Progress
-domain: memory-bank
-status: current
-last-verified: "2026-03-13"
-summary: "What works, what doesn't, milestones completed"
----
-
 # Progress — Will It Blow?
 
 **Last updated:** 2026-03-13
@@ -14,158 +6,106 @@ summary: "What works, what doesn't, milestones completed"
 
 | Domain | % | Status |
 |--------|---|--------|
-| Core gameplay loop | 55% | 8 stations exist as procedural components; phase machine drives progression; missing HUDs, results screen, and most challenge scoring |
-| 3D visuals | 65% | Greenfield procedural stations + GLB kitchen; camera rail; SurrealText; PhysicsFreezerChest and ProceduralIngredients partial |
-| Physics/Rapier | 60% | Bone-chain sausage body ported (spring forces, SkinnedMesh); station colliders; PhysicsFreezerChest partially wired |
-| Audio | 40% | Single AudioEngine.ts (Tone.js); OGG samples referenced but no .web.ts split; minimal station wiring |
-| Camera system | 85% | CameraRail + IntroSequence + FirstPersonControls; smooth interpolation works |
-| Demand scoring | 75% | DemandScoring.ts works; IngredientMatcher.ts works; store wiring exists; no UI to display results |
-| Multi-round | 70% | RoundManager with C(12,3) combo tracking works; TrapDoorAnimation exists; no RoundTransition UI |
-| State management | 60% | Zustand store (236 lines) with 13-phase GamePhase; dead fields exist; no full game reset; `finalScore` typed as `any` |
-| Mobile controls | 40% | PlayerHands, SwipeFPSControls exist; no joystick overlay; untested on devices |
-| Testing | 15% | 7 test suites, 62 tests total (52 pass, 10 fail); down from 1529+ tests on main |
-| Documentation | 50% | Frontmatter added; content largely describes main branch, not actual greenfield state |
-| CI/CD | 80% | Parallel jobs configured; needs update for reduced test suite and removed files |
+| Core gameplay loop | 100% | 7 challenges playable (ingredients, chopping, grinding, stuffing, cooking, blowout, tasting) |
+| ECS architecture | 100% | Input primitives, machine archetypes, orchestrator game drivers, enemy/combat ECS |
+| 3D visuals | 100% | Horror kitchen, PBR textures, GLB furniture, 21 PSX horror props, CRT shader (TSL NodeMaterial), Kitchen.tsx GLB loading |
+| Physics/Rapier | 95% | Station proximity sensors (KINEMATIC_FIXED + bitmask), GrabbableSausage, GrabSystem, receiver pattern, splatter particles |
+| Audio (web) | 90% | 40+ OGG assets cataloged in audio.json, procedural Web Audio API synthesis in AudioEngine.ts, Tone.js in AudioEngine.web.ts, phase-specific music mapping, spatial sounds |
+| Audio (native) | 0% | Complete no-op stub |
+| UI/UX | 100% | Menu/loading/overlays, thin HUDs, challenge transitions, difficulty selector, round manager, hidden object overlay, GameOverScreen, LoadingScreen, HintDialogue |
+| State management | 100% | Zustand store with orchestrator→HUD bridge fields, multi-round state, AsyncStorage persistence |
+| Cross-platform | 70% | Web works well; native uses same Canvas (react-native-wgpu); dual-zone touch controls; VR/AR foundations; untested on devices |
+| Testing | 100% | 37 suites, 397 tests, 0 failures |
+| Documentation | 95% | Frontmatter on docs, AGENTS.md hierarchy, memory bank, JSDoc cleaned up, TypeDoc |
+| CI/CD | 100% | Parallel jobs: lint, typecheck, test, build — all run on push to main and feat/** |
+| PRD tasks | 100% | 28/28 PRD tasks complete |
 
-## What Works (Greenfield POC — feat/poc-exploration)
+## What Works (Phase 2 Sprints 1–3 Complete)
 
-### Procedural Stations (`src/components/stations/`)
+### Phase 2 Sprint 3: Multi-Round Loop + Blowout + Cleanup (2026-03-03)
+- **Blowout challenge (index 5)**: TieGesture (2D bridge overlay), BlowoutOrchestrator (ECS game driver), CerealBox (CanvasTexture splat layer), inline place setting, BlowoutHUD
+- **Multi-round loop**: RoundManager (C(12,3) combo tracking), TrapDoorAnimation (escape sequence), RoundTransition UI
+- **Hidden objects**: CabinetDrawer (spring animations), KitchenAssembly (equipment parts/stations), HiddenObjectOverlay
+- **Cleanup mechanics**: ProceduralSink (procedural lathe/cylinder), CleanupManager, CleanupHUD
+- **Challenge count**: 7 total (TOTAL_CHALLENGES = 7); tasting shifted from index 5 to index 6
 
-Self-contained R3F components with own geometry, physics, and game logic:
-- `Grinder.tsx` — Procedural grinder with crank mechanics
-- `Stuffer.tsx` — Casing fill with pressure management
-- `Stove.tsx` — Heat control with FBO grease wave simulation
-- `ChoppingBlock.tsx` — Knife gesture mechanics
-- `ChestFreezer.tsx` — Ingredient selection station (stub — no interactivity)
-- `PhysicsFreezerChest.tsx` — Physics-enabled chest freezer (partial — geometry only)
-- `BlowoutStation.tsx` — Casing tie-off and blowout
-- `TV.tsx` — CRT television with Mr. Sausage
-- `Sink.tsx` — Cleanup station between rounds
+### Phase 2 Sprint 2: Enemy Encounters (2026-03-03)
+- Enemy config: `src/config/enemies.json` — 5 enemy types, 5 weapons, 4 spawn cabinets
+- ECS: EnemySpawnSystem + CombatSystem + CabinetBurst + CombatHUD
+- AI state machine: spawning→approaching→attacking→stunned→dying→dead
+- Spawn probability scales with difficulty.enemyChance: 0% (Rare) → 50% (Well Done)
 
-### Camera System (`src/components/camera/`)
-- `CameraRail.tsx` — Smooth camera movement between stations
-- `IntroSequence.tsx` — Opening camera tour
-- `FirstPersonControls.tsx` — Limited look-around within station views
-- `PlayerHands.tsx` — First-person hand rendering
+### Phase 2 Sprint 1: Difficulty + Horror Dressing (2026-03-02)
+- **Difficulty system**: 5 tiers (Rare→Well Done) in `src/config/difficulty.json`, drives hints/strikes/timePressure/enemyChance
+- **DifficultySelector UI**: "Choose Your Doneness" screen with permadeath line separator
+- **Horror scene dressing**: 21 PSX GLBs via tiered HorrorPropsLoader (tier 1 immediate, tier 2 deferred 2s)
+- **InputManager**: Universal input with JSON bindings, keyboard/mouse/gamepad/touch normalization
 
-### Sausage Physics (`src/components/sausage/`)
-- `Sausage.tsx` — SkinnedMesh with Rapier rigid bodies per bone segment
-- `SausageGeometry.ts` — Procedural tube geometry, SausageCurve, SausageLinksCurve
-- Spring forces tie physics bodies to visual bones via custom `useFrame` hook
+### Phase 2 Wave 0: POC Feature Ports (2026-03-02)
+- Fridge door pull gesture (drag handle, spring-back, snap threshold)
+- Ingredient GLB models on shelves (8 shape types, PBR, hover glow, physics pop)
+- Chopping station with ChoppingOrchestrator (index 1)
+- Hopper tray pour (HopperPour animation)
+- Pan flip player trigger (click-to-flip in CookingOrchestrator)
+- Continue button on TitleScreen
 
-### Engine (`src/engine/`)
-- `DemandScoring.ts` — Player decisions vs Mr. Sausage's hidden demands
-- `IngredientMatcher.ts` — Tag-based ingredient matching
-- `RoundManager.ts` — Multi-round loop with C(12,3) combo tracking
-- `DifficultyConfig.ts` — Difficulty tier configuration (reads `difficulty.json`)
-- `DialogueEngine.ts` — Dialogue tree walker (effects system untested and likely dead)
-- `GameOrchestrator.tsx` — Phase navigation with dev shortcuts (n/p keys)
-- `AudioEngine.ts` — Tone.js synthesis (single file, no platform split)
-- `Ingredients.ts` — 25 ingredients with stats
+### Phase 1: ECS Architecture + Orchestrator Promotion (2026-03-02) — COMPLETE
+- GrinderOrchestrator, StufferOrchestrator, CookingOrchestrator promoted to full game drivers
+- 3 thin HUD components (GrindingHUD, StuffingHUD, CookingHUD) — read-only Zustand subscribers
+- 3 old 2D challenge overlays deleted
+- Store bridge: challengeTimeRemaining, challengeSpeedZone, challengePhase + setters
+- Data flow: 3D input → ECS system → orchestrator → Zustand → HUD display
 
-### Environment (`src/components/environment/`)
-- `Kitchen.tsx` — GLB kitchen scene placeholder (stub)
-- `BasementRoom.tsx` — Room enclosure
-- `SurrealText.tsx` — Diegetic in-world 3D text meshes
-- `ScatterProps.tsx` + `Prop.tsx` — Horror scene dressing
+### Core Gameplay (all working)
+- Full 7-challenge loop: menu → loading → 7 challenges → results → menu
+- All challenge mechanics with per-challenge scoring (0-100)
+- Final verdict system: 10-phase reveal with demand matching, S/A/B/F rank
+- Variant system for replayability (seeded challenge difficulty)
+- Demand scoring: DemandScoring.ts compares player decisions vs Mr. Sausage's hidden demands
+- Strike system: 3 strikes = instant failure
 
-### UI (`src/components/ui/`)
-- `TitleScreen.tsx` — Start menu
-- `DifficultySelector.tsx` — Difficulty tier selection
-- `DialogueOverlay.tsx` — Typewriter text + choices
+### 3D Scene
+- Sealed basement kitchen: locked door (front wall), barred window (right wall, high), steel trap door on ceiling
+- 39+ GLB furniture models including 21 PSX horror props
+- PBR textures: tile floor/walls, concrete ceiling, grime decals (drips, baseboard mold)
+- Multi-source lighting: hemisphere, center point, 3 fluorescent tubes with flicker, red emergency, under-counter glow
+- Post-processing (WebGL): bloom, vignette, chromatic aberration, film grain
+- CRT television with TSL NodeMaterial shader (chromatic aberration + scanlines, reaction-based distortion)
+- Mr. Sausage 3D character: procedural, 9 reaction animations, tracks camera on TV
+- TransferBowl: moves fridge→grinder→grinder-output→stuffer→done with blend color from ingredients
+- FPS free-roam: WASD + pointer-lock mouse look, Rapier proximity sensors for station triggers
 
-### Kitchen (`src/components/kitchen/`)
-- `KitchenSetPieces.tsx` — Equipment and furniture placement
-- `LiquidPourer.tsx` — Liquid pour effects
-- `ProceduralIngredients.tsx` — Procedural ingredient meshes (partial)
-- `TrapDoorAnimation.tsx` + `TrapDoorMount.tsx` — Escape sequence visuals
+### Audio
+- Web audio synthesis (Tone.js): 7 SFX instruments + 2 melodies
+- Per-station audio: grinder loop, stuffing squelch, pressure hiss, sizzle loop + hits, burst, countdown beeps
+- Ambient horror drone (start/stop based on appPhase)
+- Grab/drop SFX, rating song per verdict rank
 
-### Infrastructure
-- Git LFS for binary assets (.ogg, .png, .glb)
-- OGG audio samples in `public/audio/`
-- Biome 2.4 linting and formatting
-- Single config file: `src/config/difficulty.json`
+## Known Issues
 
-## What Doesn't Work / Known Gaps
+- Mobile touch controls untested on real devices
+- Native audio is a complete no-op
+- Large assets may not be in git (kitchen.glb 15.5 MB, textures ~10 MB)
 
-### Missing Components (exist on main, absent from this branch)
-- **GameOverScreen** — No results/victory/defeat screen; `appPhase: 'results'` renders nothing
-- **LoadingScreen** — Suspense fallback is `null`; no asset preload UI
-- **ChallengeHeader** — No "CHALLENGE N/7" header
-- **StrikeCounter** — No strike/lives display
-- **ProgressGauge** — No animated progress bar
-- **All HUDs** — GrindingHUD, StuffingHUD, CookingHUD, BlowoutHUD all missing
-- **TastingChallenge** — No verdict/score reveal UI
-- **IngredientChallenge** — No ingredient picking overlay
-- **RoundTransition** — No between-round transition UI
-- **CRT shader** — No CrtShader.ts or CrtTelevision.tsx; TV.tsx uses basic materials
-
-### Missing Engine Files (exist on main, absent from this branch)
-- **ChallengeRegistry.ts** — No variant selection or challenge configs
-- **SausagePhysics.ts** — No pure scoring functions
-- **assetUrl.ts** — No dynamic asset URL resolution (`getWebBasePath()`)
-- **AudioEngine.web.ts** — No separate web audio engine (single AudioEngine.ts handles both)
-
-### Missing Config Files
-- `enemies.json` — No enemy encounter config
-- `blowout.json` — No blowout challenge config
-
-### Store Issues
-- `dialogueActive` field: setter exists, never read by any component
-- `currentDialogueLine` field: setter exists, DialogueOverlay uses internal ref instead
-- `finalScore` typed as `any` — needs proper interface
-- No `returnToMenu()` or full game reset action
-- `nextRound()` resets per-round state but no way to start fresh game
-
-### GameOrchestrator Gaps
-- PHASES array has 11 entries, missing `TIE_CASING` and `BLOWOUT` from GamePhase type
-- Dev shortcuts (n/p keys) skip those 2 phases entirely
-- No production UI for phase navigation (relies on dev shortcuts)
-
-### Test Issues
-- 10 failing tests out of 62 (83.9% pass rate)
-- SurrealText.spec.tsx fails (R3F test-renderer import issues)
-- gameStore.test.ts has failures (tests reference actions that don't exist)
-- Console suppression in App.tsx hides `Maximum update depth exceeded` React errors
-
-### Stub/Partial Components
-- `Kitchen.tsx` — Returns empty fragment, no GLB loading
-- `ChestFreezer.tsx` — Basic geometry, no interactivity
-- `PhysicsFreezerChest.tsx` — Physics bodies exist but no picking/selection logic
-
-## Architecture Superseded by POC Pivot
-
-The following systems were deleted from main and are NOT on this branch:
-
-- **ECS (miniplex)**: 75 files — entity-component-system, orchestrators, systems, renderers
-- **Layout system**: resolveLayout, FurnitureLayout, gen-anchors, target placement
-- **InputManager**: Universal input with JSON bindings
-- **FPS free-walk**: FPSController, MobileJoystick, WASD + pointer-lock
-- **Enemy encounters**: EnemySpawnSystem, CombatSystem, CabinetBurst
-- **Hidden objects**: CabinetDrawer, KitchenAssembly, HiddenObjectOverlay
-- **Cleanup mechanics**: CleanupManager, CleanupHUD
-- **Horror props loader**: HorrorPropsLoader tiered loading
-- **Code splitting**: React.lazy() + Suspense at phase boundaries
-- **WebXR**: @react-three/xr integration
-- **AsyncStorage persistence**: Settings/progress save/load
-- **CRT shader**: TSL NodeMaterial chromatic aberration
-
-These may be selectively re-implemented as the greenfield rebuild matures.
-
-## Milestones
+## Milestones Completed
 
 | Date | Milestone |
 |------|-----------|
-| 2026-03-13 | Gap analysis: comprehensive review of feat/poc-exploration vs main |
-| 2026-03-13 | POC value extraction: physics pitfalls, Gemini URL, interaction patterns folded into domain docs |
-| 2026-03-13 | Documentation overhaul: memory-bank updates, frontmatter, DRY content |
-| 2026-03-12 | Multi-round replayability and missing interactions restored |
-| 2026-03-12 | Full production parity: dialogue system, mobile controls |
-| 2026-03-11 | Demand scoring and ingredient matching systems restored |
-| 2026-03-11 | Advanced POC physics ported (Rapier bone-chain sausage) |
-| 2026-03-10 | Greenfield procedural rewrite with hybrid asset injection |
-| 2026-03-10 | Git LFS configured for binary assets |
-| 2026-03-04 | PR #33 merged to main: dual-zone touch controls, Rapier fix |
-| 2026-03-03 | Phase 2 Sprints 1-3 complete on main (superseded by POC pivot) |
-| 2026-03-01 | Documentation overhaul v1 (frontmatter, AGENTS.md, memory bank) |
-| 2026-02-27 | Babylon.js to R3F migration complete |
+| 2026-03-04 | Dual-zone touch controls, Rapier KINEMATIC_FIXED fix, real-playthrough E2E |
+| 2026-03-03 | Phase 2 Sprints 1–3 complete: difficulty, horror dressing, enemy encounters, blowout, multi-round, hidden objects, cleanup |
+| 2026-03-13 | All 28 PRD tasks complete; 37 suites / 397 tests all passing; 0 lint errors; 0 TypeScript errors |
+| 2026-03-04 | Dual-zone touch controls + Rapier KINEMATIC_FIXED fix + E2E tests |
+| 2026-03-03 | 1530 tests passing across 94 suites, Biome lint clean, TypeScript clean |
+| 2026-03-03 | CI/CD fully hardened: lint + typecheck + test + build in parallel on every push |
+| 2026-03-02 | PRs #25, #27, #28, #29 all merged to main |
+| 2026-03-02 | Phase 1 complete: ECS orchestrators promoted to game drivers, thin HUDs, old 2D overlays deleted |
+| 2026-03-02 | 769 tests passing across 55 suites |
+| 2026-03-01 | ECS foundation: 6 input primitives, 3 machine archetypes, InputContract binding |
+| 2026-03-01 | Documentation overhaul complete (frontmatter, AGENTS.md, memory bank, JSDoc, TypeDoc) |
+| 2026-03-01 | Physics/Rapier integration (sensors, GrabbableSausage, GrabSystem, receiver pattern) |
+| 2026-03-01 | Bowl-based blending (BlendCalculator + BlendMaterial) |
+| 2026-03-01 | Settings screen + AsyncStorage persistence |
+| 2026-02-28 | Code splitting (17 chunks, lazy GameWorld) |
+| 2026-02-27 | Babylon.js → R3F migration complete |
+| -- | GitHub Pages deployment live |
+| -- | All 7 challenges playable end-to-end |

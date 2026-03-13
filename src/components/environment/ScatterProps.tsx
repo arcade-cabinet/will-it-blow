@@ -1,9 +1,10 @@
 import {useGLTF} from '@react-three/drei';
 import {RigidBody} from '@react-three/rapier';
 import {useMemo} from 'react';
+import {getAssetUrl} from '../../engine/assetUrl';
 
 export function ScatterProps() {
-  const {nodes, materials} = useGLTF('/models/misc.glb') as any;
+  const {nodes, materials} = useGLTF(getAssetUrl('models', 'misc.glb')) as any;
 
   // We want to scatter specific creepy/grunge objects around the scene.
   // Using rigid bodies so they physically fall to the floor/shelves.
@@ -69,4 +70,4 @@ export function ScatterProps() {
   );
 }
 
-useGLTF.preload('/models/misc.glb');
+useGLTF.preload(getAssetUrl('models', 'misc.glb'));

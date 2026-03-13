@@ -3,43 +3,44 @@ import {RigidBody} from '@react-three/rapier';
 import {useDrag} from '@use-gesture/react';
 import {useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
+import {getAssetUrl} from '../../engine/assetUrl';
 import {useGameStore} from '../../store/gameStore';
 
 // An array of available GLB models to act as ingredients in the freezer.
 // We mix normal food with strange objects for the "Will It Blow?" aspect.
-const INGREDIENT_MODELS = [
+const FREEZER_INGREDIENT_MODELS = [
   // Normal Food (Playwright cache)
-  {path: '/models/ingredients/banana.glb', scale: 1.5, type: 'food'},
-  {path: '/models/ingredients/burger.glb', scale: 1.2, type: 'food'},
-  {path: '/models/ingredients/cake.glb', scale: 1.0, type: 'food'},
-  {path: '/models/ingredients/fish.glb', scale: 1.8, type: 'food'},
-  {path: '/models/ingredients/pepper_red.glb', scale: 1.5, type: 'food'},
-  {path: '/models/ingredients/pizza_slice.glb', scale: 1.5, type: 'food'},
-  {path: '/models/ingredients/steak.glb', scale: 1.2, type: 'food'},
+  {path: getAssetUrl('models/ingredients', 'banana.glb'), scale: 1.5, type: 'food'},
+  {path: getAssetUrl('models/ingredients', 'burger.glb'), scale: 1.2, type: 'food'},
+  {path: getAssetUrl('models/ingredients', 'cake.glb'), scale: 1.0, type: 'food'},
+  {path: getAssetUrl('models/ingredients', 'fish.glb'), scale: 1.8, type: 'food'},
+  {path: getAssetUrl('models/ingredients', 'pepper_red.glb'), scale: 1.5, type: 'food'},
+  {path: getAssetUrl('models/ingredients', 'pizza_slice.glb'), scale: 1.5, type: 'food'},
+  {path: getAssetUrl('models/ingredients', 'steak.glb'), scale: 1.2, type: 'food'},
 
   // Normal Food (3DLowPoly extracts)
-  {path: '/models/ingredients/bacon.glb', scale: 2.0, type: 'food'},
-  {path: '/models/ingredients/bottle-ketchup.glb', scale: 1.5, type: 'food'},
-  {path: '/models/ingredients/bread.glb', scale: 1.5, type: 'food'},
-  {path: '/models/ingredients/apple.glb', scale: 1.5, type: 'food'},
+  {path: getAssetUrl('models/ingredients', 'bacon.glb'), scale: 2.0, type: 'food'},
+  {path: getAssetUrl('models/ingredients', 'bottle-ketchup.glb'), scale: 1.5, type: 'food'},
+  {path: getAssetUrl('models/ingredients', 'bread.glb'), scale: 1.5, type: 'food'},
+  {path: getAssetUrl('models/ingredients', 'apple.glb'), scale: 1.5, type: 'food'},
 
   // The "Weird" Stuff
-  {path: '/models/ingredients/worm.glb', scale: 2.0, type: 'weird'},
-  {path: '/models/ingredients/arcade-machine.glb', scale: 0.2, type: 'weird'}, // Miniaturized!
-  {path: '/models/ingredients/cash-register.glb', scale: 0.4, type: 'weird'},
-  {path: '/models/ingredients/vending-machine.glb', scale: 0.2, type: 'weird'},
-  {path: '/models/ingredients/bottle-large.glb', scale: 1.0, type: 'weird'},
+  {path: getAssetUrl('models/ingredients', 'worm.glb'), scale: 2.0, type: 'weird'},
+  {path: getAssetUrl('models/ingredients', 'arcade-machine.glb'), scale: 0.2, type: 'weird'},
+  {path: getAssetUrl('models/ingredients', 'cash-register.glb'), scale: 0.4, type: 'weird'},
+  {path: getAssetUrl('models/ingredients', 'vending-machine.glb'), scale: 0.2, type: 'weird'},
+  {path: getAssetUrl('models/ingredients', 'bottle-large.glb'), scale: 1.0, type: 'weird'},
 
   // Trash & Horror (misc.glb nodes)
-  {path: '/models/misc.glb', node: 'Radio', scale: 1.0, type: 'trash'},
-  {path: '/models/misc.glb', node: 'Meds', scale: 1.5, type: 'trash'},
-  {path: '/models/misc.glb', node: 'Tape', scale: 1.5, type: 'trash'},
-  {path: '/models/misc.glb', node: 'PS1', scale: 0.5, type: 'trash'},
+  {path: getAssetUrl('models', 'misc.glb'), node: 'Radio', scale: 1.0, type: 'trash'},
+  {path: getAssetUrl('models', 'misc.glb'), node: 'Meds', scale: 1.5, type: 'trash'},
+  {path: getAssetUrl('models', 'misc.glb'), node: 'Tape', scale: 1.5, type: 'trash'},
+  {path: getAssetUrl('models', 'misc.glb'), node: 'PS1', scale: 0.5, type: 'trash'},
 ];
 
 export function PhysicsFreezerChest() {
-  const {scene: fridgeScene} = useGLTF('/models/fridge.glb') as any;
-  const misc = useGLTF('/models/misc.glb') as any;
+  const {scene: fridgeScene} = useGLTF(getAssetUrl('models', 'fridge.glb')) as any;
+  const misc = useGLTF(getAssetUrl('models', 'misc.glb')) as any;
 
   // Create an ice/frost overlay material
   const frostMat = useMemo(
@@ -61,7 +62,7 @@ export function PhysicsFreezerChest() {
     const list = [];
     // Spawn 25 random items for a totally packed toy chest
     for (let i = 0; i < 25; i++) {
-      const def = INGREDIENT_MODELS[Math.floor(Math.random() * INGREDIENT_MODELS.length)];
+      const def = FREEZER_INGREDIENT_MODELS[Math.floor(Math.random() * FREEZER_INGREDIENT_MODELS.length)];
       list.push({
         id: i,
         ...def,
@@ -167,6 +168,6 @@ function FreezerIngredient({def, miscNodes, frostMat: _frostMat}: any) {
 }
 
 // Preload all possible ingredients
-for (const m of INGREDIENT_MODELS) {
+for (const m of FREEZER_INGREDIENT_MODELS) {
   useGLTF.preload(m.path);
 }

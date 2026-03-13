@@ -1,73 +1,64 @@
----
-title: Active Context
-domain: memory-bank
-status: current
-last-verified: "2026-03-13"
-summary: "Current session — feat/poc-exploration branch, gap analysis complete, doc updates in progress"
----
-
 # Active Context — Will It Blow?
 
 **Last updated:** 2026-03-13
 
 ## Current Branch
 
-`feat/poc-exploration` — greenfield rebuild replacing Phase 2 ECS architecture with procedural R3F components
+`main` — 30+ commits ahead of origin. All 28 PRD tasks complete.
 
 ## Current Focus
 
-Gap analysis complete. Updating all docs to reflect the actual greenfield state vs the inherited main-branch documentation.
+All PRD tasks complete. Project is in maintenance/polish phase. 37 test suites, 397 tests, 0 failures. 0 lint errors, 0 TypeScript errors.
 
-## Gap Analysis Summary (2026-03-13)
+## Merged PRs
 
-### Macro: Architecture Delta
+| PR | Branch | Status |
+|----|--------|--------|
+| #25 | feat/sausage-factory-kitchen | Merged — Phase 1 complete |
+| #27 | Phase 2 Sprint 1 | Merged — difficulty, horror, input |
+| #28 | Phase 2 Sprint 2 | Merged — enemy encounters |
+| #29 | Phase 2 Sprint 3 | Merged — blowout, multi-round, hidden objects, cleanup |
+| #33 | feat/dual-zone-touch-controls | Merged — dual-zone touch controls, Rapier fix, E2E tests |
 
-| Metric | main | feat/poc-exploration | Delta |
-|--------|------|---------------------|-------|
-| Components | ~118 | 34 | -71% |
-| ECS files | 75 | 0 | -100% |
-| Config files | 36 | 1 | -97% |
-| Test suites | ~96 | 7 | -93% |
-| Tests | ~1529 | 62 (52 pass) | -96% |
-| Store lines | 1038 | 236 | -77% |
-| Binary assets | 0 (untracked) | 62 (Git LFS) | +62 |
+## Open PRs
 
-### Meso: Component Status
+None.
 
-**18 COMPLETE** — Grinder, Stuffer, Stove, ChoppingBlock, BlowoutStation, TV, Sink, Sausage, SausageGeometry, CameraRail, IntroSequence, FirstPersonControls, MrSausage3D, BasementRoom, SurrealText, ScatterProps/Prop, TitleScreen, DialogueOverlay
+## Recent Work
 
-**2 PARTIAL** — PhysicsFreezerChest (geometry only), ProceduralIngredients (partial rendering)
+### All 28 PRD Tasks Complete (2026-03-13)
 
-**2 STUBS** — Kitchen.tsx (empty fragment), ChestFreezer.tsx (no interactivity)
+- All 7 challenge mechanics fully implemented with scoring
+- Data-driven config: audio.json with 40+ OGG assets, phase-specific music mapping, spatial sounds
+- 12 JSON config files in src/config/ (audio, blowout, camera, chopping, demands, dialogue, grinder, ingredients, rounds, scoring, stove, stuffer)
+- CRT shader (TSL NodeMaterial) exists and is integrated
+- GameOverScreen, LoadingScreen, HintDialogue, all HUDs implemented
+- Kitchen.tsx has GLB loading working
+- AudioEngine.ts (procedural Web Audio API synthesis) and AudioEngine.web.ts (Tone.js) both implemented
 
-**Missing from main** — GameOverScreen, LoadingScreen, ChallengeHeader, StrikeCounter, ProgressGauge, all 4 HUDs, CrtShader, IngredientChallenge, TastingChallenge, RoundTransition, CombatHUD, HiddenObjectOverlay, SettingsScreen, HintButton
+## Test Health
 
-### Micro: Engine/Store Gaps
+- **397 tests** across **37 suites**, **0 failures**
+- Biome lint clean (0 errors), TypeScript clean (0 errors)
+- CI: parallel lint + typecheck + test + build
 
-- Store dead fields: `dialogueActive`, `currentDialogueLine` (never read)
-- `finalScore` typed as `any`
-- GameOrchestrator PHASES missing TIE_CASING and BLOWOUT
-- App.tsx has no `results` phase rendering
-- Console suppression hides `Maximum update depth exceeded` errors
-- DialogueEngine effects system untested and likely dead code
-- No ChallengeRegistry, SausagePhysics, or assetUrl engine modules
+## Known Issues
+
+- TypeScript stack overflow requires `node --stack-size=8192` (handled by `pnpm typecheck`)
+- Native audio is a complete no-op
 
 ## Decisions Made
 
-- **POC pivot**: Deleted old ECS/layout complexity in favor of playable procedural simplicity
-- **Camera rail**: Replaced FPS free-walk with automatic camera rail between stations
-- **Diegetic UI**: SurrealText for in-world instructions instead of floating HUD overlays
-- **OGG audio**: Sample-based audio supplements Tone.js synthesis
-- **Git LFS**: Binary assets tracked to keep repo size manageable
-- **Procedural stations**: Each station is a self-contained R3F component
+- Orchestrators own ALL game logic — HUDs are pure read-only display
+- ECS input primitives drive game state (not 2D gestures)
+- `challengePhase` store field bridges orchestrator→HUD dialogue transitions
+- Old 2D challenge overlays fully deleted (not deprecated)
+- Data-driven config: ~200 magic numbers extracted to JSON files
+- CI/CD runs parallel jobs for fast feedback
 
 ## What's Next
 
-1. Finish updating all docs with gap analysis findings (in progress)
-2. Fix failing tests (10 of 62)
-3. Add missing UI components: GameOverScreen, LoadingScreen, HUDs
-4. Wire up GameOrchestrator with missing phases (TIE_CASING, BLOWOUT)
-5. Type `finalScore` properly; remove dead store fields
-6. Merge feat/poc-exploration to main
-7. Continue building out station interactions
-8. Mobile testing on real devices
+1. Mobile testing on real devices
+2. Native audio implementation
+3. Polish, balancing, asset optimization
+4. Push to origin / production deployment

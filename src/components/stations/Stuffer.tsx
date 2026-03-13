@@ -2,8 +2,9 @@ import {Box, Cylinder, useTexture} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
 import {RigidBody} from '@react-three/rapier';
 import {useDrag} from '@use-gesture/react';
-import {useMemo, useRef, useState} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
+import {audioEngine} from '../../engine/AudioEngine';
 import {useGameStore} from '../../store/gameStore';
 
 class SquigglyCurve extends THREE.Curve<THREE.Vector3> {
@@ -72,6 +73,21 @@ export function Stuffer() {
       }),
     [],
   );
+
+  // Play squelch sounds during stuffing as level changes
+  const prevStuffRef = useRef(stuffLevel);
+  useEffect(() => {
+    if (gamePhase === 'STUFFING' && stuffLevel > prevStuffRef.current) {
+      const delta = stuffLevel - prevStuffRef.current;
+      if (delta > 0.02) {
+        audioEngine.playSound('squelch');
+      }
+      if (stuffLevel > 0.8) {
+        audioEngine.playSound('pressure');
+      }
+    }
+    prevStuffRef.current = stuffLevel;
+  }, [stuffLevel, gamePhase]);
 
   const bunchedCasingGeo = useMemo(() => {
     const geo = new THREE.CylinderGeometry(0.06, 0.06, 0.25, 32, 32, true);

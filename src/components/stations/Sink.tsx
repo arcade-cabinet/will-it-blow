@@ -1,8 +1,9 @@
 import {Box, Cylinder, useTexture} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
 import {RigidBody} from '@react-three/rapier';
-import {useMemo, useRef} from 'react';
+import {useEffect, useMemo, useRef} from 'react';
 import * as THREE from 'three';
+import {audioEngine} from '../../engine/AudioEngine';
 
 export function Sink() {
   const [metalColor, metalNormal, metalRoughness] = useTexture([
@@ -47,6 +48,19 @@ export function Sink() {
       }),
     [concreteColor, concreteNormal, concreteRoughness],
   );
+
+  // Play ambient water/sizzle sound (re-using sizzle as a water-like loop)
+  const waterSoundPlaying = useRef(false);
+  useEffect(() => {
+    // Start ambient water sound when sink mounts
+    if (!waterSoundPlaying.current) {
+      audioEngine.playSound('ambient');
+      waterSoundPlaying.current = true;
+    }
+    return () => {
+      waterSoundPlaying.current = false;
+    };
+  }, []);
 
   useFrame(state => {
     // Animate running water

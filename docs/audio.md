@@ -1,32 +1,79 @@
----
+<!--
 title: Audio System
 domain: core
 status: current
+engine: r3f
 last-verified: 2026-03-13
 depends-on: [game-design, development-guide]
 agent-context: scene-architect, challenge-dev
-summary: Tone.js synthesis, sound design, integration points
----
+summary: Dual audio engine (Web Audio API + Tone.js), 40+ OGG assets, phase-specific music, spatial sounds
+-->
 
 # Audio System
 
 ## Overview
 
-Audio is fully synthesized using Tone.js on web. No audio samples are loaded — all sounds are generated procedurally from oscillators, noise generators, and filters. This keeps the bundle small and avoids asset loading delays.
+The audio system uses a dual-engine approach:
 
-Native (iOS/Android) audio is a complete no-op stub (`AudioEngine.ts`).
+- **AudioEngine.web.ts** — Full Tone.js synthesis engine for procedural SFX and music on web
+- **AudioEngine.ts** — Procedural Web Audio API synthesis engine (with native no-op fallback)
+
+40+ OGG audio assets are cataloged in `src/config/audio.json`, providing phase-specific music mapping and spatial sound definitions. An additional `src/config/audio/manifest.json` indexes ambient and SFX files.
 
 ## Architecture
 
 ```text
-AudioEngine.web.ts (Tone.js)     AudioEngine.ts (native)
-├── initTone()                    ├── All methods are no-ops
-├── SFX synths (7 instruments)    └── Placeholder for future implementation
-├── Music (PolySynth melodies)
+src/config/audio.json             Data-driven audio config
+├── challengeTracks               Per-challenge music (7 phases → OGG files)
+├── victoryTrack / defeatTrack    Endgame music
+├── enemyTrack                    Combat music
+├── crossfadeDuration             Music transition timing
+└── spatialSounds                 Positional audio (fridge hum, grinder idle, stove sizzle, drain drip)
+
+AudioEngine.web.ts (Tone.js)     AudioEngine.ts (Web Audio API)
+├── initTone()                    ├── Procedural synthesis
+├── SFX synths (7 instruments)    ├── Phase-specific music playback
+├── Music (PolySynth melodies)    └── Spatial audio support
 └── Cleanup (stopEngine)
+
+src/config/audio/manifest.json   Audio file manifest
+├── ambient                       Horror drone, verdict unsettling
+└── sfx                           Chop, sizzle, boiling, mix, pour, pan clang
 ```
 
 The AudioEngine is a singleton class exported as `audioEngine`. It must be initialized with `initTone()` before any sounds play (requires user gesture for browser audio policy).
+
+## Audio Assets (OGG)
+
+28 OGG audio files are available, referenced by `audio.json`:
+
+### Challenge Music Tracks
+- `music/track_exploration.ogg` — Ingredients phase
+- `music/track_violence.ogg` — Chopping and grinding phases
+- `music/track_death_metal.ogg` — Stuffing phase
+- `music/track_revenge.ogg` — Cooking and blowout phases
+- `music/track_dark.ogg` — Tasting phase
+- `music/track_unsettling_victory.ogg` — Victory
+- `music/track_boss_horror.ogg` — Defeat
+- `music/track_kick_harder.ogg` — Enemy encounters
+
+### Spatial Sound Loops
+- `fridge_hum_loop.ogg` — Fridge ambient hum (position: [-2.5, 1.0, -2.0])
+- `grinder_idle_loop.ogg` — Grinder idle loop (position: [1.5, 0.9, -1.5])
+- `sizzle_loop_1.ogg` — Stove sizzle (position: [2.0, 0.9, 1.5])
+- `drain_drip_loop.ogg` — Drain drip (position: [0.0, 0.0, 0.0])
+
+### SFX (from manifest.json)
+- `audio/sfx/chop-1.ogg`, `audio/sfx/chop-2.ogg` — Chopping hits
+- `audio/sfx/sizzle-loop.ogg` — Cooking sizzle
+- `audio/sfx/boiling.ogg` — Boiling water
+- `audio/sfx/mix-wet.ogg` — Mixing sound
+- `audio/sfx/pour.ogg` — Pouring
+- `audio/sfx/pan-clang.ogg` — Pan impact
+
+### Ambient
+- `audio/ambient-horror.ogg` — Horror ambient drone
+- `audio/verdict-unsettling.ogg` — Verdict reveal ambience
 
 ## Sound Effects
 
@@ -116,32 +163,20 @@ Three melodies based on score:
 
 | Challenge | Sounds Used |
 |-----------|------------|
-| Ingredient Selection | (none currently) |
-| Grinding | `startGrinder()`, `stopGrinder()` |
-| Stuffing | `playStuffingSquelch()`, `updatePressure()`, `stopPressure()`, `playBurst()` |
-| Cooking | `playSizzle()`, `playCountdownBeep()` |
-| Tasting | `playRatingSong(rating)` |
+| Ingredient Selection | Phase music (`track_exploration.ogg`), spatial fridge hum |
+| Chopping | Phase music (`track_violence.ogg`), chop SFX |
+| Grinding | `startGrinder()`, `stopGrinder()`, phase music (`track_violence.ogg`), spatial grinder idle |
+| Stuffing | `playStuffingSquelch()`, `updatePressure()`, `stopPressure()`, `playBurst()`, phase music (`track_death_metal.ogg`) |
+| Cooking | `playSizzle()`, `playCountdownBeep()`, phase music (`track_revenge.ogg`), spatial stove sizzle |
+| Blowout | Phase music (`track_revenge.ogg`) |
+| Tasting | `playRatingSong(rating)`, phase music (`track_dark.ogg`) |
+| Victory | `track_unsettling_victory.ogg` |
+| Defeat | `track_boss_horror.ogg` |
+| Enemy Encounter | `track_kick_harder.ogg` |
 | Title Screen | `playTitleJingle()` |
-| BUT FIRST | `playSlam()` (not yet triggered) |
+| Ambient | Horror drone, drain drip (spatial) |
 
-## What's Missing
+## What's Remaining
 
-1. **Native audio implementation** — The `AudioEngine.ts` stub needs a real implementation using `expo-av` or `react-native-audio-api` for iOS/Android
-2. **Background music** — No ambient horror soundtrack or looping background audio
-3. **Ambient kitchen sounds** — No fridge hum, dripping water, flickering light buzz
-4. **Sound effects from downloaded pack** — `Kitchen Sound Effects.zip` contains pre-recorded SFX but is not integrated. Could replace or supplement synth sounds.
-5. **Audio settings** — No volume control or mute toggle
-6. **Ingredient selection feedback** — No sound on correct/wrong ingredient pick
-
-## Planned Work
-
-### Sound Effect Library Integration
-- 147 WAV files available in `pending-integration/Kitchen Sound Effects.zip`: chop (36), sizzle (24+), peel (23), pour (11), mix (11), pots/pans (13), boiling (5), sizzle loops (2)
-- Station-specific sounds from asset library: fridge (door_open/close, hum), grinder (motor_start/loop, grind_crunch, splat), stuffer (crank_turn, casing_stretch, pressure_hiss), stove (sizzle_oil, fry_loop, boil_over, steam_hiss)
-- See `docs/plans/2026-03-01-sausage-factory-kitchen-design.md` Section 9
-
-### Per-Challenge Music Tracks
-- Horror music library tracks mapped to phases: Menu (Dark), Exploration (Space Horror), Grinding (Violence), Stuffing (16 Bit GEN Death Metal), Cooking (Revenge)
-- Track switching system with crossfade between challenge tracks
-- Spatial audio for enemy positions via Tone.Panner3D
-- See `docs/plans/2026-03-02-comprehensive-phase1-phase2-plan.md` Wave 8
+1. **Native audio implementation** — The native path in `AudioEngine.ts` is a no-op stub; needs a real implementation using `expo-av` or `react-native-audio-api` for iOS/Android
+2. **Ingredient selection feedback** — No sound on correct/wrong ingredient pick

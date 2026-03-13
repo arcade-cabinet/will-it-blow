@@ -3,6 +3,8 @@ import {useFrame} from '@react-three/fiber';
 import {RigidBody} from '@react-three/rapier';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
+import {audioEngine} from '../../engine/AudioEngine';
+import {getAssetUrl} from '../../engine/assetUrl';
 import {useGameStore} from '../../store/gameStore';
 
 const MAX_SPLATTERS = 50;
@@ -11,8 +13,8 @@ export function BlowoutStation() {
   const canvasRef = useRef<HTMLCanvasElement>(document.createElement('canvas'));
   const textureRef = useRef<THREE.CanvasTexture | null>(null);
 
-  const table = useGLTF('/models/table_styloo.glb') as any;
-  const chair = useGLTF('/models/chair_styloo.glb') as any;
+  const table = useGLTF(getAssetUrl('models', 'table_styloo.glb')) as any;
+  const chair = useGLTF(getAssetUrl('models', 'chair_styloo.glb')) as any;
 
   const [pressure, setPressure] = useState(0);
   const [isBlowing, setIsBlowing] = useState(false);
@@ -66,9 +68,17 @@ export function BlowoutStation() {
     textureRef.current.needsUpdate = true;
   }, [drawCerealBox]);
 
+  // Play pressure sound while blowing
+  useEffect(() => {
+    if (isBlowing && !hasBlown && gamePhase === 'BLOWOUT') {
+      audioEngine.playSound('pressure');
+    }
+  }, [isBlowing, hasBlown, gamePhase]);
+
   const triggerBlowout = () => {
     if (hasBlown) return;
     setHasBlown(true);
+    audioEngine.playSound('burst');
 
     const data = particlesData.current;
     for (let i = 0; i < Math.floor(pressure * MAX_SPLATTERS); i++) {
@@ -214,5 +224,5 @@ export function BlowoutStation() {
   );
 }
 
-useGLTF.preload('/models/table_styloo.glb');
-useGLTF.preload('/models/chair_styloo.glb');
+useGLTF.preload(getAssetUrl('models', 'table_styloo.glb'));
+useGLTF.preload(getAssetUrl('models', 'chair_styloo.glb'));

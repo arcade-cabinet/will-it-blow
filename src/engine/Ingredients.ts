@@ -1,3 +1,5 @@
+import {getAssetUrl} from './assetUrl';
+
 export type IngredientCategory = 'food' | 'weird' | 'trash';
 
 export interface IngredientDef {
@@ -19,7 +21,7 @@ export const INGREDIENT_MODELS: IngredientDef[] = [
   {
     id: 'banana',
     name: 'Banana',
-    path: '/models/ingredients/banana.glb',
+    path: getAssetUrl('models/ingredients', 'banana.glb'),
     scale: 1.5,
     category: 'food',
     tasteMod: 4,
@@ -30,7 +32,7 @@ export const INGREDIENT_MODELS: IngredientDef[] = [
   {
     id: 'burger',
     name: 'Burger',
-    path: '/models/ingredients/burger.glb',
+    path: getAssetUrl('models/ingredients', 'burger.glb'),
     scale: 1.2,
     category: 'food',
     tasteMod: 5,
@@ -41,7 +43,7 @@ export const INGREDIENT_MODELS: IngredientDef[] = [
   {
     id: 'cake',
     name: 'Cake',
-    path: '/models/ingredients/cake.glb',
+    path: getAssetUrl('models/ingredients', 'cake.glb'),
     scale: 1.0,
     category: 'food',
     tasteMod: 5,
@@ -52,7 +54,7 @@ export const INGREDIENT_MODELS: IngredientDef[] = [
   {
     id: 'fish',
     name: 'Raw Fish',
-    path: '/models/ingredients/fish.glb',
+    path: getAssetUrl('models/ingredients', 'fish.glb'),
     scale: 1.8,
     category: 'food',
     tasteMod: 3,
@@ -63,7 +65,7 @@ export const INGREDIENT_MODELS: IngredientDef[] = [
   {
     id: 'pepper',
     name: 'Hot Pepper',
-    path: '/models/ingredients/pepper_red.glb',
+    path: getAssetUrl('models/ingredients', 'pepper_red.glb'),
     scale: 1.5,
     category: 'food',
     tasteMod: 2,
@@ -74,7 +76,7 @@ export const INGREDIENT_MODELS: IngredientDef[] = [
   {
     id: 'pizza',
     name: 'Pizza Slice',
-    path: '/models/ingredients/pizza_slice.glb',
+    path: getAssetUrl('models/ingredients', 'pizza_slice.glb'),
     scale: 1.5,
     category: 'food',
     tasteMod: 4,
@@ -85,7 +87,7 @@ export const INGREDIENT_MODELS: IngredientDef[] = [
   {
     id: 'steak',
     name: 'Raw Steak',
-    path: '/models/ingredients/steak.glb',
+    path: getAssetUrl('models/ingredients', 'steak.glb'),
     scale: 1.2,
     category: 'food',
     tasteMod: 5,
@@ -98,7 +100,7 @@ export const INGREDIENT_MODELS: IngredientDef[] = [
   {
     id: 'bacon',
     name: 'Bacon',
-    path: '/models/ingredients/bacon.glb',
+    path: getAssetUrl('models/ingredients', 'bacon.glb'),
     scale: 2.0,
     category: 'food',
     tasteMod: 5,
@@ -109,7 +111,7 @@ export const INGREDIENT_MODELS: IngredientDef[] = [
   {
     id: 'ketchup',
     name: 'Ketchup',
-    path: '/models/ingredients/bottle-ketchup.glb',
+    path: getAssetUrl('models/ingredients', 'bottle-ketchup.glb'),
     scale: 1.5,
     category: 'food',
     tasteMod: 3,
@@ -120,7 +122,7 @@ export const INGREDIENT_MODELS: IngredientDef[] = [
   {
     id: 'bread',
     name: 'Bread',
-    path: '/models/ingredients/bread.glb',
+    path: getAssetUrl('models/ingredients', 'bread.glb'),
     scale: 1.5,
     category: 'food',
     tasteMod: 2,
@@ -131,7 +133,7 @@ export const INGREDIENT_MODELS: IngredientDef[] = [
   {
     id: 'apple',
     name: 'Apple',
-    path: '/models/ingredients/apple.glb',
+    path: getAssetUrl('models/ingredients', 'apple.glb'),
     scale: 1.5,
     category: 'food',
     tasteMod: 3,
@@ -144,7 +146,7 @@ export const INGREDIENT_MODELS: IngredientDef[] = [
   {
     id: 'worm',
     name: 'Giant Worm',
-    path: '/models/ingredients/worm.glb',
+    path: getAssetUrl('models/ingredients', 'worm.glb'),
     scale: 2.0,
     category: 'weird',
     tasteMod: 0,
@@ -155,7 +157,7 @@ export const INGREDIENT_MODELS: IngredientDef[] = [
   {
     id: 'arcade',
     name: 'Mini Arcade',
-    path: '/models/ingredients/arcade-machine.glb',
+    path: getAssetUrl('models/ingredients', 'arcade-machine.glb'),
     scale: 0.2,
     category: 'weird',
     tasteMod: 0,
@@ -166,7 +168,7 @@ export const INGREDIENT_MODELS: IngredientDef[] = [
   {
     id: 'register',
     name: 'Cash Register',
-    path: '/models/ingredients/cash-register.glb',
+    path: getAssetUrl('models/ingredients', 'cash-register.glb'),
     scale: 0.4,
     category: 'weird',
     tasteMod: 0,
@@ -177,7 +179,7 @@ export const INGREDIENT_MODELS: IngredientDef[] = [
   {
     id: 'vending',
     name: 'Vending Machine',
-    path: '/models/ingredients/vending-machine.glb',
+    path: getAssetUrl('models/ingredients', 'vending-machine.glb'),
     scale: 0.2,
     category: 'weird',
     tasteMod: 2,
@@ -188,7 +190,7 @@ export const INGREDIENT_MODELS: IngredientDef[] = [
   {
     id: 'bottle',
     name: 'Glass Bottle',
-    path: '/models/ingredients/bottle-large.glb',
+    path: getAssetUrl('models/ingredients', 'bottle-large.glb'),
     scale: 1.0,
     category: 'weird',
     tasteMod: 0,
@@ -201,7 +203,7 @@ export const INGREDIENT_MODELS: IngredientDef[] = [
   {
     id: 'radio',
     name: 'Old Radio',
-    path: '/models/misc.glb',
+    path: getAssetUrl('models', 'misc.glb'),
     node: 'Radio',
     scale: 1.0,
     category: 'trash',
@@ -213,7 +215,7 @@ export const INGREDIENT_MODELS: IngredientDef[] = [
   {
     id: 'meds',
     name: 'Mystery Pills',
-    path: '/models/misc.glb',
+    path: getAssetUrl('models', 'misc.glb'),
     node: 'Meds',
     scale: 1.5,
     category: 'trash',
@@ -225,7 +227,7 @@ export const INGREDIENT_MODELS: IngredientDef[] = [
   {
     id: 'tape',
     name: 'Duct Tape',
-    path: '/models/misc.glb',
+    path: getAssetUrl('models', 'misc.glb'),
     node: 'Tape',
     scale: 1.5,
     category: 'trash',
@@ -237,7 +239,7 @@ export const INGREDIENT_MODELS: IngredientDef[] = [
   {
     id: 'ps1',
     name: 'Retro Console',
-    path: '/models/misc.glb',
+    path: getAssetUrl('models', 'misc.glb'),
     node: 'PS1',
     scale: 0.5,
     category: 'trash',

@@ -1,4 +1,5 @@
 import * as Tone from 'tone';
+import {getAssetUrl} from './assetUrl';
 
 class AudioEngine {
   private initialized = false;
@@ -19,7 +20,7 @@ class AudioEngine {
 
       // Use high-quality sampled audio for chop
       this.chopPlayer = new Tone.Player({
-        url: '/audio/sfx/chop-1.ogg',
+        url: getAssetUrl('audio/sfx', 'chop-1.ogg'),
         volume: -5,
         autostart: false,
         onload: () => {},
@@ -28,7 +29,7 @@ class AudioEngine {
 
       // Use real sizzle loop
       this.sizzlePlayer = new Tone.Player({
-        url: '/audio/sfx/sizzle-loop.ogg',
+        url: getAssetUrl('audio/sfx', 'sizzle-loop.ogg'),
         volume: -20,
         loop: true,
         autostart: false,
@@ -38,7 +39,7 @@ class AudioEngine {
 
       // Use real ambient horror track
       this.ambientPlayer = new Tone.Player({
-        url: '/audio/music/track_boss_horror.ogg',
+        url: getAssetUrl('audio/music', 'track_boss_horror.ogg'),
         volume: -25,
         loop: true,
         autostart: false,

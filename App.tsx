@@ -1,11 +1,11 @@
 /**
  * @module App
- * Root application component -- manages app phase routing (title -> playing -> results)
+ * Root application component -- manages app phase routing (title -> loading -> playing -> results)
  * and composes the 3D Canvas, physics world, UI overlays, and mobile controls.
  */
 import {Canvas} from '@react-three/fiber';
 import {Physics} from '@react-three/rapier';
-import {Suspense, useEffect, useMemo, useRef, useState} from 'react';
+import {Suspense, useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {StyleSheet, View} from 'react-native';
 import * as THREE from 'three';
 import {CameraRail} from './src/components/camera/CameraRail';
@@ -32,10 +32,23 @@ import {Sink} from './src/components/stations/Sink';
 import {Stove} from './src/components/stations/Stove';
 import {Stuffer} from './src/components/stations/Stuffer';
 import {TV} from './src/components/stations/TV';
+import {BlowoutHUD} from './src/components/ui/BlowoutHUD';
+import {ChallengeHeader} from './src/components/ui/ChallengeHeader';
+import {CookingHUD} from './src/components/ui/CookingHUD';
 import {DialogueOverlay} from './src/components/ui/DialogueOverlay';
+import {GameOverScreen} from './src/components/ui/GameOverScreen';
+import {GrindingHUD} from './src/components/ui/GrindingHUD';
+import {IngredientChallenge} from './src/components/ui/IngredientChallenge';
+import {LoadingScreen} from './src/components/ui/LoadingScreen';
+import {RoundTransition} from './src/components/ui/RoundTransition';
+import {SettingsScreen} from './src/components/ui/SettingsScreen';
+import {StrikeCounter} from './src/components/ui/StrikeCounter';
+import {StuffingHUD} from './src/components/ui/StuffingHUD';
+import {TastingChallenge} from './src/components/ui/TastingChallenge';
 import {TitleScreen} from './src/components/ui/TitleScreen';
 import {INTRO_DIALOGUE} from './src/data/dialogue/intro';
 import {VERDICT_A, VERDICT_B, VERDICT_F, VERDICT_S} from './src/data/dialogue/verdict';
+import {INGREDIENT_MODELS} from './src/engine/Ingredients';
 import {GameOrchestrator} from './src/engine/GameOrchestrator';
 import {useGameStore} from './src/store/gameStore';
 
@@ -112,7 +125,15 @@ function GameContent() {
   );
 }
 
-/** 2D overlay layer: dialogue, verdict, mobile touch controls, and tie gesture. */
+/** Derive rank letter from a total score. */
+function getRank(score: number): string {
+  if (score >= 92) return 'S';
+  if (score >= 75) return 'A';
+  if (score >= 50) return 'B';
+  return 'F';
+}
+
+/** 2D overlay layer: dialogue, verdict, mobile touch controls, HUDs, challenges, and tie gesture. */
 function UILayer() {
   const _introActive = useGameStore(state => state.introActive);
   const setIntroActive = useGameStore(state => state.setIntroActive);
@@ -122,8 +143,53 @@ function UILayer() {
   const posture = useGameStore(state => state.posture);
   const gamePhase = useGameStore(state => state.gamePhase);
   const finalScore = useGameStore(state => state.finalScore);
+  const groundMeatVol = useGameStore(state => state.groundMeatVol);
+  const stuffLevel = useGameStore(state => state.stuffLevel);
+  const cookLevel = useGameStore(state => state.cookLevel);
+  const casingTied = useGameStore(state => state.casingTied);
+  const currentRound = useGameStore(state => state.currentRound);
+  const totalRounds = useGameStore(state => state.totalRounds);
+  const nextRound = useGameStore(state => state.nextRound);
+  const addSelectedIngredientId = useGameStore(state => state.addSelectedIngredientId);
+  const setGamePhase = useGameStore(state => state.setGamePhase);
+  const calculateFinalScore = useGameStore(state => state.calculateFinalScore);
 
   const [showIntroDialogue, setShowIntroDialogue] = useState(true);
+  const [strikes, setStrikes] = useState(0);
+  const [showRoundTransition, setShowRoundTransition] = useState(false);
+  const [showTasting, setShowTasting] = useState(false);
+
+  // Track previous groundMeatVol to compute grinding speed
+  const prevGroundMeatVolRef = useRef(groundMeatVol);
+  const grindSpeed = useRef(0);
+  useEffect(() => {
+    const delta = Math.abs(groundMeatVol - prevGroundMeatVolRef.current);
+    grindSpeed.current = Math.min(100, delta * 500);
+    prevGroundMeatVolRef.current = groundMeatVol;
+  }, [groundMeatVol]);
+
+  // Track previous stuffLevel to compute pressure
+  const prevStuffLevelRef = useRef(stuffLevel);
+  const stuffPressure = useRef(0);
+  useEffect(() => {
+    const delta = Math.abs(stuffLevel - prevStuffLevelRef.current);
+    stuffPressure.current = Math.min(100, delta * 600);
+    prevStuffLevelRef.current = stuffLevel;
+  }, [stuffLevel]);
+
+  // When DONE phase reached with more rounds to play, show round transition
+  useEffect(() => {
+    if (gamePhase === 'DONE' && finalScore?.calculated && currentRound < totalRounds) {
+      setShowRoundTransition(true);
+    }
+  }, [gamePhase, finalScore, currentRound, totalRounds]);
+
+  // When DONE phase reached, show tasting challenge
+  useEffect(() => {
+    if (gamePhase === 'DONE' && finalScore?.calculated) {
+      setShowTasting(true);
+    }
+  }, [gamePhase, finalScore]);
 
   const verdictLines = useMemo(() => {
     if (gamePhase !== 'DONE' || !finalScore?.calculated) return null;
@@ -135,7 +201,7 @@ function UILayer() {
 
   const joystickRef = useRef({x: 0, y: 0});
 
-  // Sync joystick ref to store at 30fps (not every frame — avoids render loop)
+  // Sync joystick ref to store at 30fps (not every frame -- avoids render loop)
   useEffect(() => {
     const interval = setInterval(() => {
       setJoystick(joystickRef.current.x, joystickRef.current.y);
@@ -143,8 +209,49 @@ function UILayer() {
     return () => clearInterval(interval);
   }, [setJoystick]);
 
+  // Ingredients for the challenge overlay -- map INGREDIENT_MODELS to simple {id, name}
+  const ingredientItems = useMemo(
+    () => INGREDIENT_MODELS.map(ing => ({id: ing.id, name: ing.name})),
+    [],
+  );
+
+  const handleIngredientComplete = useCallback(
+    (selectedIds: string[]) => {
+      for (const id of selectedIds) {
+        addSelectedIngredientId(id);
+      }
+      // Auto-advance to CHOPPING after ingredient selection
+      setTimeout(() => {
+        setGamePhase('CHOPPING');
+      }, 800);
+    },
+    [addSelectedIngredientId, setGamePhase],
+  );
+
+  const handleTastingComplete = useCallback(() => {
+    setShowTasting(false);
+    // Round transition or verdict will take over
+  }, []);
+
+  const handleNextRound = useCallback(() => {
+    setShowRoundTransition(false);
+    setShowTasting(false);
+    setStrikes(0);
+    nextRound();
+  }, [nextRound]);
+
+  // Compute temperature from cookLevel (0 -> 70F, 1 -> 400F)
+  const temperature = 70 + cookLevel * 330;
+  const targetZone: [number, number] = [280, 350];
+
   return (
     <View style={[StyleSheet.absoluteFill, {pointerEvents: 'box-none'} as any]}>
+      {/* Challenge Header -- top-of-screen HUD showing current challenge */}
+      <ChallengeHeader />
+
+      {/* Strike Counter */}
+      <StrikeCounter strikes={strikes} />
+
       {/* Dialogue Overlay for Mr. Sausage's Intro */}
       {showIntroDialogue && (
         <DialogueOverlay
@@ -155,19 +262,85 @@ function UILayer() {
           }}
         />
       )}
-      {/* Dialogue Overlay for Verdict */}
-      {verdictLines && (
-        <DialogueOverlay
-          key={finalScore?.totalScore ?? 0} // Re-mount if score changes on new round
-          lines={verdictLines}
-          onComplete={() => {}}
+
+      {/* Ingredient Selection Challenge */}
+      {gamePhase === 'SELECT_INGREDIENTS' && !showIntroDialogue && (
+        <IngredientChallenge
+          ingredients={ingredientItems}
+          requiredCount={3}
+          onComplete={handleIngredientComplete}
+          onStrike={() => setStrikes(s => Math.min(3, s + 1))}
         />
       )}
+
+      {/* Grinding HUD */}
+      {(gamePhase === 'GRINDING' || gamePhase === 'FILL_GRINDER') && (
+        <GrindingHUD speed={grindSpeed.current} progress={groundMeatVol * 100} />
+      )}
+
+      {/* Stuffing HUD */}
+      {gamePhase === 'STUFFING' && (
+        <StuffingHUD pressure={stuffPressure.current} fillLevel={stuffLevel * 100} />
+      )}
+
+      {/* Cooking HUD */}
+      {gamePhase === 'COOKING' && (
+        <CookingHUD
+          temperature={temperature}
+          targetZone={targetZone}
+          timeInZone={
+            temperature >= targetZone[0] && temperature <= targetZone[1] ? cookLevel * 10 : 0
+          }
+        />
+      )}
+
+      {/* Blowout HUD */}
+      {gamePhase === 'BLOWOUT' && (
+        <BlowoutHUD pressure={stuffLevel * 100} leftTied={casingTied} rightTied={casingTied} />
+      )}
+
+      {/* Tasting Challenge -- 4-beat score reveal */}
+      {showTasting && finalScore?.calculated && (
+        <TastingChallenge
+          scores={{
+            form: finalScore.totalScore * 0.3,
+            ingredients: finalScore.totalScore * 0.4,
+            cook: finalScore.totalScore * 0.3,
+          }}
+          demandBonus={Math.round(finalScore.totalScore * 0.1)}
+          rank={getRank(finalScore.totalScore)}
+          onComplete={handleTastingComplete}
+        />
+      )}
+
+      {/* Round Transition */}
+      {showRoundTransition && finalScore?.calculated && (
+        <RoundTransition
+          roundNumber={currentRound}
+          totalRounds={totalRounds}
+          roundScore={finalScore.totalScore}
+          totalScore={finalScore.totalScore * currentRound}
+          onNextRound={handleNextRound}
+        />
+      )}
+
+      {/* Dialogue Overlay for Verdict (only on final round) */}
+      {verdictLines && !showRoundTransition && currentRound >= totalRounds && (
+        <DialogueOverlay
+          key={finalScore?.totalScore ?? 0}
+          lines={verdictLines}
+          onComplete={() => {
+            calculateFinalScore();
+          }}
+        />
+      )}
+
       {/* Mobile Touch Surface (only active when game is playing and standing) */}
       {!showIntroDialogue &&
         !verdictLines &&
         posture === 'standing' &&
-        gamePhase !== 'TIE_CASING' && (
+        gamePhase !== 'TIE_CASING' &&
+        gamePhase !== 'SELECT_INGREDIENTS' && (
           <SwipeFPSControls
             joystickRef={joystickRef}
             onLookDrag={(dx, dy) => addLookDelta(dx, dy)}
@@ -177,22 +350,108 @@ function UILayer() {
       {/* Tie Gesture Overlay */}
       {gamePhase === 'TIE_CASING' && (
         <TieGesture onComplete={() => useGameStore.getState().setGamePhase('BLOWOUT')} />
-      )}{' '}
+      )}
     </View>
   );
 }
 
+/**
+ * Simulated loading screen wrapper.
+ * Runs a progress timer from 0 to 100 over ~2 seconds, then calls onReady.
+ */
+function LoadingPhase({onReady}: {onReady: () => void}) {
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        const next = Math.min(100, prev + 5);
+        return next;
+      });
+    }, 100);
+    return () => clearInterval(interval);
+  }, []);
+
+  return <LoadingScreen progress={progress} onReady={onReady} />;
+}
+
 export default function App() {
   const appPhase = useGameStore(state => state.appPhase);
+  const returnToMenu = useGameStore(state => state.returnToMenu);
+  const startNewGame = useGameStore(state => state.startNewGame);
+  const finalScore = useGameStore(state => state.finalScore);
+  const [showLoading, setShowLoading] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [sfxVolume, setSfxVolume] = useState(80);
+  const [musicVolume, setMusicVolume] = useState(70);
+  const [hapticsEnabled, setHapticsEnabled] = useState(true);
+  const prevAppPhase = useRef(appPhase);
+
+  // Intercept transition to 'playing' to show loading screen first
+  useEffect(() => {
+    if (prevAppPhase.current !== 'playing' && appPhase === 'playing') {
+      setShowLoading(true);
+    }
+    prevAppPhase.current = appPhase;
+  }, [appPhase]);
+
+  const handleLoadingReady = useCallback(() => {
+    setShowLoading(false);
+  }, []);
+
+  // Derive results data from finalScore
+  const rank = finalScore?.calculated ? getRank(finalScore.totalScore) : 'F';
+  const totalScore = finalScore?.totalScore ?? 0;
+  const breakdown = finalScore?.calculated
+    ? [
+        {label: 'Ingredients', score: totalScore * 0.25},
+        {label: 'Chopping', score: totalScore * 0.15},
+        {label: 'Grinding', score: totalScore * 0.15},
+        {label: 'Stuffing', score: totalScore * 0.15},
+        {label: 'Cooking', score: totalScore * 0.2},
+        {label: 'Form', score: totalScore * 0.1},
+      ]
+    : [];
+  const demandBonus = finalScore?.calculated ? Math.round(totalScore * 0.1) : 0;
 
   return (
     <View style={styles.container}>
-      {appPhase === 'title' && <TitleScreen />}
+      {/* Title screen with Settings button */}
+      {appPhase === 'title' && !showSettings && <TitleScreen />}
 
-      {appPhase === 'playing' && (
+      {/* Settings screen (accessible from title) */}
+      {appPhase === 'title' && showSettings && (
+        <SettingsScreen
+          sfxVolume={sfxVolume}
+          musicVolume={musicVolume}
+          hapticsEnabled={hapticsEnabled}
+          onSfxChange={setSfxVolume}
+          onMusicChange={setMusicVolume}
+          onHapticsToggle={() => setHapticsEnabled(prev => !prev)}
+          onBack={() => setShowSettings(false)}
+        />
+      )}
+
+      {/* Results screen */}
+      {appPhase === 'results' && (
+        <GameOverScreen
+          rank={rank}
+          totalScore={totalScore}
+          breakdown={breakdown}
+          demandBonus={demandBonus}
+          onPlayAgain={startNewGame}
+          onMenu={returnToMenu}
+        />
+      )}
+
+      {/* Loading screen (shown briefly when entering playing phase) */}
+      {appPhase === 'playing' && showLoading && <LoadingPhase onReady={handleLoadingReady} />}
+
+      {/* Playing state: 3D Canvas + UI Layer */}
+      {appPhase === 'playing' && !showLoading && (
         <>
           <Canvas
-            camera={{position: [2.0, 0.5, 3.0], fov: 75}} // Increased FOV for better first-person perspective
+            camera={{position: [2.0, 0.5, 3.0], fov: 75}}
             shadows={{type: THREE.PCFShadowMap}}
             gl={{toneMappingExposure: 1.0}}
           >
@@ -201,7 +460,7 @@ export default function App() {
 
             <ambientLight intensity={0.4} />
             <directionalLight
-              position={[0, 2.5, 0]} // Light from center ceiling
+              position={[0, 2.5, 0]}
               intensity={1.0}
               castShadow
               shadow-mapSize-width={2048}

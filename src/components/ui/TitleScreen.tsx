@@ -3,11 +3,16 @@ import {Animated, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {DIFFICULTY_TIERS} from '../../engine/DifficultyConfig';
 import {useGameStore} from '../../store/gameStore';
 import {DifficultySelector} from './DifficultySelector';
+import {SettingsScreen} from './SettingsScreen';
 
 export function TitleScreen() {
   const setAppPhase = useGameStore(s => s.setAppPhase);
   const setDifficulty = useGameStore(s => s.setDifficulty);
   const [showDifficulty, setShowDifficulty] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [sfxVolume, setSfxVolume] = useState(80);
+  const [musicVolume, setMusicVolume] = useState(70);
+  const [hapticsEnabled, setHapticsEnabled] = useState(true);
 
   // Fade-in animation
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -65,6 +70,20 @@ export function TitleScreen() {
     setAppPhase('playing');
   };
 
+  if (showSettings) {
+    return (
+      <SettingsScreen
+        sfxVolume={sfxVolume}
+        musicVolume={musicVolume}
+        hapticsEnabled={hapticsEnabled}
+        onSfxChange={setSfxVolume}
+        onMusicChange={setMusicVolume}
+        onHapticsToggle={() => setHapticsEnabled(prev => !prev)}
+        onBack={() => setShowSettings(false)}
+      />
+    );
+  }
+
   if (showDifficulty) {
     return (
       <DifficultySelector
@@ -106,6 +125,13 @@ export function TitleScreen() {
       <View style={styles.menuContainer}>
         <TouchableOpacity style={styles.button} onPress={handleStart} activeOpacity={0.8}>
           <Text style={styles.buttonText}>START COOKING</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.settingsButton}
+          onPress={() => setShowSettings(true)}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.settingsButtonText}>SETTINGS</Text>
         </TouchableOpacity>
       </View>
 
@@ -189,6 +215,7 @@ const styles = StyleSheet.create({
   },
   menuContainer: {
     alignItems: 'center',
+    gap: 12,
   },
   button: {
     backgroundColor: '#D2A24C',
@@ -201,6 +228,20 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#1a0a00',
     fontSize: 24,
+    fontWeight: '900',
+    letterSpacing: 2,
+  },
+  settingsButton: {
+    backgroundColor: '#333',
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#555',
+  },
+  settingsButtonText: {
+    color: '#CCBBAA',
+    fontSize: 18,
     fontWeight: '900',
     letterSpacing: 2,
   },

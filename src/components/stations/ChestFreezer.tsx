@@ -11,6 +11,7 @@
 import {useFrame} from '@react-three/fiber';
 import {useRef} from 'react';
 import type * as THREE from 'three/webgpu';
+import {audioEngine} from '../../engine/AudioEngine';
 
 interface IngredientItem {
   id: string;
@@ -63,7 +64,14 @@ function IngredientMesh({
   const z = (row - 0.5) * 0.2;
 
   return (
-    <mesh ref={meshRef} position={[x, 0.15, z]} onClick={() => onSelect?.(item.id)}>
+    <mesh
+      ref={meshRef}
+      position={[x, 0.15, z]}
+      onClick={() => {
+        audioEngine.playSound('click');
+        onSelect?.(item.id);
+      }}
+    >
       <boxGeometry args={[0.12, 0.12, 0.12]} />
       <meshStandardMaterial
         color={item.color ?? '#DD6868'}
