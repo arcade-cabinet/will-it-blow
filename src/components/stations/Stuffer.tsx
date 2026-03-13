@@ -1,13 +1,12 @@
 import {Box, Cylinder, useTexture} from '@react-three/drei';
-import {useFrame} from '@react-three/fiber';
+import {useFrame, useThree} from '@react-three/fiber';
 import {RigidBody} from '@react-three/rapier';
-import {useEffect, useMemo, useRef, useState} from 'react';
+import {useDrag} from '@use-gesture/react';
+import {useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
-import {audioEngine} from '../../engine/AudioEngine';
 import {useGameStore} from '../../store/gameStore';
 
 class SquigglyCurve extends THREE.Curve<THREE.Vector3> {
-  // biome-ignore lint/complexity/noUselessConstructor: THREE.Curve has protected constructor
   constructor() {
     super();
   }
@@ -73,21 +72,6 @@ export function Stuffer() {
     [],
   );
 
-  // Play squelch sounds during stuffing as level changes
-  const prevStuffRef = useRef(stuffLevel);
-  useEffect(() => {
-    if (gamePhase === 'STUFFING' && stuffLevel > prevStuffRef.current) {
-      const delta = stuffLevel - prevStuffRef.current;
-      if (delta > 0.02) {
-        audioEngine.playSound('squelch');
-      }
-      if (stuffLevel > 0.8) {
-        audioEngine.playSound('pressure');
-      }
-    }
-    prevStuffRef.current = stuffLevel;
-  }, [stuffLevel, gamePhase]);
-
   const bunchedCasingGeo = useMemo(() => {
     const geo = new THREE.CylinderGeometry(0.06, 0.06, 0.25, 32, 32, true);
     const pA = geo.attributes.position;
@@ -105,47 +89,37 @@ export function Stuffer() {
     [],
   );
 
-  // Crank drag via R3F pointer events (useDrag crashes on web)
-  const crankDragging = useRef(false);
-  const crankStartY = useRef(0);
+  const bindCrank = useDrag(({movement: [, my]}) => {
+    if (gamePhase !== 'STUFFING') return;
 
-  const handleCrankDown = (e: any) => {
-    crankDragging.current = true;
-    crankStartY.current = e.point?.y ?? 0;
-  };
-  const handleCrankMove = (e: any) => {
-    if (!crankDragging.current || gamePhase !== 'STUFFING') return;
-    const my = (crankStartY.current - (e.point?.y ?? 0)) * 200;
     const newLevel = Math.max(0, Math.min(1.0, stuffLevel + my * 0.002));
     setStuffLevel(newLevel);
-    if (crankRef.current) crankRef.current.rotation.x = -newLevel * Math.PI * 10;
-    if (rodRef.current) rodRef.current.position.y = 1.0 - newLevel * 0.8;
-    if (newLevel >= 1.0) setGamePhase('TIE_CASING');
-  };
-  const handleCrankUp = () => {
-    crankDragging.current = false;
-  };
 
-  // Casing drag via R3F pointer events
-  const casingDragging = useRef(false);
-  const handleCasingDown = () => {
-    if (gamePhase !== 'ATTACH_CASING') return;
-    casingDragging.current = true;
-    setIsDraggingCasing(true);
-  };
-  const handleCasingMove = (e: any) => {
-    if (!casingDragging.current || gamePhase !== 'ATTACH_CASING') return;
-    const pt = e.point;
-    if (pt) setDragTarget(new THREE.Vector3(pt.x, pt.y, 0));
-  };
-  const handleCasingUp = () => {
-    if (!casingDragging.current) return;
-    casingDragging.current = false;
-    setIsDraggingCasing(false);
-    if (dragTarget.distanceTo(new THREE.Vector3(0.4, 0.2, 0)) < 0.3) {
-      setGamePhase('STUFFING');
+    if (crankRef.current) {
+      crankRef.current.rotation.x = -newLevel * Math.PI * 10;
     }
-  };
+    if (rodRef.current) {
+      rodRef.current.position.y = 1.0 - newLevel * 0.8;
+    }
+
+    if (newLevel >= 1.0) {
+      setGamePhase('TIE_CASING');
+    }
+  });
+
+  const bindCasing = useDrag(({active, movement: [mx, my]}) => {
+    if (gamePhase !== 'ATTACH_CASING') return;
+
+    setIsDraggingCasing(active);
+
+    if (active) {
+      setDragTarget(new THREE.Vector3(0.5 + mx * 0.002, 0.2 - my * 0.002, 0));
+    } else {
+      if (dragTarget.distanceTo(new THREE.Vector3(0.4, 0.2, 0)) < 0.3) {
+        setGamePhase('STUFFING');
+      }
+    }
+  });
 
   useFrame(() => {
     if (isDraggingCasing) {
@@ -188,10 +162,7 @@ export function Stuffer() {
           <mesh
             geometry={squigglyGeo}
             material={casingMat}
-            onPointerDown={handleCasingDown}
-            onPointerMove={handleCasingMove}
-            onPointerUp={handleCasingUp}
-            onPointerLeave={handleCasingUp}
+            {...(bindCasing() as any)}
             position={[0, 0.05, 0]}
           />
         )}
@@ -257,14 +228,7 @@ export function Stuffer() {
       </mesh>
 
       {/* Crank */}
-      <group
-        ref={crankRef}
-        position={[0.5, 1.2, 0]}
-        onPointerDown={handleCrankDown}
-        onPointerMove={handleCrankMove}
-        onPointerUp={handleCrankUp}
-        onPointerLeave={handleCrankUp}
-      >
+      <group {...(bindCrank() as any)} ref={crankRef} position={[0.5, 1.2, 0]}>
         <Box args={[0.05, 0.4, 0.05]} position={[0, 0.2, 0]} material={metalMat} />
         <Cylinder
           args={[0.03, 0.03, 0.1, 16]}

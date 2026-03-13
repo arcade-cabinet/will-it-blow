@@ -1,11 +1,10 @@
 import {useGLTF} from '@react-three/drei';
 import {RigidBody} from '@react-three/rapier';
-import {getAssetUrl} from '../../engine/assetUrl';
 
 export function KitchenSetPieces() {
-  const island = useGLTF(getAssetUrl('models', 'island_counter.glb')) as any;
-  const cabinet1 = useGLTF(getAssetUrl('models', 'kitchen_cabinet1.glb')) as any;
-  const cabinet2 = useGLTF(getAssetUrl('models', 'kitchen_cabinet2.glb')) as any;
+  const island = useGLTF('/models/island_counter.glb') as any;
+  const cabinet1 = useGLTF('/models/kitchen_cabinet1.glb') as any;
+  const cabinet2 = useGLTF('/models/kitchen_cabinet2.glb') as any;
 
   return (
     <group position={[0, 0, 0]}>
@@ -32,6 +31,6 @@ export function KitchenSetPieces() {
   );
 }
 
-useGLTF.preload(getAssetUrl('models', 'island_counter.glb'));
-useGLTF.preload(getAssetUrl('models', 'kitchen_cabinet1.glb'));
-useGLTF.preload(getAssetUrl('models', 'kitchen_cabinet2.glb'));
+useGLTF.preload('/models/island_counter.glb');
+useGLTF.preload('/models/kitchen_cabinet1.glb');
+useGLTF.preload('/models/kitchen_cabinet2.glb');

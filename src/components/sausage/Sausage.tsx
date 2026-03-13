@@ -91,18 +91,7 @@ export function Sausage({
   useEffect(() => {
     if (!world) return;
     const newBodies: any[] = [];
-    // Use RAPIER from the @react-three/rapier Physics context (already init'd)
-    // Fallback to dynamic import if not on window
-    let RAPIER: any;
-    try {
-      RAPIER = require('@dimforge/rapier3d-compat');
-      if (!RAPIER.RigidBodyDesc) {
-        // WASM not yet initialized — skip this frame, Physics will handle it
-        return;
-      }
-    } catch {
-      return;
-    }
+    const RAPIER = (window as any).RAPIER || require('@dimforge/rapier3d-compat');
 
     for (let i = 0; i < numBones; i++) {
       // Initially, hide bodies high up until extruded
@@ -120,14 +109,14 @@ export function Sausage({
     setBodies(newBodies);
 
     return () => {
-      for (const b of newBodies) world.removeRigidBody(b);
+      newBodies.forEach(b => world.removeRigidBody(b));
     };
   }, [world, numBones]);
 
   // Reset extrusion states if game phase changes backwards
   useEffect(() => {
     if (gamePhase === 'SELECT_INGREDIENTS') {
-      for (const a of anchors) a.extruded = false;
+      anchors.forEach(a => (a.extruded = false));
       meatMat.color.setHex(0xffffff);
       meatMat.roughness = 1.0 - greaseLevel * 0.6;
     }

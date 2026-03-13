@@ -1,10 +1,10 @@
 import {Torus, useGLTF} from '@react-three/drei';
 import {useFrame, useThree} from '@react-three/fiber';
 import {RigidBody} from '@react-three/rapier';
+import {useDrag} from '@use-gesture/react';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
 import {audioEngine} from '../../engine/AudioEngine';
-import {getAssetUrl} from '../../engine/assetUrl';
 import {useGameStore} from '../../store/gameStore';
 
 const fboSize = 256;
@@ -123,8 +123,8 @@ export function Stove() {
     [],
   );
 
-  const oven = useGLTF(getAssetUrl('models', 'kitchen_oven_large.glb')) as any;
-  const pan = useGLTF(getAssetUrl('models', 'frying_pan.glb')) as any;
+  const oven = useGLTF('/models/kitchen_oven_large.glb') as any;
+  const pan = useGLTF('/models/frying_pan.glb') as any;
   const gamePhase = useGameStore(state => state.gamePhase);
   const setGamePhase = useGameStore(state => state.setGamePhase);
   const cookLevel = useGameStore(state => state.cookLevel);
@@ -132,41 +132,22 @@ export function Stove() {
 
   const [panPos, setPanPos] = useState(new THREE.Vector3(0.8, 0, 0)); // BR Burner
 
-  // Pan drag via R3F pointer events (useDrag crashes on web)
-  const panDragging = useRef(false);
-  const panStartPos = useRef({x: 0, y: 0});
-
-  const handlePanDown = (e: any) => {
+  const bindPan = useDrag(({active, movement: [x, y]}) => {
     if (gamePhase !== 'MOVE_PAN') return;
-    panDragging.current = true;
-    panStartPos.current = {x: e.point?.x ?? 0, y: e.point?.z ?? 0};
-  };
-  const handlePanMove = (e: any) => {
-    if (!panDragging.current || gamePhase !== 'MOVE_PAN') return;
-    const mx = ((e.point?.x ?? 0) - panStartPos.current.x) * 100;
-    const my = ((e.point?.z ?? 0) - panStartPos.current.y) * 100;
-    setPanPos(new THREE.Vector3(0.8 + mx * 0.01, 0, my * 0.01));
-  };
-  const handlePanUp = (e: any) => {
-    if (!panDragging.current) return;
-    panDragging.current = false;
-    if (gamePhase !== 'MOVE_PAN') return;
-    const mx = ((e.point?.x ?? 0) - panStartPos.current.x) * 100;
-    const my = ((e.point?.z ?? 0) - panStartPos.current.y) * 100;
-    const releasePos = new THREE.Vector3(0.8 + mx * 0.01, 0, my * 0.01);
-    if (releasePos.distanceTo(new THREE.Vector3(0, 0, 0.8)) < 0.5) {
-      setPanPos(new THREE.Vector3(0, 0, 0.8));
-      setGamePhase('COOKING');
+    if (active) {
+      setPanPos(new THREE.Vector3(0.8 + x * 0.01, 0, y * 0.01));
     } else {
-      setPanPos(new THREE.Vector3(0.8, 0, 0));
+      if (
+        new THREE.Vector3(0.8 + x * 0.01, 0, y * 0.01).distanceTo(new THREE.Vector3(0, 0, 0.8)) <
+        0.5
+      ) {
+        setPanPos(new THREE.Vector3(0, 0, 0.8));
+        setGamePhase('COOKING');
+      } else {
+        setPanPos(new THREE.Vector3(0.8, 0, 0));
+      }
     }
-  };
-  const handlePanLeave = () => {
-    if (panDragging.current) {
-      panDragging.current = false;
-      setPanPos(new THREE.Vector3(0.8, 0, 0));
-    }
-  };
+  });
 
   const updateSizzle = (l1: number, l2: number) => {
     if (gamePhase === 'COOKING') {
@@ -174,45 +155,19 @@ export function Stove() {
     }
   };
 
-  // Dial FL drag via R3F pointer events
-  const dialFLDragging = useRef(false);
-  const dialFLStartY = useRef(0);
-
-  const handleDialFLDown = (e: any) => {
-    dialFLDragging.current = true;
-    dialFLStartY.current = e.point?.y ?? 0;
-  };
-  const handleDialFLMove = (e: any) => {
-    if (!dialFLDragging.current) return;
-    const my = (dialFLStartY.current - (e.point?.y ?? 0)) * 200;
+  const bindDialFL = useDrag(({movement: [, my]}) => {
     const level = Math.max(0, Math.min(1.0, burnerLevels[0] - my * 0.005));
     setBurnerLevels([level, burnerLevels[1]]);
     if (dialFL.current) dialFL.current.rotation.x = level * Math.PI * 0.8;
     updateSizzle(level, burnerLevels[1]);
-  };
-  const handleDialFLUp = () => {
-    dialFLDragging.current = false;
-  };
+  });
 
-  // Dial BR drag via R3F pointer events
-  const dialBRDragging = useRef(false);
-  const dialBRStartY = useRef(0);
-
-  const handleDialBRDown = (e: any) => {
-    dialBRDragging.current = true;
-    dialBRStartY.current = e.point?.y ?? 0;
-  };
-  const handleDialBRMove = (e: any) => {
-    if (!dialBRDragging.current) return;
-    const my = (dialBRStartY.current - (e.point?.y ?? 0)) * 200;
+  const bindDialBR = useDrag(({movement: [, my]}) => {
     const level = Math.max(0, Math.min(1.0, burnerLevels[1] - my * 0.005));
     setBurnerLevels([burnerLevels[0], level]);
     if (dialBR.current) dialBR.current.rotation.x = level * Math.PI * 0.8;
     updateSizzle(burnerLevels[0], level);
-  };
-  const handleDialBRUp = () => {
-    dialBRDragging.current = false;
-  };
+  });
 
   // Cook logic & FBO Physics
   useFrame((_state, delta) => {
@@ -296,13 +251,7 @@ export function Stove() {
       <group position={[-0.4, 0.9, -0.4]}>
         {/* Frying Pan (Draggable) */}
         {pan.scene && (
-          <group
-            position={panPos}
-            onPointerDown={handlePanDown}
-            onPointerMove={handlePanMove}
-            onPointerUp={handlePanUp}
-            onPointerLeave={handlePanLeave}
-          >
+          <group {...bindPan()} position={panPos}>
             <primitive object={pan.scene.clone()} scale={0.7} position={[0, -0.02, 0]} />
             {/* Grease Pool inside the pan */}
             {(gamePhase === 'COOKING' || gamePhase === 'DONE') &&
@@ -351,14 +300,8 @@ export function Stove() {
 
       {/* Dials */}
       <group position={[0.4, 0.75, 0.85]} rotation={[0, Math.PI / 2, 0]}>
-        <group
-          ref={dialFL}
-          position={[0.4, 0, 0]}
-          onPointerDown={handleDialFLDown}
-          onPointerMove={handleDialFLMove}
-          onPointerUp={handleDialFLUp}
-          onPointerLeave={handleDialFLUp}
-        >
+        {/* @ts-ignore */}
+        <group {...bindDialFL()} ref={dialFL} position={[0.4, 0, 0]}>
           <mesh>
             <boxGeometry args={[0.08, 0.08, 0.04]} />
             <meshStandardMaterial color="#888" />
@@ -368,14 +311,8 @@ export function Stove() {
           </mesh>
         </group>
 
-        <group
-          ref={dialBR}
-          position={[-0.4, 0, 0]}
-          onPointerDown={handleDialBRDown}
-          onPointerMove={handleDialBRMove}
-          onPointerUp={handleDialBRUp}
-          onPointerLeave={handleDialBRUp}
-        >
+        {/* @ts-ignore */}
+        <group {...bindDialBR()} ref={dialBR} position={[-0.4, 0, 0]}>
           <mesh>
             <boxGeometry args={[0.08, 0.08, 0.04]} />
             <meshStandardMaterial color="#888" />
@@ -389,4 +326,4 @@ export function Stove() {
   );
 }
 
-useGLTF.preload(getAssetUrl('models', 'kitchen_oven_large.glb'));
+useGLTF.preload('/models/kitchen_oven_large.glb');
