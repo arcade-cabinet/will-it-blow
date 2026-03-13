@@ -1,7 +1,7 @@
 import {useGLTF} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
 import {RigidBody} from '@react-three/rapier';
-import {useEffect, useRef, useState, useMemo, useCallback} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
 import {useGameStore} from '../../store/gameStore';
 

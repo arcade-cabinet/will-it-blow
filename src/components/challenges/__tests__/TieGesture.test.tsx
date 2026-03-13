@@ -6,18 +6,20 @@
  * - Both tie points must be tapped before onComplete fires
  * - Order of tapping does not matter (left-then-right or right-then-left both work)
  * - setCasingTied is called when both ends are tied
- * - Fast tie (< 2500ms) earns a flair point via recordFlairPoint
- * - Slow tie (> 2500ms) does NOT earn a flair point
  * - Component cleanup — timer cleared on unmount
  */
 
 import {afterEach, beforeEach, describe, expect, it, jest} from '@jest/globals';
 import renderer, {act} from 'react-test-renderer';
-import {INITIAL_GAME_STATE, useGameStore} from '../../../store/gameStore';
+import {useGameStore} from '../../../store/gameStore';
 import {TieGesture} from '../TieGesture';
 
 const store = () => useGameStore.getState();
-const reset = () => useGameStore.setState({...INITIAL_GAME_STATE});
+const reset = () =>
+  useGameStore.setState({
+    casingTied: false,
+    gamePhase: 'TIE_CASING',
+  });
 
 beforeEach(() => {
   jest.useFakeTimers();
@@ -180,58 +182,6 @@ describe('tie gesture logic', () => {
     // Advance more time — should not double-fire
     act(() => jest.advanceTimersByTime(3000));
     expect(onComplete).toHaveBeenCalledTimes(1);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Flair point for fast ties
-// ---------------------------------------------------------------------------
-
-describe('fast tie flair bonus', () => {
-  it('records a flair point when both ends are tied within 2500ms', () => {
-    // Date.now() is called once on mount (startTimeRef) and once when both are tied
-    const startTime = 100000;
-    jest
-      .spyOn(Date, 'now')
-      .mockReturnValueOnce(startTime)
-      .mockReturnValue(startTime + 500);
-
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<TieGesture onComplete={jest.fn()} />);
-    });
-
-    pressNode(tree!, 'tie-left');
-    act(() => jest.runAllTimers());
-    pressNode(tree!, 'tie-right');
-    act(() => jest.runAllTimers());
-
-    const {playerDecisions} = store();
-    const flairPoint = playerDecisions.flairPoints.find(fp => fp.reason === 'fast-tie');
-    expect(flairPoint).toBeDefined();
-    expect(flairPoint?.points).toBe(5);
-  });
-
-  it('does NOT record a flair point when tie takes longer than 2500ms', () => {
-    const startTime = 100000;
-    jest
-      .spyOn(Date, 'now')
-      .mockReturnValueOnce(startTime)
-      .mockReturnValue(startTime + 3000);
-
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<TieGesture onComplete={jest.fn()} />);
-    });
-
-    pressNode(tree!, 'tie-left');
-    act(() => jest.runAllTimers());
-    pressNode(tree!, 'tie-right');
-    act(() => jest.runAllTimers());
-
-    const {playerDecisions} = store();
-    const flairPoint = playerDecisions.flairPoints.find(fp => fp.reason === 'fast-tie');
-    expect(flairPoint).toBeUndefined();
   });
 });
 

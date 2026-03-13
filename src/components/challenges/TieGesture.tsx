@@ -56,6 +56,7 @@ export function TieGesture({onComplete}: {onComplete: () => void}) {
 
       <View style={styles.sausageRow}>
         <TouchableOpacity
+          testID="tie-left"
           style={styles.tiePointWrapper}
           onPress={handleLeftTie}
           activeOpacity={0.7}
@@ -85,6 +86,7 @@ export function TieGesture({onComplete}: {onComplete: () => void}) {
         </View>
 
         <TouchableOpacity
+          testID="tie-right"
           style={styles.tiePointWrapper}
           onPress={handleRightTie}
           activeOpacity={0.7}

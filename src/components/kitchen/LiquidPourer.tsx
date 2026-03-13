@@ -43,9 +43,9 @@ export function LiquidPourer({position = [0, 0, 0]}: {position?: [number, number
     // Tilt the bottle when pouring using delta-based damping
     const targetRotZ = isPouring ? -Math.PI / 2.2 : 0;
     bottleRef.current.rotation.z = THREE.MathUtils.lerp(
-      bottleRef.current.rotation.z, 
-      targetRotZ, 
-      1 - Math.pow(0.001, delta)
+      bottleRef.current.rotation.z,
+      targetRotZ,
+      1 - 0.001 ** delta,
     );
 
     if (liquidRef.current) {

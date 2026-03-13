@@ -49,12 +49,10 @@ const ALL_COMBOS: string[][] = generateAllCombos(
  */
 export function isComboUsed(combo: string[], usedCombos: string[][]): boolean {
   const sorted = [...combo].sort();
-  return usedCombos.some(
-    used => {
-      const sortedUsed = [...used].sort();
-      return sortedUsed.length === sorted.length && sortedUsed.every((id, i) => id === sorted[i]);
-    }
-  );
+  return usedCombos.some(used => {
+    const sortedUsed = [...used].sort();
+    return sortedUsed.length === sorted.length && sortedUsed.every((id, i) => id === sorted[i]);
+  });
 }
 
 /**

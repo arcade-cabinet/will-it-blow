@@ -4,7 +4,7 @@
  * Uses the exported PHASES constant and pure helper functions.
  */
 import type {GamePhase} from '../../store/gameStore';
-import {PHASES, nextPhase, prevPhase} from '../GameOrchestrator';
+import {nextPhase, PHASES, prevPhase} from '../GameOrchestrator';
 
 // ---------------------------------------------------------------------------
 // All GamePhase values — authoritative list from the store type

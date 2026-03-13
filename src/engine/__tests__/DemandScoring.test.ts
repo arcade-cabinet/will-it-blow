@@ -1,10 +1,10 @@
-import {calculateDemandBonus, COOK_TARGETS} from '../DemandScoring';
+import {COOK_TARGETS, calculateDemandBonus} from '../DemandScoring';
 
 describe('DemandScoring', () => {
   const defaultDemands = {
     desiredTags: ['meat'],
     hatedTags: ['absurd'],
-    cookPreference: 'medium'
+    cookPreference: 'medium',
   };
 
   it('calculates a high score for perfect matches', () => {

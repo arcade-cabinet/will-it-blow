@@ -17,7 +17,7 @@ export const COOK_TARGETS = {
   rare: 0.15,
   medium: 0.45,
   'well-done': 0.75,
-  charred: 0.95
+  charred: 0.95,
 };
 
 /**

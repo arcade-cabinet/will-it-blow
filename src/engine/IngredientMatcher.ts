@@ -3,7 +3,7 @@
  * Matches ingredients against tag-based criteria for the ingredient selection
  * challenge. Derives tags from both explicit definitions and stat thresholds.
  */
-import { type IngredientDef } from './Ingredients';
+import type {IngredientDef} from './Ingredients';
 
 /** All recognized ingredient tags, including stat-derived ones. */
 export type IngredientTag =

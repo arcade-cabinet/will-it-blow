@@ -109,14 +109,14 @@ export function Sausage({
     setBodies(newBodies);
 
     return () => {
-      newBodies.forEach(b => world.removeRigidBody(b));
+      for (const b of newBodies) world.removeRigidBody(b);
     };
   }, [world, numBones]);
 
   // Reset extrusion states if game phase changes backwards
   useEffect(() => {
     if (gamePhase === 'SELECT_INGREDIENTS') {
-      anchors.forEach(a => (a.extruded = false));
+      for (const a of anchors) a.extruded = false;
       meatMat.color.setHex(0xffffff);
       meatMat.roughness = 1.0 - greaseLevel * 0.6;
     }

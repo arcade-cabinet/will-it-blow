@@ -161,7 +161,19 @@
       "id": "US-6.4",
       "title": "E2E playthrough test",
       "description": "Create e2e/playthrough.spec.ts — full game loop E2E test. Exercise: title → playing → all 13 phases → results → menu. Use GameGovernor (window.__gov) for phase advancement. Verify score display, rank badge, and menu return. Run headed with system Chrome (WebGL support). Add CI integration (runs on push to feat/** branches).",
-      "dependsOn": ["US-2.4", "US-3.1", "US-3.2", "US-3.3", "US-3.4", "US-3.5", "US-3.6", "US-3.7", "US-4.1", "US-4.2", "US-6.1"],
+      "dependsOn": [
+        "US-2.4",
+        "US-3.1",
+        "US-3.2",
+        "US-3.3",
+        "US-3.4",
+        "US-3.5",
+        "US-3.6",
+        "US-3.7",
+        "US-4.1",
+        "US-4.2",
+        "US-6.1"
+      ],
       "blocks": ["US-7.2"]
     },
     {

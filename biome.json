@@ -6,6 +6,8 @@
       "!!**/dist",
       "!!**/.expo",
       "!!**/.worktrees",
+      "!!**/.claude/worktrees",
+      "!!**/playwright",
       "!!**/public",
       "!!**/android",
       "!!**/ios",

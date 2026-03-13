@@ -170,18 +170,17 @@ export function SurrealText() {
     currentRound,
     totalRounds,
   ]);
-useEffect(() => {
-  if (textContent) {
-    setMessages(prev => {
-      if (prev.some(m => m.active && m.text === textContent)) return prev;
-      const updated = prev.map(m => ({...m, active: false}));
-      return [...updated, {id: nextId++, text: textContent, active: true}];
-    });
-  } else {
-    setMessages(prev => prev.map(m => ({...m, active: false})));
-  }
-}, [textContent]);
-  }, [textContent, messages.some]); // Removed messages from dep array to avoid loops
+  useEffect(() => {
+    if (textContent) {
+      setMessages(prev => {
+        if (prev.some(m => m.active && m.text === textContent)) return prev;
+        const updated = prev.map(m => ({...m, active: false}));
+        return [...updated, {id: nextId++, text: textContent, active: true}];
+      });
+    } else {
+      setMessages(prev => prev.map(m => ({...m, active: false})));
+    }
+  }, [textContent]);
 
   const removeMessage = (id: number) => {
     setMessages(prev => prev.filter(m => m.id !== id));

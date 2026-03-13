@@ -1,7 +1,7 @@
 module.exports = {
   preset: 'react-native',
   setupFiles: ['./jest.setup.js'],
-  testPathIgnorePatterns: ['/node_modules/', '/e2e/'],
+  testPathIgnorePatterns: ['/node_modules/', '/e2e/', '/.claude/'],
   transformIgnorePatterns: [
     'node_modules/(?!(.pnpm|react-native|@react-native|@react-native-async-storage|expo|@expo|babel-preset-expo|three|@react-three|zustand|three-mesh-bvh|tsl-textures|maath|postprocessing|miniplex|miniplex-react)/)',
   ],

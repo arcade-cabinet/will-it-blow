@@ -11,10 +11,7 @@
     "android": {
       "package": "com.jbcom.willitblow"
     },
-    "plugins": [
-      "expo-sqlite",
-      "expo-asset"
-    ],
+    "plugins": ["expo-sqlite", "expo-asset"],
     "experiments": {
       "baseUrl": "/will-it-blow"
     }

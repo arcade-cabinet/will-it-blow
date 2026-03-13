@@ -38,11 +38,15 @@ export function PlayerHands() {
   skinTex.flipY = false;
   skinTex.colorSpace = THREE.SRGBColorSpace;
 
-  const handMat = useMemo(() => new THREE.MeshStandardMaterial({
-    map: skinTex,
-    roughness: 0.6,
-    metalness: 0.1,
-  }), [skinTex]);
+  const handMat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        map: skinTex,
+        roughness: 0.6,
+        metalness: 0.1,
+      }),
+    [skinTex],
+  );
 
   // Cleanup material on unmount
   useEffect(() => {
@@ -85,8 +89,8 @@ export function PlayerHands() {
     localOffset.applyQuaternion(camera.quaternion);
     targetPos.copy(camera.position).add(localOffset);
 
-    group.current.position.lerp(targetPos, 1 - Math.pow(0.001, delta));
-    group.current.quaternion.slerp(camera.quaternion, 1 - Math.pow(0.001, delta));
+    group.current.position.lerp(targetPos, 1 - 0.001 ** delta);
+    group.current.quaternion.slerp(camera.quaternion, 1 - 0.001 ** delta);
   });
 
   return (

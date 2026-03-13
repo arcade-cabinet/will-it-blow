@@ -1,7 +1,7 @@
 import {useEffect} from 'react';
 import {type GamePhase, useGameStore} from '../store/gameStore';
 
-const PHASES: GamePhase[] = [
+export const PHASES: GamePhase[] = [
   'SELECT_INGREDIENTS',
   'CHOPPING',
   'FILL_GRINDER',
@@ -9,11 +9,27 @@ const PHASES: GamePhase[] = [
   'MOVE_BOWL',
   'ATTACH_CASING',
   'STUFFING',
+  'TIE_CASING',
+  'BLOWOUT',
   'MOVE_SAUSAGE',
   'MOVE_PAN',
   'COOKING',
   'DONE',
 ];
+
+/** Returns the next phase in the sequence, or null if at the end. */
+export function nextPhase(current: GamePhase): GamePhase | null {
+  const idx = PHASES.indexOf(current);
+  if (idx === -1 || idx === PHASES.length - 1) return null;
+  return PHASES[idx + 1];
+}
+
+/** Returns the previous phase in the sequence, or null if at the start. */
+export function prevPhase(current: GamePhase): GamePhase | null {
+  const idx = PHASES.indexOf(current);
+  if (idx <= 0) return null;
+  return PHASES[idx - 1];
+}
 
 export function GameOrchestrator() {
   const introActive = useGameStore(state => state.introActive);
