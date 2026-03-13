@@ -20,6 +20,20 @@ export function GameOrchestrator() {
   const posture = useGameStore(state => state.posture);
   const gamePhase = useGameStore(state => state.gamePhase);
   const setGamePhase = useGameStore(state => state.setGamePhase);
+  const generateDemands = useGameStore(state => state.generateDemands);
+  const calculateFinalScore = useGameStore(state => state.calculateFinalScore);
+
+  // Initialize demands when game starts
+  useEffect(() => {
+    generateDemands();
+  }, [generateDemands]);
+
+  // Trigger score calculation when reaching the DONE phase
+  useEffect(() => {
+    if (gamePhase === 'DONE') {
+      calculateFinalScore();
+    }
+  }, [gamePhase, calculateFinalScore]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

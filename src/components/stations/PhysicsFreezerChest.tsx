@@ -105,6 +105,7 @@ function FreezerIngredient({ def, miscNodes, frostMat }: any) {
 
   const gamePhase = useGameStore(state => state.gamePhase);
   const setGamePhase = useGameStore(state => state.setGamePhase);
+  const setSelectedIngredientId = useGameStore(state => state.setSelectedIngredientId);
 
   // Allow player to reach in and grab an item
   const bind = useDrag(({ active, movement: [x, y] }) => {
@@ -112,6 +113,7 @@ function FreezerIngredient({ def, miscNodes, frostMat }: any) {
     if (active && ref.current) {
       // Lift the object out of the freezer
       ref.current.setTranslation({ x: -1.5, y: 2.0, z: -2.5 }, true);
+      setSelectedIngredientId(def.id);
     }
     
     // When released, if we were in the selection phase, progress to chopping

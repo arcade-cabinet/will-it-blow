@@ -83,23 +83,29 @@ export function SurrealText() {
 
   const [messages, setMessages] = useState<{id: number; text: string; active: boolean}[]>([]);
 
+  const finalScore = useGameStore(state => state.finalScore);
+  const mrSausageDemands = useGameStore(state => state.mrSausageDemands);
+
   const textContent = useMemo(() => {
-    if (introActive) return 'Hey, wake up lazybones';
+    if (introActive) return "Hey, wake up lazybones";
 
     // Waking up sequence texts
     if (posture === 'prone') {
       if (idleTime > 10) return "Use the arrow keys for God's sake";
-      return 'Come on, time to get up';
+      return "Come on, time to get up";
     }
     if (posture === 'sitting') {
       if (idleTime > 10) return "Use the arrow keys for God's sake";
-      return 'Almost there, stand up';
+      return "Almost there, stand up";
     }
 
     // Main gameplay loop
     if (posture === 'standing') {
       switch (gamePhase) {
         case 'SELECT_INGREDIENTS':
+          if (mrSausageDemands) {
+            return `WANTS: ${mrSausageDemands.desiredTags.join(', ').toUpperCase()} / HATES: ${mrSausageDemands.hatedTags.join(', ').toUpperCase()} / COOK: ${mrSausageDemands.cookPreference.toUpperCase()}`;
+          }
           return "WHAT'S IN THE BOX?";
         case 'CHOPPING':
           return "CHOP IT UP";
@@ -120,6 +126,9 @@ export function SurrealText() {
         case 'COOKING':
           return "DON'T LET IT BURN";
         case 'DONE':
+          if (finalScore && finalScore.calculated) {
+            return `SCORE: ${finalScore.totalScore}%\n${finalScore.breakdown}\n(CLICK CEREAL BOX TO RESTART)`;
+          }
           return "WILL IT BLOW? (CLICK CEREAL BOX TO RESTART)";
         default:
           return '';
@@ -127,7 +136,7 @@ export function SurrealText() {
     }
 
     return '';
-  }, [introActive, posture, idleTime, gamePhase]);
+  }, [introActive, posture, idleTime, gamePhase, finalScore, mrSausageDemands]);
 
   useEffect(() => {
     if (textContent) {
