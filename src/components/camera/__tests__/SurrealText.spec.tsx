@@ -5,7 +5,13 @@ import {SurrealText} from '../../environment/SurrealText';
 test.use({viewport: {width: 500, height: 500}});
 
 test('should render SurrealText correctly based on state', async ({mount}) => {
-  // We can mount the component inside a Canvas for testing
+  // Set an initial game store state before mounting
+  useGameStore.setState({
+    posture: 'neutral',
+    gamePhase: 'intro',
+  } as any);
+
+  // Mount the component inside a Canvas for testing
   const component = await mount(
     <div style={{width: '500px', height: '500px'}}>
       <Canvas>
@@ -14,11 +20,18 @@ test('should render SurrealText correctly based on state', async ({mount}) => {
     </div>,
   );
 
-  // Since R3F doesn't render HTML DOM elements directly,
-  // asserting text in Canvas usually requires checking the internal state
-  // or taking a visual regression snapshot.
+  // Basic sanity check that the component renders
   await expect(component).toBeVisible();
 
-  // Visual test!
-  // await expect(component).toHaveScreenshot('surreal-text-default.png');
+  // Visual regression: intro phase
+  await expect(component).toHaveScreenshot('surreal-text-intro.png');
+
+  // Update the store to simulate a different phase/posture and validate the change
+  useGameStore.setState({
+    posture: 'slouch',
+    gamePhase: 'game',
+  } as any);
+
+  // Visual regression: in-game phase
+  await expect(component).toHaveScreenshot('surreal-text-game.png');
 });
