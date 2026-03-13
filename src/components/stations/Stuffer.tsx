@@ -1,7 +1,6 @@
 import {Box, Cylinder, useTexture} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
 import {RigidBody} from '@react-three/rapier';
-import {useDrag} from '@use-gesture/react';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
 import {audioEngine} from '../../engine/AudioEngine';
@@ -106,37 +105,47 @@ export function Stuffer() {
     [],
   );
 
-  const bindCrank = useDrag(({movement: [, my]}) => {
-    if (gamePhase !== 'STUFFING') return;
+  // Crank drag via R3F pointer events (useDrag crashes on web)
+  const crankDragging = useRef(false);
+  const crankStartY = useRef(0);
 
+  const handleCrankDown = (e: any) => {
+    crankDragging.current = true;
+    crankStartY.current = e.point?.y ?? 0;
+  };
+  const handleCrankMove = (e: any) => {
+    if (!crankDragging.current || gamePhase !== 'STUFFING') return;
+    const my = (crankStartY.current - (e.point?.y ?? 0)) * 200;
     const newLevel = Math.max(0, Math.min(1.0, stuffLevel + my * 0.002));
     setStuffLevel(newLevel);
+    if (crankRef.current) crankRef.current.rotation.x = -newLevel * Math.PI * 10;
+    if (rodRef.current) rodRef.current.position.y = 1.0 - newLevel * 0.8;
+    if (newLevel >= 1.0) setGamePhase('TIE_CASING');
+  };
+  const handleCrankUp = () => {
+    crankDragging.current = false;
+  };
 
-    if (crankRef.current) {
-      crankRef.current.rotation.x = -newLevel * Math.PI * 10;
-    }
-    if (rodRef.current) {
-      rodRef.current.position.y = 1.0 - newLevel * 0.8;
-    }
-
-    if (newLevel >= 1.0) {
-      setGamePhase('TIE_CASING');
-    }
-  });
-
-  const bindCasing = useDrag(({active, movement: [mx, my]}) => {
+  // Casing drag via R3F pointer events
+  const casingDragging = useRef(false);
+  const handleCasingDown = () => {
     if (gamePhase !== 'ATTACH_CASING') return;
-
-    setIsDraggingCasing(active);
-
-    if (active) {
-      setDragTarget(new THREE.Vector3(0.5 + mx * 0.002, 0.2 - my * 0.002, 0));
-    } else {
-      if (dragTarget.distanceTo(new THREE.Vector3(0.4, 0.2, 0)) < 0.3) {
-        setGamePhase('STUFFING');
-      }
+    casingDragging.current = true;
+    setIsDraggingCasing(true);
+  };
+  const handleCasingMove = (e: any) => {
+    if (!casingDragging.current || gamePhase !== 'ATTACH_CASING') return;
+    const pt = e.point;
+    if (pt) setDragTarget(new THREE.Vector3(pt.x, pt.y, 0));
+  };
+  const handleCasingUp = () => {
+    if (!casingDragging.current) return;
+    casingDragging.current = false;
+    setIsDraggingCasing(false);
+    if (dragTarget.distanceTo(new THREE.Vector3(0.4, 0.2, 0)) < 0.3) {
+      setGamePhase('STUFFING');
     }
-  });
+  };
 
   useFrame(() => {
     if (isDraggingCasing) {
@@ -179,7 +188,10 @@ export function Stuffer() {
           <mesh
             geometry={squigglyGeo}
             material={casingMat}
-            {...(bindCasing() as any)}
+            onPointerDown={handleCasingDown}
+            onPointerMove={handleCasingMove}
+            onPointerUp={handleCasingUp}
+            onPointerLeave={handleCasingUp}
             position={[0, 0.05, 0]}
           />
         )}
@@ -245,7 +257,14 @@ export function Stuffer() {
       </mesh>
 
       {/* Crank */}
-      <group {...(bindCrank() as any)} ref={crankRef} position={[0.5, 1.2, 0]}>
+      <group
+        ref={crankRef}
+        position={[0.5, 1.2, 0]}
+        onPointerDown={handleCrankDown}
+        onPointerMove={handleCrankMove}
+        onPointerUp={handleCrankUp}
+        onPointerLeave={handleCrankUp}
+      >
         <Box args={[0.05, 0.4, 0.05]} position={[0, 0.2, 0]} material={metalMat} />
         <Cylinder
           args={[0.03, 0.03, 0.1, 16]}

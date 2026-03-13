@@ -1,6 +1,5 @@
 import {useGLTF} from '@react-three/drei';
 import {RigidBody} from '@react-three/rapier';
-import {useDrag} from '@use-gesture/react';
 import {useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
 import {getAssetUrl} from '../../engine/assetUrl';
@@ -113,25 +112,28 @@ function FreezerIngredient({def, miscNodes, frostMat: _frostMat}: any) {
   const addSelectedIngredientId = useGameStore(state => state.addSelectedIngredientId);
   const selectedIngredientIds = useGameStore(state => state.selectedIngredientIds);
 
-  // Allow player to reach in and grab an item
-  const bind = useDrag(({active, movement: [_x, _y]}) => {
-    setIsGrabbed(active);
-    if (active && ref.current && gamePhase === 'SELECT_INGREDIENTS') {
+  // Allow player to reach in and grab an item (R3F pointer events, useDrag crashes on web)
+  const handleDown = () => {
+    setIsGrabbed(true);
+    if (ref.current && gamePhase === 'SELECT_INGREDIENTS') {
       // Lift the object out of the freezer
       // Stagger positions slightly so they don't overlap exactly
       const count = selectedIngredientIds.length;
       ref.current.setTranslation({x: -1.5 + count * 0.2, y: 2.0, z: -2.5}, true);
       addSelectedIngredientId(def.id);
     }
+  };
 
+  const handleUp = () => {
+    setIsGrabbed(false);
     // When released, if we were in the selection phase and we have 3, progress
-    if (!active && gamePhase === 'SELECT_INGREDIENTS') {
+    if (gamePhase === 'SELECT_INGREDIENTS') {
       if (selectedIngredientIds.length >= 2) {
         // length was 2 before this click, so this is the 3rd
         setGamePhase('CHOPPING');
       }
     }
-  });
+  };
 
   let content = null;
   if (def.node) {
@@ -159,8 +161,7 @@ function FreezerIngredient({def, miscNodes, frostMat: _frostMat}: any) {
       mass={1}
       type={isGrabbed ? 'kinematicPosition' : 'dynamic'}
     >
-      {/* @ts-ignore */}
-      <group {...bind()}>
+      <group onPointerDown={handleDown} onPointerUp={handleUp} onPointerLeave={handleUp}>
         {content}
         {/* Frost overlay logic could be applied here by wrapping or duplicating mesh with frostMat */}
       </group>

@@ -1,7 +1,6 @@
 import {Box, Cylinder, useTexture} from '@react-three/drei';
 import {RigidBody} from '@react-three/rapier';
-import {useDrag} from '@use-gesture/react';
-import {useState} from 'react';
+import {useRef, useState} from 'react';
 import {audioEngine} from '../../engine/AudioEngine';
 import {useGameStore} from '../../store/gameStore';
 
@@ -34,12 +33,30 @@ export function ChoppingBlock() {
     doChop();
   };
 
-  // Allow swiping to chop for mobile/advanced interaction
-  const bindDrag = useDrag(({swipe: [swipeX, swipeY]}) => {
-    if (swipeX !== 0 || swipeY !== 0) {
+  // Allow swiping to chop for mobile/advanced interaction (R3F pointer events, useDrag crashes on web)
+  const swipeDragging = useRef(false);
+  const swipeStart = useRef({x: 0, y: 0});
+  const SWIPE_THRESHOLD = 0.05; // minimum distance in 3D units to count as a swipe
+
+  const handleSwipeDown = (e: any) => {
+    swipeDragging.current = true;
+    swipeStart.current = {x: e.point?.x ?? 0, y: e.point?.y ?? 0};
+  };
+  const handleSwipeMove = (_e: any) => {
+    // Movement tracked, swipe detected on pointer up
+  };
+  const handleSwipeUp = (e: any) => {
+    if (!swipeDragging.current) return;
+    swipeDragging.current = false;
+    const dx = (e.point?.x ?? 0) - swipeStart.current.x;
+    const dy = (e.point?.y ?? 0) - swipeStart.current.y;
+    if (Math.abs(dx) > SWIPE_THRESHOLD || Math.abs(dy) > SWIPE_THRESHOLD) {
       doChop();
     }
-  });
+  };
+  const handleSwipeLeave = () => {
+    swipeDragging.current = false;
+  };
 
   return (
     <group position={[1.5, 0.4, 0]}>
@@ -55,10 +72,12 @@ export function ChoppingBlock() {
 
       {/* Cutting Surface (Grimey/Bloody) */}
       <RigidBody type="fixed" colliders="hull">
-        {/* @ts-ignore */}
         <Cylinder
-          {...bindDrag()}
           onClick={handleClick}
+          onPointerDown={handleSwipeDown}
+          onPointerMove={handleSwipeMove}
+          onPointerUp={handleSwipeUp}
+          onPointerLeave={handleSwipeLeave}
           args={[0.5, 0.5, 0.05, 32]}
           position={[0, 0.4, 0]}
           castShadow

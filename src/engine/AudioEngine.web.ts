@@ -104,6 +104,53 @@ class AudioEngine {
       this.ambientPlayer.stop();
     }
   }
+
+  /** Unified playSound interface — maps sound names to specific player methods. */
+  playSound(name: string): void {
+    switch (name) {
+      case 'chop':
+        this.playChop();
+        break;
+      case 'sizzle':
+        this.setSizzleLevel(0.5);
+        break;
+      case 'grind':
+        this.setGrinderSpeed(0.5);
+        break;
+      case 'ambient':
+        this.setAmbientDrone(true);
+        break;
+      default:
+        // For sounds without dedicated players, use chop as fallback
+        this.playChop();
+        break;
+    }
+  }
+
+  setVolume(_type: string, _level: number): void {
+    // Tone.js master volume — would need Tone.Destination.volume
+  }
+
+  startAmbient(): void {
+    this.setAmbientDrone(true);
+  }
+
+  stopAmbient(): void {
+    this.setAmbientDrone(false);
+  }
+
+  setMuted(muted: boolean): void {
+    if (muted) this.setAmbientDrone(false);
+  }
+
+  isMuted(): boolean {
+    return false;
+  }
+
+  dispose(): void {
+    this.setAmbientDrone(false);
+    this.setGrinderSpeed(0);
+  }
 }
 
 export const audioEngine = new AudioEngine();

@@ -91,7 +91,18 @@ export function Sausage({
   useEffect(() => {
     if (!world) return;
     const newBodies: any[] = [];
-    const RAPIER = (window as any).RAPIER || require('@dimforge/rapier3d-compat');
+    // Use RAPIER from the @react-three/rapier Physics context (already init'd)
+    // Fallback to dynamic import if not on window
+    let RAPIER: any;
+    try {
+      RAPIER = require('@dimforge/rapier3d-compat');
+      if (!RAPIER.RigidBodyDesc) {
+        // WASM not yet initialized — skip this frame, Physics will handle it
+        return;
+      }
+    } catch {
+      return;
+    }
 
     for (let i = 0; i < numBones; i++) {
       // Initially, hide bodies high up until extruded

@@ -5,8 +5,8 @@
  */
 import {Canvas} from '@react-three/fiber';
 import {Physics} from '@react-three/rapier';
-import {Suspense, useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {StyleSheet, View} from 'react-native';
+import React, {Suspense, useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import * as THREE from 'three';
 import {CameraRail} from './src/components/camera/CameraRail';
 import {FirstPersonControls} from './src/components/camera/FirstPersonControls';
@@ -67,6 +67,62 @@ console.warn = (...args) => {
 
 // -----------------------------------------------------------------------
 
+/** Error boundary that catches Canvas/Physics crashes and shows a recovery UI. */
+class SceneErrorBoundary extends React.Component<
+  {children: React.ReactNode},
+  {error: Error | null}
+> {
+  state = {error: null as Error | null};
+
+  static getDerivedStateFromError(error: Error) {
+    return {error};
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <View style={{flex: 1, backgroundColor: '#0a0a0a', justifyContent: 'center', alignItems: 'center', padding: 24}}>
+          <Text style={{color: '#FF1744', fontSize: 24, fontWeight: '900', marginBottom: 16}}>SCENE CRASHED</Text>
+          <Text style={{color: '#888', fontSize: 14, textAlign: 'center', marginBottom: 24}}>
+            {this.state.error.message.substring(0, 200)}
+          </Text>
+          <TouchableOpacity
+            style={{backgroundColor: '#D2A24C', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 8}}
+            onPress={() => this.setState({error: null})}
+          >
+            <Text style={{color: '#1a0a00', fontSize: 18, fontWeight: '900'}}>RETRY</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+/** Ensures Rapier WASM is initialized before rendering Physics children. */
+function RapierReady({children}: {children: React.ReactNode}) {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const RAPIER = await import('@dimforge/rapier3d-compat');
+        await RAPIER.init();
+        if (!cancelled) setReady(true);
+      } catch (err) {
+        console.warn('Rapier WASM init failed:', err);
+        // Still set ready to let Physics try its own init
+        if (!cancelled) setReady(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  if (!ready) return null;
+  return <>{children}</>;
+}
+
 /** 3D scene content: physics world, stations, props, camera, and orchestrator. */
 function GameContent() {
   const introActive = useGameStore(state => state.introActive);
@@ -74,6 +130,7 @@ function GameContent() {
 
   return (
     <>
+      <RapierReady>
       <Physics gravity={[0, -20, 0]}>
         <BasementRoom />
         <SurrealText />
@@ -117,6 +174,7 @@ function GameContent() {
         {/* State Machine */}
         <GameOrchestrator />
       </Physics>
+      </RapierReady>
 
       <PlayerHands />
 
@@ -450,6 +508,7 @@ export default function App() {
       {/* Playing state: 3D Canvas + UI Layer */}
       {appPhase === 'playing' && !showLoading && (
         <>
+          <SceneErrorBoundary>
           <Canvas
             camera={{position: [2.0, 0.5, 3.0], fov: 75}}
             shadows={{type: THREE.PCFShadowMap}}
@@ -473,6 +532,7 @@ export default function App() {
               <GameContent />
             </Suspense>
           </Canvas>
+          </SceneErrorBoundary>
           <UILayer />
         </>
       )}

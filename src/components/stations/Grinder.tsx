@@ -1,7 +1,8 @@
 import {Box, Cylinder, useTexture} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
 import {RigidBody} from '@react-three/rapier';
-import {useDrag} from '@use-gesture/react';
+// useDrag from @use-gesture/react crashes on web with R3F elements
+// Using R3F native pointer events instead
 import {useEffect, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
 import {audioEngine} from '../../engine/AudioEngine';
@@ -97,16 +98,23 @@ export function Grinder() {
 
   const particleSpawnIndex = useRef(0);
 
-  const bindPlunger = useDrag(({offset: [, y]}) => {
+  const isDragging = useRef(false);
+  const dragStartY = useRef(0);
+
+  const handlePlungerDown = (e: any) => {
+    isDragging.current = true;
+    dragStartY.current = e.point?.y ?? 0;
+  };
+
+  const handlePlungerMove = (e: any) => {
+    if (!isDragging.current) return;
     if (gamePhase !== 'GRINDING') return;
     if (bowlState !== 'UNDER') return;
 
-    // How many chunks are currently in the chute waiting to be ground?
     const chunksInChute = chunks.filter(c => c.state === 2).length;
-
-    // Only allow plunging if there is meat in the chute
     if (chunksInChute === 0) return;
 
+    const y = (dragStartY.current - (e.point?.y ?? 0)) * 100;
     const newY = Math.max(0.5, Math.min(1.2, 1.2 - y * 0.01));
     const plungeDelta = plungerY - newY;
     setPlungerY(newY);
@@ -156,7 +164,11 @@ export function Grinder() {
         }
       }
     }
-  });
+  };
+
+  const handlePlungerUp = () => {
+    isDragging.current = false;
+  };
 
   useEffect(() => {
     if (isGrinderOn && gamePhase === 'GRINDING') {
@@ -290,8 +302,14 @@ export function Grinder() {
       </Box>
 
       {/* Plunger */}
-      {/* @ts-ignore - use-gesture typing requires this cast for R3F elements */}
-      <group {...bindPlunger()} ref={plungerRef} position={[0.2, plungerY, 0]}>
+      <group
+        ref={plungerRef}
+        position={[0.2, plungerY, 0]}
+        onPointerDown={handlePlungerDown}
+        onPointerMove={handlePlungerMove}
+        onPointerUp={handlePlungerUp}
+        onPointerLeave={handlePlungerUp}
+      >
         <Cylinder args={[0.12, 0.12, 0.6, 16]} position={[0, -0.3, 0]}>
           <meshStandardMaterial color="#fff" roughness={0.4} />
         </Cylinder>

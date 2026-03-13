@@ -93,7 +93,12 @@ test.describe('Greenfield Playthrough', () => {
       await startButton.click();
       await page.waitForTimeout(1000);
       const mediumButton = page.getByText('Medium', {exact: false});
-      if (await mediumButton.first().isVisible({timeout: 3000}).catch(() => false)) {
+      if (
+        await mediumButton
+          .first()
+          .isVisible({timeout: 3000})
+          .catch(() => false)
+      ) {
         await mediumButton.first().click();
       }
     }
