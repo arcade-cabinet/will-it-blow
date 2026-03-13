@@ -1,3 +1,14 @@
+<!--
+title: Gemini Conversation - POC Development
+domain: poc
+status: archived
+engine: gemini
+last-verified: 2026-03-13
+depends-on: []
+agent-context: conversation-log
+summary: Gemini conversation logs documenting the iterative development of the POC including physics debugging, FBO fluid dynamics implementation, and interactive state machine refinement.
+-->
+
 Original URL: https://gemini.google.com/app/5546a3ed9463e9b0
 
 **[USER]**

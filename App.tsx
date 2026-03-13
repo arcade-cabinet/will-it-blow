@@ -28,6 +28,7 @@ import {Stove} from './src/components/stations/Stove';
 import {Stuffer} from './src/components/stations/Stuffer';
 import {TV} from './src/components/stations/TV';
 import {DialogueOverlay} from './src/components/ui/DialogueOverlay';
+import {TitleScreen} from './src/components/ui/TitleScreen';
 import {INTRO_DIALOGUE} from './src/data/dialogue/intro';
 import {VERDICT_A, VERDICT_B, VERDICT_F, VERDICT_S} from './src/data/dialogue/verdict';
 import {GameOrchestrator} from './src/engine/GameOrchestrator';
@@ -58,6 +59,7 @@ console.error = (...args) => {
 
 function GameContent() {
   const introActive = useGameStore(state => state.introActive);
+  const mrSausageReaction = useGameStore(state => state.mrSausageReaction);
 
   return (
     <>
@@ -92,7 +94,7 @@ function GameContent() {
           rotationY={Math.PI / 2}
           scale={0.4}
           trackCamera
-          reaction={useGameStore(state => state.mrSausageReaction)}
+          reaction={mrSausageReaction}
         />
 
         {/* Ceiling Trapdoor */}
@@ -184,8 +186,6 @@ function UILayer() {
   );
 }
 
-import {TitleScreen} from './src/components/ui/TitleScreen';
-
 export default function App() {
   const appPhase = useGameStore(state => state.appPhase);
 
@@ -230,22 +230,4 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000',
   },
-  uiLayer: {
-    position: 'absolute',
-    bottom: 40,
-    width: '100%',
-    alignItems: 'center',
-  },
-  instructions: {
-    color: '#ffcc00',
-    fontSize: 20,
-    fontWeight: 'bold',
-    textShadow: '0px 2px 4px rgba(0,0,0,1)',
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ffcc00',
-  } as any,
 });
