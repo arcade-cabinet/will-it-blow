@@ -40,41 +40,44 @@ Fixed camera positions per station. Smooth interpolation between stations on cha
 ### State Management
 Single Zustand store (`src/store/gameStore.ts`). No React Context for game state. `appPhase` (menu/loading/playing) controls top-level rendering. `currentChallenge` (0-6) tracks progression.
 
-### Challenge Patterns (Two Types)
+### Challenge Pattern
 
-**ECS Orchestrator** (chopping, grinding, stuffing, cooking, blowout):
-- Orchestrator OWNS game logic, spawns/despawns ECS entities
-- Thin HUD is read-only Zustand subscriber — ZERO input handling
+**Procedural Station** (all stations):
+- Each station is a self-contained R3F component in `src/components/stations/`
+- Station owns its own geometry, physics, game logic, and input handling
+- Writes results to Zustand store (gamePhase, groundMeatVol, stuffLevel, etc.)
+- UI overlays (when implemented) read store for display only
 
-**Bridge Pattern** (ingredients, tasting):
-- 2D overlay owns scoring, 3D station handles visuals
-- Coordinate through Zustand store only
+**Note:** The old main branch used ECS orchestrators + bridge patterns. Those are deleted. All stations are now procedural components.
 
-### Game Flow
+### Game Flow (13 GamePhase values)
 ```
-menu -> difficulty -> loading -> ingredients -> chopping -> grinding -> stuffing -> cooking -> blowout -> tasting -> results
+SELECT_INGREDIENTS → CHOPPING → FILL_GRINDER → GRINDING → MOVE_BOWL →
+ATTACH_CASING → STUFFING → TIE_CASING → BLOWOUT → MOVE_SAUSAGE →
+MOVE_PAN → COOKING → DONE
 ```
 
 ## Key Files
 
 | File | Purpose |
 |------|---------|
-| `App.tsx` | Root layout — phase routing + code splitting |
-| `src/store/gameStore.ts` | Zustand store (all game state + actions) |
+| `App.tsx` | Root layout — phase routing (title/playing) |
+| `src/store/gameStore.ts` | Zustand store (236 lines, all game state + actions) |
+| `src/engine/GameOrchestrator.tsx` | Phase navigation + dev shortcuts (n/p keys) |
 | `src/engine/DemandScoring.ts` | Demand scoring — player vs Mr. Sausage's hidden demands |
 | `src/engine/RoundManager.ts` | Multi-round loop, C(12,3) combo tracking |
 | `src/engine/IngredientMatcher.ts` | Tag/criteria matching for ingredient selection |
-| `src/engine/ChallengeRegistry.ts` | Challenge configs, variant selection, final verdict |
-| `src/engine/SausagePhysics.ts` | Pure scoring functions |
+| `src/engine/DifficultyConfig.ts` | Difficulty tier configuration |
+| `src/engine/DialogueEngine.ts` | Dialogue tree walker |
+| `src/engine/AudioEngine.ts` | Tone.js synthesis (single file) |
 | `src/engine/Ingredients.ts` | 25 ingredients with stats |
 | `src/components/GameWorld.tsx` | R3F Canvas, camera rail, station triggers |
+| `src/components/stations/*.tsx` | Procedural station components (9 stations) |
+| `src/components/sausage/Sausage.tsx` | SkinnedMesh + Rapier bone-chain physics |
 | `src/components/camera/CameraRail.tsx` | Camera rail interpolation between stations |
-| `src/components/camera/PlayerHands.tsx` | First-person hand rendering |
 | `src/components/environment/SurrealText.tsx` | Diegetic in-world UI text |
-| `src/components/kitchen/*.tsx` | 3D station components |
-| `src/components/kitchen/LiquidPourer.tsx` | Liquid pouring mechanics |
-| `src/components/challenges/*.tsx` | Challenge overlays/HUDs |
-| `src/config/` | JSON configs: difficulty, enemies, blowout |
+| `src/components/ui/DialogueOverlay.tsx` | Typewriter text + choices |
+| `src/config/difficulty.json` | 5 difficulty tiers (only config file) |
 
 ## Commands
 

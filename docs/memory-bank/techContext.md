@@ -64,12 +64,9 @@ pnpm typecheck                # node --stack-size=8192 (required for Three.js ty
 
 ## Platform Split
 
-Only one platform-specific file remains:
+No platform-specific files on the greenfield branch. A single `AudioEngine.ts` handles Tone.js synthesis (the `.web.ts` / `.ts` split from main is not present).
 
-- `AudioEngine.web.ts` — Full Tone.js synthesis + OGG sample playback
-- `AudioEngine.ts` — Native no-op stub
-
-Everything else (including the entire 3D layer) is unified cross-platform.
+Everything (including the entire 3D layer) is unified cross-platform.
 
 ## Audio Assets
 

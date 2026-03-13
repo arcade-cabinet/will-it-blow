@@ -60,7 +60,7 @@ Every `.md` file under `docs/` carries YAML frontmatter (`---` delimiters). Fiel
 | `testing.md` | Testing Strategy | current | Jest, R3F test-renderer, Playwright E2E, coverage |
 | `deployment.md` | Deployment & CI/CD | current | CI/CD pipeline, GitHub Pages, Git LFS, build commands |
 | `development-guide.md` | Development Guide | current | Conventions, patterns, pitfalls, how to add features |
-| `status.md` | Project Status | current | Completion overview, remaining work |
+| `status.md` | Project Status | current | Greenfield rebuild status, gap inventory, remaining work |
 
 ## Memory Bank
 
@@ -97,10 +97,10 @@ Every `.md` file under `docs/` carries YAML frontmatter (`---` delimiters). Fiel
 
 | Domain | Docs | Key Code Paths |
 |--------|------|---------------|
-| **3D / Scene** | `architecture.md`, `3d-rendering.md` | `src/components/GameWorld.tsx`, `src/components/kitchen/`, `src/components/camera/` |
+| **3D / Scene** | `architecture.md`, `3d-rendering.md` | `src/components/GameWorld.tsx`, `src/components/stations/`, `src/components/camera/` |
 | **Gameplay** | `game-design.md`, `state-management.md` | `src/engine/`, `src/store/gameStore.ts`, `src/components/challenges/` |
 | **Infrastructure** | `deployment.md`, `testing.md`, `development-guide.md` | `.github/workflows/`, `jest.config.js`, `metro.config.js` |
-| **Audio** | `audio.md` | `src/audio/AudioEngine.web.ts`, `src/audio/AudioEngine.ts` |
+| **Audio** | `audio.md` | `src/engine/AudioEngine.ts` |
 | **Environment** | `3d-rendering.md` | `src/components/environment/`, `src/components/kitchen/` |
 | **Status** | `status.md`, `memory-bank/progress.md` | N/A (meta-documents) |
 

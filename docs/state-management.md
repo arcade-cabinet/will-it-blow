@@ -5,16 +5,16 @@ status: current
 last-verified: 2026-03-13
 depends-on: [architecture, game-design]
 agent-context: store-warden, challenge-dev
-summary: Zustand store schema, actions, state flow
+summary: Zustand store schema (236 lines), actions, state flow — greenfield rebuild
 ---
 
 # State Management
 
 ## Overview
 
-All game state lives in a single Zustand store (`src/store/gameStore.ts`). There are no React Context providers, no prop drilling for game state, and no local component state for shared game data.
+All game state lives in a single Zustand store (`src/store/gameStore.ts`, 236 lines). No React Context providers, no prop drilling, no local component state for shared game data.
 
-Components subscribe to specific slices of the store using Zustand selectors, which prevents unnecessary re-renders.
+Components subscribe via Zustand selectors: `useGameStore(s => s.fieldName)`.
 
 ## Store Schema
 
@@ -22,213 +22,177 @@ Components subscribe to specific slices of the store using Zustand selectors, wh
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `appPhase` | `'menu' \| 'loading' \| 'playing'` | `'menu'` | Controls which top-level component renders (TitleScreen / LoadingScreen / GameWorld+GameUI) |
-| `gameStatus` | `'menu' \| 'playing' \| 'victory' \| 'defeat'` | `'menu'` | In-game state machine. Victory/defeat triggers GameOverScreen overlay. |
+| `appPhase` | `'title' \| 'playing' \| 'results'` | `'title'` | Controls top-level rendering. **Note:** `'results'` has no rendering path in App.tsx |
+| `introActive` | `boolean` | `true` | Whether intro camera sequence is playing |
+| `introPhase` | `number` | `0` | Current phase of intro sequence |
+| `posture` | `Posture` | `'prone'` | Player posture: `'prone' \| 'sitting' \| 'standing'` |
+| `idleTime` | `number` | `0` | Time since last posture change |
 
-### Progression State
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `currentChallenge` | `number` | `0` | Index into CHALLENGE_ORDER (0=ingredients, 1=chopping, 2=grinding, 3=stuffing, 4=cooking, 5=blowout, 6=tasting) |
-| `challengeScores` | `number[]` | `[]` | Accumulated scores for completed challenges |
-| `strikes` | `number` | `0` | Strikes in current challenge (0–3). Resets between challenges. |
-| `hintsRemaining` | `number` | `3` | Hints available for the entire game |
-
-### Challenge Ephemeral State
-
-These fields are set by challenge overlays and read by 3D station components:
+### Progression & Difficulty
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `challengeProgress` | `number` | `0` | 0–100 progress through current challenge |
-| `challengePressure` | `number` | `0` | 0–100 pressure level (stuffing challenge) |
-| `challengeIsPressing` | `boolean` | `false` | Whether player is currently pressing/holding (stuffing) |
-| `challengeTemperature` | `number` | `70` | Current temperature in deg F (cooking challenge) |
-| `challengeHeatLevel` | `number` | `0` | 0–100 heat control setting (cooking challenge) |
+| `difficulty` | `string` | `'medium'` | Difficulty tier ID |
+| `currentRound` | `number` | `1` | Current round (1-indexed) |
+| `totalRounds` | `number` | `3` | Total rounds for this difficulty |
+| `usedIngredientCombos` | `string[][]` | `[]` | Previously used ingredient combos (sorted, for C(12,3) tracking) |
 
-### ECS Bridge Fields
-
-Written by ECS orchestrators, read by thin HUDs:
+### Station Gameplay State
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `challengeTimeRemaining` | `number` | `0` | Seconds left in current ECS-driven challenge |
-| `challengeSpeedZone` | `string` | `'slow'` | Current speed zone (slow/good/fast) for grinding |
-| `challengePhase` | `string` | `''` | Sub-phase within ECS orchestrator lifecycle |
+| `gamePhase` | `GamePhase` | `'SELECT_INGREDIENTS'` | Current station/phase in the 13-phase machine |
+| `groundMeatVol` | `number` | `0` | 0.0–1.0 grinder output volume |
+| `stuffLevel` | `number` | `0` | 0.0–1.0 casing fill level |
+| `casingTied` | `boolean` | `false` | Whether casing has been tied off |
+| `cookLevel` | `number` | `0` | 0.0–1.0 cook progress |
 
-### Multi-Round State
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `currentRound` | `number` | `0` | Current round index in multi-round mode |
-| `totalRounds` | `number` | `1` | Total rounds for current game |
-| `usedIngredientCombos` | `number[][]` | `[]` | Previously used ingredient index combos (C(12,3) tracking) |
-
-### Hidden Objects & Cleanup State
+### Scoring State
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `openCabinets` | `string[]` | `[]` | IDs of opened cabinet drawers |
-| `openDrawers` | `string[]` | `[]` | IDs of opened drawers |
-| `assembledParts` | `string[]` | `[]` | IDs of assembled equipment parts |
-| `stationCleanliness` | `Record<string, number>` | `{}` | Cleanliness level per station (0-100) |
+| `selectedIngredientIds` | `string[]` | `[]` | IDs of selected ingredients for this round |
+| `mrSausageReaction` | `Reaction` | `'idle'` | Current Mr. Sausage animation |
+| `mrSausageDemands` | `object \| null` | `null` | Hidden demands: `{ desiredTags, hatedTags, cookPreference }` |
+| `finalScore` | `any \| null` | `null` | **BUG: typed as `any`** — contains `{ calculated, totalScore, breakdown }` |
 
-### Blowout State
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `casingTied` | `boolean` | `false` | Whether casing has been successfully tied |
-| `blowoutScore` | `number` | `0` | Score from blowout challenge |
-
-### XR State
+### Dialogue State
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `xrEnabled` | `boolean` | `false` | Whether XR session is active |
-| `arEnabled` | `boolean` | `false` | Whether AR mode is active |
-| `arPlaced` | `boolean` | `false` | Whether AR kitchen has been placed via hit-test |
-| `snapTurnAngle` | `number` | `45` | VR snap turn angle in degrees |
-| `comfortVignette` | `boolean` | `true` | VR comfort vignette enabled |
-| `xrSeatedMode` | `boolean` | `false` | VR seated mode vs standing |
-| `vrLocomotionMode` | `string` | `'smooth'` | VR locomotion: smooth or teleport |
-| `spatialAudioEnabled` | `boolean` | `true` | Spatial audio with Panner3D/HRTF |
-| `pendingTeleport` | `object \| null` | `null` | One-shot field consumed by FPSController (Store→Camera bridge) |
+| `currentDialogueLine` | `any \| null` | `null` | **DEAD FIELD** — setter exists but DialogueOverlay uses internal ref |
+| `dialogueActive` | `boolean` | `false` | **DEAD FIELD** — setter exists but never read by any component |
 
-### Player Decisions
+### Input State
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `playerDecisions` | `PlayerDecisions` | `{}` | Nested interface tracking all player choices (twistPoints, flairPoints, etc.) |
+| `joystick` | `{x, y}` | `{x:0, y:0}` | Virtual joystick position from mobile touch controls |
+| `lookDelta` | `{x, y}` | `{x:0, y:0}` | Accumulated look deltas from touch/swipe |
+| `interactPulse` | `number` | `0` | Incrementing counter for interact triggers |
 
-### Meta State
+## GamePhase Type (13 phases)
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `totalGamesPlayed` | `number` | `0` | Lifetime games played (persists across games in session, not saved to disk) |
-| `variantSeed` | `number` | `0` | Seed for deterministic variant selection (set to Date.now() on startNewGame) |
+```typescript
+type GamePhase =
+  | 'SELECT_INGREDIENTS'
+  | 'CHOPPING'
+  | 'FILL_GRINDER'
+  | 'GRINDING'
+  | 'MOVE_BOWL'
+  | 'ATTACH_CASING'
+  | 'STUFFING'
+  | 'TIE_CASING'
+  | 'BLOWOUT'
+  | 'MOVE_SAUSAGE'
+  | 'MOVE_PAN'
+  | 'COOKING'
+  | 'DONE';
+```
+
+**Known issue:** GameOrchestrator.tsx PHASES array only contains 11 of these — `TIE_CASING` and `BLOWOUT` are missing, so dev shortcuts (n/p keys) skip them.
 
 ## Actions
 
 ### `setAppPhase(phase)`
 
-Sets the app lifecycle phase. Called by:
-- LoadingScreen → `'playing'` when assets are preloaded
-- Title screen → `'loading'` on "NEW GAME"
+Sets app lifecycle. Called by TitleScreen → `'playing'`.
 
-### `startNewGame()`
+### `setDifficulty(diff, total)`
 
-Resets all game state for a fresh playthrough:
-- `appPhase` → `'playing'`
-- `gameStatus` → `'playing'`
-- `currentChallenge` → 0
-- `challengeScores` → []
-- All ephemeral state → defaults
-- `hintsRemaining` → 3
-- `totalGamesPlayed` += 1
-- `variantSeed` → Date.now()
+Sets difficulty and resets round tracking: `difficulty`, `totalRounds`, `currentRound → 1`, `usedIngredientCombos → []`.
 
-### `continueGame()`
+### `nextRound()`
 
-Resets challenge-level ephemeral state but preserves progression. Used when retrying after non-fatal failure.
+Archives current ingredient combo into `usedIngredientCombos`, increments `currentRound`, resets per-round state (gamePhase, groundMeatVol, stuffLevel, casingTied, cookLevel, selectedIngredientIds, finalScore).
 
-### `completeChallenge(score)`
+### `generateDemands()`
 
-Advances to next challenge:
-- Appends score to `challengeScores`
-- Increments `currentChallenge`
-- Resets all challenge ephemeral state
-- If last challenge (index 6), sets `gameStatus` → `'victory'`
+Randomly generates Mr. Sausage's hidden demands from 9 possible tags (sweet, savory, meat, spicy, comfort, absurd, fast-food, chunky, smooth). Picks 2 desired tags, 1 hated tag, and a random cook preference (rare/medium/well-done/charred).
 
-### `addStrike()`
+### `calculateFinalScore()`
 
-Increments strikes. If strikes ≥ 3, sets `gameStatus` → `'defeat'`.
+Calls `calculateDemandBonus()` from DemandScoring.ts with current demands, selected ingredients, and cook level. Stores result as `finalScore` (typed as `any`).
 
-### `useHint()`
+### Setter Actions
 
-Decrements `hintsRemaining` (minimum 0).
+Standard setters for all state fields: `setGamePhase`, `setGroundMeatVol` (accepts number or updater function), `setStuffLevel`, `setCasingTied`, `setCookLevel`, `addSelectedIngredientId`, `setMrSausageReaction`, etc.
 
-### `returnToMenu()`
+### Input Actions
 
-Resets to menu: `appPhase` → `'menu'`, `gameStatus` → `'menu'`, all ephemeral state → defaults.
+- `setJoystick(x, y)` — Update virtual joystick position
+- `addLookDelta(dx, dy)` — Accumulate look deltas from touch/swipe
+- `consumeLookDelta()` — Read and reset look delta (one-shot consumption)
+- `triggerInteract()` — Increment interact pulse counter
 
-## State Flow Diagram
+## Missing Actions (compared to main)
+
+| Action | Purpose | Status |
+|--------|---------|--------|
+| `startNewGame()` | Full game reset + `variantSeed` | Missing |
+| `returnToMenu()` | Reset to menu state | Missing |
+| `completeChallenge(score)` | Advance challenge + accumulate score | Missing |
+| `addStrike()` | Increment strikes, trigger defeat at 3 | Missing |
+| `useHint()` | Decrement hints | Missing |
+| `continueGame()` | Reset ephemeral state, keep progression | Missing |
+
+## State Flow
 
 ```text
                     ┌──────────────────────────────┐
-                    │         MENU                  │
-                    │  appPhase='menu'              │
-                    │  gameStatus='menu'            │
+                    │         TITLE                 │
+                    │  appPhase='title'             │
                     └──────────┬───────────────────┘
-                               │ setAppPhase('loading')
-                    ┌──────────▼───────────────────┐
-                    │         LOADING               │
-                    │  appPhase='loading'           │
-                    │  gameStatus='menu'            │
-                    └──────────┬───────────────────┘
-                               │ startNewGame()
+                               │ setAppPhase('playing')
                     ┌──────────▼───────────────────┐
                     │         PLAYING               │
                     │  appPhase='playing'           │
-                    │  gameStatus='playing'         │
-                    │  currentChallenge: 0→1→2→3→4→5→6 │
-                    └──┬───────────────┬───────────┘
-                       │               │
-          addStrike()  │               │ completeChallenge(score)
-          strikes ≥ 3  │               │ currentChallenge ≥ 7
-                       ▼               ▼
-                    DEFEAT          VICTORY
-                    gameStatus=     gameStatus=
-                    'defeat'        'victory'
-                       │               │
-                       └───────┬───────┘
-                               │ returnToMenu()
-                               ▼
-                             MENU
+                    │  gamePhase cycles:            │
+                    │  SELECT → ... → DONE          │
+                    └──────────┬───────────────────┘
+                               │ (NO ACTION EXISTS)
+                    ┌──────────▼───────────────────┐
+                    │         RESULTS               │
+                    │  appPhase='results'           │
+                    │  (NOT RENDERED)               │
+                    └──────────────────────────────┘
 ```
+
+**Note:** There is no way to get back to `'title'` from `'playing'` or `'results'`. No `returnToMenu()` action exists.
 
 ## Subscription Patterns
 
-### Challenge overlay → Store
+### Station → Store
 
 ```typescript
-// Challenge reads variant seed, writes progress/strikes
-const { variantSeed, setChallengeProgress, addStrike, completeChallenge } = useGameStore();
+// Station reads gamePhase, writes gameplay state
+const gamePhase = useGameStore(s => s.gamePhase);
+const setGroundMeatVol = useGameStore(s => s.setGroundMeatVol);
+// ... uses setGroundMeatVol in useFrame or pointer handlers
 ```
 
-### 3D Station → Store (via GameWorld)
+### UI Overlay → Store
 
 ```typescript
-// GameWorld reads challenge state, passes to station components as props
-const { challengeProgress, challengePressure, strikes } = useGameStore();
-// ...
-<StufferStation fillLevel={challengeProgress} pressureLevel={challengePressure} />
+// Overlay reads state for display
+const cookLevel = useGameStore(s => s.cookLevel);
+const mrSausageReaction = useGameStore(s => s.mrSausageReaction);
 ```
 
 ### App.tsx → Store
 
 ```typescript
-// Top-level phase routing
 const appPhase = useGameStore(s => s.appPhase);
-// Renders TitleScreen, LoadingScreen, or GameWorld+GameUI based on phase
+// Renders TitleScreen or GameWorld+overlays based on phase
 ```
-
-## Constants
-
-```typescript
-const TOTAL_CHALLENGES = 7;
-const INITIAL_HINTS = 3;
-const MAX_STRIKES = 3;
-```
-
-## Persistence
-
-State persistence is implemented via AsyncStorage. Progress and settings survive across sessions. The "CONTINUE" button on the title screen restores saved game state.
 
 ## Planned Work
 
-### Kitchen State Machine (Hidden Objects)
-- Planned `KitchenState` interface for Medium+ difficulty: `cabinets: boolean[]`, `drawers: boolean[]`, `equipment: Record<string, 'stored'|'found'|'placed'|'assembled'>`, `sinkRunning: boolean`
-- Equipment finding + assembly flow: find part in cabinet -> carry to station -> place -> assemble (bolt sound + visual snap)
-- `KitchenAssembly.ts` engine module: `getRequiredEquipment(difficulty)`, `getEquipmentLocations(difficulty)`, `validateAssembly(state, station)`
-- At "extreme" difficulty, parts scattered randomly among ALL locations
-- See `docs/plans/2026-03-01-phase2-will-it-blow-design.md` Section 4
+### Store Fixes
+- Type `finalScore` with proper `{ calculated: boolean; totalScore: number; breakdown: object }` interface
+- Remove dead fields: `dialogueActive`, `currentDialogueLine`
+- Add `returnToMenu()` action
+- Add `startNewGame()` with full reset
+- Add `completeChallenge(score)` for challenge progression
+- Add `addStrike()` with defeat trigger
+- Fix GameOrchestrator PHASES to include all 13 phases

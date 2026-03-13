@@ -24,32 +24,26 @@ Root:    SafeAreaView (React Native)  <- Container, background (#0a0a0a)
 - Layer 2 is React Native views with `pointerEvents="box-none"` floating above the 3D scene
 - Both layers subscribe independently to the Zustand store — no direct communication between them
 
-## Challenge Component Patterns
+## Challenge Component Pattern
 
-Challenges follow two patterns depending on the station:
+All stations follow the same procedural pattern in the greenfield rebuild:
 
-### Procedural Station Pattern (Grinding, Stuffing, Cooking, Chopping, Blowout)
+### Procedural Station Pattern (All Stations)
 
-Greenfield procedural R3F components that own their own geometry, physics, and game logic:
+Self-contained R3F components in `src/components/stations/` that own their own geometry, physics, and game logic:
 
-- **Station component** (R3F, in 3D Canvas) owns all game logic: phase machine, scoring, strikes, timers, audio
+- **Station component** (R3F, in 3D Canvas) owns all logic: input handling, state updates, visual feedback
 - **Station** reads player input from R3F events (`onPointerDown`, `onPointerMove`) and writes to Zustand store
-- **HUD overlay** (React Native) is pure read-only — subscribes to Zustand and displays values
-- Data flow: R3F pointer events → station logic → Zustand → HUD display
+- **UI overlays** (when implemented) will be read-only Zustand subscribers — display only
+- Data flow: R3F pointer events → station logic → Zustand → UI display
 
-Files: `src/components/stations/*.tsx` + `src/components/challenges/*.tsx`
+Files: `src/components/stations/*.tsx`
 
-### Bridge Pattern (Ingredients, Tasting)
+Supporting components:
+- `src/components/challenges/TieGesture.tsx` — Swipe-to-tie gesture for BlowoutStation
+- `src/components/ui/DialogueOverlay.tsx` — Typewriter text overlay
 
-```
-challenge = overlay (challenges/) + 3D station (stations/) + dialogue (data/dialogue/)
-```
-
-- **Overlay** (React Native) owns scoring logic and writes to store
-- **3D Station** (R3F) handles visual interaction (freezer clicks, sausage display)
-- Coordinate through Zustand store (no direct communication)
-
-Files: `src/components/challenges/*.tsx` + `src/components/stations/*.tsx`
+**Note:** The old main branch used two patterns (ECS orchestrator + bridge). Those are deleted. HUD overlays for each station are not yet implemented.
 
 ## Camera Rail System
 
@@ -74,16 +68,16 @@ Source: `src/components/environment/SurrealText.tsx`
 
 ## State Machine
 
-Two separate state fields manage lifecycle:
+Two state fields manage lifecycle:
 
-- `appPhase`: `'menu'` | `'loading'` | `'playing'` — controls which top-level component renders
-- `gameStatus`: `'menu'` | `'playing'` | `'victory'` | `'defeat'` — in-game state
+- `appPhase`: `'title'` | `'playing'` | `'results'` — controls which top-level component renders
+- `gamePhase`: 13-phase enum tracking station progression (SELECT_INGREDIENTS → ... → DONE)
 
 ```
-menu → loading → playing (challenge 0→1→2→3→4→5→6) → victory/defeat → menu
+title → playing (gamePhase cycles through 13 stations) → results (NOT YET RENDERED)
 ```
 
-`currentChallenge` (0-6) tracks progression through the 7 challenges. See `src/store/gameStore.ts`.
+**Known gaps:** No `'results'` rendering path in App.tsx. No `returnToMenu()` action to get back to title. See `src/store/gameStore.ts`.
 
 ## Sausage Physics (Rapier)
 
@@ -103,4 +97,4 @@ Source: `src/components/sausage/`
 
 ## Asset URL Resolution
 
-Dynamic asset URLs (GLB, textures, audio) use `getWebBasePath()` from `src/engine/assetUrl.ts`. This derives the base path from `<script src>` tags at runtime, handling the GitHub Pages `/will-it-blow/` prefix correctly.
+**Note:** `src/engine/assetUrl.ts` (with `getWebBasePath()`) does NOT exist on the greenfield branch. Asset URLs are currently hardcoded (e.g., `/models/kitchen.glb`, `/audio/sfx/chop-1.ogg`). This will break on GitHub Pages deployment where the base path is `/will-it-blow/`. Restoring `assetUrl.ts` is a prerequisite for deployment.

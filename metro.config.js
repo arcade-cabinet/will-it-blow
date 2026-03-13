@@ -32,8 +32,19 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
   return context.resolveRequest(context, moduleName, platform);
 };
 
-// GLB/GLTF models must be treated as binary assets by Metro bundler
-// so they can be loaded by drei's useGLTF on native
-config.resolver.assetExts.push('glb', 'gltf', 'png', 'jpg', 'ttf', 'woff', 'woff2');
+// Asset extensions: GLB models, WASM (expo-sqlite), textures, fonts
+config.resolver.assetExts.push('glb', 'gltf', 'png', 'jpg', 'ttf', 'woff', 'woff2', 'wasm');
+
+// Remove wasm from sourceExts if present (it's a binary asset, not source)
+config.resolver.sourceExts = config.resolver.sourceExts.filter(ext => ext !== 'wasm');
+
+// Add COEP and COOP headers to enable SharedArrayBuffer for expo-sqlite WASM
+config.server.enhanceMiddleware = (middleware) => {
+  return (req, res, next) => {
+    res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+    middleware(req, res, next);
+  };
+};
 
 module.exports = config;

@@ -79,7 +79,7 @@ The player controls grind speed by dragging/flinging. Too slow = bad texture. To
 - EMA (exponential moving average) smoothing on angular velocity
 - Score based on time spent in good zone
 
-**Note:** Grinding, Stuffing, and Cooking use the ECS orchestrator pattern -- the orchestrator owns game logic, and a thin HUD (GrindingHUD, StuffingHUD, CookingHUD) reads bridge fields from the store with zero input handling.
+**Note:** On the greenfield `feat/poc-exploration` branch, grinding, stuffing, and cooking are self-contained procedural R3F components (Grinder.tsx, Stuffer.tsx, Stove.tsx) that own their own game logic. The ECS orchestrator pattern from main is deleted. Per-station HUDs are not yet implemented.
 
 ### Challenge 3: Stuffing
 
@@ -106,7 +106,7 @@ Control heat level to keep temperature in a target range. Heat overshoots cause 
 
 **Station:** Table (center)
 
-The titular "Will It Blow?" moment. The player must tie off the sausage casing with a TieGesture before internal pressure causes a blowout. Managed by BlowoutOrchestrator (ECS pattern).
+The titular "Will It Blow?" moment. The player must tie off the sausage casing with a TieGesture before internal pressure causes a blowout. Implemented as BlowoutStation.tsx (self-contained procedural component).
 
 - TieGesture: swipe-to-tie mechanic under time pressure
 - CerealBox: CanvasTexture splat effect on blowout failure

@@ -3,7 +3,7 @@ title: Active Context
 domain: memory-bank
 status: current
 last-verified: "2026-03-13"
-summary: "Current session — feat/poc-exploration branch, documentation overhaul"
+summary: "Current session — feat/poc-exploration branch, gap analysis complete, doc updates in progress"
 ---
 
 # Active Context — Will It Blow?
@@ -12,61 +12,45 @@ summary: "Current session — feat/poc-exploration branch, documentation overhau
 
 ## Current Branch
 
-`feat/poc-exploration` — major architectural pivot from Phase 2 ECS to greenfield procedural components
+`feat/poc-exploration` — greenfield rebuild replacing Phase 2 ECS architecture with procedural R3F components
 
 ## Current Focus
 
-Documentation architecture overhaul: DRYing out docs, adding YAML frontmatter to all memory-bank files, updating content to reflect the POC exploration pivot.
+Gap analysis complete. Updating all docs to reflect the actual greenfield state vs the inherited main-branch documentation.
 
-## Recent Work
+## Gap Analysis Summary (2026-03-13)
 
-### POC Exploration Pivot (2026-03-10 to 2026-03-13) — IN PROGRESS
+### Macro: Architecture Delta
 
-A major architectural pivot that:
+| Metric | main | feat/poc-exploration | Delta |
+|--------|------|---------------------|-------|
+| Components | ~118 | 34 | -71% |
+| ECS files | 75 | 0 | -100% |
+| Config files | 36 | 1 | -97% |
+| Test suites | ~96 | 7 | -93% |
+| Tests | ~1529 | 62 (52 pass) | -96% |
+| Store lines | 1038 | 236 | -77% |
+| Binary assets | 0 (untracked) | 62 (Git LFS) | +62 |
 
-- **Deleted** the old Phase 2 ECS architecture (miniplex, layout system, input manager, ~1529 tests)
-- **Rebuilt** as greenfield procedural R3F components (Grinder, Stuffer, Stove, ChoppingBlock, ChestFreezer, etc.)
-- **Replaced** FPS free-walk (WASD + pointer-lock) with camera rail system (CameraRail.tsx, IntroSequence.tsx)
-- **Ported** POC physics: Rapier bone-chain sausage body with spring forces (Sausage.tsx + SausageGeometry.ts)
-- **Restored** demand scoring (DemandScoring.ts) and ingredient matching (IngredientMatcher.ts)
-- **Restored** multi-round loop (RoundManager.ts with C(12,3) combo tracking)
-- **Added** dialogue system and Mr. Sausage commentary
-- **Added** diegetic UI via SurrealText (in-world 3D text meshes)
-- **Added** mobile touch controls (PlayerHands.tsx, LiquidPourer.tsx)
-- **Added** OGG sample audio (replacing pure Tone.js synthesis)
-- **Added** Git LFS tracking for binary assets (.ogg, .png, .glb)
+### Meso: Component Status
 
-Key commits (11 total on branch):
-- `d2a4f6f` feat: complete greenfield procedural rewrite with hybrid asset injection
-- `0f92d3a` feat: restore advanced POC physics and interactions
-- `28cb4a1` feat: restore demand scoring and ingredient matching systems
-- `597cb48` feat: full production parity with dialogue and mobile controls
-- `6a5bec3` feat: complete multi-round replayability and missing interactions
-- `f82b355` fix: address all PR feedback and biome linting errors
+**18 COMPLETE** — Grinder, Stuffer, Stove, ChoppingBlock, BlowoutStation, TV, Sink, Sausage, SausageGeometry, CameraRail, IntroSequence, FirstPersonControls, MrSausage3D, BasementRoom, SurrealText, ScatterProps/Prop, TitleScreen, DialogueOverlay
 
-## Merged PRs (pre-pivot)
+**2 PARTIAL** — PhysicsFreezerChest (geometry only), ProceduralIngredients (partial rendering)
 
-| PR | Branch | Status |
-|----|--------|--------|
-| #25 | feat/sausage-factory-kitchen | Merged — Phase 1 complete |
-| #27 | Phase 2 Sprint 1 | Merged — difficulty, horror, input |
-| #28 | Phase 2 Sprint 2 | Merged — enemy encounters |
-| #29 | Phase 2 Sprint 3 | Merged — blowout, multi-round, hidden objects, cleanup |
-| #33 | feat/dual-zone-touch-controls | Merged — touch controls, Rapier fix |
+**2 STUBS** — Kitchen.tsx (empty fragment), ChestFreezer.tsx (no interactivity)
 
-## Test Health
+**Missing from main** — GameOverScreen, LoadingScreen, ChallengeHeader, StrikeCounter, ProgressGauge, all 4 HUDs, CrtShader, IngredientChallenge, TastingChallenge, RoundTransition, CombatHUD, HiddenObjectOverlay, SettingsScreen, HintButton
 
-Tests are being refactored to match the new architecture. The old 1529+ test suite was tied to the deleted ECS architecture. New tests cover:
-- DemandScoring (unit tests)
-- RoundManager (unit tests)
-- IngredientMatcher (unit tests)
-- DifficultyConfig (unit tests)
+### Micro: Engine/Store Gaps
 
-## Known Issues
-
-- TypeScript stack overflow requires `node --stack-size=8192` (handled by `pnpm typecheck`)
-- Native audio is a complete no-op
-- Test suite is significantly reduced from pre-pivot — rebuilding coverage for new architecture
+- Store dead fields: `dialogueActive`, `currentDialogueLine` (never read)
+- `finalScore` typed as `any`
+- GameOrchestrator PHASES missing TIE_CASING and BLOWOUT
+- App.tsx has no `results` phase rendering
+- Console suppression hides `Maximum update depth exceeded` errors
+- DialogueEngine effects system untested and likely dead code
+- No ChallengeRegistry, SausagePhysics, or assetUrl engine modules
 
 ## Decisions Made
 
@@ -75,12 +59,15 @@ Tests are being refactored to match the new architecture. The old 1529+ test sui
 - **Diegetic UI**: SurrealText for in-world instructions instead of floating HUD overlays
 - **OGG audio**: Sample-based audio supplements Tone.js synthesis
 - **Git LFS**: Binary assets tracked to keep repo size manageable
-- **Procedural stations**: Each station is a self-contained R3F component with its own geometry and physics
+- **Procedural stations**: Each station is a self-contained R3F component
 
 ## What's Next
 
-1. Complete documentation overhaul (frontmatter, DRY content, memory-bank updates)
-2. Merge `feat/poc-exploration` to main
-3. Continue building out station interactions and polish
-4. Expand test coverage for new procedural components
-5. Mobile testing on real devices
+1. Finish updating all docs with gap analysis findings (in progress)
+2. Fix failing tests (10 of 62)
+3. Add missing UI components: GameOverScreen, LoadingScreen, HUDs
+4. Wire up GameOrchestrator with missing phases (TIE_CASING, BLOWOUT)
+5. Type `finalScore` properly; remove dead store fields
+6. Merge feat/poc-exploration to main
+7. Continue building out station interactions
+8. Mobile testing on real devices

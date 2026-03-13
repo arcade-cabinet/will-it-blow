@@ -3,20 +3,21 @@ title: Testing Strategy
 domain: core
 status: current
 last-verified: 2026-03-13
-depends-on: [3d-rendering, state-management, development-guide]
+depends-on: [3d-rendering, state-management]
 agent-context: doc-keeper, challenge-dev
-summary: Jest testing strategy, R3F test-renderer, coverage
+summary: "Jest testing — 7 suites, 62 tests (52 pass, 10 fail), greenfield rebuild coverage"
 ---
 
 # Testing Strategy
 
 ## Overview
 
-Tests cover both **pure logic** and **R3F 3D component** behavior. R3F components are tested via `@react-three/test-renderer`, which renders the Three.js scene graph in Node.js without a canvas.
+The greenfield rebuild on `feat/poc-exploration` has significantly reduced test coverage. The old 1529-test suite was tied to the deleted ECS architecture.
 
 - **Framework:** Jest 29.6.3 with `react-native` preset + `babel-preset-expo`
-- **Test count:** 259 tests across ~17 test files
-- **Runtime:** ~1.6 seconds
+- **Test count:** 62 tests across 7 suites (52 pass, 10 fail)
+- **Runtime:** ~1.3 seconds
+- **Pass rate:** 83.9%
 
 ## Running Tests
 
@@ -27,130 +28,99 @@ pnpm test
 # CI mode (no watch, force exit)
 pnpm test -- --ci --forceExit
 
-# Watch mode (development)
-pnpm test -- --watch
+# Without watchman (needed in worktrees)
+npx jest --no-watchman --ci --forceExit
 
 # Single file
-pnpm test -- SausagePhysics
+pnpm test -- DemandScoring
 ```
 
 ## Test Files
 
-### Pure Logic Tests (`__tests__/`)
+### Passing Suites
 
-#### `SausagePhysics.test.ts` (~32 tests)
+#### `src/engine/__tests__/DemandScoring.test.ts`
 
-Tests the 5 pure scoring functions:
-- `calculateBlowRuffalos()` — blow power from hold duration × ingredient stats
-- `checkBurst()` — probabilistic burst check against average risk
-- `calculateTasteRating()` — taste score from ingredient stats + burst penalty
-- `calculateFinalScore()` — weighted formula combining taste, blow, burst, bonus
-- `getTitleTier()` — maps score (0–100) to tier name
+Tests demand bonus calculation: ingredient tag matching, cook preference scoring, breakdown structure.
 
-#### `Ingredients.test.ts` (~15 tests)
+#### `src/engine/__tests__/DifficultyConfig.test.ts`
 
-Data integrity: all properties present, names unique, stat ranges valid, pool randomization works.
+Tests difficulty tier resolution and config parsing from difficulty.json.
 
-#### `ChallengeRegistry.test.ts` (~12 tests)
+#### `src/engine/__tests__/RoundManager.test.ts`
 
-Variant seeding, challenge configs, `calculateFinalVerdict()` ranks, challenge order.
+Tests multi-round loop: C(12,3) combo tracking, round advancement, combo uniqueness.
 
-#### `IngredientMatcher.test.ts` (~10 tests)
+#### `__tests__/IngredientMatcher.test.ts`
 
-Tag system, keyword-based matching, criteria matching, edge cases.
+Tests tag-based ingredient matching: keyword matching, criteria resolution, edge cases.
 
-#### `DialogueEngine.test.ts` (~12 tests)
+#### `src/components/challenges/__tests__/TieGesture.test.tsx`
 
-Line traversal, choice selection branching, effect tracking.
+Tests swipe-to-tie gesture recognition and scoring.
 
-#### `gameStore.test.ts` (~20 tests)
+### Failing Suites
 
-Store state transitions, `startNewGame()`, `completeChallenge()`, `addStrike()`, `returnToMenu()`.
+#### `src/store/__tests__/gameStore.test.ts`
 
-#### `App.test.tsx` (~15 tests)
+Tests reference store actions that don't exist on this branch (e.g., `startNewGame`, `completeChallenge`, `addStrike`, `returnToMenu`). Tests need rewriting to match the actual 236-line store.
 
-End-to-end scoring pipeline, balance sanity checks, title tier distribution.
+#### `src/components/camera/__tests__/SurrealText.spec.tsx`
 
-### R3F Component Tests (`src/components/**/\__tests__/`)
-
-These use `@react-three/test-renderer` to render R3F components and inspect the Three.js scene graph.
-
-#### `CrtShader.test.ts` (2 tests)
-
-Verifies shader material creation and uniform presence.
-
-#### `MrSausage3D.test.tsx` (4 tests)
-
-Head sphere present, reaction prop updates, self-lit material verification.
-
-#### `CrtTelevision.test.tsx` (5 tests)
-
-TV housing geometry, CRT shader screen, Mr. Sausage embedded.
-
-#### `KitchenEnvironment.test.tsx` (7 tests)
-
-Room enclosure geometry, lighting setup, GLB model integration (useGLTF mocked).
-
-#### `FridgeStation.test.tsx` (7 tests)
-
-Fridge geometry, ingredient meshes, onClick picking, hint glow.
-
-#### `GrinderStation.test.tsx` (7 tests)
-
-Grinder geometry, crank animation, meat chunks, splatter particles.
-
-#### `StufferStation.test.tsx` (12 tests)
-
-Plunger animation, casing inflation, pressureToColor pure function, burst particles.
-
-#### `StoveStation.test.tsx` (11 tests)
-
-Burner glow, sausageColor pure function, sizzle/smoke particles.
-
-#### `Ingredient3D.test.tsx` (4 tests)
-
-8 shape types render correctly, self-lit material, color prop.
-
-#### `GameWorld.test.tsx` (7 tests)
-
-Canvas mounting, CameraWalker, station visibility logic.
+Fails with Babel parse error — likely an import incompatibility with R3F test-renderer setup.
 
 ## What's NOT Tested
 
-1. **Audio engine** — Tone.js synthesis (would need audio context mock)
-2. **Visual correctness** — No screenshot regression tests (use Playwright MCP for manual verification)
-3. **Challenge overlay interactions** — Touch/drag handlers, timer logic, sub-phase transitions
-4. **Real GLB loading** — useGLTF is mocked; actual model parsing not tested in Jest
+### Missing Test Coverage
+
+1. **All station components** — Grinder, Stuffer, Stove, ChoppingBlock, BlowoutStation, TV, Sink, ChestFreezer (0 tests)
+2. **Sausage physics** — Sausage.tsx, SausageGeometry.ts (0 tests)
+3. **Camera system** — CameraRail, IntroSequence, FirstPersonControls (0 tests)
+4. **UI components** — TitleScreen, DifficultySelector, DialogueOverlay (0 tests)
+5. **Characters** — MrSausage3D, reactions (0 tests)
+6. **Environment** — Kitchen, BasementRoom, SurrealText, ScatterProps (0 tests)
+7. **Kitchen** — KitchenSetPieces, LiquidPourer, ProceduralIngredients, TrapDoorAnimation (0 tests)
+8. **Engine** — GameOrchestrator, DialogueEngine, AudioEngine, Ingredients (0 tests on this branch)
+9. **E2E** — Playwright spec exists but is not committed/integrated
+
+### Systemic Gaps
+
+- No R3F component tests (old tests deleted with ECS architecture)
+- No audio tests
+- No visual regression tests
+- No challenge interaction tests
+- No E2E integration tests in CI
 
 ## Type Checking
 
 ```bash
-npx tsc --noEmit
+pnpm typecheck    # Uses node --stack-size=8192 for Three.js types
 ```
 
-TypeScript strict mode is enabled. Source files should produce zero errors.
+**Do NOT use** `npx tsc --noEmit` directly — stack overflow with Three.js recursive types.
 
 ## CI Integration
 
-`.github/workflows/ci.yml` runs tests on push to `main` and `feat/**` branches:
+`.github/workflows/ci.yml` runs on push to `main` and `feat/**`:
 
 ```yaml
 - run: pnpm install --frozen-lockfile
 - run: pnpm test -- --ci --forceExit
 ```
 
+**Note:** CI will currently report 10 test failures. The failing tests need to be fixed or removed.
+
 ## Adding New Tests
 
 ### Pure logic modules (safe to test directly)
 
-- `src/engine/SausagePhysics.ts`
-- `src/engine/Ingredients.ts`
-- `src/engine/ChallengeRegistry.ts`
+- `src/engine/DemandScoring.ts`
 - `src/engine/IngredientMatcher.ts`
+- `src/engine/RoundManager.ts`
+- `src/engine/DifficultyConfig.ts`
 - `src/engine/DialogueEngine.ts`
+- `src/engine/Ingredients.ts`
 - `src/store/gameStore.ts`
-- `src/data/challenges/variants.ts`
-- `src/data/dialogue/*.ts`
 
 ### R3F components (test via @react-three/test-renderer)
 
@@ -178,19 +148,15 @@ jest.mock('@react-three/drei', () => ({
 }));
 ```
 
-### Exported pure functions from R3F components
-
-Some station components export pure functions for testability:
-- `StufferStation.tsx` → `pressureToColor(pressure: number)`
-- `StoveStation.tsx` → `sausageColor(progress: number)`
-
-These can be tested directly without the test renderer.
-
 ## Planned Work
 
-### Testing Gaps to Close
-- Audio engine testing (requires audio context mock for Tone.js)
-- Visual regression testing via screenshot comparison (Playwright E2E infrastructure exists)
-- Challenge overlay interaction tests (touch/drag handlers, timer logic, sub-phase transitions)
-- Real GLB loading tests (currently all mocked via `useGLTF`)
-- See `docs/plans/2026-03-02-comprehensive-phase1-phase2-plan.md` for critical constraint: test count must never decrease
+### Immediate Fixes
+- Fix or rewrite `gameStore.test.ts` to match actual store API
+- Fix `SurrealText.spec.tsx` Babel import issue
+- Get to 100% pass rate (62/62)
+
+### Coverage Expansion
+- Add station component tests (Grinder, Stuffer, Stove are highest priority)
+- Add GameOrchestrator tests (phase navigation, demand generation)
+- Add DialogueEngine tests (tree walking, effects)
+- Add E2E playthrough test in CI

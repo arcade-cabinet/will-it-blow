@@ -5,13 +5,18 @@
     "version": "0.0.1",
     "platforms": ["ios", "android", "web"],
     "web": {
-      "bundler": "metro"
-    },
-    "experiments": {
-      "baseUrl": "/will-it-blow"
+      "bundler": "metro",
+      "output": "static"
     },
     "android": {
       "package": "com.jbcom.willitblow"
+    },
+    "plugins": [
+      "expo-sqlite",
+      "expo-asset"
+    ],
+    "experiments": {
+      "baseUrl": "/will-it-blow"
     }
   }
 }
