@@ -10,18 +10,18 @@ class SquigglyCurve extends THREE.Curve<THREE.Vector3> {
   constructor() {
     super();
   }
-  
+
   getPoint(t: number, target = new THREE.Vector3()) {
     return target.set(
       Math.sin(t * 20) * 0.15,
       0.05 + Math.abs(Math.cos(t * 15)) * 0.05,
-      Math.cos(t * 25) * 0.15
+      Math.cos(t * 25) * 0.15,
     );
   }
 }
 
 export function Stuffer() {
-  const { camera } = useThree();
+  const {camera} = useThree();
   const gamePhase = useGameStore(state => state.gamePhase);
   const setGamePhase = useGameStore(state => state.setGamePhase);
   const stuffLevel = useGameStore(state => state.stuffLevel);
@@ -33,10 +33,10 @@ export function Stuffer() {
     new THREE.QuadraticBezierCurve3(
       new THREE.Vector3(0.5, 0.2, 0),
       new THREE.Vector3(0.5, 0.5, 0),
-      new THREE.Vector3(0, 0.2, 0)
-    )
+      new THREE.Vector3(0, 0.2, 0),
+    ),
   );
-  
+
   const [isDraggingCasing, setIsDraggingCasing] = useState(false);
   const [dragTarget, setDragTarget] = useState(new THREE.Vector3(0.5, 0.2, 0));
 
@@ -70,7 +70,7 @@ export function Stuffer() {
         thickness: 0.1,
         side: THREE.DoubleSide,
       }),
-    []
+    [],
   );
 
   const bunchedCasingGeo = useMemo(() => {
@@ -85,7 +85,10 @@ export function Stuffer() {
     return geo;
   }, []);
 
-  const squigglyGeo = useMemo(() => new THREE.TubeGeometry(new SquigglyCurve(), 64, 0.04, 8, false), []);
+  const squigglyGeo = useMemo(
+    () => new THREE.TubeGeometry(new SquigglyCurve(), 64, 0.04, 8, false),
+    [],
+  );
 
   const bindCrank = useDrag(({movement: [, my]}) => {
     if (gamePhase !== 'STUFFING') return;
@@ -102,17 +105,17 @@ export function Stuffer() {
       // Base Y = 1.0. Plunge down by 0.8 units at max level
       rodRef.current.position.y = 1.0 - newLevel * 0.8;
     }
-    
+
     if (newLevel >= 1.0) {
       setGamePhase('MOVE_SAUSAGE');
     }
   });
 
-  const bindCasing = useDrag(({ active, movement: [mx, my] }) => {
+  const bindCasing = useDrag(({active, movement: [mx, my]}) => {
     if (gamePhase !== 'ATTACH_CASING') return;
-    
+
     setIsDraggingCasing(active);
-    
+
     if (active) {
       // Simple screen to world map for the drag target
       setDragTarget(new THREE.Vector3(0.5 + mx * 0.002, 0.2 - my * 0.002, 0));
@@ -162,11 +165,16 @@ export function Stuffer() {
           <cylinderGeometry args={[0.19, 0.19, 0.02, 32]} />
           <meshPhysicalMaterial color="#aaccff" transmission={0.9} opacity={1} ior={1.33} />
         </mesh>
-        
+
         {/* Draggable Unattached Casing */}
         {(gamePhase === 'ATTACH_CASING' || gamePhase === 'MOVE_BOWL') && !isDraggingCasing && (
-          // @ts-ignore
-          <mesh geometry={squigglyGeo} material={casingMat} {...bindCasing()} position={[0, 0.05, 0]} />
+          // @ts-expect-error
+          <mesh
+            geometry={squigglyGeo}
+            material={casingMat}
+            {...bindCasing()}
+            position={[0, 0.05, 0]}
+          />
         )}
       </group>
 
@@ -198,17 +206,18 @@ export function Stuffer() {
       >
         {/* Bunched up casing when attached */}
         {(gamePhase === 'STUFFING' || gamePhase === 'MOVE_SAUSAGE') && (
-           <mesh geometry={bunchedCasingGeo} material={casingMat} position={[0, 0.2, 0]} scale={[1, Math.max(0.1, 1.0 - stuffLevel), 1]} />
+          <mesh
+            geometry={bunchedCasingGeo}
+            material={casingMat}
+            position={[0, 0.2, 0]}
+            scale={[1, Math.max(0.1, 1.0 - stuffLevel), 1]}
+          />
         )}
       </Cylinder>
-      
+
       {/* Sausage visual for picking up */}
-      {(gamePhase === 'MOVE_SAUSAGE') && (
-        <mesh 
-          position={[0.8, 0.2, 0]} 
-          rotation={[0, 0, Math.PI / 2]} 
-          onClick={handleSausageClick}
-        >
+      {gamePhase === 'MOVE_SAUSAGE' && (
+        <mesh position={[0.8, 0.2, 0]} rotation={[0, 0, Math.PI / 2]} onClick={handleSausageClick}>
           <cylinderGeometry args={[0.08, 0.08, stuffLevel * 0.8]} />
           <meshStandardMaterial color="#822424" roughness={0.6} />
         </mesh>

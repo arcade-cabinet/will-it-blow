@@ -1,8 +1,8 @@
-import { useGLTF } from '@react-three/drei';
-import { RigidBody } from '@react-three/rapier';
+import {useGLTF} from '@react-three/drei';
+import {RigidBody} from '@react-three/rapier';
 
 export function ChestFreezer() {
-  const { scene } = useGLTF('/models/fridge.glb') as any;
+  const {scene} = useGLTF('/models/fridge.glb') as any;
 
   // Position: Push to the back-left corner
   return (

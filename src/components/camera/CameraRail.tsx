@@ -4,18 +4,21 @@ import * as THREE from 'three';
 import {type GamePhase, useGameStore} from '../../store/gameStore';
 
 // Defines the target camera positions for each phase
-const STATION_CAMERAS: Record<GamePhase, { pos: THREE.Vector3, target: THREE.Vector3 }> = {
-  'SELECT_INGREDIENTS': { pos: new THREE.Vector3(-1.5, 1.8, -1.5), target: new THREE.Vector3(-1.5, 0.5, -3.2) }, // Freezer
-  'CHOPPING':     { pos: new THREE.Vector3(1.5, 1.8, 1.5), target: new THREE.Vector3(1.5, 0.5, 0) }, // Chopping Block
-  'FILL_GRINDER': { pos: new THREE.Vector3(-1.5, 1.8, -1.0), target: new THREE.Vector3(-2.8, 1.2, -2) }, // Grinder
-  'GRINDING':     { pos: new THREE.Vector3(-1.5, 1.8, -1.0), target: new THREE.Vector3(-2.8, 1.2, -2) }, // Grinder
-  'MOVE_BOWL':    { pos: new THREE.Vector3(-0.5, 1.8, -1.0), target: new THREE.Vector3(0, 1.2, -2) }, // Pan middle
-  'ATTACH_CASING':{ pos: new THREE.Vector3(1.0, 1.8, -1.0), target: new THREE.Vector3(2.0, 1.2, -2) }, // Stuffer
-  'STUFFING':     { pos: new THREE.Vector3(1.0, 1.8, -1.0), target: new THREE.Vector3(2.0, 1.2, -2) }, // Stuffer
-  'MOVE_SAUSAGE': { pos: new THREE.Vector3(1.5, 1.8, 0.0), target: new THREE.Vector3(2.0, 1.0, 1.5) }, // Moving to stove
-  'MOVE_PAN':     { pos: new THREE.Vector3(2.0, 1.8, 1.0), target: new THREE.Vector3(2.5, 1.0, 2.0) }, // Stove
-  'COOKING':      { pos: new THREE.Vector3(2.0, 1.8, 1.0), target: new THREE.Vector3(2.5, 1.0, 2.0) }, // Stove
-  'DONE':         { pos: new THREE.Vector3(0.0, 1.8, 1.0), target: new THREE.Vector3(-1.5, 1.0, 1.5) } // Blowout Table
+const STATION_CAMERAS: Record<GamePhase, {pos: THREE.Vector3; target: THREE.Vector3}> = {
+  SELECT_INGREDIENTS: {
+    pos: new THREE.Vector3(-1.5, 1.8, -1.5),
+    target: new THREE.Vector3(-1.5, 0.5, -3.2),
+  }, // Freezer
+  CHOPPING: {pos: new THREE.Vector3(1.5, 1.8, 1.5), target: new THREE.Vector3(1.5, 0.5, 0)}, // Chopping Block
+  FILL_GRINDER: {pos: new THREE.Vector3(-1.5, 1.8, -1.0), target: new THREE.Vector3(-2.8, 1.2, -2)}, // Grinder
+  GRINDING: {pos: new THREE.Vector3(-1.5, 1.8, -1.0), target: new THREE.Vector3(-2.8, 1.2, -2)}, // Grinder
+  MOVE_BOWL: {pos: new THREE.Vector3(-0.5, 1.8, -1.0), target: new THREE.Vector3(0, 1.2, -2)}, // Pan middle
+  ATTACH_CASING: {pos: new THREE.Vector3(1.0, 1.8, -1.0), target: new THREE.Vector3(2.0, 1.2, -2)}, // Stuffer
+  STUFFING: {pos: new THREE.Vector3(1.0, 1.8, -1.0), target: new THREE.Vector3(2.0, 1.2, -2)}, // Stuffer
+  MOVE_SAUSAGE: {pos: new THREE.Vector3(1.5, 1.8, 0.0), target: new THREE.Vector3(2.0, 1.0, 1.5)}, // Moving to stove
+  MOVE_PAN: {pos: new THREE.Vector3(2.0, 1.8, 1.0), target: new THREE.Vector3(2.5, 1.0, 2.0)}, // Stove
+  COOKING: {pos: new THREE.Vector3(2.0, 1.8, 1.0), target: new THREE.Vector3(2.5, 1.0, 2.0)}, // Stove
+  DONE: {pos: new THREE.Vector3(0.0, 1.8, 1.0), target: new THREE.Vector3(-1.5, 1.0, 1.5)}, // Blowout Table
 };
 
 export function CameraRail() {

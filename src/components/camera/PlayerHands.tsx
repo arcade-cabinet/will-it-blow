@@ -1,17 +1,17 @@
-import { useGLTF, useTexture } from '@react-three/drei';
-import { useFrame, useThree } from '@react-three/fiber';
-import { useEffect, useRef, useMemo } from 'react';
+import {useGLTF, useTexture} from '@react-three/drei';
+import {useFrame, useThree} from '@react-three/fiber';
+import {useEffect, useMemo, useRef} from 'react';
 import * as THREE from 'three';
-import { useGameStore } from '../../store/gameStore';
+import {useGameStore} from '../../store/gameStore';
 
 export function PlayerHands() {
-  const { camera } = useThree();
+  const {camera} = useThree();
   const group = useRef<THREE.Group>(null);
   const posture = useGameStore(state => state.posture);
 
   // Load the exported GLB
-  const { scene: handsScene } = useGLTF('/models/hands.glb') as any;
-  
+  const {scene: handsScene} = useGLTF('/models/hands.glb') as any;
+
   // Choose a random texture from the newly integrated HandsPack
   const randomSkin = useMemo(() => {
     const skins = [

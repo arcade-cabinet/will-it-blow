@@ -12,7 +12,7 @@ const PHASES: GamePhase[] = [
   'MOVE_SAUSAGE',
   'MOVE_PAN',
   'COOKING',
-  'DONE'
+  'DONE',
 ];
 
 export function GameOrchestrator() {

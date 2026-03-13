@@ -1,4 +1,4 @@
-import { getIngredientById } from './Ingredients';
+import {getIngredientById} from './Ingredients';
 
 // How cooked a sausage is based on the final cookLevel (0.0 to 1.0)
 export function getCookPreference(cookLevel: number): 'rare' | 'medium' | 'well-done' | 'charred' {
@@ -9,12 +9,12 @@ export function getCookPreference(cookLevel: number): 'rare' | 'medium' | 'well-
 }
 
 export function calculateDemandBonus(
-  demands: { desiredTags: string[]; hatedTags: string[]; cookPreference: string },
+  demands: {desiredTags: string[]; hatedTags: string[]; cookPreference: string},
   selectedIngredientId: string,
-  finalCookLevel: number
+  finalCookLevel: number,
 ) {
   const ingredient = getIngredientById(selectedIngredientId);
-  if (!ingredient) return { totalScore: 0, breakdown: 'No ingredient selected.' };
+  if (!ingredient) return {totalScore: 0, breakdown: 'No ingredient selected.'};
 
   let score = 0;
   let breakdown = '';
@@ -32,7 +32,7 @@ export function calculateDemandBonus(
     score += hitDesired.length * 25;
     breakdown += `Hit Desired Tags (${hitDesired.join(', ')}): +${hitDesired.length * 25}\n`;
   }
-  
+
   if (hitHated.length > 0) {
     score -= hitHated.length * 30;
     breakdown += `Hit Hated Tags (${hitHated.join(', ')}): -${hitHated.length * 30}\n`;
@@ -48,7 +48,7 @@ export function calculateDemandBonus(
     score -= 10;
     breakdown += `Wrong Cook (Wanted ${demands.cookPreference}, got ${actualCook}): -10\n`;
   }
-  
+
   // 4. "Will It Blow?" Power (Bonus for exploding the casing)
   // Higher blow power is riskier but yields more points if it succeeds
   score += ingredient.blowPower * 10;
@@ -59,6 +59,6 @@ export function calculateDemandBonus(
 
   return {
     totalScore,
-    breakdown
+    breakdown,
   };
 }

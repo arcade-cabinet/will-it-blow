@@ -28,10 +28,10 @@
     <div id="canvas-container"></div>
 
     <script type="module">
+        import RAPIER from 'https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.19.3/+esm';
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
-        import RAPIER from 'https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.19.3/+esm';
 
         await RAPIER.init();
 
@@ -389,7 +389,7 @@
             for (let i = 0; i <= pSeg; i++) {
                 const t = i / pSeg, p = path.getPointAt(t), N = frames.normals[i], B = frames.binormals[i];
                 const boneF = t * (numBones - 1); let b0 = Math.floor(boneF), b1 = Math.ceil(boneF);
-                let w1 = boneF - b0, w0 = 1.0 - w1; if(b0>=numBones)b0=numBones-1; if(b1>=numBones)b1=numBones-1;
+                const w1 = boneF - b0, w0 = 1.0 - w1; if(b0>=numBones)b0=numBones-1; if(b1>=numBones)b1=numBones-1;
                 let cRad = radius;
                 if (!isCoil && linksCount > 1) {
                     const sT = t * linksCount, dT = Math.min(sT - Math.floor(sT), Math.ceil(sT) - sT);
@@ -549,7 +549,7 @@
                     const p = anchor.basePosition.clone();
                     if (params.scene === 'Frying Pan') {
                         const shrinkY = 1.0 - (params.cookLevel * 0.25), dist2D = Math.sqrt(p.x*p.x + p.z*p.z);
-                        p.y = (p.y * shrinkY) + (Math.pow(dist2D * 0.12, 2) * params.cookLevel * 0.6);
+                        p.y = (p.y * shrinkY) + ((dist2D * 0.12) ** 2 * params.cookLevel * 0.6);
                         if (params.cookLevel > 0.05) { p.x += Math.sin(time*15 + anchor.basePosition.x*2) * 0.03 * params.cookLevel; p.z += Math.cos(time*18 + anchor.basePosition.z*2) * 0.03 * params.cookLevel; }
                     }
                     anchor.currentTarget.copy(p);

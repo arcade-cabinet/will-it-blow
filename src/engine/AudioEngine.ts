@@ -2,10 +2,10 @@ import * as Tone from 'tone';
 
 class AudioEngine {
   private initialized = false;
-  
+
   // Synthesizers
   private grindSynth: Tone.FMSynth | null = null;
-  
+
   // Samplers / Players for gorgeous SFX
   private chopPlayer: Tone.Player | null = null;
   private sizzlePlayer: Tone.Player | null = null;
@@ -13,14 +13,14 @@ class AudioEngine {
 
   async initialize() {
     if (this.initialized) return;
-    
+
     await Tone.start();
 
     // Use high-quality sampled audio for chop
     this.chopPlayer = new Tone.Player({
       url: '/audio/sfx/chop-1.ogg',
       volume: -5,
-      autostart: false
+      autostart: false,
     }).toDestination();
 
     // Use real sizzle loop
@@ -28,7 +28,7 @@ class AudioEngine {
       url: '/audio/sfx/sizzle-loop.ogg',
       volume: -20,
       loop: true,
-      autostart: false
+      autostart: false,
     }).toDestination();
 
     // Use real ambient horror track
@@ -36,17 +36,17 @@ class AudioEngine {
       url: '/audio/music/track_boss_horror.ogg',
       volume: -25,
       loop: true,
-      autostart: false
+      autostart: false,
     }).toDestination();
 
     // Keep the procedural Grinder noise because it reacts dynamically to speed
     this.grindSynth = new Tone.FMSynth({
       harmonicity: 1.5,
       modulationIndex: 10,
-      oscillator: { type: 'sawtooth' },
-      envelope: { attack: 0.1, decay: 0.2, sustain: 1.0, release: 0.5 },
-      modulation: { type: 'square' },
-      modulationEnvelope: { attack: 0.1, decay: 0.2, sustain: 1.0, release: 0.5 }
+      oscillator: {type: 'sawtooth'},
+      envelope: {attack: 0.1, decay: 0.2, sustain: 1.0, release: 0.5},
+      modulation: {type: 'square'},
+      modulationEnvelope: {attack: 0.1, decay: 0.2, sustain: 1.0, release: 0.5},
     }).toDestination();
     this.grindSynth.volume.value = -15;
 
@@ -58,26 +58,28 @@ class AudioEngine {
     this.chopPlayer.start();
   }
 
-  setSizzleLevel(level: number) { // 0.0 to 1.0
+  setSizzleLevel(level: number) {
+    // 0.0 to 1.0
     if (!this.initialized || !this.sizzlePlayer || !this.sizzlePlayer.loaded) return;
-    
+
     if (level > 0 && this.sizzlePlayer.state !== 'started') {
       this.sizzlePlayer.start();
     } else if (level === 0 && this.sizzlePlayer.state === 'started') {
       this.sizzlePlayer.stop();
     }
-    
+
     // Scale volume based on cooking level
-    this.sizzlePlayer.volume.rampTo(-25 + (level * 15), 0.1);
+    this.sizzlePlayer.volume.rampTo(-25 + level * 15, 0.1);
   }
 
-  setGrinderSpeed(speed: number) { // 0.0 to 1.0
+  setGrinderSpeed(speed: number) {
+    // 0.0 to 1.0
     if (!this.initialized || !this.grindSynth) return;
-    
+
     if (speed > 0) {
       // Re-trigger if it stopped
       this.grindSynth.triggerAttack('C1');
-      this.grindSynth.set({ harmonicity: 1.0 + speed * 2.0 });
+      this.grindSynth.set({harmonicity: 1.0 + speed * 2.0});
     } else {
       this.grindSynth.triggerRelease();
     }

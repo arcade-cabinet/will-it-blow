@@ -1,5 +1,5 @@
-import { useGLTF } from '@react-three/drei';
-import { RigidBody } from '@react-three/rapier';
+import {useGLTF} from '@react-three/drei';
+import {RigidBody} from '@react-three/rapier';
 
 export function KitchenSetPieces() {
   const island = useGLTF('/models/island_counter.glb') as any;
@@ -21,7 +21,7 @@ export function KitchenSetPieces() {
           <primitive object={cabinet1.scene.clone()} position={[-1.0, 0, -3.5]} scale={1.2} />
         </RigidBody>
       )}
-      
+
       {cabinet2.scene && (
         <RigidBody type="fixed" colliders="hull">
           <primitive object={cabinet2.scene.clone()} position={[0.5, 0, -3.5]} scale={1.2} />

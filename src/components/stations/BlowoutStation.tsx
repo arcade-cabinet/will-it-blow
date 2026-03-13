@@ -1,9 +1,9 @@
-import { Box, useTexture, useGLTF } from '@react-three/drei';
-import { RigidBody } from '@react-three/rapier';
-import { useRef, useEffect } from 'react';
+import {Box, useGLTF, useTexture} from '@react-three/drei';
+import {useFrame} from '@react-three/fiber';
+import {RigidBody} from '@react-three/rapier';
+import {useEffect, useRef} from 'react';
 import * as THREE from 'three';
-import { useFrame } from '@react-three/fiber';
-import { useGameStore } from '../../store/gameStore';
+import {useGameStore} from '../../store/gameStore';
 
 export function BlowoutStation() {
   const canvasRef = useRef<HTMLCanvasElement>(document.createElement('canvas'));
@@ -27,17 +27,17 @@ export function BlowoutStation() {
       ctx.textAlign = 'center';
       ctx.fillText("MR. SAUSAGE'S", 256, 100);
       ctx.font = '72px Impact';
-      ctx.fillText("FLAKES", 256, 180);
+      ctx.fillText('FLAKES', 256, 180);
       ctx.fillStyle = '#aa4400';
-      ctx.fillText("100% MEAT", 256, 400);
-      
+      ctx.fillText('100% MEAT', 256, 400);
+
       // Simulate stain on mount
       ctx.fillStyle = 'rgba(150, 0, 0, 0.6)';
       ctx.beginPath();
       ctx.arc(256, 256, 100, 0, Math.PI * 2);
       ctx.fill();
     }
-    
+
     textureRef.current = new THREE.CanvasTexture(canvas);
     textureRef.current.needsUpdate = true;
   }, []);
@@ -74,7 +74,12 @@ export function BlowoutStation() {
 
       {chair.scene && (
         <RigidBody type="fixed" colliders="hull">
-          <primitive object={chair.scene.clone()} position={[0, 0, 0.8]} rotation={[0, Math.PI, 0]} scale={1.2} />
+          <primitive
+            object={chair.scene.clone()}
+            position={[0, 0, 0.8]}
+            rotation={[0, Math.PI, 0]}
+            scale={1.2}
+          />
         </RigidBody>
       )}
 

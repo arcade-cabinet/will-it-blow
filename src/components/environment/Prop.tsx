@@ -1,6 +1,5 @@
-import { useGLTF } from '@react-three/drei';
-import { RigidBody } from '@react-three/rapier';
-import { Box, Cylinder } from '@react-three/drei';
+import {Box, Cylinder, useGLTF} from '@react-three/drei';
+import {RigidBody} from '@react-three/rapier';
 
 interface PropProps {
   name: string;
@@ -17,9 +16,8 @@ export function Prop({
   scale = 1,
   type = 'fixed',
 }: PropProps) {
-  
   // Convert uniform scale to vector
-  const s = typeof scale === 'number' ? [scale, scale, scale] as [number, number, number] : scale;
+  const s = typeof scale === 'number' ? ([scale, scale, scale] as [number, number, number]) : scale;
 
   const chainsaw = useGLTF('/models/Chainsaw.glb') as any;
   const cleaver = useGLTF('/models/Cleaver.glb') as any;
@@ -29,22 +27,14 @@ export function Prop({
   return (
     <RigidBody type={type} position={position} rotation={rotation} colliders="cuboid">
       <group scale={s}>
-        {name === 'Saw' && chainsaw.scene && (
-          <primitive object={chainsaw.scene.clone()} />
-        )}
-        
-        {name === 'Cleaver' && cleaver.scene && (
-          <primitive object={cleaver.scene.clone()} />
-        )}
+        {name === 'Saw' && chainsaw.scene && <primitive object={chainsaw.scene.clone()} />}
 
-        {name === 'Machete' && machete.scene && (
-          <primitive object={machete.scene.clone()} />
-        )}
+        {name === 'Cleaver' && cleaver.scene && <primitive object={cleaver.scene.clone()} />}
 
-        {name === 'Trap' && traps.scene && (
-          <primitive object={traps.scene.clone()} />
-        )}
-        
+        {name === 'Machete' && machete.scene && <primitive object={machete.scene.clone()} />}
+
+        {name === 'Trap' && traps.scene && <primitive object={traps.scene.clone()} />}
+
         {/* Procedural Fallbacks for non-GLB props */}
         {name === 'PS1' && (
           <group>
@@ -62,7 +52,7 @@ export function Prop({
             </Cylinder>
           </group>
         )}
-        
+
         {name === 'Polaroid' && (
           <group>
             <Box args={[0.2, 0.01, 0.25]} position={[0, 0, 0]}>

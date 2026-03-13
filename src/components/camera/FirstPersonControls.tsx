@@ -142,12 +142,26 @@ export function FirstPersonControls() {
     };
   }, [gl, posture, setPosture]);
 
+  const consumeLookDelta = useGameStore(state => state.consumeLookDelta);
+  const joystick = useGameStore(state => state.joystick);
+
   useFrame((_, delta) => {
     // 1. Update Idle Time
     internalIdleTime.current += delta;
     if (internalIdleTime.current > 1.0) {
-      // Sync to store every second instead of every frame
       setIdleTime(Math.floor(internalIdleTime.current));
+    }
+
+    // Process Mobile Look Delta
+    const look = consumeLookDelta();
+    if (look.x !== 0 || look.y !== 0) {
+      lookState.current.yaw -= look.x * 0.005;
+      lookState.current.pitch -= look.y * 0.005;
+      lookState.current.pitch = Math.max(
+        -Math.PI / 2 + 0.1,
+        Math.min(Math.PI / 2 - 0.1, lookState.current.pitch),
+      );
+      internalIdleTime.current = 0;
     }
 
     // 2. Smoothly transition height based on posture
@@ -155,15 +169,15 @@ export function FirstPersonControls() {
 
     // Add Head Bobbing if standing and moving
     let bobOffset = 0;
-    if (
-      posture === 'standing' &&
-      (moveState.current.forward ||
-        moveState.current.backward ||
-        moveState.current.left ||
-        moveState.current.right)
-    ) {
+    const isMoving =
+      moveState.current.forward ||
+      moveState.current.backward ||
+      moveState.current.left ||
+      moveState.current.right ||
+      joystick.x !== 0 ||
+      joystick.y !== 0;
+    if (posture === 'standing' && isMoving) {
       const t = _.clock.elapsedTime;
-      // Simple sine wave bobbing based on time while moving
       bobOffset = Math.sin(t * 8) * 0.05;
     }
 
@@ -183,25 +197,25 @@ export function FirstPersonControls() {
     sideVector.normalize();
 
     if (posture === 'prone') {
-      // Prone: left/right rolls the camera, no X/Z movement
       if (moveState.current.left) targetRoll = Math.PI / 4;
       if (moveState.current.right) targetRoll = -Math.PI / 4;
-
-      // Look at ceiling
       lookState.current.pitch += (Math.PI / 2 - 0.1 - lookState.current.pitch) * delta * 2.0;
     } else if (posture === 'sitting') {
-      // Sitting: left/right spins you around on your butt, no X/Z movement
       if (moveState.current.left) lookState.current.yaw += delta * 2.0;
       if (moveState.current.right) lookState.current.yaw -= delta * 2.0;
-
-      // Look forward
       lookState.current.pitch += (0 - lookState.current.pitch) * delta * 2.0;
     } else if (posture === 'standing') {
-      // Standing: full movement
+      // Keyboard input
       if (moveState.current.forward) direction.add(frontVector);
       if (moveState.current.backward) direction.sub(frontVector);
       if (moveState.current.left) direction.sub(sideVector);
       if (moveState.current.right) direction.add(sideVector);
+
+      // Mobile Joystick input
+      if (joystick.x !== 0 || joystick.y !== 0) {
+        direction.addScaledVector(sideVector, joystick.x);
+        direction.addScaledVector(frontVector, -joystick.y);
+      }
     }
 
     // Apply Roll smoothing

@@ -1,6 +1,6 @@
 import {Canvas} from '@react-three/fiber';
 import {Physics} from '@react-three/rapier';
-import {Suspense} from 'react';
+import {Suspense, useEffect, useMemo, useRef, useState} from 'react';
 import {StyleSheet, Text, View} from 'react-native';
 import * as THREE from 'three';
 import {CameraRail} from './src/components/camera/CameraRail';
@@ -8,6 +8,7 @@ import {FirstPersonControls} from './src/components/camera/FirstPersonControls';
 import {IntroSequence} from './src/components/camera/IntroSequence';
 import {PlayerHands} from './src/components/camera/PlayerHands';
 import {MrSausage3D} from './src/components/characters/MrSausage3D';
+import {SwipeFPSControls} from './src/components/controls/SwipeFPSControls';
 import {BasementRoom} from './src/components/environment/BasementRoom';
 import {Prop} from './src/components/environment/Prop';
 import {ScatterProps} from './src/components/environment/ScatterProps';
@@ -18,14 +19,16 @@ import {ProceduralIngredientsList} from './src/components/kitchen/ProceduralIngr
 import {TrapDoorAnimation} from './src/components/kitchen/TrapDoorAnimation';
 import {Sausage} from './src/components/sausage/Sausage';
 import {BlowoutStation} from './src/components/stations/BlowoutStation';
-import {PhysicsFreezerChest} from './src/components/stations/PhysicsFreezerChest';
 import {ChoppingBlock} from './src/components/stations/ChoppingBlock';
-
 import {Grinder} from './src/components/stations/Grinder';
+import {PhysicsFreezerChest} from './src/components/stations/PhysicsFreezerChest';
 import {Sink} from './src/components/stations/Sink';
 import {Stove} from './src/components/stations/Stove';
 import {Stuffer} from './src/components/stations/Stuffer';
 import {TV} from './src/components/stations/TV';
+import {DialogueOverlay} from './src/components/ui/DialogueOverlay';
+import {INTRO_DIALOGUE} from './src/data/dialogue/intro';
+import {VERDICT_A, VERDICT_B, VERDICT_F, VERDICT_S} from './src/data/dialogue/verdict';
 import {GameOrchestrator} from './src/engine/GameOrchestrator';
 import {useGameStore} from './src/store/gameStore';
 
@@ -83,7 +86,13 @@ function GameContent() {
         <Prop name="Polaroid" position={[2.6, 0.4, -2.5]} rotation={[0, 0, 0]} />
 
         {/* Mr. Sausage area */}
-        <MrSausage3D position={[-2.4, 0, 0]} rotationY={Math.PI / 2} scale={0.4} trackCamera />
+        <MrSausage3D
+          position={[-2.4, 0, 0]}
+          rotationY={Math.PI / 2}
+          scale={0.4}
+          trackCamera
+          reaction={useGameStore(state => state.mrSausageReaction)}
+        />
 
         {/* Ceiling Trapdoor */}
         <TrapDoorAnimation position={[0, 3, 0]} />
@@ -104,41 +113,108 @@ function GameContent() {
 
 function UILayer() {
   const introActive = useGameStore(state => state.introActive);
+  const setIntroActive = useGameStore(state => state.setIntroActive);
+  const setJoystick = useGameStore(state => state.setJoystick);
+  const addLookDelta = useGameStore(state => state.addLookDelta);
+  const triggerInteract = useGameStore(state => state.triggerInteract);
+  const posture = useGameStore(state => state.posture);
+  const gamePhase = useGameStore(state => state.gamePhase);
+  const finalScore = useGameStore(state => state.finalScore);
+
+  const [showIntroDialogue, setShowIntroDialogue] = useState(true);
+
+  const verdictLines = useMemo(() => {
+    if (gamePhase !== 'DONE' || !finalScore?.calculated) return null;
+    if (finalScore.totalScore >= 92) return VERDICT_S;
+    if (finalScore.totalScore >= 75) return VERDICT_A;
+    if (finalScore.totalScore >= 50) return VERDICT_B;
+    return VERDICT_F;
+  }, [gamePhase, finalScore]);
+
+  const joystickRef = useRef({x: 0, y: 0});
+
+  // Sync joystick ref to store every frame equivalent
+  useEffect(() => {
+    let animationFrameId: number;
+    const syncJoystick = () => {
+      setJoystick(joystickRef.current.x, joystickRef.current.y);
+      animationFrameId = requestAnimationFrame(syncJoystick);
+    };
+    syncJoystick();
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [setJoystick]);
 
   return (
-    <View style={[StyleSheet.absoluteFill, {pointerEvents: 'none'} as any]}>
-      {/* We removed the non-diegetic HUD text here in favor of the in-world SurrealText */}
+    <View style={[StyleSheet.absoluteFill, {pointerEvents: 'box-none'} as any]}>
+      {/* Dialogue Overlay for Mr. Sausage's Intro */}
+      {showIntroDialogue && (
+        <DialogueOverlay
+          lines={INTRO_DIALOGUE}
+          onComplete={() => {
+            setShowIntroDialogue(false);
+            setIntroActive(false);
+          }}
+        />
+      )}
+
+      {/* Dialogue Overlay for Verdict */}
+      {verdictLines && (
+        <DialogueOverlay
+          key={finalScore.totalScore} // Re-mount if score changes on new round
+          lines={verdictLines}
+          onComplete={() => {}}
+        />
+      )}
+
+      {/* Mobile Touch Surface (only active when game is playing and standing) */}
+      {!showIntroDialogue && !verdictLines && posture === 'standing' && (
+        <SwipeFPSControls
+          joystickRef={joystickRef}
+          onLookDrag={(dx, dy) => addLookDelta(dx, dy)}
+          onInteract={triggerInteract}
+        />
+      )}
     </View>
   );
 }
 
+import {TitleScreen} from './src/components/ui/TitleScreen';
+
 export default function App() {
+  const appPhase = useGameStore(state => state.appPhase);
+
   return (
     <View style={styles.container}>
-      <Canvas
-        camera={{position: [2.0, 0.5, 3.0], fov: 75}} // Increased FOV for better first-person perspective
-        shadows={{type: THREE.PCFShadowMap}}
-        gl={{toneMappingExposure: 1.0}}
-      >
-        <color attach="background" args={['#000000']} />
-        <fogExp2 attach="fog" args={['#2a2a2a', 0.015]} />
+      {appPhase === 'title' && <TitleScreen />}
 
-        <ambientLight intensity={0.4} />
-        <directionalLight
-          position={[0, 2.5, 0]} // Light from center ceiling
-          intensity={1.0}
-          castShadow
-          shadow-mapSize-width={2048}
-          shadow-mapSize-height={2048}
-          shadow-bias={-0.001}
-        />
-        <pointLight position={[0, 2.0, 0]} intensity={50} distance={10} color="#ffeedd" />
+      {appPhase === 'playing' && (
+        <>
+          <Canvas
+            camera={{position: [2.0, 0.5, 3.0], fov: 75}} // Increased FOV for better first-person perspective
+            shadows={{type: THREE.PCFShadowMap}}
+            gl={{toneMappingExposure: 1.0}}
+          >
+            <color attach="background" args={['#000000']} />
+            <fogExp2 attach="fog" args={['#2a2a2a', 0.015]} />
 
-        <Suspense fallback={null}>
-          <GameContent />
-        </Suspense>
-      </Canvas>
-      <UILayer />
+            <ambientLight intensity={0.4} />
+            <directionalLight
+              position={[0, 2.5, 0]} // Light from center ceiling
+              intensity={1.0}
+              castShadow
+              shadow-mapSize-width={2048}
+              shadow-mapSize-height={2048}
+              shadow-bias={-0.001}
+            />
+            <pointLight position={[0, 2.0, 0]} intensity={50} distance={10} color="#ffeedd" />
+
+            <Suspense fallback={null}>
+              <GameContent />
+            </Suspense>
+          </Canvas>
+          <UILayer />
+        </>
+      )}
     </View>
   );
 }

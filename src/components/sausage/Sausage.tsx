@@ -2,8 +2,8 @@ import {useFrame} from '@react-three/fiber';
 import {useRapier} from '@react-three/rapier';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
-import {createSausageGeometry, generateMeatTexture, SausageCurve} from './SausageGeometry';
 import {useGameStore} from '../../store/gameStore';
+import {createSausageGeometry, generateMeatTexture, SausageCurve} from './SausageGeometry';
 
 interface SausageProps {
   position?: [number, number, number];
@@ -31,7 +31,7 @@ export function Sausage({
 }: SausageProps) {
   const {world} = useRapier();
   const groupRef = useRef<THREE.Group>(null);
-  
+
   const gamePhase = useGameStore(state => state.gamePhase);
   const stuffLevel = useGameStore(state => state.stuffLevel);
   const cookLevel = useGameStore(state => state.cookLevel);
@@ -41,15 +41,16 @@ export function Sausage({
 
   // Memoize geometry and materials so they don't rebuild every frame
   const {geometry, bones, skeleton, anchors} = useMemo(() => {
-    const curve = new SausageCurve(
-      'Coil',
-      3.0,
-      new THREE.Vector3(0, 0, 0),
-    );
+    const curve = new SausageCurve('Coil', 3.0, new THREE.Vector3(0, 0, 0));
     const geo = createSausageGeometry(curve, pSeg, thickness, 32, links, true, numBones);
 
     const bonesArr: THREE.Bone[] = [];
-    const anchorsArr: {t: number; basePosition: THREE.Vector3; currentTarget: THREE.Vector3; extruded: boolean}[] = [];
+    const anchorsArr: {
+      t: number;
+      basePosition: THREE.Vector3;
+      currentTarget: THREE.Vector3;
+      extruded: boolean;
+    }[] = [];
     const boneRoot = new THREE.Group();
 
     for (let i = 0; i < numBones; i++) {
@@ -123,10 +124,14 @@ export function Sausage({
 
   useFrame((state, delta) => {
     if (bodies.length === 0) return;
-    
+
     // Only visible if past grinder phase
     if (!groupRef.current) return;
-    if (['SELECT_INGREDIENTS', 'CHOPPING', 'FILL_GRINDER', 'GRINDING', 'MOVE_BOWL'].includes(gamePhase)) {
+    if (
+      ['SELECT_INGREDIENTS', 'CHOPPING', 'FILL_GRINDER', 'GRINDING', 'MOVE_BOWL'].includes(
+        gamePhase,
+      )
+    ) {
       groupRef.current.visible = false;
       return;
     } else {
@@ -136,10 +141,13 @@ export function Sausage({
     const t = state.clock.elapsedTime;
     const isPan = gamePhase === 'COOKING' || gamePhase === 'MOVE_PAN' || gamePhase === 'DONE';
     const isStuffing = gamePhase === 'ATTACH_CASING' || gamePhase === 'STUFFING';
-    
+
     // Position target based on phase
-    const targetOffset = isPan ? new THREE.Vector3(2.8, 0.45, 0) : 
-                         (isStuffing || gamePhase === 'MOVE_SAUSAGE' ? new THREE.Vector3(-2.8, 0.65, 2) : new THREE.Vector3(...position));
+    const targetOffset = isPan
+      ? new THREE.Vector3(2.8, 0.45, 0)
+      : isStuffing || gamePhase === 'MOVE_SAUSAGE'
+        ? new THREE.Vector3(-2.8, 0.65, 2)
+        : new THREE.Vector3(...position);
 
     // Stuffer Nozzle position (local to stuffer offset)
     const nozzleTipPos = new THREE.Vector3(-2.8, 1.4, 2.5);
@@ -172,11 +180,14 @@ export function Sausage({
         if (!anchor.extruded) {
           anchor.extruded = true;
           bone.scale.setScalar(1);
-          body.setTranslation({
-            x: targetOffset.x + anchor.basePosition.x, 
-            y: targetOffset.y + anchor.basePosition.y + 0.5, 
-            z: targetOffset.z + anchor.basePosition.z
-          }, true);
+          body.setTranslation(
+            {
+              x: targetOffset.x + anchor.basePosition.x,
+              y: targetOffset.y + anchor.basePosition.y + 0.5,
+              z: targetOffset.z + anchor.basePosition.z,
+            },
+            true,
+          );
         }
       }
 
@@ -184,9 +195,9 @@ export function Sausage({
       const p = anchor.basePosition.clone().add(targetOffset);
 
       if (isPan) {
-        const shrinkY = 1.0 - (cookLevel * 0.25);
+        const shrinkY = 1.0 - cookLevel * 0.25;
         const dist2D = Math.sqrt(anchor.basePosition.x ** 2 + anchor.basePosition.z ** 2);
-        p.y = (p.y * shrinkY) + (Math.pow(dist2D * 0.12, 2) * cookLevel * 0.6);
+        p.y = p.y * shrinkY + (dist2D * 0.12) ** 2 * cookLevel * 0.6;
         if (cookLevel > 0.05) {
           p.x += Math.sin(t * 15 + anchor.basePosition.x * 2) * 0.03 * cookLevel;
           p.z += Math.cos(t * 18 + anchor.basePosition.z * 2) * 0.03 * cookLevel;
@@ -208,18 +219,18 @@ export function Sausage({
       // Update bone to body position (relative to group, which is at 0,0,0)
       bone.position.set(pos.x, pos.y, pos.z);
     }
-    
+
     // Update cooking visuals on the material
     if (gamePhase === 'COOKING' || gamePhase === 'DONE') {
       const cL = cookLevel;
       const tC = new THREE.Color();
       if (cL < 0.7) {
-        tC.lerpColors(new THREE.Color(0xffffff), new THREE.Color(0x8B5A2B), cL / 0.7);
+        tC.lerpColors(new THREE.Color(0xffffff), new THREE.Color(0x8b5a2b), cL / 0.7);
       } else {
-        tC.lerpColors(new THREE.Color(0x8B5A2B), new THREE.Color(0x3a1e12), (cL - 0.7) / 0.3);
+        tC.lerpColors(new THREE.Color(0x8b5a2b), new THREE.Color(0x3a1e12), (cL - 0.7) / 0.3);
       }
       meatMat.color.copy(tC);
-      meatMat.roughness = Math.min(1.0, (1.0 - greaseLevel * 0.6) + cL * 0.8);
+      meatMat.roughness = Math.min(1.0, 1.0 - greaseLevel * 0.6 + cL * 0.8);
       meatMat.bumpScale = 0.05 + cL * 0.25;
       meatMat.clearcoat = greaseLevel * Math.max(0, 1.0 - cL * 1.2);
       if (groupRef.current) {

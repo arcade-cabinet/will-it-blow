@@ -87,16 +87,16 @@ export function SurrealText() {
   const mrSausageDemands = useGameStore(state => state.mrSausageDemands);
 
   const textContent = useMemo(() => {
-    if (introActive) return "Hey, wake up lazybones";
+    if (introActive) return 'Hey, wake up lazybones';
 
     // Waking up sequence texts
     if (posture === 'prone') {
       if (idleTime > 10) return "Use the arrow keys for God's sake";
-      return "Come on, time to get up";
+      return 'Come on, time to get up';
     }
     if (posture === 'sitting') {
       if (idleTime > 10) return "Use the arrow keys for God's sake";
-      return "Almost there, stand up";
+      return 'Almost there, stand up';
     }
 
     // Main gameplay loop
@@ -108,7 +108,7 @@ export function SurrealText() {
           }
           return "WHAT'S IN THE BOX?";
         case 'CHOPPING':
-          return "CHOP IT UP";
+          return 'CHOP IT UP';
         case 'FILL_GRINDER':
           return 'GRIND THE MEAT';
         case 'GRINDING':
@@ -129,7 +129,7 @@ export function SurrealText() {
           if (finalScore && finalScore.calculated) {
             return `SCORE: ${finalScore.totalScore}%\n${finalScore.breakdown}\n(CLICK CEREAL BOX TO RESTART)`;
           }
-          return "WILL IT BLOW? (CLICK CEREAL BOX TO RESTART)";
+          return 'WILL IT BLOW? (CLICK CEREAL BOX TO RESTART)';
         default:
           return '';
       }
