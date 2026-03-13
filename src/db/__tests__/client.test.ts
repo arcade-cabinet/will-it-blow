@@ -6,25 +6,21 @@ describe('db/client', () => {
     resetDbClient();
   });
 
-  it('getDb returns null when expo-sqlite is unavailable', () => {
-    // In Jest/Node, expo-sqlite is not available
-    const db = getDb();
-    expect(db).toBeNull();
+  it('getDb throws in test environment (no WASM)', () => {
+    expect(() => getDb()).toThrow('test environment');
   });
 
-  it('getDb is idempotent (returns same result on multiple calls)', () => {
-    const db1 = getDb();
-    const db2 = getDb();
-    expect(db1).toBe(db2);
-  });
-
-  it('resetDbClient resets the cached instance', () => {
-    const db1 = getDb();
+  it('getDb throws with informative message on second call after failure', () => {
+    expect(() => getDb()).toThrow();
     resetDbClient();
-    const db2 = getDb();
-    // Both should be null in tests, but the reset should have cleared any cache
-    expect(db1).toBeNull();
-    expect(db2).toBeNull();
+    expect(() => getDb()).toThrow();
+  });
+
+  it('resetDbClient allows retry', () => {
+    expect(() => getDb()).toThrow();
+    resetDbClient();
+    // Should throw again (still in test env) but with fresh attempt
+    expect(() => getDb()).toThrow('test environment');
   });
 
   it('exports getDb as a function', () => {

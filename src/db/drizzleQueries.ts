@@ -16,8 +16,12 @@ import {gameSession, settings, usedCombos} from './schema';
 
 /** Hydrate the latest incomplete session, or null if none exists. */
 export async function hydrateSession() {
-  const db = getDb();
-  if (!db) return null;
+  let db: ReturnType<typeof getDb>;
+  try {
+    db = getDb();
+  } catch {
+    return null;
+  }
   try {
     const rows = db.select().from(gameSession).where(eq(gameSession.rank, '')).limit(1).all();
     return rows.length > 0 ? rows[0] : null;
@@ -33,8 +37,12 @@ export async function persistSession(data: {
   finalScore?: number;
   rank?: string;
 }): Promise<number | null> {
-  const db = getDb();
-  if (!db) return null;
+  let db: ReturnType<typeof getDb>;
+  try {
+    db = getDb();
+  } catch {
+    return null;
+  }
   try {
     if (data.id) {
       db.update(gameSession)
@@ -68,8 +76,12 @@ export async function persistSession(data: {
 
 /** Save a setting by key. */
 export async function saveSettings(key: string, value: string): Promise<void> {
-  const db = getDb();
-  if (!db) return;
+  let db: ReturnType<typeof getDb>;
+  try {
+    db = getDb();
+  } catch {
+    return;
+  }
   try {
     // Upsert: try insert, on conflict update
     const existing = db.select().from(settings).where(eq(settings.key, key)).all();
@@ -85,8 +97,12 @@ export async function saveSettings(key: string, value: string): Promise<void> {
 
 /** Load a setting by key. Returns null if not found. */
 export async function loadSettings(key: string): Promise<string | null> {
-  const db = getDb();
-  if (!db) return null;
+  let db: ReturnType<typeof getDb>;
+  try {
+    db = getDb();
+  } catch {
+    return null;
+  }
   try {
     const rows = db.select().from(settings).where(eq(settings.key, key)).all();
     return rows.length > 0 ? rows[0].value : null;
@@ -101,8 +117,12 @@ export async function loadSettings(key: string): Promise<string | null> {
 
 /** Record an ingredient combo used in a session round. */
 export async function recordCombo(sessionId: number, combo: string[]): Promise<void> {
-  const db = getDb();
-  if (!db) return;
+  let db: ReturnType<typeof getDb>;
+  try {
+    db = getDb();
+  } catch {
+    return;
+  }
   try {
     db.insert(usedCombos)
       .values({
@@ -117,8 +137,12 @@ export async function recordCombo(sessionId: number, combo: string[]): Promise<v
 
 /** Get all ingredient combos used in a session. */
 export async function getUsedCombos(sessionId: number): Promise<string[][]> {
-  const db = getDb();
-  if (!db) return [];
+  let db: ReturnType<typeof getDb>;
+  try {
+    db = getDb();
+  } catch {
+    return [];
+  }
   try {
     const rows = db.select().from(usedCombos).where(eq(usedCombos.sessionId, sessionId)).all();
     return rows.map(r => r.ingredientCombo);

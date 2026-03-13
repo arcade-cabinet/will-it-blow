@@ -1,4 +1,5 @@
-import {describe, expect, it} from '@jest/globals';
+import {beforeEach, describe, expect, it} from '@jest/globals';
+import {resetDbClient} from '../client';
 import {
   getUsedCombos,
   hydrateSession,
@@ -10,9 +11,13 @@ import {
 
 /**
  * These tests verify graceful fallback behavior when SQLite is unavailable.
- * In Jest/Node, expo-sqlite is not available, so getDb() returns null.
- * All query functions must handle this gracefully.
+ * In Jest/Node, getDb() throws (test environment). All query functions
+ * catch the error and return safe defaults.
  */
+beforeEach(() => {
+  resetDbClient();
+});
+
 describe('drizzleQueries — graceful fallback (no SQLite)', () => {
   describe('hydrateSession', () => {
     it('returns null when db unavailable', async () => {

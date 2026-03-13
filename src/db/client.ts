@@ -67,13 +67,22 @@ CREATE TABLE IF NOT EXISTS "settings" (
  * (web uses expo-sqlite WASM via SharedArrayBuffer).
  *
  * On first successful init, runs migration SQL to create all 5 tables.
- * Returns null only in test environment or if expo-sqlite genuinely
- * fails to initialize (missing WASM, no SharedArrayBuffer support).
+ * Throws if expo-sqlite fails — persistence is a hard requirement.
+ * Only returns null in Jest test environment (no WASM available).
  */
-export function getDb(): DrizzleDb | null {
+export function getDb(): DrizzleDb {
   if (_db) return _db;
-  if (_initAttempted) return null;
+  if (_initAttempted) {
+    throw new Error(
+      '[db] expo-sqlite already failed to initialize. Check SharedArrayBuffer support.',
+    );
+  }
   _initAttempted = true;
+
+  // In test environment, skip — no WASM runtime
+  if (typeof process !== 'undefined' && process.env.NODE_ENV === 'test') {
+    throw new Error('[db] expo-sqlite not available in test environment');
+  }
 
   try {
     const {drizzle} = require('drizzle-orm/expo-sqlite');
@@ -84,10 +93,14 @@ export function getDb(): DrizzleDb | null {
     expoDb.execSync(MIGRATION_SQL);
 
     _db = drizzle(expoDb, {schema});
-    return _db;
+    return _db!;
   } catch (err) {
-    console.warn('[db] expo-sqlite init failed:', err);
-    return null;
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(
+      `[db] expo-sqlite init failed: ${msg}\n` +
+        'Ensure SharedArrayBuffer is available (COI service worker must be active).\n' +
+        'Check: Cross-Origin-Embedder-Policy and Cross-Origin-Opener-Policy headers.',
+    );
   }
 }
 
