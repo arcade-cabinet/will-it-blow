@@ -1,5 +1,4 @@
-import {useGLTF, useTexture} from '@react-three/drei';
-import {useFrame} from '@react-three/fiber';
+import {useGLTF} from '@react-three/drei';
 import {RigidBody} from '@react-three/rapier';
 import {useDrag} from '@use-gesture/react';
 import {useMemo, useRef, useState} from 'react';
@@ -113,7 +112,7 @@ function FreezerIngredient({def, miscNodes, frostMat}: any) {
   const selectedIngredientIds = useGameStore(state => state.selectedIngredientIds);
 
   // Allow player to reach in and grab an item
-  const bind = useDrag(({active, movement: [x, y]}) => {
+  const bind = useDrag(({active, movement: [_x, _y]}) => {
     setIsGrabbed(active);
     if (active && ref.current && gamePhase === 'SELECT_INGREDIENTS') {
       // Lift the object out of the freezer
@@ -168,4 +167,6 @@ function FreezerIngredient({def, miscNodes, frostMat}: any) {
 }
 
 // Preload all possible ingredients
-INGREDIENT_MODELS.forEach(m => useGLTF.preload(m.path));
+for (const m of INGREDIENT_MODELS) {
+  useGLTF.preload(m.path);
+}

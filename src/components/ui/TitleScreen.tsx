@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {Animated, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {DIFFICULTY_TIERS} from '../../engine/DifficultyConfig';
 import {useGameStore} from '../../store/gameStore';

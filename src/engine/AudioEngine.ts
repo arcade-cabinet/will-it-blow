@@ -14,43 +14,53 @@ class AudioEngine {
   async initialize() {
     if (this.initialized) return;
 
-    await Tone.start();
+    try {
+      await Tone.start();
 
-    // Use high-quality sampled audio for chop
-    this.chopPlayer = new Tone.Player({
-      url: '/audio/sfx/chop-1.ogg',
-      volume: -5,
-      autostart: false,
-    }).toDestination();
+      // Use high-quality sampled audio for chop
+      this.chopPlayer = new Tone.Player({
+        url: '/audio/sfx/chop-1.ogg',
+        volume: -5,
+        autostart: false,
+        onload: () => {},
+        onerror: error => console.warn('Failed to load chop audio:', error),
+      }).toDestination();
 
-    // Use real sizzle loop
-    this.sizzlePlayer = new Tone.Player({
-      url: '/audio/sfx/sizzle-loop.ogg',
-      volume: -20,
-      loop: true,
-      autostart: false,
-    }).toDestination();
+      // Use real sizzle loop
+      this.sizzlePlayer = new Tone.Player({
+        url: '/audio/sfx/sizzle-loop.ogg',
+        volume: -20,
+        loop: true,
+        autostart: false,
+        onload: () => {},
+        onerror: error => console.warn('Failed to load sizzle audio:', error),
+      }).toDestination();
 
-    // Use real ambient horror track
-    this.ambientPlayer = new Tone.Player({
-      url: '/audio/music/track_boss_horror.ogg',
-      volume: -25,
-      loop: true,
-      autostart: false,
-    }).toDestination();
+      // Use real ambient horror track
+      this.ambientPlayer = new Tone.Player({
+        url: '/audio/music/track_boss_horror.ogg',
+        volume: -25,
+        loop: true,
+        autostart: false,
+        onload: () => {},
+        onerror: error => console.warn('Failed to load ambient audio:', error),
+      }).toDestination();
 
-    // Keep the procedural Grinder noise because it reacts dynamically to speed
-    this.grindSynth = new Tone.FMSynth({
-      harmonicity: 1.5,
-      modulationIndex: 10,
-      oscillator: {type: 'sawtooth'},
-      envelope: {attack: 0.1, decay: 0.2, sustain: 1.0, release: 0.5},
-      modulation: {type: 'square'},
-      modulationEnvelope: {attack: 0.1, decay: 0.2, sustain: 1.0, release: 0.5},
-    }).toDestination();
-    this.grindSynth.volume.value = -15;
+      // Keep the procedural Grinder noise because it reacts dynamically to speed
+      this.grindSynth = new Tone.FMSynth({
+        harmonicity: 1.5,
+        modulationIndex: 10,
+        oscillator: {type: 'sawtooth'},
+        envelope: {attack: 0.1, decay: 0.2, sustain: 1.0, release: 0.5},
+        modulation: {type: 'square'},
+        modulationEnvelope: {attack: 0.1, decay: 0.2, sustain: 1.0, release: 0.5},
+      }).toDestination();
+      this.grindSynth.volume.value = -15;
 
-    this.initialized = true;
+      this.initialized = true;
+    } catch (error) {
+      console.warn('Audio engine initialization failed:', error);
+    }
   }
 
   playChop() {

@@ -331,7 +331,7 @@ splatScene.add(splatMesh);
             }
         });
 
-        window.addEventListener('pointerup', (e) => {
+        window.addEventListener('pointerup', (_e) => {
             if (params.scene === 'Stuffing Station') {
                 if (stufferState === 'DRAGGING') {
                     stufferState = 'IDLE'; controls.enabled = true; draggedCasing.visible = false;
@@ -601,7 +601,7 @@ fboCamera);
                 } else { gMotor.position.x = 0; gExtruder.position.x = 0; gChute.position.x = 0; faceplate.position.x = 0; }
 
                 // Update Falling Meat Particles
-                let pCount = 0;
+                let _pCount = 0;
                 for(let i=0; i<maxGrindParticles; i++) {
                     const p = gPartData[i];
                     if (p.active) {
@@ -614,7 +614,7 @@ fboCamera);
                         else {
                             gDummy.position.copy(p.pos); gDummy.rotation.copy(p.rot);
                             gDummy.updateMatrix(); gPartMesh.setMatrixAt(i, gDummy.matrix);
-                            pCount++;
+                            _pCount++;
                         }
                     } else { gDummy.position.set(0,999,0); gDummy.updateMatrix(); gPartMesh.setMatrixAt(i, gDummy.matrix); }
                 }

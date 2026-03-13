@@ -132,7 +132,7 @@ export function SurrealText() {
         case 'COOKING':
           return "DON'T LET IT BURN";
         case 'DONE':
-          if (finalScore && finalScore.calculated) {
+          if (finalScore?.calculated) {
             if (currentRound >= totalRounds) {
               return `SCORE: ${finalScore.totalScore}%\n${finalScore.breakdown}\nYOU ESCAPED.`;
             }
@@ -171,7 +171,7 @@ export function SurrealText() {
     } else {
       setMessages(prev => prev.map(m => ({...m, active: false})));
     }
-  }, [textContent]); // Removed messages from dep array to avoid loops
+  }, [textContent, messages.some]); // Removed messages from dep array to avoid loops
 
   const removeMessage = (id: number) => {
     setMessages(prev => prev.filter(m => m.id !== id));

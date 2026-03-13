@@ -1,7 +1,7 @@
 import {Canvas} from '@react-three/fiber';
 import {Physics} from '@react-three/rapier';
 import {Suspense, useEffect, useMemo, useRef, useState} from 'react';
-import {StyleSheet, Text, View} from 'react-native';
+import {StyleSheet, View} from 'react-native';
 import * as THREE from 'three';
 import {CameraRail} from './src/components/camera/CameraRail';
 import {FirstPersonControls} from './src/components/camera/FirstPersonControls';
@@ -113,7 +113,7 @@ function GameContent() {
 }
 
 function UILayer() {
-  const introActive = useGameStore(state => state.introActive);
+  const _introActive = useGameStore(state => state.introActive);
   const setIntroActive = useGameStore(state => state.setIntroActive);
   const setJoystick = useGameStore(state => state.setJoystick);
   const addLookDelta = useGameStore(state => state.addLookDelta);

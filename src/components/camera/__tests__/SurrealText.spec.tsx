@@ -1,6 +1,5 @@
 import {expect, test} from '@playwright/experimental-ct-react';
 import {Canvas} from '@react-three/fiber';
-import {useGameStore} from '../../../store/gameStore';
 import {SurrealText} from '../../environment/SurrealText';
 
 test.use({viewport: {width: 500, height: 500}});

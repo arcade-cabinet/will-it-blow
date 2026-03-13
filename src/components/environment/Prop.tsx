@@ -20,9 +20,9 @@ export function Prop({
   const s = typeof scale === 'number' ? ([scale, scale, scale] as [number, number, number]) : scale;
 
   const chainsaw = useGLTF('/models/Chainsaw.glb') as any;
-  const cleaver = useGLTF('/models/Cleaver.glb') as any;
+  const cleaver = useGLTF('/models/cleaver.glb') as any;
   const machete = useGLTF('/models/Machete.glb') as any;
-  const traps = useGLTF('/models/Traps.glb') as any;
+  const traps = useGLTF('/models/traps.glb') as any;
 
   return (
     <RigidBody type={type} position={position} rotation={rotation} colliders="cuboid">
@@ -69,6 +69,6 @@ export function Prop({
 }
 
 useGLTF.preload('/models/Chainsaw.glb');
-useGLTF.preload('/models/Cleaver.glb');
+useGLTF.preload('/models/cleaver.glb');
 useGLTF.preload('/models/Machete.glb');
-useGLTF.preload('/models/Traps.glb');
+useGLTF.preload('/models/traps.glb');

@@ -38,8 +38,6 @@ export function ProceduralIngredient({type, position}: IngredientProps) {
           roughness: 0.4,
           clearcoat: 1.0,
         });
-      case 'meat':
-      case 'mystery':
       default:
         return new THREE.MeshStandardMaterial({color, roughness: 0.8, metalness: 0.1});
     }

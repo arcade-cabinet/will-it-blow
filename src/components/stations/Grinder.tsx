@@ -95,6 +95,8 @@ export function Grinder() {
     }
   };
 
+  const particleSpawnIndex = useRef(0);
+
   const bindPlunger = useDrag(({offset: [, y]}) => {
     if (gamePhase !== 'GRINDING') return;
     if (bowlState !== 'UNDER') return;
@@ -135,8 +137,10 @@ export function Grinder() {
         // Spawn particles
         const data = particlesData.current;
         for (let i = 0; i < 5; i++) {
-          const p = data.find(d => !d.active);
-          if (p) {
+          const p = data[particleSpawnIndex.current];
+          particleSpawnIndex.current = (particleSpawnIndex.current + 1) % MAX_PARTICLES;
+
+          if (p && !p.active) {
             p.active = true;
             const angle = Math.random() * Math.PI * 2;
             const r = Math.random() * 0.15;

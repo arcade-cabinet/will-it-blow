@@ -71,6 +71,10 @@ export function Stove() {
   const splatScene = useMemo(() => new THREE.Scene(), []);
   const splatCamera = useMemo(() => new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1), []);
   const splatMesh = useMemo(() => {
+    if (typeof document === 'undefined') {
+      const mat = new THREE.MeshBasicMaterial({transparent: true, opacity: 0});
+      return new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), mat, 100);
+    }
     const sCtx = document.createElement('canvas').getContext('2d');
     if (sCtx) {
       sCtx.canvas.width = 32;
@@ -166,7 +170,7 @@ export function Stove() {
   });
 
   // Cook logic & FBO Physics
-  useFrame((state, delta) => {
+  useFrame((_state, delta) => {
     if (gamePhase === 'COOKING') {
       const maxHeat = Math.max(burnerLevels[0], burnerLevels[1]);
       if (maxHeat > 0) {

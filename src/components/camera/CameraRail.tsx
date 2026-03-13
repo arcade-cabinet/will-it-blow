@@ -33,7 +33,7 @@ export function CameraRail() {
   const currentTarget = useRef(new THREE.Vector3());
 
   // Track previous phase to trigger transitions
-  const prevPhase = useRef<GamePhase>(gamePhase);
+  const _prevPhase = useRef<GamePhase>(gamePhase);
 
   useEffect(() => {
     if (!introActive && posture === 'standing') {
@@ -49,7 +49,7 @@ export function CameraRail() {
     }
   }, [introActive, posture, gamePhase, camera]);
 
-  useFrame((state, delta) => {
+  useFrame((_state, delta) => {
     if (introActive || posture !== 'standing') return;
 
     const targetDef = STATION_CAMERAS[gamePhase];

@@ -21,7 +21,6 @@ class SquigglyCurve extends THREE.Curve<THREE.Vector3> {
 }
 
 export function Stuffer() {
-  const {camera} = useThree();
   const gamePhase = useGameStore(state => state.gamePhase);
   const setGamePhase = useGameStore(state => state.setGamePhase);
   const stuffLevel = useGameStore(state => state.stuffLevel);

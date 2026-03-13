@@ -1,9 +1,8 @@
-import {Box, useGLTF, useTexture} from '@react-three/drei';
+import {useGLTF} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
 import {RigidBody} from '@react-three/rapier';
-import {useEffect, useMemo, useRef, useState} from 'react';
+import {useEffect, useRef, useState, useMemo, useCallback} from 'react';
 import * as THREE from 'three';
-import {audioEngine} from '../../engine/AudioEngine';
 import {useGameStore} from '../../store/gameStore';
 
 const MAX_SPLATTERS = 50;
@@ -31,15 +30,15 @@ export function BlowoutStation() {
 
   const gamePhase = useGameStore(state => state.gamePhase);
   const setGamePhase = useGameStore(state => state.setGamePhase);
-  const setGroundMeatVol = useGameStore(state => state.setGroundMeatVol);
-  const setStuffLevel = useGameStore(state => state.setStuffLevel);
-  const setCookLevel = useGameStore(state => state.setCookLevel);
+  const _setGroundMeatVol = useGameStore(state => state.setGroundMeatVol);
+  const _setStuffLevel = useGameStore(state => state.setStuffLevel);
+  const _setCookLevel = useGameStore(state => state.setCookLevel);
   const nextRound = useGameStore(state => state.nextRound);
   const totalRounds = useGameStore(state => state.totalRounds);
   const currentRound = useGameStore(state => state.currentRound);
   const finalScore = useGameStore(state => state.finalScore);
 
-  const drawCerealBox = (ctx: CanvasRenderingContext2D, clear: boolean = false) => {
+  const drawCerealBox = useCallback((ctx: CanvasRenderingContext2D, clear = false) => {
     if (clear) {
       ctx.fillStyle = '#ffaa00';
       ctx.fillRect(0, 0, 512, 512);
@@ -52,7 +51,7 @@ export function BlowoutStation() {
       ctx.fillStyle = '#aa4400';
       ctx.fillText('100% MEAT', 256, 400);
     }
-  };
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -65,7 +64,7 @@ export function BlowoutStation() {
 
     textureRef.current = new THREE.CanvasTexture(canvas);
     textureRef.current.needsUpdate = true;
-  }, []);
+  }, [drawCerealBox]);
 
   const triggerBlowout = () => {
     if (hasBlown) return;
@@ -98,7 +97,7 @@ export function BlowoutStation() {
     }
 
     if (particlesRef.current && hasBlown) {
-      let activeCount = 0;
+      let _activeCount = 0;
       const data = particlesData.current;
       const ctx = canvasRef.current.getContext('2d');
 
@@ -125,7 +124,7 @@ export function BlowoutStation() {
             dummy.position.set(0, -999, 0);
           } else {
             dummy.position.copy(p.pos);
-            activeCount++;
+            _activeCount++;
           }
           dummy.updateMatrix();
           particlesRef.current.setMatrixAt(i, dummy.matrix);

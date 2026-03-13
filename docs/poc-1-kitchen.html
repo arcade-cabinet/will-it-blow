@@ -326,7 +326,7 @@ geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sWts,4)); geo.se
 
         function setInstruction(msg, pct) {
             instructionUI.innerText = msg;
-            if(pct !== undefined) progressFill.style.width = pct + '%';
+            if(pct !== undefined) progressFill.style.width = `${pct}%`;
         }
 
         buildSausage();
@@ -458,7 +458,7 @@ geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sWts,4)); geo.se
                 stuffLevel = Math.min(1.0, stuffLevel + Math.abs(e.movementY) * 0.002);
                 attachedCasing.scale.z = Math.max(0.01, 1.0 - stuffLevel);
                 attachedCasing.position.z = 0 - (stuffLevel * 1.5);
-                progressFill.style.width = (50 + stuffLevel*20) + '%';
+                progressFill.style.width = `${50 + stuffLevel*20}%`;
 
                 if(stuffLevel >= 1.0) {
                     isCranking = false; controls.enabled = true; gameState = 5;
@@ -524,7 +524,7 @@ geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sWts,4)); geo.se
             // Cooking Logic
             if(isCooking && cookLevel < 1.0) {
                 cookLevel += delta * 0.06;
-                progressFill.style.width = (80 + cookLevel*20) + '%';
+                progressFill.style.width = `${80 + cookLevel*20}%`;
 
                 const tC = new THREE.Color();
                 if(cookLevel<0.7) tC.lerpColors(new THREE.Color(0xffffff), new THREE.Color(0x8B5A2B), cookLevel/0.7);

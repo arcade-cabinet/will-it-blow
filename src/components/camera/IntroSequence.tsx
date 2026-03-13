@@ -41,7 +41,7 @@ export function IntroSequence() {
     return () => {
       camera.remove(topLid);
       camera.remove(bottomLid);
-      if (gl.domElement && gl.domElement.style) {
+      if (gl.domElement?.style) {
         gl.domElement.style.filter = 'none';
       }
     };
@@ -53,9 +53,9 @@ export function IntroSequence() {
   useEffect(() => {
     camera.position.copy(startPos);
     camera.lookAt(lookCeiling);
-  }, [camera]);
+  }, [camera, lookCeiling, startPos]);
 
-  useFrame((state, delta) => {
+  useFrame((_state, delta) => {
     timeRef.current += delta;
     const t = timeRef.current;
 
@@ -105,7 +105,7 @@ export function IntroSequence() {
     topLid.position.set(0, lidOffset + eyelidOpenness * openDistance, -2);
     bottomLid.position.set(0, -lidOffset - eyelidOpenness * openDistance, -2);
 
-    if (gl.domElement && gl.domElement.style) {
+    if (gl.domElement?.style) {
       gl.domElement.style.filter = blurAmount > 0 ? `blur(${blurAmount}px)` : 'none';
     }
 

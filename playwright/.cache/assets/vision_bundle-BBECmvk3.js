@@ -1,4 +1,4 @@
-var t = 'undefined' != typeof self ? self : {};
+var t = 'undefined' !== typeof self ? self : {};
 function e(e, n) {
   t: {
     for (var r = ['CLOSURE_FLAGS'], i = t, s = 0; s < r.length; s++)
@@ -8,7 +8,7 @@ function e(e, n) {
       }
     r = i;
   }
-  return null != (e = r && r[e]) ? e : n;
+  return null != (e = r?.[e]) ? e : n;
 }
 function n() {
   throw Error('Invalid UTF8');
@@ -17,9 +17,9 @@ function r(t, e) {
   return (e = String.fromCharCode.apply(null, e)), null == t ? e : t + e;
 }
 let i, s;
-const o = 'undefined' != typeof TextDecoder;
+const o = 'undefined' !== typeof TextDecoder;
 let a;
-const h = 'undefined' != typeof TextEncoder;
+const h = 'undefined' !== typeof TextEncoder;
 function c(t) {
   if (h) t = (a ||= new TextEncoder()).encode(t);
   else {
@@ -61,11 +61,11 @@ var u,
   d = e(660014094, !1);
 const p = t.navigator;
 function g(t) {
-  return !!l && !!u && u.brands.some(({brand: e}) => e && -1 != e.indexOf(t));
+  return !!l && !!u && u.brands.some(({brand: e}) => e && -1 !== e.indexOf(t));
 }
 function m(e) {
   var n;
-  return ((n = t.navigator) && (n = n.userAgent)) || (n = ''), -1 != n.indexOf(e);
+  return ((n = t.navigator) && (n = n.userAgent)) || (n = ''), -1 !== n.indexOf(e);
 }
 function y() {
   return !!l && !!u && u.brands.length > 0;
@@ -76,7 +76,7 @@ function _() {
 function v(t) {
   return v[' '](t), t;
 }
-(u = (p && p.userAgentData) || null), (v[' '] = () => {});
+(u = p?.userAgentData || null), (v[' '] = () => {});
 var E = !y() && (m('Trident') || m('MSIE'));
 !m('Android') || _(),
   _(),
@@ -94,7 +94,7 @@ function A(t) {
     n = (3 * e) / 4;
   n % 3
     ? (n = Math.floor(n))
-    : -1 != '=.'.indexOf(t[e - 1]) && (n = -1 != '=.'.indexOf(t[e - 2]) ? n - 2 : n - 1);
+    : -1 !== '=.'.indexOf(t[e - 1]) && (n = -1 !== '=.'.indexOf(t[e - 2]) ? n - 2 : n - 1);
   var r = new Uint8Array(n),
     i = 0;
   return (
@@ -104,19 +104,19 @@ function A(t) {
           var n = t.charAt(r++),
             i = T[n];
           if (null != i) return i;
-          if (!/^[\s\xa0]*$/.test(n)) throw Error('Unknown base64 encoding at char: ' + n);
+          if (!/^[\s\xa0]*$/.test(n)) throw Error(`Unknown base64 encoding at char: ${n}`);
         }
         return e;
       }
       b();
-      for (var r = 0; ; ) {
+      for (var _r = 0; ; ) {
         var i = n(-1),
           s = n(0),
           o = n(64),
           a = n(64);
         if (64 === a && -1 === i) break;
         e((i << 2) | (s >> 4)),
-          64 != o && (e(((s << 4) & 240) | (o >> 2)), 64 != a && e(((o << 6) & 192) | a));
+          64 !== o && (e(((s << 4) & 240) | (o >> 2)), 64 !== a && e(((o << 6) & 192) | a));
       }
     })(t, t => {
       r[i++] = t;
@@ -143,8 +143,8 @@ function b() {
     }
   }
 }
-var k = 'undefined' != typeof Uint8Array,
-  S = !E && 'function' == typeof btoa;
+var k = 'undefined' !== typeof Uint8Array,
+  S = !E && 'function' === typeof btoa;
 function x(t) {
   if (!S) {
     var e;
@@ -201,7 +201,7 @@ function N() {
 function U(t) {
   C(P);
   var e = t.ba;
-  return null == (e = null == e || I(e) ? e : 'string' == typeof e ? M(e) : null) ? e : (t.ba = e);
+  return null == (e = null == e || I(e) ? e : 'string' === typeof e ? M(e) : null) ? e : (t.ba = e);
 }
 var D = class {
   constructor(t, e) {
@@ -230,14 +230,14 @@ function V(t) {
   return B((t = Error(t)), 'warning'), t;
 }
 function X() {
-  return 'function' == typeof BigInt;
+  return 'function' === typeof BigInt;
 }
 function H(t) {
   return Array.prototype.slice.call(t);
 }
-var W = 'function' == typeof Symbol && 'symbol' == typeof Symbol();
+var W = 'function' === typeof Symbol && 'symbol' === typeof Symbol();
 function z(t) {
-  return 'function' == typeof Symbol && 'symbol' == typeof Symbol() ? Symbol() : t;
+  return 'function' === typeof Symbol && 'symbol' === typeof Symbol() ? Symbol() : t;
 }
 var K = z(),
   Y = z('0di'),
@@ -288,14 +288,14 @@ var ot,
   at = {},
   ht = {};
 function ct(t) {
-  return !(!t || 'object' != typeof t || t.La !== ht);
+  return !(!t || 'object' !== typeof t || t.La !== ht);
 }
 function ut(t) {
-  return null !== t && 'object' == typeof t && !Array.isArray(t) && t.constructor === Object;
+  return null !== t && 'object' === typeof t && !Array.isArray(t) && t.constructor === Object;
 }
 function lt(t, e, n) {
   if (null != t)
-    if ('string' == typeof t) t = t ? new D(t, P) : N();
+    if ('string' === typeof t) t = t ? new D(t, P) : N();
     else if (t.constructor !== D)
       if (I(t)) t = t.length ? new D(n ? t : new Uint8Array(t), P) : N();
       else {
@@ -337,10 +337,10 @@ var vt = Object.freeze({});
 function Et(t) {
   return (t.Sa = !0), t;
 }
-var wt = Et(t => 'number' == typeof t),
-  Tt = Et(t => 'string' == typeof t),
-  At = Et(t => 'boolean' == typeof t),
-  bt = 'function' == typeof t.BigInt && 'bigint' == typeof t.BigInt(0),
+var wt = Et(t => 'number' === typeof t),
+  Tt = Et(t => 'string' === typeof t),
+  At = Et(t => 'boolean' === typeof t),
+  bt = 'function' === typeof t.BigInt && 'bigint' === typeof t.BigInt(0),
   kt = Et(t => (bt ? t >= xt && t <= Rt : '-' === t[0] ? Ft(t, St) : Ft(t, Lt)));
 const St = Number.MIN_SAFE_INTEGER.toString(),
   xt = bt ? BigInt(Number.MIN_SAFE_INTEGER) : void 0,
@@ -356,7 +356,7 @@ function Ft(t, e) {
     if (r < i) return !0;
   }
 }
-const Mt = 'function' == typeof Uint8Array.prototype.slice;
+const Mt = 'function' === typeof Uint8Array.prototype.slice;
 let It,
   Pt = 0,
   Ot = 0;
@@ -381,16 +381,16 @@ function Dt(t, e) {
 function Bt(t, e) {
   const n = 2147483648 & e;
   return (
-    n && ((e = ~e >>> 0), 0 == (t = (1 + ~t) >>> 0) && (e = (e + 1) >>> 0)),
+    n && ((e = ~e >>> 0), 0 === (t = (1 + ~t) >>> 0) && (e = (e + 1) >>> 0)),
     (t = Dt(t, e)),
     n ? -t : t
   );
 }
 function Gt(t, e) {
-  if (((t >>>= 0), (e >>>= 0) <= 2097151)) var n = '' + (4294967296 * e + t);
+  if (((t >>>= 0), (e >>>= 0) <= 2097151)) var n = `${4294967296 * e + t}`;
   else
     X()
-      ? (n = '' + ((BigInt(e) << BigInt(32)) | BigInt(t)))
+      ? (n = `${(BigInt(e) << BigInt(32)) | BigInt(t)}`)
       : ((t =
           (16777215 & t) +
           6777216 * (n = 16777215 & ((t >>> 24) | (e << 8))) +
@@ -431,14 +431,14 @@ function Xt(t, e) {
   return (e = ~e), t ? (t = 1 + ~t) : (e += 1), [t, e];
 }
 function Ht(t) {
-  return null == t || 'number' == typeof t
+  return null == t || 'number' === typeof t
     ? t
     : 'NaN' === t || 'Infinity' === t || '-Infinity' === t
       ? Number(t)
       : void 0;
 }
 function Wt(t) {
-  return null == t || 'boolean' == typeof t ? t : 'number' == typeof t ? !!t : void 0;
+  return null == t || 'boolean' === typeof t ? t : 'number' === typeof t ? !!t : void 0;
 }
 const zt = /^-?([1-9][0-9]*|0)(\.[0-9]+)?$/;
 function Kt(t) {
@@ -453,19 +453,19 @@ function Kt(t) {
 }
 function Yt(t) {
   if (null == t) return t;
-  if ('string' == typeof t) {
+  if ('string' === typeof t) {
     if (!t) return;
     t = +t;
   }
-  return 'number' == typeof t && Number.isFinite(t) ? 0 | t : void 0;
+  return 'number' === typeof t && Number.isFinite(t) ? 0 | t : void 0;
 }
 function $t(t) {
   if (null == t) return t;
-  if ('string' == typeof t) {
+  if ('string' === typeof t) {
     if (!t) return;
     t = +t;
   }
-  return 'number' == typeof t && Number.isFinite(t) ? t >>> 0 : void 0;
+  return 'number' === typeof t && Number.isFinite(t) ? t >>> 0 : void 0;
 }
 function qt(t) {
   return '-' !== t[0] && (t.length < 20 || (20 === t.length && Number(t.substring(0, 6)) < 184467));
@@ -483,10 +483,10 @@ function Zt(t) {
       : t.length < 19 || (19 === t.length && Number(t.substring(0, 6)) < 922337)))
   )
     if ((Vt(t), (t = Pt), 2147483648 & (e = Ot)))
-      if (X()) t = '' + ((BigInt(0 | e) << BigInt(32)) | BigInt(t >>> 0));
+      if (X()) t = `${(BigInt(0 | e) << BigInt(32)) | BigInt(t >>> 0)}`;
       else {
         const [n, r] = Xt(t, e);
-        t = '-' + Gt(n, r);
+        t = `-${Gt(n, r)}`;
       }
     else t = Gt(t, e);
   return t;
@@ -494,13 +494,13 @@ function Zt(t) {
 function Qt(t) {
   return null == t
     ? t
-    : 'bigint' == typeof t
+    : 'bigint' === typeof t
       ? (kt(t)
           ? (t = Number(t))
           : ((t = BigInt.asIntN(64, t)), (t = kt(t) ? Number(t) : String(t))),
         t)
       : Kt(t)
-        ? 'number' == typeof t
+        ? 'number' === typeof t
           ? Jt(t)
           : Zt(t)
         : void 0;
@@ -533,18 +533,18 @@ function te(t) {
   }
 }
 function ee(t) {
-  if ('string' != typeof t) throw Error();
+  if ('string' !== typeof t) throw Error();
   return t;
 }
 function ne(t) {
-  if (null != t && 'string' != typeof t) throw Error();
+  if (null != t && 'string' !== typeof t) throw Error();
   return t;
 }
 function re(t) {
-  return null == t || 'string' == typeof t ? t : void 0;
+  return null == t || 'string' === typeof t ? t : void 0;
 }
 function ie(t, e, n, r) {
-  if (null != t && 'object' == typeof t && t.Y === at) return t;
+  if (null != t && 'object' === typeof t && t.Y === at) return t;
   if (!Array.isArray(t))
     return (
       n
@@ -578,13 +578,13 @@ function se(t, e, n) {
       }
     }
   else e = Qt(t);
-  return 'string' == typeof (n = null == (t = e) ? (n ? 0 : void 0) : t) &&
+  return 'string' === typeof (n = null == (t = e) ? (n ? 0 : void 0) : t) &&
     ((e = +n), Number.isSafeInteger(e))
     ? e
     : n;
 }
 function oe(t) {
-  if ((void 0 === ce && (ce = 'function' == typeof Proxy ? ye(Proxy) : null), !ce || !me()))
+  if ((void 0 === ce && (ce = 'function' === typeof Proxy ? ye(Proxy) : null), !ce || !me()))
     return t;
   let e = ae?.get(t);
   return (
@@ -597,7 +597,7 @@ function oe(t) {
             le = 1 === Array.prototype.concat.call([], t).length;
           }
           le &&
-            'function' == typeof Symbol &&
+            'function' === typeof Symbol &&
             Symbol.isConcatSpreadable &&
             (t[Symbol.isConcatSpreadable] = !0);
         })(t),
@@ -610,7 +610,7 @@ function oe(t) {
 }
 let ae, he, ce, ue, le, fe, de, pe, ge;
 function me() {
-  return void 0 === ue && (ue = 'function' == typeof WeakMap ? ye(WeakMap) : null), ue;
+  return void 0 === ue && (ue = 'function' === typeof WeakMap ? ye(WeakMap) : null), ue;
 }
 function ye(t) {
   try {
@@ -709,16 +709,7 @@ function be(t, e, n) {
 const ke = {};
 const Se = (() => {
   try {
-    return (
-      v(
-        new (class extends Map {
-          constructor() {
-            super();
-          }
-        })(),
-      ),
-      !1
-    );
+    return v(new (class extends Map {})()), !1;
   } catch {
     return !0;
   }
@@ -764,11 +755,7 @@ const Le = Se
       size: {value: 0, configurable: !0, enumerable: !0, writable: !0},
     }),
     xe)
-  : class extends Map {
-      constructor() {
-        super();
-      }
-    };
+  : class extends Map {};
 function Re(t) {
   return t;
 }
@@ -814,7 +801,7 @@ var Me = class extends Le {
     return new gt(t, Me.prototype.get, this);
   }
   forEach(t, e) {
-    super.forEach((n, r) => {
+    super.forEach((_n, r) => {
       t.call(e, this.get(r), r, this);
     });
   }
@@ -855,7 +842,7 @@ var Me = class extends Le {
     return this.entries();
   }
 };
-function Ie(t, e, n, r, i, s) {
+function Ie(t, _e, n, r, i, s) {
   return (t = ie(t, r, n, s)), i && (t = He(t)), t;
 }
 function Pe(t) {
@@ -897,7 +884,7 @@ function Ge(t) {
       : (t => {
           switch (typeof t) {
             case 'number':
-              return isFinite(t) ? t : String(t);
+              return Number.isFinite(t) ? t : String(t);
             case 'bigint':
               return kt(t) ? Number(t) : String(t);
             case 'boolean':
@@ -910,7 +897,7 @@ function Ge(t) {
                   if (I(t)) return x(t);
                   if (t instanceof D) {
                     const e = t.ba;
-                    return null == e ? '' : 'string' == typeof e ? e : (t.ba = x(e));
+                    return null == e ? '' : 'string' === typeof e ? e : (t.ba = x(e));
                   }
                   if (t instanceof Me) return t.pa();
                 }
@@ -1210,7 +1197,7 @@ function mn(t, e, n) {
   const r = et(t.u);
   return gn(t, r, e, n, tn(), !1, !(2 & r));
 }
-function yn(t, e, n, r) {
+function yn(t, _e, n, r) {
   return null == r && (r = void 0), $e(t, n, r);
 }
 function _n(t, e, n, r) {
@@ -1253,25 +1240,25 @@ function kn(t, e) {
   return Tn(re(ze(t, e)), '');
 }
 function Sn(t, e, n) {
-  if (null != n && 'boolean' != typeof n)
+  if (null != n && 'boolean' !== typeof n)
     throw (
       ((t = typeof n),
       Error(
-        `Expected boolean but got ${'object' != t ? t : n ? (Array.isArray(n) ? 'array' : t) : 'null'}: ${n}`,
+        `Expected boolean but got ${'object' !== t ? t : n ? (Array.isArray(n) ? 'array' : t) : 'null'}: ${n}`,
       ))
     );
   $e(t, e, n);
 }
 function xn(t, e, n) {
   if (null != n) {
-    if ('number' != typeof n) throw V('int32');
+    if ('number' !== typeof n) throw V('int32');
     if (!Number.isFinite(n)) throw V('int32');
     n |= 0;
   }
   $e(t, e, n);
 }
 function Ln(t, e, n) {
-  if (null != n && 'number' != typeof n)
+  if (null != n && 'number' !== typeof n)
     throw Error(`Value of float/double field must be a number, found ${typeof n}: ${n}`);
   $e(t, e, n);
 }
@@ -1309,7 +1296,7 @@ function Pn(t, e) {
   return Error(`Tried to read past the end of the data ${e} > ${t}`);
 }
 function On(t) {
-  if ('string' == typeof t) return {buffer: M(t), O: !1};
+  if ('string' === typeof t) return {buffer: M(t), O: !1};
   if (Array.isArray(t)) return {buffer: new Uint8Array(t), O: !1};
   if (t.constructor === Uint8Array) return {buffer: t, O: !1};
   if (t.constructor === ArrayBuffer) return {buffer: new Uint8Array(t), O: !1};
@@ -1342,7 +1329,7 @@ function Nn(t) {
     i = t.h;
   for (; n < r; ) {
     const r = i[n++];
-    if (((e |= r), 0 == (128 & r))) return Xn(t, n), !!(127 & e);
+    if (((e |= r), 0 === (128 & r))) return Xn(t, n), !!(127 & e);
   }
   throw In();
 }
@@ -1391,11 +1378,11 @@ function Gn(t) {
   const n = (e >>> 23) & 255;
   return (
     (e &= 8388607),
-    255 == n
+    255 === n
       ? e
         ? NaN
         : t * (1 / 0)
-      : 0 == n
+      : 0 === n
         ? 1401298464324817e-60 * t * e
         : t * 2 ** (n - 150) * (e + 8388608)
   );
@@ -1418,7 +1405,7 @@ function Hn(t, e) {
   return (t.g = r), n;
 }
 function Wn(t, e) {
-  if (0 == e) return N();
+  if (0 === e) return N();
   var n = Hn(t, e);
   return (
     t.ea && t.m
@@ -1430,14 +1417,14 @@ function Wn(t, e) {
             : Mt
               ? t.slice(n, e)
               : new Uint8Array(t.subarray(n, e)))),
-    0 == n.length ? N() : new D(n, P)
+    0 === n.length ? N() : new D(n, P)
   );
 }
 (Me.prototype.toJSON = void 0), (Me.prototype.La = ht);
 var zn = [];
 function Kn(t) {
   var e = t.g;
-  if (e.g == e.l) return !1;
+  if (e.g === e.l) return !1;
   t.l = t.g.g;
   var n = Dn(t.g);
   if (((e = n >>> 3), !((n &= 7) >= 0 && n <= 5))) throw Mn(n, t.l);
@@ -1447,13 +1434,13 @@ function Kn(t) {
 function Yn(t) {
   switch (t.h) {
     case 0:
-      0 != t.h ? Yn(t) : Nn(t.g);
+      0 !== t.h ? Yn(t) : Nn(t.g);
       break;
     case 1:
       Xn((t = t.g), t.g + 8);
       break;
     case 2:
-      if (2 != t.h) Yn(t);
+      if (2 !== t.h) Yn(t);
       else {
         var e = Dn(t.g);
         Xn((t = t.g), t.g + e);
@@ -1465,8 +1452,8 @@ function Yn(t) {
     case 3:
       for (e = t.m; ; ) {
         if (!Kn(t)) throw Error('Unmatched start-group tag: stream EOF');
-        if (4 == t.h) {
-          if (t.m != e) throw Error('Unmatched end-group tag');
+        if (4 === t.h) {
+          if (t.m !== e) throw Error('Unmatched end-group tag');
           break;
         }
         Yn(t);
@@ -1502,10 +1489,10 @@ function qn(t) {
       if (void 0 === i) {
         try {
           h.decode(new Uint8Array([128]));
-        } catch (t) {}
+        } catch (_t) {}
         try {
           h.decode(new Uint8Array([97])), (i = !0);
-        } catch (t) {
+        } catch (_t) {
           i = !1;
         }
       }
@@ -1523,25 +1510,25 @@ function qn(t) {
           ? u >= e
             ? n()
             : ((i = t[u++]),
-              l < 194 || 128 != (192 & i) ? (u--, n()) : a.push(((31 & l) << 6) | (63 & i)))
+              l < 194 || 128 !== (192 & i) ? (u--, n()) : a.push(((31 & l) << 6) | (63 & i)))
           : l < 240
             ? u >= e - 1
               ? n()
               : ((i = t[u++]),
-                128 != (192 & i) ||
+                128 !== (192 & i) ||
                 (224 === l && i < 160) ||
                 (237 === l && i >= 160) ||
-                128 != (192 & (h = t[u++]))
+                128 !== (192 & (h = t[u++]))
                   ? (u--, n())
                   : a.push(((15 & l) << 12) | ((63 & i) << 6) | (63 & h)))
             : l <= 244
               ? u >= e - 2
                 ? n()
                 : ((i = t[u++]),
-                  128 != (192 & i) ||
-                  (i - 144 + (l << 28)) >> 30 != 0 ||
-                  128 != (192 & (h = t[u++])) ||
-                  128 != (192 & (c = t[u++]))
+                  128 !== (192 & i) ||
+                  (i - 144 + (l << 28)) >> 30 !== 0 ||
+                  128 !== (192 & (h = t[u++])) ||
+                  128 !== (192 & (c = t[u++]))
                     ? (u--, n())
                     : ((l = ((7 & l) << 18) | ((63 & i) << 12) | ((63 & h) << 6) | (63 & c)),
                       (l -= 65536),
@@ -1602,14 +1589,14 @@ function rr(t) {
             a = !1;
           if (o)
             for (const t in o)
-              isNaN(+t)
+              Number.isNaN(+t)
                 ? ((s ??= {})[t] = o[t])
                 : ((r = o[t]),
                   Array.isArray(r) && (ft(r) || (ct(r) && 0 === r.size)) && (r = null),
                   null == r && (a = !0),
                   null != r && ((s ??= {})[t] = r));
           if ((a || (s = o), s))
-            for (const t in s) {
+            for (const _t in s) {
               a = s;
               break t;
             }
@@ -1722,7 +1709,7 @@ function br(t) {
     (e = r
       ? (t, e) => r(t, e, n)
       : (t, e) => {
-          for (; Kn(e) && 4 != e.h; ) {
+          for (; Kn(e) && 4 !== e.h; ) {
             var r = e.m;
             let o = n[r];
             const a = !o;
@@ -1734,7 +1721,7 @@ function br(t) {
                 s && ((h = i.P?.[r]), (!d || h) && (i = kr(s)) && (o = n[r] = i));
               }
             }
-            (o && o(e, t, r)) ||
+            o?.(e, t, r) ||
               ((r = (i = e).l),
               Yn(i),
               i.ja ? (i = void 0) : ((s = i.g.g - r), (i.g.g = r), (i = Wn(i.g, s))),
@@ -1777,23 +1764,23 @@ function xr(t, e, n, r) {
   var o = t[++s];
   o &&
     o.constructor === Object &&
-    ((e.X = o), 'function' == typeof (o = t[++s]) && ((e.h = o), (e.l = t[++s]), (o = t[++s])));
+    ((e.X = o), 'function' === typeof (o = t[++s]) && ((e.h = o), (e.l = t[++s]), (o = t[++s])));
   const a = {};
-  for (; Array.isArray(o) && 'number' == typeof o[0] && o[0] > 0; ) {
+  for (; Array.isArray(o) && 'number' === typeof o[0] && o[0] > 0; ) {
     for (var h = 0; h < o.length; h++) a[o[h]] = o;
     o = t[++s];
   }
   for (h = 1; void 0 !== o; ) {
     let l;
-    'number' == typeof o && ((h += o), (o = t[++s]));
+    'number' === typeof o && ((h += o), (o = t[++s]));
     var c = void 0;
     if ((o instanceof Er ? (l = o) : ((l = mi), s--), l.qa)) {
       (o = t[++s]), (c = t);
       var u = s;
-      'function' == typeof o && ((o = o()), (c[u] = o)), (c = o);
+      'function' === typeof o && ((o = o()), (c[u] = o)), (c = o);
     }
     for (
-      u = h + 1, 'number' == typeof (o = t[++s]) && o < 0 && ((u -= o), (o = t[++s]));
+      u = h + 1, 'number' === typeof (o = t[++s]) && o < 0 && ((u -= o), (o = t[++s]));
       h < u;
       h++
     ) {
@@ -1905,7 +1892,7 @@ var Hr = Vr(
     ((t = $n(t, Ae([void 0, void 0], r), i)),
     pt((r = et(e))),
     (i = Ye(e, r, n)) instanceof Me
-      ? 0 != (2 & i.M)
+      ? 0 !== (2 & i.M)
         ? ((i = i.Z()).push(t), qe(e, r, n, i))
         : i.Qa(t)
       : Array.isArray(i)
@@ -1938,7 +1925,7 @@ function zr(t, e, n) {
     })(e)),
     null != e)
   ) {
-    if ('string' == typeof e) ar(e);
+    if ('string' === typeof e) ar(e);
     if (null != e)
       switch ((gr(t, n, 0), typeof e)) {
         case 'number':
@@ -1967,13 +1954,13 @@ function qr(t, e, n, r, i) {
   e instanceof nr ? (we(e), (e = e.u)) : (e = Array.isArray(e) ? Ae(e, r) : void 0), vr(t, n, e, i);
 }
 function Jr(t, e, n) {
-  null != (e = null == e || 'string' == typeof e || I(e) || e instanceof D ? e : void 0) &&
+  null != (e = null == e || 'string' === typeof e || I(e) || e instanceof D ? e : void 0) &&
     _r(t, n, On(e).buffer);
 }
 function Zr(t, e, n) {
   return (
     (5 === t.h || 2 === t.h) &&
-    ((e = Je(e, et(e), n, 2, !1)), 2 == t.h ? Zn(t, Gn, e) : e.push(Gn(t.g)), !0)
+    ((e = Je(e, et(e), n, 2, !1)), 2 === t.h ? Zn(t, Gn, e) : e.push(Gn(t.g)), !0)
   );
 }
 var Qr,
@@ -1990,11 +1977,11 @@ var Qr,
         Xr(
           e,
           n,
-          2047 == s
+          2047 === s
             ? t
               ? NaN
               : r * (1 / 0)
-            : 0 == s
+            : 0 === s
               ? 5e-324 * r * t
               : r * 2 ** (s - 1075) * (t + 4503599627370496),
         ),
@@ -2039,7 +2026,7 @@ var Qr,
     (t, e, n) => 0 === t.h && (Xr(e, n, Cn(t.g, Dt)), !0),
     (t, e, n) => {
       if (null != (e = te(e))) {
-        if ('string' == typeof e) ir(e);
+        if ('string' === typeof e) ir(e);
         if (null != e)
           switch ((gr(t, n, 0), typeof e)) {
             case 'number':
@@ -2060,7 +2047,7 @@ var Qr,
   hi = jr(
     (t, e, n) =>
       (0 === t.h || 2 === t.h) &&
-      ((e = Je(e, et(e), n, 2, !1)), 2 == t.h ? Zn(t, Un, e) : e.push(Un(t.g)), !0),
+      ((e = Je(e, et(e), n, 2, !1)), 2 === t.h ? Zn(t, Un, e) : e.push(Un(t.g)), !0),
     (t, e, n) => {
       if (null != (e = Tr(Yt, e)) && e.length) {
         n = mr(t, n);
@@ -2121,7 +2108,7 @@ var yi = Vr(
   vi = jr(
     (t, e, n) =>
       (0 === t.h || 2 === t.h) &&
-      ((e = Je(e, et(e), n, 2, !1)), 2 == t.h ? Zn(t, Dn, e) : e.push(Dn(t.g)), !0),
+      ((e = Je(e, et(e), n, 2, !1)), 2 === t.h ? Zn(t, Dn, e) : e.push(Dn(t.g)), !0),
     (t, e, n) => {
       if (null != (e = Tr($t, e)))
         for (let o = 0; o < e.length; o++) {
@@ -2216,11 +2203,7 @@ function bi(t) {
     return (e.l = [n]), n;
   };
 }
-var ki = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
+var ki = class extends nr {},
   Si = [
     0,
     di,
@@ -2239,11 +2222,7 @@ var ki = class extends nr {
     ),
   ],
   xi = [0, ai, Ei, ui, -1, hi, Ei, -1],
-  Li = class extends nr {
-    constructor() {
-      super();
-    }
-  },
+  Li = class extends nr {},
   Ri = [
     0,
     ui,
@@ -2254,7 +2233,7 @@ var ki = class extends nr {
     jr(
       (t, e, n) =>
         (0 === t.h || 2 === t.h) &&
-        ((e = Je(e, et(e), n, 2, !1)), 2 == t.h ? Zn(t, jn, e) : e.push(Un(t.g)), !0),
+        ((e = Je(e, et(e), n, 2, !1)), 2 === t.h ? Zn(t, jn, e) : e.push(Un(t.g)), !0),
       (t, e, n) => {
         if (null != (e = Tr(Yt, e)) && e.length) {
           n = mr(t, n);
@@ -2271,11 +2250,7 @@ var ki = class extends nr {
     -1,
   ],
   Fi = [0, pi, -2],
-  Mi = class extends nr {
-    constructor() {
-      super();
-    }
-  },
+  Mi = class extends nr {},
   Ii = [0],
   Pi = [0, ai, ui, 1, ui, -3],
   Oi = [
@@ -2405,35 +2380,17 @@ var $i = class extends nr {
   ];
 $i.prototype.g = bi(qi);
 var Ji = Ai($i, qi),
-  Zi = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
+  Zi = class extends nr {},
   Qi = class extends nr {
-    constructor(t) {
-      super(t);
-    }
     g() {
       return mn(this, Zi, 1);
     }
   },
   ts = [0, Qr, [0, ai, ei, pi, -1]],
   es = Ai(Qi, ts),
-  ns = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
-  rs = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
+  ns = class extends nr {},
+  rs = class extends nr {},
   is = class extends nr {
-    constructor(t) {
-      super(t);
-    }
     h() {
       return pn(this, ns, 2);
     }
@@ -2441,128 +2398,47 @@ var Ji = Ai($i, qi),
       return mn(this, rs, 5);
     }
   },
-  ss = Ai(
-    class extends nr {
-      constructor(t) {
-        super(t);
-      }
-    },
-    [
-      0,
-      fi,
-      hi,
-      ri,
-      [0, Ei, [0, ai, -3], [0, ei, -3], [0, ai, -1, [0, Qr, [0, ai, -2]]], Qr, [0, ei, -1, pi, ei]],
-      pi,
-      -1,
-      ii,
-      Qr,
-      [0, ai, ei],
-      fi,
-      ii,
-    ],
-  ),
-  os = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
-  as = Ai(
-    class extends nr {
-      constructor(t) {
-        super(t);
-      }
-    },
-    [0, Qr, [0, ei, -4]],
-  ),
-  hs = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
-  cs = Ai(
-    class extends nr {
-      constructor(t) {
-        super(t);
-      }
-    },
-    [0, Qr, [0, ei, -4]],
-  ),
-  us = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
+  ss = Ai(class extends nr {}, [
+    0,
+    fi,
+    hi,
+    ri,
+    [0, Ei, [0, ai, -3], [0, ei, -3], [0, ai, -1, [0, Qr, [0, ai, -2]]], Qr, [0, ei, -1, pi, ei]],
+    pi,
+    -1,
+    ii,
+    Qr,
+    [0, ai, ei],
+    fi,
+    ii,
+  ]),
+  os = class extends nr {},
+  as = Ai(class extends nr {}, [0, Qr, [0, ei, -4]]),
+  hs = class extends nr {},
+  cs = Ai(class extends nr {}, [0, Qr, [0, ei, -4]]),
+  us = class extends nr {},
   ls = [0, ai, -1, ri, Ei],
-  fs = class extends nr {
-    constructor() {
-      super();
-    }
-  };
+  fs = class extends nr {};
 fs.prototype.g = bi([0, ei, -4, ii]);
-var ds = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
-  ps = Ai(
-    class extends nr {
-      constructor(t) {
-        super(t);
-      }
-    },
-    [0, Qr, [0, 1, ai, pi, ts], ii],
-  ),
-  gs = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
+var ds = class extends nr {},
+  ps = Ai(class extends nr {}, [0, Qr, [0, 1, ai, pi, ts], ii]),
+  gs = class extends nr {},
   ms = class extends nr {
-    constructor(t) {
-      super(t);
-    }
     ra() {
       const t = Qe(this);
       return null == t ? N() : t;
     }
   },
-  ys = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
+  ys = class extends nr {},
   _s = [1, 2],
-  vs = Ai(
-    class extends nr {
-      constructor(t) {
-        super(t);
-      }
-    },
-    [0, Qr, [0, _s, yi, [0, ri], yi, [0, _i], ai, pi], ii],
-  ),
-  Es = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
+  vs = Ai(class extends nr {}, [0, Qr, [0, _s, yi, [0, ri], yi, [0, _i], ai, pi], ii]),
+  Es = class extends nr {},
   ws = [0, pi, ai, ei, fi, -1],
-  Ts = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
+  Ts = class extends nr {},
   As = [0, ui, -1],
-  bs = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
+  bs = class extends nr {},
   ks = [1, 2, 3, 4, 5],
   Ss = class extends nr {
-    constructor(t) {
-      super(t);
-    }
     g() {
       return null != Qe(this);
     }
@@ -2571,20 +2447,13 @@ var ds = class extends nr {
     }
   },
   xs = class extends nr {
-    constructor(t) {
-      super(t);
-    }
     g() {
       return Wt(ze(this, 2)) ?? !1;
     }
   },
   Ls = [0, _i, pi, [0, ai, ii, -1], [0, oi, ii]],
   Rs = [0, Ls, ui, [0, ks, yi, Pi, yi, Ri, yi, xi, yi, Ii, yi, Fi], Ei],
-  Fs = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
+  Fs = class extends nr {},
   Ms = [0, Rs, ei, -1, ai],
   Is = Ti(502141897, Fs);
 (Ni[502141897] = Ms), (Ui[502141897] = 1);
@@ -2592,42 +2461,20 @@ var Ps = [0, Ls];
 Ni[512499200] = Ps;
 var Os = [0, Ps];
 Ni[515723506] = Os;
-var Cs = Ai(
-    class extends nr {
-      constructor(t) {
-        super(t);
-      }
-    },
-    [0, [0, Ei, -1, ni, vi], ls],
-  ),
+var Cs = Ai(class extends nr {}, [0, [0, Ei, -1, ni, vi], ls]),
   Ns = [0, Rs];
 Ni[508981768] = Ns;
-var Us = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
-  Ds = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
+var Us = class extends nr {},
+  Ds = class extends nr {},
   Bs = [0, Rs, ei, Ns, ui],
   Gs = [0, Rs, Ms, Bs, ei, Os];
 Ni[508968149] = Bs;
 var js = Ti(508968150, Ds);
 (Ni[508968150] = Gs), (Ui[508968150] = 1), (Ui[508968149] = 1);
-var Vs = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
+var Vs = class extends nr {},
   Xs = Ti(513916220, Vs);
 (Ni[513916220] = [0, Rs, Gs, ai]), (Ui[513916220] = 1);
 var Hs = class extends nr {
-    constructor(t) {
-      super(t);
-    }
     h() {
       return pn(this, Es, 2);
     }
@@ -2639,31 +2486,11 @@ var Hs = class extends nr {
 (Ni[478825465] = Ws), (Ui[478825465] = 1);
 var zs = [0, Rs];
 Ni[478825422] = zs;
-var Ks = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
-  Ys = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
-  $s = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
-  qs = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
-  Js = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
+var Ks = class extends nr {},
+  Ys = class extends nr {},
+  $s = class extends nr {},
+  qs = class extends nr {},
+  Js = class extends nr {},
   Zs = [0, Rs, zs, Ws, -1],
   Qs = [0, Rs, ei, ai],
   to = [0, Rs, ei],
@@ -2679,62 +2506,27 @@ var io = Ti(479097054, Js);
   (Ui[464864288] = 1),
   (Ui[462713202] = 1),
   (Ui[474472470] = 1);
-var so = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
-  oo = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
-  ao = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
-  ho = class extends nr {
-    constructor() {
-      super();
-    }
-  },
+var so = class extends nr {},
+  oo = class extends nr {},
+  ao = class extends nr {},
+  ho = class extends nr {},
   co = [0, Rs, ei, -1, ai],
   uo = [0, Rs, ei, ui];
 (ho.prototype.g = bi([0, Rs, to, [0, Rs], Ms, Bs, co, uo])),
   (Ni[514774813] = co),
   (Ni[518928384] = uo);
-var lo = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
+var lo = class extends nr {},
   fo = Ti(456383383, lo);
 (Ni[456383383] = [0, Rs, ws]), (Ui[456383383] = 1);
-var po = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
+var po = class extends nr {},
   go = Ti(476348187, po);
 (Ni[476348187] = [0, Rs, As]), (Ui[476348187] = 1);
-var mo = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
-  yo = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
+var mo = class extends nr {},
+  yo = class extends nr {},
   _o = [0, Ei, -1],
   vo = Ti(
     458105876,
     class extends nr {
-      constructor(t) {
-        super(t);
-      }
       g() {
         var t = this.u;
         const e = et(t);
@@ -2748,7 +2540,7 @@ var mo = class extends nr {
               if (i) return Ne();
               n = [];
             } else if (n.constructor === Me) {
-              if (0 == (2 & n.M) || i) return n;
+              if (0 === (2 & n.M) || i) return n;
               n = n.Z();
             } else Array.isArray(n) ? (s = !!(2 & tt(n))) : (n = []);
             if (i) {
@@ -2768,25 +2560,13 @@ var mo = class extends nr {
     },
   );
 (Ni[458105876] = [0, _o, Hr, [!0, ii, [0, pi, -1, fi]]]), (Ui[458105876] = 1);
-var Eo = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
+var Eo = class extends nr {},
   wo = Ti(458105758, Eo);
 (Ni[458105758] = [0, Rs, pi, _o]), (Ui[458105758] = 1);
-var To = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
+var To = class extends nr {},
   Ao = Ti(443442058, To);
 (Ni[443442058] = [0, Rs, pi, ai, ei, fi, -1]), (Ui[443442058] = 1), (Ui[514774813] = 1);
-var bo = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
+var bo = class extends nr {},
   ko = Ti(516587230, bo);
 function So(t, e) {
   return (
@@ -2900,7 +2680,7 @@ var Uo = class {};
 function Do() {
   var t = navigator;
   return (
-    'undefined' != typeof OffscreenCanvas &&
+    'undefined' !== typeof OffscreenCanvas &&
     (!((t = navigator) => (t = t.userAgent).includes('Safari') && !t.includes('Chrome'))(t) ||
       !!(
         (t = t.userAgent.match(/Version\/([\d]+).*Safari/)) &&
@@ -2910,7 +2690,7 @@ function Do() {
   );
 }
 async function Bo(t) {
-  if ('function' != typeof importScripts) {
+  if ('function' !== typeof importScripts) {
     const e = document.createElement('script');
     return (
       (e.src = t.toString()),
@@ -3028,7 +2808,7 @@ async function zo(t, e, n, r) {
 }
 function Ko(t, e) {
   const n = pn(t.baseOptions, Ss, 1) || new Ss();
-  'string' == typeof e
+  'string' === typeof e
     ? ($e(n, 2, ne(e)), $e(n, 1))
     : e instanceof Uint8Array && ($e(n, 1, lt(e, !1, !1)), $e(n, 2)),
     yn(t.baseOptions, 0, 1, n);
@@ -3037,7 +2817,7 @@ function Yo(t) {
   try {
     const e = t.H.length;
     if (1 === e) throw Error(t.H[0].message);
-    if (e > 1) throw Error('Encountered multiple errors: ' + t.H.map(t => t.message).join(', '));
+    if (e > 1) throw Error(`Encountered multiple errors: ${t.H.map(t => t.message).join(', ')}`);
   } finally {
     t.H = [];
   }
@@ -3054,7 +2834,7 @@ function qo(t, e) {
     zi(e, t.A);
 }
 function Jo(t, e) {
-  Gi(t.A, e), ji(t.A, e + '_unused_out');
+  Gi(t.A, e), ji(t.A, `${e}_unused_out`);
 }
 function Zo(t) {
   t.g.addBoolToStream(!0, 'free_memory', t.B);
@@ -3142,7 +2922,7 @@ var Qo = class {
     return t;
   }
   setGraph(t, e) {
-    this.g.attachErrorListener((t, e) => {
+    this.g.attachErrorListener((_t, e) => {
       this.H.push(Error(e));
     }),
       this.g.Oa(),
@@ -3166,7 +2946,7 @@ function ta(t, e) {
     e = e.split('.');
     var r,
       i = t;
-    e[0] in i || void 0 === i.execScript || i.execScript('var ' + e[0]);
+    e[0] in i || void 0 === i.execScript || i.execScript(`var ${e[0]}`);
     for (; e.length && (r = e.shift()); )
       e.length || void 0 === n
         ? (i = i[r] && i[r] !== Object.prototype[r] ? i[r] : (i[r] = {}))
@@ -3286,7 +3066,7 @@ var ca = class {
       const t = this.g;
       t.deleteProgram(this.h), t.deleteShader(this.da), t.deleteShader(this.ca);
     }
-    this.A && this.g.deleteFramebuffer(this.A), this.v && this.v.close(), this.s && this.s.close();
+    this.A && this.g.deleteFramebuffer(this.A), this.v?.close(), this.s?.close();
   }
 };
 var ua = class extends ca {
@@ -3350,7 +3130,7 @@ function fa(t, e) {
     case 1:
       return t.g.find(t => t instanceof Float32Array);
     case 2:
-      return t.g.find(t => 'undefined' != typeof WebGLTexture && t instanceof WebGLTexture);
+      return t.g.find(t => 'undefined' !== typeof WebGLTexture && t instanceof WebGLTexture);
     default:
       throw Error(`Type is not supported: ${e}`);
   }
@@ -3742,9 +3522,9 @@ function Pa(t, e) {
     case 0:
       return t.g.find(t => t instanceof ImageData);
     case 1:
-      return t.g.find(t => 'undefined' != typeof ImageBitmap && t instanceof ImageBitmap);
+      return t.g.find(t => 'undefined' !== typeof ImageBitmap && t instanceof ImageBitmap);
     case 2:
-      return t.g.find(t => 'undefined' != typeof WebGLTexture && t instanceof WebGLTexture);
+      return t.g.find(t => 'undefined' !== typeof WebGLTexture && t instanceof WebGLTexture);
     default:
       throw Error(`Type is not supported: ${e}`);
   }
@@ -3937,7 +3717,7 @@ const Ha = (t =>
         (this.i = t),
         (this.g = null),
         (this.h = 0),
-        (this.m = 'function' == typeof this.i._addIntToInputStream),
+        (this.m = 'function' === typeof this.i._addIntToInputStream),
         void 0 !== e
           ? (this.i.canvas = e)
           : Do()
@@ -4370,8 +4150,8 @@ function Ya(t, e, n, r) {
         Ln(s, 3, i.bottom - i.top);
     } else Ln(s, 1, 0.5), Ln(s, 2, 0.5), Ln(s, 4, 1), Ln(s, 3, 1);
     if (n?.rotationDegrees) {
-      if (n?.rotationDegrees % 90 != 0) throw Error('Expected rotation to be a multiple of 90°.');
-      if ((Ln(s, 5, (-Math.PI * n.rotationDegrees) / 180), n?.rotationDegrees % 180 != 0)) {
+      if (n?.rotationDegrees % 90 !== 0) throw Error('Expected rotation to be a multiple of 90°.');
+      if ((Ln(s, 5, (-Math.PI * n.rotationDegrees) / 180), n?.rotationDegrees % 180 !== 0)) {
         const [t, r] = Go(e);
         (n = (bn(s, 3) * r) / t), (i = (bn(s, 4) * t) / r), Ln(s, 4, n), Ln(s, 3, i);
       }
@@ -4395,7 +4175,7 @@ function Ja(t, e, n, r) {
   const s = e.width,
     o = s * (e = e.height);
   if ((i instanceof Uint8Array || i instanceof Float32Array) && i.length !== o)
-    throw Error('Unsupported channel count: ' + i.length / o);
+    throw Error(`Unsupported channel count: ${i.length / o}`);
   return (t = new wa([i], n, !1, t.g.i.canvas, t.R, s, e)), r ? t.clone() : t;
 }
 var Za = class extends Qo {
@@ -7283,8 +7063,8 @@ var fh = class extends Za {
     return super.l(t);
   }
   Ra(t, e, n) {
-    const r = 'function' != typeof e ? e : {};
-    if (((this.h = 'function' == typeof e ? e : n), $a(this, t, r ?? {}), !this.h)) return this.s;
+    const r = 'function' !== typeof e ? e : {};
+    if (((this.h = 'function' === typeof e ? e : n), $a(this, t, r ?? {}), !this.h)) return this.s;
   }
   m() {
     var t = new $i();
@@ -7313,18 +7093,18 @@ var fh = class extends Za {
                 (e[4 * t + 3] = 255);
             r = new ImageData(e, i, t);
           } else {
-            if (r.length !== 4 * s) throw Error('Unsupported channel count: ' + r.length / s);
+            if (r.length !== 4 * s) throw Error(`Unsupported channel count: ${r.length / s}`);
             r = new ImageData(new Uint8ClampedArray(r.buffer, r.byteOffset, r.length), i, t);
           }
         else if (!(r instanceof WebGLTexture))
           throw Error(`Unsupported format: ${r.constructor.name}`);
         (i = new ja([r], !1, !1, this.g.i.canvas, this.R, i, t)),
           (this.s = n = n ? i.clone() : i),
-          this.h && this.h(n),
+          this.h?.(n),
           $o(this, e);
       }),
       this.g.attachEmptyPacketListener('stylized_image', t => {
-        (this.s = null), this.h && this.h(null), $o(this, t);
+        (this.s = null), this.h?.(null), $o(this, t);
       }),
       (t = t.g()),
       this.setGraph(new Uint8Array(t), !0);
@@ -7766,12 +7546,12 @@ var bh = class extends Za {
     );
   }
   D(t, e, n) {
-    const r = 'function' != typeof e ? e : {};
-    return (this.C = 'function' == typeof e ? e : n), wh(this), $a(this, t, r), Th(this);
+    const r = 'function' !== typeof e ? e : {};
+    return (this.C = 'function' === typeof e ? e : n), wh(this), $a(this, t, r), Th(this);
   }
   F(t, e, n, r) {
-    const i = 'function' != typeof n ? n : {};
-    return (this.C = 'function' == typeof n ? n : r), wh(this), qa(this, t, i, e), Th(this);
+    const i = 'function' !== typeof n ? n : {};
+    return (this.C = 'function' === typeof n ? n : r), wh(this), qa(this, t, i, e), Th(this);
   }
   m() {
     var t = new $i();
@@ -7797,7 +7577,7 @@ var bh = class extends Za {
         if (null != e)
           if (Array.isArray(e)) $e(t, 2, De(e, Ge, void 0, void 0, !1));
           else {
-            if (!('string' == typeof e || e instanceof D || I(e)))
+            if (!('string' === typeof e || e instanceof D || I(e)))
               throw Error(
                 'invalid value in Any.value field: ' +
                   e +
@@ -8109,12 +7889,12 @@ var Fh = class extends Za {
     })(this);
   }
   ha(t, e, n) {
-    const r = 'function' != typeof e ? e : {};
-    return (this.j = 'function' == typeof e ? e : n), Lh(this), $a(this, t, r), Rh(this);
+    const r = 'function' !== typeof e ? e : {};
+    return (this.j = 'function' === typeof e ? e : n), Lh(this), $a(this, t, r), Rh(this);
   }
   Pa(t, e, n, r) {
-    const i = 'function' != typeof n ? n : {};
-    return (this.j = 'function' == typeof n ? n : r), Lh(this), qa(this, t, i, e), Rh(this);
+    const i = 'function' !== typeof n ? n : {};
+    return (this.j = 'function' === typeof n ? n : r), Lh(this), qa(this, t, i, e), Rh(this);
   }
   Ha() {
     return this.s;
@@ -8182,37 +7962,17 @@ var Mh = class {
   }
 };
 Mh.prototype.close = Mh.prototype.close;
-var Ih = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
+var Ih = class extends nr {},
   Ph = [0, ai, -2],
   Oh = [0, ti, -3, ui, ti, -1],
   Ch = [0, Oh],
   Nh = [0, Oh, ai, -1],
-  Uh = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
+  Uh = class extends nr {},
   Dh = [0, ti, -1, ui],
-  Bh = class extends nr {
-    constructor() {
-      super();
-    }
-  },
-  Gh = class extends nr {
-    constructor(t) {
-      super(t);
-    }
-  },
+  Bh = class extends nr {},
+  Gh = class extends nr {},
   jh = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 14, 15],
-  Vh = class extends nr {
-    constructor() {
-      super();
-    }
-  };
+  Vh = class extends nr {};
 Vh.prototype.g = bi([
   0,
   Qr,
@@ -8274,8 +8034,8 @@ var Xh = class extends Za {
     );
   }
   ha(t, e, n, r) {
-    const i = 'function' != typeof n ? n : {};
-    (this.j = 'function' == typeof n ? n : r),
+    const i = 'function' !== typeof n ? n : {};
+    (this.j = 'function' === typeof n ? n : r),
       (this.qualityScores = this.categoryMask = this.confidenceMasks = void 0),
       (n = this.B + 1),
       (r = new Vh());
@@ -8482,12 +8242,12 @@ var Yh = class extends Za {
     );
   }
   D(t, e, n) {
-    const r = 'function' != typeof e ? e : {};
-    return (this.s = 'function' == typeof e ? e : n), zh(this), $a(this, t, r), Kh(this);
+    const r = 'function' !== typeof e ? e : {};
+    return (this.s = 'function' === typeof e ? e : n), zh(this), $a(this, t, r), Kh(this);
   }
   F(t, e, n, r) {
-    const i = 'function' != typeof n ? n : {};
-    return (this.s = 'function' == typeof n ? n : r), zh(this), qa(this, t, i, e), Kh(this);
+    const i = 'function' !== typeof n ? n : {};
+    return (this.s = 'function' === typeof n ? n : r), zh(this), qa(this, t, i, e), Kh(this);
   }
   m() {
     var t = new $i();

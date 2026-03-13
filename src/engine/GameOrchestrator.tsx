@@ -36,6 +36,8 @@ export function GameOrchestrator() {
   }, [gamePhase, calculateFinalScore]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       // Dev shortcut to progress through the game phases
       if (e.key === 'n' && !introActive && posture === 'standing') {
@@ -57,6 +59,5 @@ export function GameOrchestrator() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [introActive, posture, gamePhase, setGamePhase]);
-
   return null;
 }

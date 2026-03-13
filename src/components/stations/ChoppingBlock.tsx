@@ -1,8 +1,7 @@
 import {Box, Cylinder, useTexture} from '@react-three/drei';
 import {RigidBody} from '@react-three/rapier';
 import {useDrag} from '@use-gesture/react';
-import {useRef, useState} from 'react';
-import * as THREE from 'three';
+import {useState} from 'react';
 import {audioEngine} from '../../engine/AudioEngine';
 import {useGameStore} from '../../store/gameStore';
 

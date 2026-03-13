@@ -82,7 +82,6 @@ export function BasementRoom() {
             map={wallColor}
             normalMap={wallNormal}
             roughnessMap={wallRoughness}
-            aoMap={wallAo}
           />
         </mesh>
       </RigidBody>
@@ -95,7 +94,6 @@ export function BasementRoom() {
             map={wallColor}
             normalMap={wallNormal}
             roughnessMap={wallRoughness}
-            aoMap={wallAo}
           />
         </mesh>
       </RigidBody>
@@ -108,7 +106,6 @@ export function BasementRoom() {
             map={wallColor}
             normalMap={wallNormal}
             roughnessMap={wallRoughness}
-            aoMap={wallAo}
           />
         </mesh>
       </RigidBody>
@@ -121,7 +118,6 @@ export function BasementRoom() {
             map={wallColor}
             normalMap={wallNormal}
             roughnessMap={wallRoughness}
-            aoMap={wallAo}
           />
         </mesh>
       </RigidBody>
