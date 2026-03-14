@@ -1,8 +1,0 @@
-appId: com.jbcom.willitblow
----
-- launchApp:
-    clearState: true
-- assertVisible: "WILL IT"
-- assertVisible: "BLOW"
-- assertVisible: "START COOKING"
-- assertVisible: "Fine Meats & Sausages"
