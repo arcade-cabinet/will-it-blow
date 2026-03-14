@@ -57,8 +57,13 @@ export function GameScene() {
         {/* Lighting — horror ambiance */}
         <KitchenLighting />
 
-        {/* Camera — FPS first-person view */}
-        <Camera />
+        {/* Camera — FPS first-person at player eye height, looking into kitchen */}
+        <Camera
+          cameraPosition={[0, 1.6, 2]}
+          cameraTarget={[0, 1.2, -2]}
+          near={0.1}
+          far={50}
+        />
 
         {/* Kitchen environment — room geometry + furniture */}
         <Kitchen world={world} />
