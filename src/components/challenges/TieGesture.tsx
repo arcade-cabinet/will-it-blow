@@ -1,6 +1,6 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {Animated, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
-import {useGameStore} from '../../store/gameStore';
+import {useGameStore} from '../../ecs/hooks';
 
 export function TieGesture({onComplete}: {onComplete: () => void}) {
   const setCasingTied = useGameStore(s => s.setCasingTied);

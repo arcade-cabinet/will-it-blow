@@ -3,7 +3,7 @@ import {RigidBody} from '@react-three/rapier';
 import {useDrag} from '@use-gesture/react';
 import {useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
-import {useGameStore} from '../../store/gameStore';
+import {useGameStore} from '../../ecs/hooks';
 
 // An array of available GLB models to act as ingredients in the freezer.
 // We mix normal food with strange objects for the "Will It Blow?" aspect.

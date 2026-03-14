@@ -1,7 +1,7 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {useGameStore} from '../../ecs/hooks';
 import {type DialogueChoice, DialogueEngine, type DialogueLine} from '../../engine/DialogueEngine';
-import {useGameStore} from '../../store/gameStore';
 
 interface DialogueOverlayProps {
   lines: DialogueLine[];

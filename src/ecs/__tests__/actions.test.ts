@@ -115,9 +115,9 @@ describe('gameActions', () => {
   });
 
   it('spawnPlayer creates a player entity', () => {
-    const entity = gameActions(ecsWorld).spawnPlayer('hard', 5);
+    const entity = gameActions(ecsWorld).spawnPlayer('medium', 5);
     expect(entity.has(PlayerTrait)).toBe(true);
-    expect(entity.get(PlayerTrait).difficulty).toBe('hard');
+    // difficulty is on RoundTrait, not PlayerTrait
     expect(entity.get(PlayerTrait).maxStrikes).toBe(5);
   });
 
@@ -139,15 +139,15 @@ describe('gameActions', () => {
     expect(entity.get(GrinderTrait).grindProgress).toBe(0.75);
   });
 
-  it('setStuffLevel clamps to [0, 1]', () => {
+  it('setStuffLevelEntity clamps to [0, 1]', () => {
     const entity = gameActions(ecsWorld).spawnStuffer();
-    gameActions(ecsWorld).setStuffLevel(entity, 2.0);
+    gameActions(ecsWorld).setStuffLevelEntity(entity, 2.0);
     expect(entity.get(StufferTrait).fillLevel).toBe(1);
   });
 
-  it('setCookLevel clamps to [0, 1]', () => {
+  it('setCookLevelEntity clamps to [0, 1]', () => {
     const entity = gameActions(ecsWorld).spawnStove();
-    gameActions(ecsWorld).setCookLevel(entity, 0.5);
+    gameActions(ecsWorld).setCookLevelEntity(entity, 0.5);
     expect(entity.get(StoveTrait).cookProgress).toBe(0.5);
   });
 

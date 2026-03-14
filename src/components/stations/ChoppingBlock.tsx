@@ -2,8 +2,8 @@ import {Box, Cylinder, useTexture} from '@react-three/drei';
 import {RigidBody} from '@react-three/rapier';
 import {useDrag} from '@use-gesture/react';
 import {useState} from 'react';
+import {useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
-import {useGameStore} from '../../store/gameStore';
 
 export function ChoppingBlock() {
   const [colorMap, normalMap, roughnessMap] = useTexture([

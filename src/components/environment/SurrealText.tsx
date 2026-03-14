@@ -8,7 +8,7 @@ import {Text} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import type * as THREE from 'three';
-import {useGameStore} from '../../store/gameStore';
+import {useGameStore} from '../../ecs/hooks';
 
 /** Individual animated message that fades in, pulses, and slides out when dismissed. */
 function SurrealMessage({

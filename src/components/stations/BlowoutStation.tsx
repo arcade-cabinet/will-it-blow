@@ -3,9 +3,9 @@ import {useFrame} from '@react-three/fiber';
 import {RigidBody} from '@react-three/rapier';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
+import {useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
 import {getAssetUrl} from '../../engine/assetUrl';
-import {useGameStore} from '../../store/gameStore';
 
 const MAX_SPLATTERS = 50;
 

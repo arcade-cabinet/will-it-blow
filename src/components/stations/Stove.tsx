@@ -4,8 +4,8 @@ import {RigidBody} from '@react-three/rapier';
 import {useDrag} from '@use-gesture/react';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
+import {useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
-import {useGameStore} from '../../store/gameStore';
 
 const fboSize = 256;
 const fboOptions = {

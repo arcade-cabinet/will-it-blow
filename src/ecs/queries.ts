@@ -5,20 +5,27 @@
  */
 import {createQuery} from 'koota';
 import {
+  AppTrait,
   BlowoutTrait,
   ChopperTrait,
   DemandTrait,
   GrinderTrait,
   IngredientTrait,
+  MrSausageTrait,
   PhaseTag,
   PlayerTrait,
   RoundTrait,
   SausageTrait,
   ScoreTrait,
+  SelectedIngredientsTrait,
+  StationGameplayTrait,
   StationTrait,
   StoveTrait,
   StufferTrait,
 } from './traits';
+
+/** App singleton. */
+export const appQuery = createQuery(AppTrait);
 
 /** All station entities. */
 export const stationQuery = createQuery(StationTrait);
@@ -64,3 +71,12 @@ export const playerQuery = createQuery(PlayerTrait);
 
 /** Phase tag entities (singleton). */
 export const phaseQuery = createQuery(PhaseTag);
+
+/** Selected ingredients singleton. */
+export const selectedIngredientsQuery = createQuery(SelectedIngredientsTrait);
+
+/** Station gameplay singleton. */
+export const stationGameplayQuery = createQuery(StationGameplayTrait);
+
+/** Mr. Sausage singleton. */
+export const mrSausageQuery = createQuery(MrSausageTrait);

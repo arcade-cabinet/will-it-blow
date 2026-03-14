@@ -1,13 +1,14 @@
 import {beforeEach, describe, expect, it} from '@jest/globals';
-import {useGameStore} from '../gameStore';
+import {useGameStore} from '../../ecs/hooks';
+import {resetWorld} from '../../ecs/kootaWorld';
 
 const getState = () => useGameStore.getState();
 
 beforeEach(() => {
-  getState().returnToMenu();
+  resetWorld();
 });
 
-describe('gameStore', () => {
+describe('gameStore (Koota ECS)', () => {
   it('starts with default state', () => {
     const state = getState();
     expect(state.introActive).toBe(true);

@@ -1,7 +1,7 @@
 import {useFrame, useThree} from '@react-three/fiber';
 import {useEffect, useMemo, useRef} from 'react';
 import * as THREE from 'three';
-import {useGameStore} from '../../store/gameStore';
+import {useGameStore} from '../../ecs/hooks';
 
 export function IntroSequence() {
   const {camera, gl, scene} = useThree();

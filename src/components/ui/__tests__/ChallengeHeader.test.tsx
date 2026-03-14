@@ -1,6 +1,6 @@
 import {beforeEach, describe, expect, it} from '@jest/globals';
 import renderer, {act} from 'react-test-renderer';
-import {useGameStore} from '../../../store/gameStore';
+import {useGameStore} from '../../../ecs/hooks';
 import {ChallengeHeader} from '../ChallengeHeader';
 
 beforeEach(() => {

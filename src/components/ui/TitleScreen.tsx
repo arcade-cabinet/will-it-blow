@@ -1,7 +1,7 @@
 import {useEffect, useRef, useState} from 'react';
 import {Animated, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {useGameStore} from '../../ecs/hooks';
 import {DIFFICULTY_TIERS} from '../../engine/DifficultyConfig';
-import {useGameStore} from '../../store/gameStore';
 import {DifficultySelector} from './DifficultySelector';
 import {SettingsScreen} from './SettingsScreen';
 

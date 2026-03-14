@@ -7,8 +7,8 @@ import {useGLTF, useTexture} from '@react-three/drei';
 import {useFrame, useThree} from '@react-three/fiber';
 import {useEffect, useMemo, useRef} from 'react';
 import * as THREE from 'three';
+import {useGameStore} from '../../ecs/hooks';
 import {getAssetUrl} from '../../engine/assetUrl';
-import {useGameStore} from '../../store/gameStore';
 
 /**
  * Renders first-person hands that track the camera with lerp/slerp smoothing.

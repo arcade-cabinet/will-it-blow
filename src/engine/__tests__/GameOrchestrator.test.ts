@@ -3,7 +3,7 @@
  * Tests for GameOrchestrator PHASES array completeness and phase navigation.
  * Uses the exported PHASES constant and pure helper functions.
  */
-import type {GamePhase} from '../../store/gameStore';
+import type {GamePhase} from '../../ecs/hooks';
 import {nextPhase, PHASES, prevPhase} from '../GameOrchestrator';
 
 // ---------------------------------------------------------------------------

@@ -7,8 +7,7 @@
  */
 
 import {StyleSheet, Text, View} from 'react-native';
-import type {GamePhase} from '../../store/gameStore';
-import {useGameStore} from '../../store/gameStore';
+import {type GamePhase, useGameStore} from '../../ecs/hooks';
 
 /** Maps GamePhase values to player-facing challenge info. Transition phases return null. */
 const PHASE_TO_CHALLENGE: Partial<Record<GamePhase, {number: number; name: string}>> = {

@@ -1,7 +1,7 @@
 import {useFrame} from '@react-three/fiber';
 import {useRef} from 'react';
 import type * as THREE from 'three';
-import {useGameStore} from '../../store/gameStore';
+import {useGameStore} from '../../ecs/hooks';
 import {TrapDoorMount} from './TrapDoorMount';
 
 interface TrapDoorAnimationProps {

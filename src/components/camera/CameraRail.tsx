@@ -1,7 +1,7 @@
 import {useFrame, useThree} from '@react-three/fiber';
 import {useEffect, useRef} from 'react';
 import * as THREE from 'three';
-import {type GamePhase, useGameStore} from '../../store/gameStore';
+import {type GamePhase, useGameStore} from '../../ecs/hooks';
 
 // Defines the target camera positions for each phase
 const STATION_CAMERAS: Record<GamePhase, {pos: THREE.Vector3; target: THREE.Vector3}> = {

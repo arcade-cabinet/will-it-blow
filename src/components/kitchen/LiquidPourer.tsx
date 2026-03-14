@@ -8,7 +8,7 @@ import {Cone, Cylinder} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
 import {useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
-import {useGameStore} from '../../store/gameStore';
+import {useGameStore} from '../../ecs/hooks';
 
 /**
  * Interactive liquid bottle with pour animation.

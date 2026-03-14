@@ -1,5 +1,5 @@
 import {useEffect} from 'react';
-import {type GamePhase, useGameStore} from '../store/gameStore';
+import {type GamePhase, useGameStore} from '../ecs/hooks';
 
 export const PHASES: GamePhase[] = [
   'SELECT_INGREDIENTS',

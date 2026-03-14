@@ -2,8 +2,8 @@ import {useFrame, useThree} from '@react-three/fiber';
 import {useEffect, useRef} from 'react';
 import {Platform} from 'react-native';
 import * as THREE from 'three';
+import {type Posture, useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
-import {type Posture, useGameStore} from '../../store/gameStore';
 
 export function FirstPersonControls() {
   const {camera, gl} = useThree();

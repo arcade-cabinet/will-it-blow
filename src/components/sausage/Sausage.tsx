@@ -2,7 +2,7 @@ import {useFrame} from '@react-three/fiber';
 import {useRapier} from '@react-three/rapier';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
-import {useGameStore} from '../../store/gameStore';
+import {useGameStore} from '../../ecs/hooks';
 import {createSausageGeometry, generateMeatTexture, SausageCurve} from './SausageGeometry';
 
 interface SausageProps {

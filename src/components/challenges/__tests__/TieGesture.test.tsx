@@ -11,7 +11,7 @@
 
 import {afterEach, beforeEach, describe, expect, it, jest} from '@jest/globals';
 import renderer, {act} from 'react-test-renderer';
-import {useGameStore} from '../../../store/gameStore';
+import {useGameStore} from '../../../ecs/hooks';
 import {TieGesture} from '../TieGesture';
 
 const store = () => useGameStore.getState();

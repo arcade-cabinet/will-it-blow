@@ -8,6 +8,13 @@
  */
 import {trait} from 'koota';
 
+// --- App-Level Traits ---
+
+/** App-level phase (title screen, playing, results). Singleton. */
+export const AppTrait = trait({
+  appPhase: 'title' as string, // 'title' | 'playing' | 'results'
+});
+
 // --- Station Traits ---
 
 /** Identifies an entity as a station with a name and active state. */
@@ -100,23 +107,42 @@ export const ScoreTrait = trait({
   blowBonus: 0 as number,
   totalScore: 0 as number,
   rank: '' as string,
+  calculated: false as boolean,
+  breakdown: '' as string,
+  /** JSON-encoded {reason: string; points: number}[] for flair tracking. */
+  flairPointsJson: '[]' as string,
 });
 
 /** Round tracking across the game session. */
 export const RoundTrait = trait({
   currentRound: 1 as number,
   totalRounds: 3 as number,
+  difficulty: 'medium' as string,
   /** JSON-encoded number[] of per-round scores. */
   roundScoresJson: '[]' as string,
   /** JSON-encoded string[][] of used combos. */
   usedCombosJson: '[]' as string,
 });
 
-/** Player entity state. */
+/** Player entity state — intro, posture, idle, input. */
 export const PlayerTrait = trait({
-  difficulty: 'medium' as string,
+  introActive: true as boolean,
+  introPhase: 0 as number,
+  posture: 'prone' as string, // 'prone' | 'sitting' | 'standing'
+  idleTime: 0 as number,
   strikes: 0 as number,
   maxStrikes: 3 as number,
+  // Input state (for mobile controls bridging to 3D)
+  joystickX: 0 as number,
+  joystickY: 0 as number,
+  lookDeltaX: 0 as number,
+  lookDeltaY: 0 as number,
+  interactPulse: 0 as number,
+});
+
+/** Mr. Sausage reaction and demand state. */
+export const MrSausageTrait = trait({
+  reaction: 'idle' as string,
 });
 
 // --- Tag Traits (no data, just markers) ---
@@ -124,6 +150,20 @@ export const PlayerTrait = trait({
 /** Phase tag: marks the current game phase on a singleton entity. */
 export const PhaseTag = trait({
   phase: 'SELECT_INGREDIENTS' as string,
+});
+
+/** Selected ingredient IDs — stored as JSON on a singleton. */
+export const SelectedIngredientsTrait = trait({
+  /** JSON-encoded string[] of selected ingredient IDs. */
+  idsJson: '[]' as string,
+});
+
+/** Station gameplay state — the main "bridge" values from the old Zustand store. */
+export const StationGameplayTrait = trait({
+  groundMeatVol: 0 as number, // 0.0 to 1.0
+  stuffLevel: 0 as number, // 0.0 to 1.0
+  casingTied: false as boolean,
+  cookLevel: 0 as number, // 0.0 to 1.0
 });
 
 // --- JSON helpers ---

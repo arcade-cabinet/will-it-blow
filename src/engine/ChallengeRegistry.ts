@@ -5,7 +5,7 @@
  */
 
 import scoringConfig from '../config/scoring.json';
-import type {GamePhase} from '../store/gameStore';
+import type {GamePhase} from '../ecs/hooks';
 
 export interface ChallengeConfig {
   phase: GamePhase;
