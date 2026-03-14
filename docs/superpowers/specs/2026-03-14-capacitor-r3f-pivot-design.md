@@ -121,7 +121,7 @@ All 85 files deleted in commit `6acdb4a` ("chainsaw: delete 55 R3F source files"
 - Config accessor tests
 
 **Audio:**
-- AudioEngine.ts (raw Web Audio API version from port-reference — works in browser as-is, Tone.js rewrite is Phase 2 enhancement)
+- AudioEngine.ts (rewritten for Tone.js — sample playback, procedural synth, effects chains)
 
 **Note:** `assetUrl.ts` was deleted and not preserved. Not needed — Vite serves `public/` at root, so asset paths are just `/models/foo.glb`. Remove any `assetUrl()` imports from restored files.
 
@@ -167,31 +167,35 @@ The `hooks.ts` on this branch exposes a Zustand-compatible API — `useGameStore
 
 ### 2. AudioEngine → Tone.js
 
-The port-reference `AudioEngine.ts` uses raw Web Audio API (`AudioContext`) — NOT Howler.js despite Howler being in deps. This already works in a browser. Phase 1: restore the Web Audio API version as-is (it works in Vite/browser). Phase 2 (enhancement): rewrite to Tone.js for procedural capabilities:
+The port-reference `AudioEngine.ts` uses raw Web Audio API (`AudioContext`) — NOT Howler.js despite Howler being in deps. This already works in a browser. Rewrite AudioEngine to use Tone.js (replaces the raw Web Audio API version):
 - `Tone.Player` for sample playback (chop, grind, sizzle, etc.)
 - `Tone.Synth` / `Tone.NoiseSynth` for procedural horror ambience
 - `Tone.Transport` for scheduling phase-based audio cues
-- `Tone.Filter` / `Tone.Reverb` / `Tone.Distortion` for real-time effects
+- `Tone.Filter` / `Tone.Reverb` / `Tone.Distortion` for real-time effects (muffled audio during intro, basement reverb)
 - Same public API surface (`play`, `loop`, `stop`)
 
-Phase 2 is not a blocker for the pivot — the existing Web Audio engine works fine.
+### 3. db/client.ts → dual driver (sql.js web + capacitor-community/sqlite native)
 
-### 3. db/client.ts → sql.js everywhere (with Capacitor SQLite optional)
+Drizzle ORM has a first-party `sql.js` driver but NOT one for `@capacitor-community/sqlite`. We need both:
 
-Drizzle ORM has a first-party `sql.js` driver (`drizzle-orm/sql-js`) but does NOT have a driver for `@capacitor-community/sqlite`. Strategy:
+**Web (dev + browser):** `sql.js` via `drizzle-orm/sql-js` — WASM SQLite in the browser.
 
-**Phase 1:** Use `sql.js` (WASM SQLite) everywhere — works in browser AND in Capacitor WebView. Drizzle's `drizzle(sqlJsDb)` driver is well-supported. This is the simplest path and avoids writing a custom adapter.
+**Native (Capacitor iOS/Android):** Write a thin Drizzle adapter for `@capacitor-community/sqlite`. The adapter implements Drizzle's `SQLJsDatabase`-compatible interface, forwarding `exec`/`run`/`prepare` calls to the Capacitor plugin. This is ~50 lines.
 
 ```typescript
-import initSqlJs from 'sql.js';
-import {drizzle} from 'drizzle-orm/sql-js';
+import {Capacitor} from '@capacitor/core';
 
-const SQL = await initSqlJs();
-const sqlDb = new SQL.Database();
-export const db = drizzle(sqlDb);
+export async function createDb() {
+  if (Capacitor.isNativePlatform()) {
+    // capacitor-community/sqlite with custom Drizzle adapter
+    return createCapacitorDrizzle();
+  }
+  // sql.js WASM fallback for web
+  return createSqlJsDrizzle();
+}
 ```
 
-**Phase 2 (optional):** If sql.js performance is insufficient on mobile, write a thin Drizzle adapter for `@capacitor-community/sqlite`. But sql.js in a WebView is fast enough for a game save file.
+Both paths use the same Drizzle schema and queries — only the connection differs.
 
 ### 4. Gesture handling
 
@@ -263,7 +267,7 @@ This is NOT a big bang. Each phase produces a verifiable checkpoint.
 **Phase 3 — Rewrite RN UI + persistence (checkpoint: full game loop works in browser)**
 1. Rewrite `TitleScreen.tsx` + `DifficultySelector.tsx` from RN primitives to HTML/CSS
 2. Rewrite `db/client.ts` for sql.js + Drizzle
-3. Restore AudioEngine (Web Audio API version, works as-is)
+3. Rewrite AudioEngine with Tone.js (sample playback + procedural + effects)
 4. Restore Playwright config + E2E specs
 5. Verify: can play a full round in browser — title → difficulty → kitchen → cook → score
 
@@ -278,7 +282,7 @@ This is NOT a big bang. Each phase produces a verifiable checkpoint.
 2. Run Vitest, fix failures
 3. Run Playwright E2E, fix failures
 4. Update AGENTS.md, CLAUDE.md, memory bank docs
-5. Tone.js AudioEngine enhancement (Phase 2 audio — not a blocker)
+5. Verify Tone.js AudioEngine works in Capacitor WebView
 
 ## Capacitor Plugins
 
@@ -286,12 +290,12 @@ Beyond the core `@capacitor/core`, `@capacitor/ios`, `@capacitor/android`:
 
 | Plugin | Purpose | Replaces |
 |--------|---------|----------|
-| `@capacitor-community/sqlite` | Optional native SQLite (Phase 2, if sql.js insufficient) | op-sqlite |
-| `@capacitor/haptics` | Vibration feedback | expo-haptics |
-| `@capacitor/screen-orientation` | Lock to portrait/landscape | expo-screen-orientation |
+| `@capacitor-community/sqlite` | Native SQLite persistence | op-sqlite |
+| `@capacitor/haptics` | Vibration feedback on interactions | expo-haptics |
+| `@capacitor/screen-orientation` | Lock to landscape during gameplay | expo-screen-orientation |
 | `@capacitor-community/keep-awake` | Prevent screen sleep during gameplay | expo-keep-awake |
 
-These are optional — only add if actually used in game code. None are Phase 1 blockers.
+All required. All get wired in during Phase 4.
 
 ## Dev Workflow
 
