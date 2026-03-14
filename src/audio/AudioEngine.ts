@@ -25,7 +25,18 @@ export type SoundId =
 
 const SOUND_MAP: Partial<Record<SoundId, number>> = {
   chop: require('../../public/audio/chop_1.ogg'),
+  grind: require('../../public/audio/mix_dry_1.ogg'),
+  squelch: require('../../public/audio/mix_wet_1.ogg'),
   sizzle: require('../../public/audio/sizzle_1.ogg'),
+  pressure: require('../../public/audio/boiling_1.ogg'),
+  burst: require('../../public/audio/pots_and_pans_1.ogg'),
+  tie: require('../../public/audio/peel_1.ogg'),
+  strike: require('../../public/audio/pots_and_pans_2.ogg'),
+  success: require('../../public/audio/pour_1.ogg'),
+  error: require('../../public/audio/pots_and_pans_3.ogg'),
+  click: require('../../public/audio/peel_2.ogg'),
+  phaseAdvance: require('../../public/audio/pour_2.ogg'),
+  rankReveal: require('../../public/audio/verdict-unsettling.ogg'),
   ambient: require('../../public/audio/ambient-horror.ogg'),
 };
 

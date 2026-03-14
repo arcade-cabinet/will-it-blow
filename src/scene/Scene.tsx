@@ -21,6 +21,7 @@ import {IntroSequence} from './IntroSequence';
 import {Kitchen} from './Kitchen';
 import {KitchenLighting} from './Lighting';
 import {MrSausage} from './MrSausage';
+import {Room} from './Room';
 import {PlayerController} from './PlayerController';
 import {PlayerHands} from './PlayerHands';
 import {Sausage} from './sausage/Sausage';
@@ -77,6 +78,7 @@ export function GameScene() {
           <Skybox colorInHex="#0a0a0a" />
           <KitchenLighting />
           <PlayerController world={world} />
+          <Room />
           <Kitchen world={world} />
           <ChestFreezer world={world} />
           <ChoppingBlock world={world} />
