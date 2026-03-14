@@ -1,5 +1,4 @@
-import {useEffect, useRef, useState} from 'react';
-import {Animated, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {useState} from 'react';
 import {useGameStore} from '../../ecs/hooks';
 import {DIFFICULTY_TIERS} from '../../engine/DifficultyConfig';
 import {DifficultySelector} from './DifficultySelector';
@@ -8,49 +7,6 @@ export function TitleScreen() {
   const setAppPhase = useGameStore(s => s.setAppPhase);
   const setDifficulty = useGameStore(s => s.setDifficulty);
   const [showDifficulty, setShowDifficulty] = useState(false);
-
-  // Fade-in animation
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
-
-  // Sign swing animation
-  const swingAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 1000,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 1000,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    // Subtle sign sway
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(swingAnim, {
-          toValue: 1,
-          duration: 3000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(swingAnim, {
-          toValue: -1,
-          duration: 3000,
-          useNativeDriver: true,
-        }),
-      ]),
-    ).start();
-  }, [fadeAnim, slideAnim, swingAnim]);
-
-  const rotate = swingAnim.interpolate({
-    inputRange: [-1, 1],
-    outputRange: ['-1deg', '1deg'],
-  });
 
   const handleStart = () => {
     setShowDifficulty(true);
@@ -75,155 +31,193 @@ export function TitleScreen() {
   }
 
   return (
-    <Animated.View
-      style={[
-        styles.container,
-        {
-          opacity: fadeAnim,
-          transform: [{translateY: slideAnim}],
-        },
-      ]}
-    >
-      {/* Butcher shop sign */}
-      <Animated.View style={[styles.sign, {transform: [{rotate}]}]}>
-        {/* Hanging chains */}
-        <View style={styles.chainRow}>
-          <View style={styles.chain} />
-          <View style={styles.chain} />
-        </View>
+    <>
+      <style>{`
+        @keyframes titleSwing {
+          0% { transform: rotate(-1deg); }
+          50% { transform: rotate(1deg); }
+          100% { transform: rotate(-1deg); }
+        }
+        @keyframes titleFadeIn {
+          from { opacity: 0; transform: translateY(30px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .title-start-btn:hover {
+          opacity: 0.8;
+        }
+        .title-start-btn:active {
+          opacity: 0.7;
+        }
+      `}</style>
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: '#0a0a0a',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          paddingLeft: 24,
+          paddingRight: 24,
+          zIndex: 100,
+          animation: 'titleFadeIn 1s ease-out',
+        }}
+      >
+        {/* Butcher shop sign */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            marginBottom: 48,
+            animation: 'titleSwing 6s ease-in-out infinite',
+            transformOrigin: 'top center',
+          }}
+        >
+          {/* Hanging chains */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              width: 200,
+              marginBottom: -2,
+            }}
+          >
+            <div
+              style={{
+                width: 3,
+                height: 24,
+                backgroundColor: '#555',
+                borderRadius: 1,
+              }}
+            />
+            <div
+              style={{
+                width: 3,
+                height: 24,
+                backgroundColor: '#555',
+                borderRadius: 1,
+              }}
+            />
+          </div>
 
-        <View style={styles.signBoard}>
-          {/* Outer border */}
-          <View style={styles.signInner}>
-            <Text style={styles.established}>Est. 1974</Text>
-            <Text style={styles.title}>WILL IT{'\n'}BLOW?</Text>
-            <View style={styles.divider} />
-            <Text style={styles.tagline}>Fine Meats & Sausages</Text>
-          </View>
-        </View>
-      </Animated.View>
+          <div
+            style={{
+              backgroundColor: '#1a0a00',
+              border: '4px solid #8B4513',
+              padding: 4,
+              boxShadow: '0 8px 16px rgba(0, 0, 0, 0.8)',
+            }}
+          >
+            {/* Outer border */}
+            <div
+              style={{
+                border: '2px solid #D2A24C',
+                paddingTop: 20,
+                paddingBottom: 20,
+                paddingLeft: 32,
+                paddingRight: 32,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 14,
+                  color: '#D2A24C',
+                  letterSpacing: 4,
+                  marginBottom: 4,
+                }}
+              >
+                Est. 1974
+              </span>
+              <h1
+                style={{
+                  fontSize: 48,
+                  fontWeight: 900,
+                  color: '#FF1744',
+                  textAlign: 'center',
+                  lineHeight: '52px',
+                  letterSpacing: 2,
+                  textShadow: '0 0 16px rgba(255, 23, 68, 0.4)',
+                  margin: 0,
+                  whiteSpace: 'pre-line',
+                }}
+              >
+                {'WILL IT\nBLOW?'}
+              </h1>
+              <div
+                style={{
+                  width: 120,
+                  height: 2,
+                  backgroundColor: '#D2A24C',
+                  marginTop: 12,
+                  marginBottom: 12,
+                }}
+              />
+              <span
+                style={{
+                  fontSize: 16,
+                  color: '#D2A24C',
+                  letterSpacing: 3,
+                }}
+              >
+                Fine Meats &amp; Sausages
+              </span>
+            </div>
+          </div>
+        </div>
 
-      <View style={styles.menuContainer}>
-        <TouchableOpacity style={styles.button} onPress={handleStart} activeOpacity={0.8}>
-          <Text style={styles.buttonText}>START COOKING</Text>
-        </TouchableOpacity>
-      </View>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 12,
+          }}
+        >
+          <button
+            type="button"
+            className="title-start-btn"
+            onClick={handleStart}
+            style={{
+              backgroundColor: '#D2A24C',
+              paddingTop: 16,
+              paddingBottom: 16,
+              paddingLeft: 32,
+              paddingRight: 32,
+              borderRadius: 8,
+              border: '4px solid #8B4513',
+              color: '#1a0a00',
+              fontSize: 24,
+              fontWeight: 900,
+              letterSpacing: 2,
+              cursor: 'pointer',
+            }}
+          >
+            START COOKING
+          </button>
+        </div>
 
-      {/* Footer */}
-      <Text style={styles.footer}>Mr. Sausage's Fine Meats & Sausages</Text>
-    </Animated.View>
+        {/* Footer */}
+        <p
+          style={{
+            fontSize: 12,
+            color: '#3a3a3a',
+            letterSpacing: 3,
+            marginTop: 48,
+            textAlign: 'center',
+          }}
+        >
+          Mr. Sausage's Fine Meats &amp; Sausages
+        </p>
+      </div>
+    </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#0a0a0a',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    zIndex: 100,
-  },
-  sign: {
-    alignItems: 'center',
-    marginBottom: 48,
-  },
-  chainRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: 200,
-    marginBottom: -2,
-  },
-  chain: {
-    width: 3,
-    height: 24,
-    backgroundColor: '#555',
-    borderRadius: 1,
-  },
-  signBoard: {
-    backgroundColor: '#1a0a00',
-    borderWidth: 4,
-    borderColor: '#8B4513',
-    paddingVertical: 4,
-    paddingHorizontal: 4,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 8},
-    shadowOpacity: 0.8,
-    shadowRadius: 16,
-    elevation: 12,
-  },
-  signInner: {
-    borderWidth: 2,
-    borderColor: '#D2A24C',
-    paddingVertical: 20,
-    paddingHorizontal: 32,
-    alignItems: 'center',
-  },
-  established: {
-    fontSize: 14,
-    color: '#D2A24C',
-    letterSpacing: 4,
-    marginBottom: 4,
-  },
-  title: {
-    fontSize: 48,
-    fontWeight: '900',
-    color: '#FF1744',
-    textAlign: 'center',
-    lineHeight: 52,
-    letterSpacing: 2,
-    textShadowColor: 'rgba(255, 23, 68, 0.4)',
-    textShadowOffset: {width: 0, height: 0},
-    textShadowRadius: 16,
-  },
-  divider: {
-    width: 120,
-    height: 2,
-    backgroundColor: '#D2A24C',
-    marginVertical: 12,
-  },
-  tagline: {
-    fontSize: 16,
-    color: '#D2A24C',
-    letterSpacing: 3,
-  },
-  menuContainer: {
-    alignItems: 'center',
-    gap: 12,
-  },
-  button: {
-    backgroundColor: '#D2A24C',
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 8,
-    borderWidth: 4,
-    borderColor: '#8B4513',
-  },
-  buttonText: {
-    color: '#1a0a00',
-    fontSize: 24,
-    fontWeight: '900',
-    letterSpacing: 2,
-  },
-  settingsButton: {
-    backgroundColor: '#333',
-    paddingVertical: 12,
-    paddingHorizontal: 28,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: '#555',
-  },
-  settingsButtonText: {
-    color: '#CCBBAA',
-    fontSize: 18,
-    fontWeight: '900',
-    letterSpacing: 2,
-  },
-  footer: {
-    fontSize: 12,
-    color: '#3a3a3a',
-    letterSpacing: 3,
-    marginTop: 48,
-    textAlign: 'center',
-  },
-});
