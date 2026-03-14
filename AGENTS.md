@@ -4,41 +4,41 @@ Entry point for all AI agents. Read this first, then follow the pointer chain.
 
 ## Project Identity
 
-"Will It Blow?" is a first-person horror sausage-making mini-game (SAW meets cooking show). Built with React Native 0.83 + React Three Fiber 9.5 (Three.js 0.183 WebGPU) + Expo SDK 55. **Native-first** (iOS/Android via react-native-wgpu). 7 sequential challenges at kitchen stations. Koota ECS for all state. Total immersion — zero 2D overlays during gameplay.
+"Will It Blow?" is a first-person horror sausage-making mini-game (SAW meets cooking show). Built with React 19 + React Three Fiber + Three.js + Rapier + Capacitor 6. Web-first with native deployment via Capacitor (iOS/Android). 7 sequential challenges at kitchen stations. Koota ECS for all state. Total immersion — zero 2D overlays during gameplay. Tailwind CSS + DaisyUI for pre-game UI components.
 
 ## Documentation Chain
 
 | Step | Location | What You'll Find |
 |------|----------|-----------------|
 | 1 | `AGENTS.md` (this file) | Project overview, architecture, commands, rules |
-| 2 | `docs/superpowers/specs/2026-03-13-native-first-pivot-design.md` | **Active design spec** — native-first pivot with full execution plan |
-| 3 | `docs/memory-bank/AGENTS.md` | Memory bank protocol — session context, read order |
-| 4 | `docs/memory-bank/*.md` | Persistent context: project brief, patterns, tech stack, progress |
-| 5 | `CLAUDE.md` | **Claude Code only** — slash commands, tool behavior |
-| 6 | `.claude/agents/` | Specialized agent definitions |
+| 2 | `docs/memory-bank/AGENTS.md` | Memory bank protocol — session context, read order |
+| 3 | `docs/memory-bank/*.md` | Persistent context: project brief, patterns, tech stack, progress |
+| 4 | `CLAUDE.md` | **Claude Code only** — slash commands, tool behavior |
+| 5 | `.claude/agents/` | Specialized agent definitions |
 
 ## Key Architecture
 
-### Native-First Rendering
-- **React Three Fiber Canvas** via `react-native-wgpu` (Metal on iOS, Vulkan on Android)
-- **No web target.** Web is abandoned. All browser workarounds deleted.
-- Three.js WebGPU renderer — use TSL `NodeMaterial`, not raw GLSL
+### Rendering & Platform
+- **Vite** dev server and production bundler
+- **React Three Fiber Canvas** with Three.js WebGL renderer
+- **Capacitor 6** for native iOS/Android deployment (web app wrapped in native shell)
+- Web is the primary dev target; Capacitor provides native access (haptics, SQLite, etc.)
 
 ### Total Immersion (ZERO 2D HUD)
 - ALL gameplay feedback via SurrealText (3D blood-text on kitchen surfaces)
-- Mr. Sausage dialogue → blood letters on walls, melt/drip off
-- Dialogue choices → tappable 3D text
+- Mr. Sausage dialogue — blood letters on walls, melt/drip off
+- Dialogue choices — tappable 3D text
 - Phase instructions, strikes, scores, demands, verdict — all diegetic
-- NO React Native overlays during gameplay
-- Pre-game only: TitleScreen + DifficultySelector (React Native Reusables)
+- NO overlays during gameplay
+- Pre-game only: TitleScreen + DifficultySelector (Tailwind + DaisyUI)
 
 ### State Management
 - **Koota ECS** — the ONLY runtime state. 16 traits, Zustand-compatible hooks API via `src/ecs/hooks.ts`
 - **No Zustand.** Deleted. `src/store/gameStore.ts` does not exist.
-- **Persistence:** Dual SQLite — sql.js (WASM) for web/dev + @capacitor-community/sqlite for native, unified via drizzle-orm/sql-js
+- **Persistence:** sql.js (WASM) for web/dev + @nicepkg/capacitor-sqlite for native, unified via drizzle-orm
 
 ### Physics
-- `@react-three/rapier` — kept, works on native via react-native-wgpu (browser WASM race does not occur on native)
+- `@react-three/rapier` — Rapier WASM physics (rigid bodies, colliders, sensors)
 - `Sausage.tsx` must use `useRapier()` context, NOT direct `require('@dimforge/rapier3d-compat')`
 
 ### FPS Controls (ported from grovekeeper)
@@ -51,6 +51,9 @@ Entry point for all AI agents. Read this first, then follow the pointer chain.
 - `src/player/usePhysicsMovement.ts` — camera-relative WASD velocity
 - Player walks freely. No camera rails.
 
+### Audio
+- **Tone.js** for procedural audio synthesis (SFX instruments + melodies)
+
 ### Game Flow
 ```
 title → difficulty → intro (blink/wake-up) → walk kitchen → 13 GamePhases → verdict
@@ -58,8 +61,8 @@ title → difficulty → intro (blink/wake-up) → walk kitchen → 13 GamePhase
 Phases: SELECT_INGREDIENTS → CHOPPING → FILL_GRINDER → GRINDING → MOVE_BOWL → ATTACH_CASING → STUFFING → TIE_CASING → BLOWOUT → MOVE_SAUSAGE → MOVE_PAN → COOKING → DONE
 
 ### Testing
-- **Maestro** YAML flows for E2E (replaces Playwright)
-- **Jest** for unit tests (42 suites, 452 tests)
+- **Vitest** for unit tests
+- **Playwright** for E2E tests
 
 ## Key Files
 
@@ -73,7 +76,7 @@ Phases: SELECT_INGREDIENTS → CHOPPING → FILL_GRINDER → GRINDING → MOVE_B
 | `src/engine/GameOrchestrator.tsx` | Phase navigation + dev shortcuts (n/p keys) |
 | `src/engine/ChallengeRegistry.ts` | Challenge configs, variant selection, verdict |
 | `src/engine/SausagePhysics.ts` | 5 pure scoring functions |
-| `src/engine/AudioEngine.ts` | Audio (needs rewrite for expo-audio) |
+| `src/engine/AudioEngine.ts` | Audio (Tone.js synthesis) |
 | `src/components/environment/SurrealText.tsx` | Diegetic feedback — blood text on surfaces |
 | `src/components/stations/*.tsx` | 9 station components (self-contained) |
 | `src/components/sausage/Sausage.tsx` | Bone-chain physics sausage |
@@ -81,29 +84,28 @@ Phases: SELECT_INGREDIENTS → CHOPPING → FILL_GRINDER → GRINDING → MOVE_B
 | `src/input/*.ts` | InputManager + providers |
 | `src/config/*.json` | 16 JSON config files |
 | `src/db/` | Dual SQLite + Drizzle persistence (sql.js web / capacitor-sqlite native) |
-| `.maestro/` | Maestro E2E test flows |
 
 ## Commands
 
 ```bash
-npx expo run:ios              # Primary dev target
-npx expo run:android          # Android dev build
-pnpm test                     # Jest unit tests
-pnpm lint                     # Biome lint
-pnpm format                   # Biome auto-fix
-pnpm typecheck                # TypeScript (needs --stack-size=8192)
-maestro test .maestro/flows/  # E2E tests
+pnpm dev          # Vite dev server
+pnpm build        # Production build
+pnpm test         # Vitest unit tests
+pnpm test:e2e     # Playwright E2E
+pnpm typecheck    # tsc --noEmit
+pnpm lint         # biome check
+pnpm format       # biome check --write
+pnpm cap:ios      # Capacitor iOS sync + open
+pnpm cap:android  # Capacitor Android sync + open
 ```
 
 ## Critical Rules
 
-- **Native-first** — iOS/Android are the targets. No web fixes.
 - **pnpm** for package management
 - **Biome** for linting/formatting
 - **Koota ECS** for all state — no Zustand, no React Context
 - **Diegetic only** — zero 2D overlays during gameplay
-- **TSL NodeMaterial** for shaders — not raw GLSL
+- **Tailwind CSS + DaisyUI** for pre-game UI components
 - **useRef** for mutable state in `useFrame` (avoid stale closures)
 - **Feature branches** — branch protection on main
 - **No git worktrees** — they base off wrong commits
-- **No WASM where avoidable** — native bindings preferred

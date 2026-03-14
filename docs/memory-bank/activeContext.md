@@ -1,64 +1,53 @@
 # Active Context — Will It Blow?
 
-**Last updated:** 2026-03-13
+**Last updated:** 2026-03-14
 
 ## Current Branch
 
-`main` — 30+ commits ahead of origin. All 28 PRD tasks complete.
+`feat/greenfield-complete` — Capacitor + R3F + Tailwind architecture pivot.
 
 ## Current Focus
 
-All PRD tasks complete. Project is in maintenance/polish phase. 37 test suites, 397 tests, 0 failures. 0 lint errors, 0 TypeScript errors.
+Greenfield rebuild with new stack: Vite + React 19 + R3F + Rapier + Capacitor 6 + Tailwind CSS + DaisyUI. Koota ECS for all game state. sql.js + capacitor-sqlite for persistence.
 
-## Merged PRs
+## Stack Pivot Summary
 
-| PR | Branch | Status |
-|----|--------|--------|
-| #25 | feat/sausage-factory-kitchen | Merged — Phase 1 complete |
-| #27 | Phase 2 Sprint 1 | Merged — difficulty, horror, input |
-| #28 | Phase 2 Sprint 2 | Merged — enemy encounters |
-| #29 | Phase 2 Sprint 3 | Merged — blowout, multi-round, hidden objects, cleanup |
-| #33 | feat/dual-zone-touch-controls | Merged — dual-zone touch controls, Rapier fix, E2E tests |
+Migrated from:
+- React Native + Expo + Metro + react-native-wgpu
+- Jest + Maestro for testing
+- Native-first (no web target)
 
-## Open PRs
-
-None.
+Migrated to:
+- Vite + React 19 + Capacitor 6
+- Vitest + Playwright for testing
+- Web-first with native deployment via Capacitor
+- Tailwind CSS + DaisyUI for UI components
 
 ## Recent Work
 
-### All 28 PRD Tasks Complete (2026-03-13)
-
-- All 7 challenge mechanics fully implemented with scoring
-- Data-driven config: audio.json with 40+ OGG assets, phase-specific music mapping, spatial sounds
-- 12 JSON config files in src/config/ (audio, blowout, camera, chopping, demands, dialogue, grinder, ingredients, rounds, scoring, stove, stuffer)
-- CRT shader (TSL NodeMaterial) exists and is integrated
-- GameOverScreen, LoadingScreen, HintDialogue, all HUDs implemented
-- Kitchen.tsx has GLB loading working
-- AudioEngine.ts (procedural Web Audio API synthesis) and AudioEngine.web.ts (Tone.js) both implemented
-
-## Test Health
-
-- **397 tests** across **37 suites**, **0 failures**
-- Biome lint clean (0 errors), TypeScript clean (0 errors)
-- CI: parallel lint + typecheck + test + build
-
-## Known Issues
-
-- TypeScript stack overflow requires `node --stack-size=8192` (handled by `pnpm typecheck`)
-- Native audio is a complete no-op
+### Capacitor + R3F Pivot (2026-03-14)
+- Replaced Expo/Metro with Vite bundler
+- Added Capacitor 6 for native iOS/Android deployment
+- Added Tailwind CSS 4 + DaisyUI 5 for UI components
+- Switched testing from Jest/Maestro to Vitest/Playwright
+- Koota ECS retained as sole state management
+- Rapier physics retained
+- Tone.js retained for audio
 
 ## Decisions Made
 
 - Orchestrators own ALL game logic — HUDs are pure read-only display
 - ECS input primitives drive game state (not 2D gestures)
-- `challengePhase` store field bridges orchestrator→HUD dialogue transitions
+- `challengePhase` store field bridges orchestrator-HUD dialogue transitions
 - Old 2D challenge overlays fully deleted (not deprecated)
 - Data-driven config: ~200 magic numbers extracted to JSON files
-- CI/CD runs parallel jobs for fast feedback
+- Web-first development with Capacitor for native deployment
+- Tailwind + DaisyUI for pre-game UI (title screen, difficulty selector)
 
 ## What's Next
 
-1. Mobile testing on real devices
-2. Native audio implementation
-3. Polish, balancing, asset optimization
-4. Push to origin / production deployment
+1. Polish gameplay mechanics and station interactions
+2. Native testing on real devices via Capacitor
+3. Audio refinement
+4. Asset optimization
+5. Production deployment

@@ -4,20 +4,20 @@
 
 | Technology | Version | Role |
 |-----------|---------|------|
-| React Native | 0.83.2 | UI framework, cross-platform runtime |
-| Three.js | 0.183.1 | 3D engine (WebGPU renderer, TSL shaders) |
-| React Three Fiber | 9.5.0 | React reconciler for Three.js (declarative JSX scene graph) |
-| @react-three/drei | 10.7.7 | R3F helpers: useGLTF, useTexture, Environment, etc. |
-| @react-three/xr | 6.6.29 | WebXR support (web only) |
-| @react-three/cannon | 6.6.0 | Physics (available, not primary) |
-| react-native-wgpu | 0.5.7 | Dawn-based WebGPU surface for native (iOS/Android) |
-| Expo | 55.0.0 | Build toolchain, dev server, deployment |
-| Zustand | 5.0.11 | State management (single store, no React Context) |
-| Tone.js | 15.1.22 | Web audio synthesis (procedural SFX) |
-| react-reconciler | ^0.33.0 | React reconciler (was pinned at 0.31.0 during migration) |
-| miniplex | 2.0.0 | Entity-component-system (ECS) for game entities |
+| React | 19 | UI framework |
+| Three.js | 0.183+ | 3D engine (WebGL renderer) |
+| React Three Fiber | 9.x | React reconciler for Three.js (declarative JSX scene graph) |
+| @react-three/drei | 10.x | R3F helpers: useGLTF, useTexture, Environment, etc. |
 | @react-three/rapier | — | Rapier physics engine (sensors, rigid bodies, colliders) |
-| Playwright | — | E2E testing (5 mobile device profiles, headed mode, system Chrome) |
+| Capacitor | 6.x | Native iOS/Android deployment (web app in native shell) |
+| Vite | 6.x | Dev server + production bundler |
+| Koota | — | ECS for all game state (replaces Zustand) |
+| Tone.js | 15.x | Web audio synthesis (procedural SFX) |
+| sql.js | — | SQLite via WASM (web/dev persistence) |
+| @nicepkg/capacitor-sqlite | — | Native SQLite (iOS/Android persistence) |
+| drizzle-orm | — | Type-safe SQL query builder |
+| Tailwind CSS | 4.x | Utility-first CSS framework |
+| DaisyUI | 5.x | Tailwind component library (pre-game UI) |
 
 ## Build & Dev Tools
 
@@ -25,72 +25,65 @@
 |------|---------------|---------|
 | **pnpm** | — | Package manager (NOT npm or yarn). Lockfile: `pnpm-lock.yaml` |
 | **Biome** | 2.4 | Linter + formatter (NOT ESLint/Prettier) |
-| **Metro** | — | Bundler. WebGPU resolver maps `'three'` to `'three/webgpu'` on native |
-| **Jest** | — | Test runner with react-native preset |
-| **@react-three/test-renderer** | — | R3F component testing in Node.js |
-| **TypeScript** | — | Type checking via `pnpm typecheck` (node --stack-size=8192) |
-| **GitHub Actions** | — | CI (tests on push) + CD (GitHub Pages deploy) |
+| **Vite** | 6.x | Bundler + dev server (replaced Metro) |
+| **Vitest** | — | Unit test runner |
+| **Playwright** | — | E2E test runner |
+| **TypeScript** | — | Type checking via `pnpm typecheck` (tsc --noEmit) |
+| **GitHub Actions** | — | CI (tests on push) + CD |
 
 ## Commands
 
 ```bash
 # Development
-npx expo start --web          # Web dev server (primary dev target)
+pnpm dev                      # Vite dev server
+
+# Build
+pnpm build                    # Production build
 
 # Testing
-pnpm test                     # Run all Jest tests (37 suites, 397 tests)
-pnpm test:ci                  # CI mode (--ci --forceExit)
+pnpm test                     # Vitest unit tests
+pnpm test:e2e                 # Playwright E2E tests
 
 # Linting & formatting
 pnpm lint                     # Check lint + format errors (Biome)
 pnpm format                   # Auto-fix lint + format errors (Biome)
 
 # Type checking
-pnpm typecheck                # node --stack-size=8192 (required for Three.js types)
+pnpm typecheck                # tsc --noEmit
+
+# Native deployment
+pnpm cap:ios                  # Capacitor iOS sync + open Xcode
+pnpm cap:android              # Capacitor Android sync + open Android Studio
 ```
 
-## WebGPU Pipeline
+## Rendering Pipeline
 
-- **Web:** Browser-native WebGPU via Three.js `WebGPURenderer`
-- **Native:** `react-native-wgpu` provides a Dawn-based WebGPU surface
-- **Metro resolver:** Bare `'three'` imports remapped to `'three/webgpu'` on native platforms
-- **Shaders:** TSL (Three Shading Language) `NodeMaterial` — compiles to WGSL for WebGPU or GLSL for WebGL2 fallback. Raw GLSL `ShaderMaterial` is NOT compatible with WebGPU renderer.
-- **TSL imports:** Node functions from `'three/tsl'`, `NodeMaterial` from `'three/webgpu'`
+- **Web:** Three.js WebGL renderer via React Three Fiber
+- **Native:** Same web app wrapped by Capacitor (WebView with native bridge)
+- **Shaders:** Standard Three.js materials (MeshStandardMaterial, MeshPhysicalMaterial, etc.)
 
-## Platform Split
+## Platform Architecture
 
-Only one platform-specific file remains:
+Capacitor wraps the Vite-built web app in a native WebView, providing:
+- Native SQLite access via `@nicepkg/capacitor-sqlite`
+- Haptics via `@capacitor/haptics`
+- Status bar control via `@capacitor/status-bar`
+- Full offline capability
 
-- `AudioEngine.web.ts` — Full Tone.js synthesis (7 SFX instruments + 2 melodies)
-- `AudioEngine.ts` — Procedural Web Audio API synthesis (native no-op fallback)
-
-Everything else (including the entire 3D layer) is unified cross-platform.
+Web is the primary development target. Capacitor provides the native deployment path.
 
 ## Testing Stack
 
-- **Framework:** Jest with react-native preset
-- **R3F components:** `@react-three/test-renderer` (renders Three.js scene graph in Node.js)
-- **Coverage:** 397 tests across 37 suites, 0 failures
-- **Pure logic tests:** SausagePhysics, Ingredients, ChallengeRegistry, IngredientMatcher, DialogueEngine, gameStore
-- **Component tests:** MrSausage3D, CrtTelevision, KitchenEnvironment, FridgeStation, GrinderStation, StufferStation, StoveStation, Ingredient3D, GameWorld, CrtShader
-- **Jest config:** `transformIgnorePatterns` must allowlist `three` and `@react-three` (ESM modules)
-- **Mocking:** `useGLTF` must be mocked (file loading unavailable in Node.js). `__mocks__/@react-three/xr.js` auto-resolved for GameWorld tests.
+- **Unit tests:** Vitest
+- **E2E tests:** Playwright
+- **Pure logic tests:** SausagePhysics, Ingredients, ChallengeRegistry, IngredientMatcher, DialogueEngine
+- **Component tests:** R3F components via test renderer
+- **Mocking:** `useGLTF` must be mocked (file loading unavailable in Node.js)
 
 ## CI/CD
 
 - `.github/workflows/ci.yml` — Tests on push to `main` and `feat/**` branches
 - **Parallel jobs:** lint, typecheck, test, build run concurrently for fast feedback
-- `.github/workflows/cd.yml` — Web export via Expo, deploy to GitHub Pages on push to main
-- **Live:** https://arcade-cabinet.github.io/will-it-blow/
-
-## E2E Testing (Playwright)
-
-- Always run headed (`headless: false`) — local agent workflow
-- Must use system Chrome (`channel: 'chrome'`) — bundled Chromium may lack WebGL
-- **5 mobile device profiles:** iPhone SE, iPhone 14 Pro, Pixel 7, iPad Mini, Galaxy S23
-- GameGovernor at `src/dev/GameGovernor.ts` exposes `window.__gov` with `setCamera(pos, yaw)`, `debugMeshes()`, `setSceneBg()`
-- Jest config excludes `e2e/` via `testPathIgnorePatterns`
-- Dev server port varies (check with curl, often 8082-8084)
 
 ## Assets
 
@@ -104,15 +97,8 @@ Everything else (including the entire 3D layer) is unified cross-platform.
 
 ## Known Technical Pitfalls
 
-1. **TypeScript stack overflow:** `npx tsc --noEmit` crashes — Three.js recursive types exceed Node default stack. Use `pnpm typecheck` (sets --stack-size=8192). `skipLibCheck: true` alone is insufficient.
-2. **import.meta in Metro:** Zustand ESM uses `import.meta.env.MODE`. Must have `unstable_transformImportMeta: true` in babel.config.js.
-3. **TSL vs GLSL:** WebGPU renderer rejects raw GLSL ShaderMaterial. Use TSL NodeMaterial. Import node functions from `'three/tsl'`.
-4. **useGLTF in tests:** Must mock `@react-three/drei`'s `useGLTF` — file loading doesn't work in Node.js.
-5. **Stale closures in useFrame:** Use `useRef` for values read inside `useFrame` callbacks.
-6. **`let` + closure = `never` type:** TypeScript can't track mutations inside callbacks. Assign to `const` after null guard.
-7. **Metro WebGPU resolver:** On native, bare `'three'` is remapped to `'three/webgpu'`. Direct `'three/webgpu'` imports work everywhere.
-8. **sphereGeometry takes radius, not diameter:** Babylon.js used `diameter: 3.6` → R3F uses `args={[1.8, 24, 24]}` (radius, widthSegments, heightSegments).
-9. **Camera inside mesh:** Check STATION_CAMERAS values. Camera needs ≥0.5 units clearance from solid meshes.
-10. **MrSausage3D overlap:** The character is ~3.5 units tall at scale 1.0. Verify position in each scene doesn't clip animated geometry.
-11. **Three.js transform allowlist:** `jest.config.js` must include `three` and `@react-three` in `transformIgnorePatterns` or tests fail with ESM syntax errors.
-12. **Rapier KINEMATIC_FIXED sensors:** Bodies with type `KINEMATIC_FIXED` need `activeCollisionTypes={15 | 8704}` bitmask for sensor intersection detection. Without it, `onIntersectionEnter`/`onIntersectionExit` callbacks silently never fire.
+1. **useGLTF in tests:** Must mock `@react-three/drei`'s `useGLTF` — file loading doesn't work in Node.js.
+2. **Stale closures in useFrame:** Use `useRef` for values read inside `useFrame` callbacks.
+3. **`let` + closure = `never` type:** TypeScript can't track mutations inside callbacks. Assign to `const` after null guard.
+4. **Rapier KINEMATIC_FIXED sensors:** Bodies with type `KINEMATIC_FIXED` need `activeCollisionTypes={15 | 8704}` bitmask for sensor intersection detection. Without it, `onIntersectionEnter`/`onIntersectionExit` callbacks silently never fire.
+5. **Camera inside mesh:** Check STATION_CAMERAS values. Camera needs >=0.5 units clearance from solid meshes.
