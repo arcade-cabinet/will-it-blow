@@ -38,6 +38,9 @@ export const MODELS = {
   plateBig: require('../../assets/models/plate_big.glb'),
   bandages: require('../../assets/models/bandages.glb'),
 
+  // Room
+  basementRoom: require('../../assets/models/basement_room.glb'),
+
   // Character + body
   hands: require('../../assets/models/hands.glb'),
   flesh: require('../../assets/models/Flesh.glb'),
