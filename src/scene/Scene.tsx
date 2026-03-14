@@ -1,16 +1,10 @@
 /**
  * @module Scene
  * Root 3D scene — FilamentScene + FilamentView + Bullet physics world.
- * Composes: kitchen environment, stations, player, characters, feedback.
- *
- * Architecture: FilamentScene provides React context for all Filament hooks.
- * FilamentView is the Metal/Vulkan rendering surface. useWorld creates the
- * Bullet3 physics simulation. RenderCallback runs on the UI thread worklet
- * for smooth animation.
+ * Composes: kitchen environment, all 7 stations, player, lighting.
  */
 
 import {
-  Camera,
   DefaultLight,
   FilamentScene,
   FilamentView,
@@ -19,59 +13,49 @@ import {
 import {useCallback} from 'react';
 import {StyleSheet} from 'react-native';
 import type {RenderCallback} from 'react-native-filament';
-import {useSharedValue} from 'react-native-worklets-core';
 import {Kitchen} from './Kitchen';
 import {KitchenLighting} from './Lighting';
+import {PlayerController} from './PlayerController';
+import {BlowoutStation} from './stations/BlowoutStation';
+import {ChestFreezer} from './stations/ChestFreezer';
+import {ChoppingBlock} from './stations/ChoppingBlock';
+import {Grinder} from './stations/Grinder';
+import {Sink} from './stations/Sink';
+import {Stove} from './stations/Stove';
+import {Stuffer} from './stations/Stuffer';
+import {TV} from './stations/TV';
 import {useGameStore} from '../ecs/hooks';
 
-/**
- * Root game scene. Manages:
- * - Bullet3 physics world (gravity -9.8 m/s²)
- * - Filament rendering surface (Metal on iOS, Vulkan on Android)
- * - Worklet render callback for per-frame animation
- * - Camera (FPS first-person, controlled by touch input)
- */
 export function GameScene() {
   const world = useWorld(0, -9.8, 0);
   const gamePhase = useGameStore(s => s.gamePhase);
 
-  // Camera state — driven by touch gestures
-  const cameraYaw = useSharedValue(0);
-  const cameraPitch = useSharedValue(-0.05); // Slightly below horizon
-  const cameraPosition = useSharedValue<[number, number, number]>([0, 1.6, 2]);
-
-  // Per-frame render callback (runs on UI thread worklet)
   const onFrame: RenderCallback = useCallback(() => {
     'worklet';
-
-    // Step physics world
-    if (world) {
-      // Bullet physics step: 1/60s fixed timestep
-      // world.stepSimulation(1 / 60, 1); // TODO: wire when physics bodies exist
-    }
-  }, [world]);
+    // Physics step will go here once player movement is wired
+  }, []);
 
   return (
     <FilamentScene>
       <FilamentView style={styles.scene} renderCallback={onFrame}>
-        {/* Lighting — horror ambiance */}
+        {/* Lighting */}
         <KitchenLighting />
 
-        {/* Camera — FPS first-person at player eye height, looking into kitchen */}
-        <Camera
-          cameraPosition={[0, 1.6, 2]}
-          cameraTarget={[0, 1.2, -2]}
-          near={0.1}
-          far={50}
-        />
+        {/* Player — FPS camera + Bullet capsule */}
+        <PlayerController world={world} />
 
-        {/* Kitchen environment — room geometry + furniture */}
+        {/* Kitchen environment — furniture + horror props + wall colliders */}
         <Kitchen world={world} />
 
-        {/* TODO: Stations — wired in next phase */}
-        {/* TODO: Player capsule + FPS camera control */}
-        {/* TODO: Mr. Sausage character */}
-        {/* TODO: SurrealText diegetic feedback */}
+        {/* All 7 game stations + TV */}
+        <ChestFreezer world={world} />
+        <ChoppingBlock world={world} />
+        <Grinder world={world} />
+        <Stuffer world={world} />
+        <BlowoutStation world={world} />
+        <Stove world={world} />
+        <Sink world={world} />
+        <TV world={world} />
       </FilamentView>
     </FilamentScene>
   );
