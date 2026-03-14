@@ -1,25 +1,21 @@
 /**
  * @module MrSausage
- * Mr. Sausage character — the horror host on the CRT TV.
+ * Mr. Sausage character — the horror host near the CRT TV.
  *
- * Ported from R3F MrSausage3D (540 lines):
- * - 9 reaction animations (idle, flinch, laugh, disgust, excitement, nervous, nod, talk, eating, judging)
- * - Procedural body from primitives (head, body, arms, legs, eyes, mouth)
- * - Camera tracking (rotates to face player)
- * - Reaction-driven transform offsets interpolated with lerp
+ * 9 reaction animations driven by Koota mrSausageReaction trait:
+ * idle, flinch, laugh, disgust, excitement, nervous, nod, talk, eating, judging
  *
- * Filament approach: Use Flesh.glb as a placeholder body model.
- * Position on/near the TV. Read reaction from Koota mrSausageReaction trait.
- * Animate scale/rotation based on reaction via shared values.
- *
- * TODO: Create proper MrSausage.glb model in Blender with armature for
- * reaction-driven bone animations.
+ * Uses Flesh.glb as body model. Reaction transforms applied via
+ * transformManager in a setInterval loop:
+ * - bodyY offset (excitement lifts, eating dips)
+ * - shakeIntensity (laughing shakes, nervous trembles)
+ * - headRotX (nod, disgust, judging tilt)
+ * - bodyRotZ (flinch lean, disgust turn)
  */
 
-import {Model} from 'react-native-filament';
-import {useCallback} from 'react';
+import {Model, useModel, useFilamentContext} from 'react-native-filament';
+import {useEffect} from 'react';
 import {useSharedValue} from 'react-native-worklets-core';
-import type {RenderCallback} from 'react-native-filament';
 import {useGameStore} from '../ecs/hooks';
 import {REACTIONS} from '../characters/reactions';
 import type {Reaction} from '../characters/reactions';
@@ -30,23 +26,50 @@ export function MrSausage() {
   const reaction = useGameStore(s => s.mrSausageReaction) as Reaction;
   const reactionDef = REACTIONS[reaction] || REACTIONS.idle;
 
-  // Scale animation based on reaction (excitement = bigger, flinch = smaller)
-  const scale = useSharedValue<[number, number, number]>([0.3, 0.3, 0.3]);
+  const model = useModel(require('../../public/models/Flesh.glb'));
+  const {transformManager} = useFilamentContext();
+  const time = useSharedValue(0);
 
-  // Apply reaction-specific transforms
-  const bodyY = reactionDef.bodyY ?? 0;
-  const shakeIntensity = reactionDef.shakeIntensity ?? 0;
+  // Continuous reaction animation loop
+  useEffect(() => {
+    const interval = setInterval(() => {
+      time.value += 16;
+      if (model.state !== 'loaded' || !model.rootEntity) return;
 
-  const position: [number, number, number] = [
-    TV_POSITION[0] + (shakeIntensity > 0 ? Math.sin(Date.now() * 0.01) * shakeIntensity : 0),
-    TV_POSITION[1] + bodyY * 0.3,
-    TV_POSITION[2],
-  ];
+      const t = time.value * 0.001; // seconds
+      const bodyY = reactionDef.bodyY ?? 0;
+      const shake = reactionDef.shakeIntensity ?? 0;
+      const bodyRotZ = reactionDef.bodyRotZ ?? 0;
+      const headRotX = reactionDef.headRotX ?? 0;
+
+      // Position with shake
+      const shakeOffset = shake > 0 ? Math.sin(t * 15) * shake : 0;
+      transformManager.setEntityPosition(
+        model.rootEntity,
+        [TV_POSITION[0] + shakeOffset, TV_POSITION[1] + bodyY * 0.3, TV_POSITION[2]],
+        false,
+      );
+
+      // Rotation from reaction (body lean + head tilt combined)
+      const totalRot = bodyRotZ + headRotX * 0.5;
+      if (Math.abs(totalRot) > 0.001) {
+        transformManager.setEntityRotation(model.rootEntity, totalRot, [0, 0, 1], false);
+      }
+
+      // Scale pulse for excitement/laugh reactions
+      if (reactionDef.loop && bodyY > 0) {
+        const s = 0.3 + Math.sin(t * 5) * 0.02;
+        transformManager.setEntityScale(model.rootEntity, [s, s, s], false);
+      }
+    }, 16);
+
+    return () => clearInterval(interval);
+  }, [model, transformManager, reactionDef, time]);
 
   return (
     <Model
       source={require('../../public/models/Flesh.glb')}
-      translate={position}
+      translate={TV_POSITION}
       scale={[0.3, 0.3, 0.3]}
     />
   );
