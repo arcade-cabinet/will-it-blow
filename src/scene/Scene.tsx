@@ -1,7 +1,10 @@
 /**
  * @module Scene
- * Root 3D scene — FilamentScene + FilamentView + Bullet physics world.
- * Composes: kitchen environment, all 7 stations, player, lighting.
+ * Root 3D scene — Filament rendering + Bullet physics + touch controls.
+ *
+ * Layers:
+ * 1. FilamentView (3D scene — kitchen, stations, models)
+ * 2. TouchControls overlay (invisible — handles FPS look/move/interact)
  */
 
 import {
@@ -10,12 +13,14 @@ import {
   FilamentView,
   useWorld,
 } from 'react-native-filament';
-import {useCallback} from 'react';
-import {StyleSheet} from 'react-native';
+import {useCallback, useRef} from 'react';
+import {StyleSheet, View} from 'react-native';
 import type {RenderCallback} from 'react-native-filament';
 import {Kitchen} from './Kitchen';
 import {KitchenLighting} from './Lighting';
 import {PlayerController} from './PlayerController';
+import {SurrealText} from './SurrealText';
+import {TouchControls} from './TouchControls';
 import {BlowoutStation} from './stations/BlowoutStation';
 import {ChestFreezer} from './stations/ChestFreezer';
 import {ChoppingBlock} from './stations/ChoppingBlock';
@@ -30,37 +35,68 @@ export function GameScene() {
   const world = useWorld(0, -9.8, 0);
   const gamePhase = useGameStore(s => s.gamePhase);
 
+  // Camera look state — mutated by touch controls
+  const yawRef = useRef(0);
+  const pitchRef = useRef(-0.05);
+  // Movement state
+  const moveXRef = useRef(0);
+  const moveZRef = useRef(0);
+
+  const handleLook = useCallback((dx: number, dy: number) => {
+    yawRef.current -= dx * 0.004;
+    pitchRef.current = Math.max(-1.4, Math.min(1.4, pitchRef.current - dy * 0.004));
+  }, []);
+
+  const handleMove = useCallback((x: number, z: number) => {
+    moveXRef.current = x;
+    moveZRef.current = z;
+  }, []);
+
+  const handleMoveEnd = useCallback(() => {
+    moveXRef.current = 0;
+    moveZRef.current = 0;
+  }, []);
+
   const onFrame: RenderCallback = useCallback(() => {
     'worklet';
-    // Physics step will go here once player movement is wired
+    // Physics stepping + camera updates will happen here
+    // when we wire the player body velocity from moveX/moveZ
   }, []);
 
   return (
-    <FilamentScene>
-      <FilamentView style={styles.scene} renderCallback={onFrame}>
-        {/* Lighting */}
-        <KitchenLighting />
+    <View style={styles.container}>
+      {/* Layer 1: 3D Filament scene */}
+      <FilamentScene>
+        <FilamentView style={StyleSheet.absoluteFill} renderCallback={onFrame}>
+          <KitchenLighting />
+          <PlayerController world={world} />
+          <Kitchen world={world} />
+          <ChestFreezer world={world} />
+          <ChoppingBlock world={world} />
+          <Grinder world={world} />
+          <Stuffer world={world} />
+          <BlowoutStation world={world} />
+          <Stove world={world} />
+          <Sink world={world} />
+          <TV world={world} />
+        </FilamentView>
+      </FilamentScene>
 
-        {/* Player — FPS camera + Bullet capsule */}
-        <PlayerController world={world} />
+      {/* Layer 2: Diegetic text — blood text showing game state */}
+      <SurrealText />
 
-        {/* Kitchen environment — furniture + horror props + wall colliders */}
-        <Kitchen world={world} />
-
-        {/* All 7 game stations + TV */}
-        <ChestFreezer world={world} />
-        <ChoppingBlock world={world} />
-        <Grinder world={world} />
-        <Stuffer world={world} />
-        <BlowoutStation world={world} />
-        <Stove world={world} />
-        <Sink world={world} />
-        <TV world={world} />
-      </FilamentView>
-    </FilamentScene>
+      {/* Layer 3: Invisible touch controls */}
+      <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+        <TouchControls
+          onLook={handleLook}
+          onMove={handleMove}
+          onMoveEnd={handleMoveEnd}
+        />
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  scene: {flex: 1, backgroundColor: '#000'},
+  container: {flex: 1, backgroundColor: '#000'},
 });

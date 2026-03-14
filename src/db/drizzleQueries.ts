@@ -1,152 +1,60 @@
 /**
  * @module db/drizzleQueries
- * Drizzle ORM query functions for Will It Blow? SQLite persistence.
- *
- * These functions require a live SQLite connection (native only).
- * On web or when SQLite is unavailable, getDb() returns null
- * and these functions gracefully return defaults.
+ * Drizzle ORM query functions — native SQLite via op-sqlite.
  */
 import {eq} from 'drizzle-orm';
 import {getDb} from './client';
 import {gameSession, settings, usedCombos} from './schema';
 
-// ---------------------------------------------------------------------------
-// Session management
-// ---------------------------------------------------------------------------
-
-/** Hydrate the latest incomplete session, or null if none exists. */
 export async function hydrateSession() {
-  let db: ReturnType<typeof getDb>;
-  try {
-    db = getDb();
-  } catch {
-    return null;
-  }
-  try {
-    const rows = db.select().from(gameSession).where(eq(gameSession.rank, '')).limit(1).all();
-    return rows.length > 0 ? rows[0] : null;
-  } catch {
-    return null;
-  }
+  const db = getDb();
+  const rows = await db.select().from(gameSession).where(eq(gameSession.rank, '')).limit(1);
+  return rows.length > 0 ? rows[0] : null;
 }
 
-/** Persist (insert or update) a game session. Returns the session ID. */
 export async function persistSession(data: {
   id?: number;
   difficulty: string;
   finalScore?: number;
   rank?: string;
 }): Promise<number | null> {
-  let db: ReturnType<typeof getDb>;
-  try {
-    db = getDb();
-  } catch {
-    return null;
+  const db = getDb();
+  if (data.id) {
+    await db
+      .update(gameSession)
+      .set({completedAt: new Date(), finalScore: data.finalScore ?? null, rank: data.rank ?? null})
+      .where(eq(gameSession.id, data.id));
+    return data.id;
   }
-  try {
-    if (data.id) {
-      db.update(gameSession)
-        .set({
-          completedAt: new Date(),
-          finalScore: data.finalScore ?? null,
-          rank: data.rank ?? null,
-        })
-        .where(eq(gameSession.id, data.id))
-        .run();
-      return data.id;
-    }
-    const result = db
-      .insert(gameSession)
-      .values({
-        startedAt: new Date(),
-        difficulty: data.difficulty,
-        finalScore: data.finalScore ?? null,
-        rank: data.rank ?? null,
-      })
-      .run();
-    return Number(result.lastInsertRowId) || null;
-  } catch {
-    return null;
-  }
+  const result = await db
+    .insert(gameSession)
+    .values({startedAt: new Date(), difficulty: data.difficulty, finalScore: data.finalScore ?? null, rank: data.rank ?? null});
+  return null; // op-sqlite doesn't return lastInsertRowId via Drizzle the same way
 }
 
-// ---------------------------------------------------------------------------
-// Settings
-// ---------------------------------------------------------------------------
-
-/** Save a setting by key. */
 export async function saveSettings(key: string, value: string): Promise<void> {
-  let db: ReturnType<typeof getDb>;
-  try {
-    db = getDb();
-  } catch {
-    return;
-  }
-  try {
-    // Upsert: try insert, on conflict update
-    const existing = db.select().from(settings).where(eq(settings.key, key)).all();
-    if (existing.length > 0) {
-      db.update(settings).set({value}).where(eq(settings.key, key)).run();
-    } else {
-      db.insert(settings).values({key, value}).run();
-    }
-  } catch {
-    // Settings persistence is non-critical
+  const db = getDb();
+  const existing = await db.select().from(settings).where(eq(settings.key, key));
+  if (existing.length > 0) {
+    await db.update(settings).set({value}).where(eq(settings.key, key));
+  } else {
+    await db.insert(settings).values({key, value});
   }
 }
 
-/** Load a setting by key. Returns null if not found. */
 export async function loadSettings(key: string): Promise<string | null> {
-  let db: ReturnType<typeof getDb>;
-  try {
-    db = getDb();
-  } catch {
-    return null;
-  }
-  try {
-    const rows = db.select().from(settings).where(eq(settings.key, key)).all();
-    return rows.length > 0 ? rows[0].value : null;
-  } catch {
-    return null;
-  }
+  const db = getDb();
+  const rows = await db.select().from(settings).where(eq(settings.key, key));
+  return rows.length > 0 ? rows[0].value : null;
 }
 
-// ---------------------------------------------------------------------------
-// Combo tracking
-// ---------------------------------------------------------------------------
-
-/** Record an ingredient combo used in a session round. */
 export async function recordCombo(sessionId: number, combo: string[]): Promise<void> {
-  let db: ReturnType<typeof getDb>;
-  try {
-    db = getDb();
-  } catch {
-    return;
-  }
-  try {
-    db.insert(usedCombos)
-      .values({
-        sessionId,
-        ingredientCombo: combo,
-      })
-      .run();
-  } catch {
-    // Non-critical
-  }
+  const db = getDb();
+  await db.insert(usedCombos).values({sessionId, ingredientCombo: combo});
 }
 
-/** Get all ingredient combos used in a session. */
 export async function getUsedCombos(sessionId: number): Promise<string[][]> {
-  let db: ReturnType<typeof getDb>;
-  try {
-    db = getDb();
-  } catch {
-    return [];
-  }
-  try {
-    const rows = db.select().from(usedCombos).where(eq(usedCombos.sessionId, sessionId)).all();
-    return rows.map(r => r.ingredientCombo);
-  } catch {
-    return [];
-  }
+  const db = getDb();
+  const rows = await db.select().from(usedCombos).where(eq(usedCombos.sessionId, sessionId));
+  return rows.map(r => r.ingredientCombo);
 }
