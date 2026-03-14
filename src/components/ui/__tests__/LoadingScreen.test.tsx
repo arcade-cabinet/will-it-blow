@@ -40,20 +40,20 @@ describe('LoadingScreen', () => {
     expect(source).toContain('#FF1744');
   });
 
-  it('has accessibilityRole="progressbar"', () => {
+  it('has role="progressbar"', () => {
     const source = require('node:fs').readFileSync(
       require('node:path').resolve(__dirname, '../LoadingScreen.tsx'),
       'utf8',
     );
-    expect(source).toContain('accessibilityRole="progressbar"');
+    expect(source).toContain('role="progressbar"');
   });
 
-  it('has accessibilityValue on progress', () => {
+  it('has aria-valuenow on progress', () => {
     const source = require('node:fs').readFileSync(
       require('node:path').resolve(__dirname, '../LoadingScreen.tsx'),
       'utf8',
     );
-    expect(source).toContain('accessibilityValue=');
+    expect(source).toContain('aria-valuenow=');
   });
 
   it('calls onReady after 500ms when progress reaches 100', () => {

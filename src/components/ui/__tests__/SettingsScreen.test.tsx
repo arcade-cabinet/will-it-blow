@@ -56,9 +56,10 @@ describe('SettingsScreen', () => {
       require('node:path').resolve(__dirname, '../SettingsScreen.tsx'),
       'utf8',
     );
-    expect(source).toContain('accessibilityRole="header"');
-    expect(source).toContain('accessibilityRole="button"');
-    expect(source).toContain('accessibilityRole="switch"');
-    expect(source).toContain('accessibilityRole="adjustable"');
+    // Web HTML uses semantic elements and ARIA roles instead of RN accessibilityRole
+    expect(source).toContain('<h2');          // implicit heading role
+    expect(source).toContain('<button');      // implicit button role
+    expect(source).toContain('role="switch"');
+    expect(source).toContain('aria-label=');  // adjustable sliders use aria-label
   });
 });

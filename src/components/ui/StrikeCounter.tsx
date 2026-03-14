@@ -23,7 +23,7 @@ export function StrikeCounter({strikes, maxStrikes = 3}: StrikeCounterProps) {
         <span
           key={i}
           style={{...styles.strike, ...(i < strikes ? styles.used : styles.unused)}}
-          title={i < strikes ? `Strike ${i + 1} used` : `Strike ${i + 1} remaining`}
+          aria-label={i < strikes ? `Strike ${i + 1} used` : `Strike ${i + 1} remaining`}
         >
           {i < strikes ? '\u2715' : '\u25CB'}
         </span>
