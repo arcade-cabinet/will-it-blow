@@ -9,6 +9,7 @@ import {ActivityIndicator, StyleSheet, View} from 'react-native';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {TitleScreen} from './src/components/ui/TitleScreen';
 import {useGameStore} from './src/ecs/hooks';
+import {usePersistence} from './src/db/usePersistence';
 import {GameOrchestrator} from './src/engine/GameOrchestrator';
 
 const LazyGameScene = React.lazy(() =>
@@ -17,6 +18,7 @@ const LazyGameScene = React.lazy(() =>
 
 export default function App() {
   const appPhase = useGameStore(state => state.appPhase);
+  usePersistence();
 
   return (
     <GestureHandlerRootView style={styles.container}>
