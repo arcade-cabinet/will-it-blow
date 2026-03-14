@@ -1,15 +1,23 @@
 /**
  * @module usePersistence
- * Wires Koota ECS state to op-sqlite persistence.
- * Auto-saves when rounds complete. Hydrates on app start.
+ * Hooks that connect Koota ECS state to expo-sqlite persistence.
+ *
+ * - Auto-saves session when a round completes (gamePhase === 'DONE')
+ * - Hydrates session on app start
+ * - Persists settings changes
  */
 
 import {useEffect, useRef} from 'react';
 import {useGameStore} from '../ecs/hooks';
-import {persistSession} from './drizzleQueries';
+import {hydrateSession, loadSettings, persistSession, saveSettings} from './drizzleQueries';
 
+/** Session ID for the current game (null if not yet persisted). */
 let currentSessionId: number | null = null;
 
+/**
+ * Call once at app level. Hydrates the last session on mount,
+ * auto-persists when rounds complete.
+ */
 export function usePersistence() {
   const gamePhase = useGameStore(s => s.gamePhase);
   const appPhase = useGameStore(s => s.appPhase);
@@ -17,12 +25,23 @@ export function usePersistence() {
   const difficulty = useGameStore(s => s.difficulty);
   const prevPhaseRef = useRef(gamePhase);
 
+  // Hydrate on mount
+  useEffect(() => {
+    (async () => {
+      const session = await hydrateSession();
+      if (session) {
+        currentSessionId = session.id;
+      }
+    })();
+  }, []);
+
   // Create session when game starts
   useEffect(() => {
     if (appPhase === 'playing' && !currentSessionId) {
-      persistSession({difficulty}).then(id => {
+      (async () => {
+        const id = await persistSession({difficulty});
         currentSessionId = id;
-      });
+      })();
     }
     if (appPhase === 'title') {
       currentSessionId = null;
@@ -54,4 +73,14 @@ export function usePersistence() {
     }
     prevPhaseRef.current = gamePhase;
   }, [gamePhase, finalScore, difficulty]);
+}
+
+/** Save a setting value (fire-and-forget). */
+export function persistSetting(key: string, value: string) {
+  saveSettings(key, value);
+}
+
+/** Load a setting value. */
+export async function loadSetting(key: string): Promise<string | null> {
+  return loadSettings(key);
 }
