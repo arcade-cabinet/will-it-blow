@@ -1,4 +1,7 @@
-import {getAssetUrl} from './assetUrl';
+/** Simple asset path builder — on native, paths are resolved via require() at the component level. */
+function getAssetUrl(dir: string, file: string): string {
+  return `/${dir}/${file}`;
+}
 
 export type IngredientCategory = 'food' | 'weird' | 'trash';
 

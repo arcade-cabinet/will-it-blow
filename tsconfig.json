@@ -17,6 +17,7 @@
     "jest.config.js",
     "babel.config.js",
     "metro.config.js",
-    "scripts"
+    "scripts",
+    "docs/port-reference"
   ]
 }

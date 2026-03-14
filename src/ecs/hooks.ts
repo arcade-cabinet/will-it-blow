@@ -11,7 +11,7 @@
  * via the module-level singleton world.
  */
 import {useSyncExternalStore} from 'react';
-import type {Reaction} from '../components/characters/reactions';
+import type {Reaction} from '../characters/reactions';
 import {calculateDemandBonus} from '../engine/DemandScoring';
 import {ecsWorld, onWorldReset} from './kootaWorld';
 import {

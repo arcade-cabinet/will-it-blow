@@ -1,17 +1,14 @@
 module.exports = {
   preset: 'react-native',
   setupFiles: ['./jest.setup.js'],
-  testPathIgnorePatterns: ['/node_modules/', '/e2e/', '/.claude/'],
+  testPathIgnorePatterns: ['/node_modules/', '/e2e/', '/.claude/', '/.maestro/', '/docs/'],
   transformIgnorePatterns: [
-    'node_modules/(?!(.pnpm|react-native|@react-native|@react-native-async-storage|expo|@expo|babel-preset-expo|three|@react-three|zustand|three-mesh-bvh|tsl-textures|maath|postprocessing|miniplex|miniplex-react)/)',
+    'node_modules/(?!(.pnpm|react-native|@react-native|@react-native-async-storage|expo|@expo|babel-preset-expo|koota)/)',
   ],
   moduleNameMapper: {
-    '^three/webgpu$': '<rootDir>/__mocks__/three_webgpu.js',
-    '^three/tsl$': '<rootDir>/__mocks__/three_tsl.js',
+    '^react-native-filament$': '<rootDir>/__mocks__/react-native-filament.js',
+    '^react-native-worklets-core$': '<rootDir>/__mocks__/react-native-worklets-core.js',
     '.*/engine/AudioEngine$': '<rootDir>/__mocks__/AudioEngine.js',
-    '^@shopify/react-native-skia$': '<rootDir>/__mocks__/react-native-skia.js',
-    '^expo-keep-awake$': '<rootDir>/__mocks__/expo-keep-awake.js',
-    '^@react-three/postprocessing$': '<rootDir>/__mocks__/postprocessing.js',
-    '^postprocessing$': '<rootDir>/__mocks__/postprocessing.js',
+    '.*/audio/AudioEngine$': '<rootDir>/__mocks__/AudioEngine.js',
   },
 };
