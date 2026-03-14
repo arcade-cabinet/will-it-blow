@@ -1,16 +1,13 @@
 import {Box, Cylinder, useTexture} from '@react-three/drei';
-import {useFrame, useThree} from '@react-three/fiber';
+import {useFrame} from '@react-three/fiber';
 import {RigidBody} from '@react-three/rapier';
 import {useDrag} from '@use-gesture/react';
 import {useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
 import {useGameStore} from '../../ecs/hooks';
+import {audioEngine} from '../../engine/AudioEngine';
 
 class SquigglyCurve extends THREE.Curve<THREE.Vector3> {
-  constructor() {
-    super();
-  }
-
   getPoint(t: number, target = new THREE.Vector3()) {
     return target.set(
       Math.sin(t * 20) * 0.15,
@@ -94,6 +91,7 @@ export function Stuffer() {
 
     const newLevel = Math.max(0, Math.min(1.0, stuffLevel + my * 0.002));
     setStuffLevel(newLevel);
+    audioEngine.playSound('squelch');
 
     if (crankRef.current) {
       crankRef.current.rotation.x = -newLevel * Math.PI * 10;

@@ -101,7 +101,7 @@ export function PhysicsFreezerChest() {
 }
 
 // Individual draggable ingredient component
-function FreezerIngredient({def, miscNodes, frostMat}: any) {
+function FreezerIngredient({def, miscNodes, frostMat: _frostMat}: any) {
   const gltf = useGLTF(def.path) as any;
   const ref = useRef<any>(null);
   const [isGrabbed, setIsGrabbed] = useState(false);

@@ -34,6 +34,7 @@ import {DialogueOverlay} from './src/components/ui/DialogueOverlay';
 import {TitleScreen} from './src/components/ui/TitleScreen';
 import {INTRO_DIALOGUE} from './src/data/dialogue/intro';
 import {VERDICT_A, VERDICT_B, VERDICT_F, VERDICT_S} from './src/data/dialogue/verdict';
+import {usePersistence} from './src/db/usePersistence';
 import {useGameStore} from './src/ecs/hooks';
 import {GameOrchestrator} from './src/engine/GameOrchestrator';
 import {FPSCamera} from './src/player/FPSCamera';
@@ -198,6 +199,7 @@ function UILayer() {
 
 export default function App() {
   const appPhase = useGameStore(state => state.appPhase);
+  usePersistence();
 
   return (
     <View style={styles.container}>
