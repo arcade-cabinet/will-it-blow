@@ -29,7 +29,7 @@ export function Sausage({
   fatRatio = 0.5,
   greaseLevel = 0.8,
 }: SausageProps) {
-  const {world} = useRapier();
+  const {world, rapier: RAPIER} = useRapier();
   const groupRef = useRef<THREE.Group>(null);
 
   const gamePhase = useGameStore(state => state.gamePhase);
@@ -89,9 +89,8 @@ export function Sausage({
   const [bodies, setBodies] = useState<any[]>([]);
 
   useEffect(() => {
-    if (!world) return;
+    if (!world || !RAPIER) return;
     const newBodies: any[] = [];
-    const RAPIER = (window as any).RAPIER || require('@dimforge/rapier3d-compat');
 
     for (let i = 0; i < numBones; i++) {
       // Initially, hide bodies high up until extruded
@@ -111,7 +110,7 @@ export function Sausage({
     return () => {
       for (const b of newBodies) world.removeRigidBody(b);
     };
-  }, [world, numBones]);
+  }, [world, RAPIER, numBones]);
 
   // Reset extrusion states if game phase changes backwards
   useEffect(() => {
