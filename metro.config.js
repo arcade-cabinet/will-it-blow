@@ -1,43 +1,31 @@
+const path = require('path');
 const {getDefaultConfig} = require('expo/metro-config');
 
 const config = getDefaultConfig(__dirname);
 
+// Asset extensions: GLB models, textures, fonts
+config.resolver.assetExts.push('glb', 'gltf', 'png', 'jpg', 'ttf', 'woff', 'woff2');
+
+// three/tsl and three/webgpu are subpath exports that Metro can't resolve
+// via package.json `exports` field. Map them to the actual build files.
+// NOTE: Do NOT redirect bare `three` to three/webgpu — that build includes
+// TSL NodeMaterial code that crashes on Hermes. Use standard three import
+// and let react-native-wgpu provide the WebGPU surface at the native layer.
 const originalResolveRequest = config.resolver.resolveRequest;
 
-// Ensure native imports of `three` use the WebGPU entry point.
 config.resolver.resolveRequest = (context, moduleName, platform) => {
-  const isNativePlatform = platform === 'ios' || platform === 'android' || platform === 'native';
-
-  if (isNativePlatform && (moduleName === 'three' || moduleName.startsWith('three/'))) {
-    const webgpuModuleName = moduleName.replace(/^three(\/)?/, 'three/webgpu$1');
-
-    if (typeof originalResolveRequest === 'function') {
-      return originalResolveRequest(context, webgpuModuleName, platform);
-    }
-
-    return context.resolveRequest(context, webgpuModuleName, platform);
+  // Explicit aliases for three/* sub-paths that Metro can't resolve
+  if (moduleName === 'three/tsl') {
+    return {type: 'sourceFile', filePath: path.resolve(__dirname, 'node_modules/three/build/three.tsl.js')};
+  }
+  if (moduleName === 'three/webgpu') {
+    return {type: 'sourceFile', filePath: path.resolve(__dirname, 'node_modules/three/build/three.webgpu.js')};
   }
 
   if (typeof originalResolveRequest === 'function') {
     return originalResolveRequest(context, moduleName, platform);
   }
-
   return context.resolveRequest(context, moduleName, platform);
-};
-
-// Asset extensions: GLB models, WASM (expo-sqlite), textures, fonts
-config.resolver.assetExts.push('glb', 'gltf', 'png', 'jpg', 'ttf', 'woff', 'woff2', 'wasm');
-
-// Remove wasm from sourceExts if present (it's a binary asset, not source)
-config.resolver.sourceExts = config.resolver.sourceExts.filter(ext => ext !== 'wasm');
-
-// Add COEP and COOP headers to enable SharedArrayBuffer for expo-sqlite WASM
-config.server.enhanceMiddleware = middleware => {
-  return (req, res, next) => {
-    res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
-    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-    middleware(req, res, next);
-  };
 };
 
 module.exports = config;

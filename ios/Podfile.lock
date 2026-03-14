@@ -48,6 +48,8 @@ PODS:
     - ExpoModulesCore
   - ExpoLinearGradient (55.0.8):
     - ExpoModulesCore
+  - ExpoLinking (55.0.7):
+    - ExpoModulesCore
   - ExpoLogBox (55.0.7):
     - React-Core
   - ExpoModulesCore (55.0.14):
@@ -2181,6 +2183,7 @@ DEPENDENCIES:
   - "ExpoHaptics (from `../node_modules/.pnpm/expo-haptics@55.0.8_expo@55.0.5/node_modules/expo-haptics/ios`)"
   - "ExpoKeepAwake (from `../node_modules/.pnpm/expo-keep-awake@55.0.4_expo@55.0.5_react@19.2.0/node_modules/expo-keep-awake/ios`)"
   - "ExpoLinearGradient (from `../node_modules/.pnpm/expo-linear-gradient@55.0.8_expo@55.0.5_react-native@0.83.2_@babel+core@7.29.0_@react-n_6dce0b781f8cc04e6377267725f60a07/node_modules/expo-linear-gradient/ios`)"
+  - "ExpoLinking (from `../node_modules/.pnpm/expo-linking@55.0.7_expo@55.0.5_react-native@0.83.2_@babel+core@7.29.0_@react-native-co_5cf68bc8e2f745e6cc03f9b8c3948943/node_modules/expo-linking/ios`)"
   - "ExpoLogBox (from `../node_modules/.pnpm/@expo+log-box@55.0.7_@expo+dom-webview@55.0.3_expo@55.0.5_react-native@0.83.2_@babel+co_5dccb095114dab16c9c36fab7c924818/node_modules/@expo/log-box`)"
   - "ExpoModulesCore (from `../node_modules/.pnpm/expo-modules-core@55.0.14_react-native@0.83.2_@babel+core@7.29.0_@react-native-communit_44e0d797ab65cc17c499e7b5cc9e0eb3/node_modules/expo-modules-core`)"
   - "ExpoModulesJSI (from `../node_modules/.pnpm/expo-modules-core@55.0.14_react-native@0.83.2_@babel+core@7.29.0_@react-native-communit_44e0d797ab65cc17c499e7b5cc9e0eb3/node_modules/expo-modules-core`)"
@@ -2294,6 +2297,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/.pnpm/expo-keep-awake@55.0.4_expo@55.0.5_react@19.2.0/node_modules/expo-keep-awake/ios"
   ExpoLinearGradient:
     :path: "../node_modules/.pnpm/expo-linear-gradient@55.0.8_expo@55.0.5_react-native@0.83.2_@babel+core@7.29.0_@react-n_6dce0b781f8cc04e6377267725f60a07/node_modules/expo-linear-gradient/ios"
+  ExpoLinking:
+    :path: "../node_modules/.pnpm/expo-linking@55.0.7_expo@55.0.5_react-native@0.83.2_@babel+core@7.29.0_@react-native-co_5cf68bc8e2f745e6cc03f9b8c3948943/node_modules/expo-linking/ios"
   ExpoLogBox:
     :path: "../node_modules/.pnpm/@expo+log-box@55.0.7_@expo+dom-webview@55.0.3_expo@55.0.5_react-native@0.83.2_@babel+co_5dccb095114dab16c9c36fab7c924818/node_modules/@expo/log-box"
   ExpoModulesCore:
@@ -2481,6 +2486,7 @@ SPEC CHECKSUMS:
   ExpoHaptics: 8952528daeafbb20d147c33f8cc6ab648cd34c58
   ExpoKeepAwake: 7f3b28c361c37389b18841bb52a58003b39fcb33
   ExpoLinearGradient: 499856f296f83c05279d18447bdb57ab0e06d294
+  ExpoLinking: 88ba36a28c83525e564b8229e02d451347accb70
   ExpoLogBox: 89b634d5a8a64c4a6a7caad8f9985a28463c7002
   ExpoModulesCore: a57a0a1e39caa9ad5f76c8477b831ee32fbeddfc
   ExpoModulesJSI: a554588f3260ee3c44a3e7f4a8151c2b9ffdb024
