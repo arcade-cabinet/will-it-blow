@@ -6,8 +6,7 @@
  * a visual "PERMADEATH LINE" separator between the safe tiers (Rare, Medium Rare,
  * Medium) and the brutal ones (Medium Well, Well Done).
  *
- * Each button shows the tier name, tinted by its color. Follows the butcher-shop
- * dark theme and Bangers font from SettingsScreen.
+ * Styled with Tailwind CSS + DaisyUI components.
  */
 
 import {DIFFICULTY_TIERS} from '../../engine/DifficultyConfig';
@@ -25,175 +24,53 @@ const brutalTiers = DIFFICULTY_TIERS.filter(t => t.permadeath);
 
 export function DifficultySelector({onSelect, onBack}: DifficultySelectorProps) {
   return (
-    <>
-      <style>{`
-        .tier-btn:hover .tier-circle {
-          border-color: #FF1744 !important;
-        }
-        .tier-btn:active .tier-circle {
-          opacity: 0.7;
-          border-color: #FF1744 !important;
-        }
-        .diff-back-btn:hover {
-          opacity: 0.8;
-        }
-      `}</style>
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: '#0a0a0a',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          paddingLeft: 24,
-          paddingRight: 24,
-        }}
+    <div className="fixed inset-0 bg-[#0a0a0a] flex justify-center items-center px-6">
+      <section
+        className="bg-[#1a0a00] border-4 border-[#8B4513] p-6 w-full max-w-[420px]"
+        aria-label="Difficulty selection"
       >
-        <section
-          style={{
-            backgroundColor: '#1a0a00',
-            border: '4px solid #8B4513',
-            padding: 24,
-            width: '100%',
-            maxWidth: 420,
-          }}
-          aria-label="Difficulty selection"
-        >
-          <h2
-            style={{
-              fontFamily: 'Bangers',
-              fontSize: 28,
-              color: '#FF1744',
-              textAlign: 'center',
-              letterSpacing: 3,
-              textShadow: '0 0 12px rgba(255, 23, 68, 0.4)',
-              margin: 0,
-            }}
+        <h2 className="font-[Bangers] text-[28px] text-[#FF1744] text-center tracking-[3px] drop-shadow-[0_0_12px_rgba(255,23,68,0.4)] m-0">
+          CHOOSE YOUR DONENESS
+        </h2>
+        <div className="h-0.5 bg-[#D2A24C] my-4 opacity-50" />
+
+        {/* Safe tiers row */}
+        <div className="flex flex-row justify-center gap-4 my-2">
+          {safeTiers.map(tier => (
+            <TierButton key={tier.id} tier={tier} onPress={() => onSelect(tier.id)} />
+          ))}
+        </div>
+
+        {/* Permadeath line separator */}
+        <div className="flex flex-row items-center my-3 gap-2">
+          <div className="flex-1 h-px bg-[#FF1744] opacity-60" />
+          <span className="font-[Bangers] text-xs text-[#FF1744] tracking-[3px] opacity-80">
+            PERMADEATH
+          </span>
+          <div className="flex-1 h-px bg-[#FF1744] opacity-60" />
+        </div>
+
+        {/* Brutal tiers row */}
+        <div className="flex flex-row justify-center gap-4 my-2">
+          {brutalTiers.map(tier => (
+            <TierButton key={tier.id} tier={tier} onPress={() => onSelect(tier.id)} />
+          ))}
+        </div>
+
+        <div className="h-0.5 bg-[#D2A24C] my-4 opacity-50" />
+
+        <div className="flex justify-center">
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label="Back to main menu"
+            className="btn btn-ghost font-[Bangers] text-[22px] text-[#CCBBAA] tracking-wider hover:opacity-80"
           >
-            CHOOSE YOUR DONENESS
-          </h2>
-          <div
-            style={{
-              height: 2,
-              backgroundColor: '#D2A24C',
-              marginTop: 16,
-              marginBottom: 16,
-              opacity: 0.5,
-            }}
-          />
-
-          {/* Safe tiers row */}
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'row',
-              justifyContent: 'center',
-              gap: 16,
-              marginTop: 8,
-              marginBottom: 8,
-            }}
-          >
-            {safeTiers.map(tier => (
-              <TierButton key={tier.id} tier={tier} onPress={() => onSelect(tier.id)} />
-            ))}
-          </div>
-
-          {/* Permadeath line separator */}
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'row',
-              alignItems: 'center',
-              marginTop: 12,
-              marginBottom: 12,
-              gap: 8,
-            }}
-          >
-            <div
-              style={{
-                flex: 1,
-                height: 1,
-                backgroundColor: '#FF1744',
-                opacity: 0.6,
-              }}
-            />
-            <span
-              style={{
-                fontFamily: 'Bangers',
-                fontSize: 12,
-                color: '#FF1744',
-                letterSpacing: 3,
-                opacity: 0.8,
-              }}
-            >
-              PERMADEATH
-            </span>
-            <div
-              style={{
-                flex: 1,
-                height: 1,
-                backgroundColor: '#FF1744',
-                opacity: 0.6,
-              }}
-            />
-          </div>
-
-          {/* Brutal tiers row */}
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'row',
-              justifyContent: 'center',
-              gap: 16,
-              marginTop: 8,
-              marginBottom: 8,
-            }}
-          >
-            {brutalTiers.map(tier => (
-              <TierButton key={tier.id} tier={tier} onPress={() => onSelect(tier.id)} />
-            ))}
-          </div>
-
-          <div
-            style={{
-              height: 2,
-              backgroundColor: '#D2A24C',
-              marginTop: 16,
-              marginBottom: 16,
-              opacity: 0.5,
-            }}
-          />
-
-          <div style={{display: 'flex', justifyContent: 'center'}}>
-            <button
-              type="button"
-              className="diff-back-btn"
-              onClick={onBack}
-              aria-label="Back to main menu"
-              style={{
-                background: 'none',
-                border: 'none',
-                paddingTop: 10,
-                paddingBottom: 10,
-                paddingLeft: 24,
-                paddingRight: 24,
-                cursor: 'pointer',
-                fontFamily: 'Bangers',
-                fontSize: 22,
-                color: '#CCBBAA',
-                letterSpacing: 2,
-              }}
-            >
-              {'\u25C0'} BACK
-            </button>
-          </div>
-        </section>
-      </div>
-    </>
+            {'\u25C0'} BACK
+          </button>
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -209,53 +86,21 @@ function TierButton({
   return (
     <button
       type="button"
-      className="tier-btn"
       onClick={onPress}
       aria-label={`${tier.name} difficulty, ${strikeText}${tier.permadeath ? ', permadeath' : ''}`}
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        width: 100,
-        paddingTop: 12,
-        paddingBottom: 12,
-        background: 'none',
-        border: 'none',
-        cursor: 'pointer',
-      }}
+      className="group btn btn-ghost flex flex-col items-center w-[100px] py-3 h-auto"
     >
       <div
-        className="tier-circle"
-        style={{
-          width: 48,
-          height: 48,
-          borderRadius: 24,
-          border: '2px solid #555',
-          marginBottom: 8,
-          backgroundColor: tier.color,
-          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.6)',
-        }}
+        className="w-12 h-12 rounded-full border-2 border-[#555] mb-2 shadow-[0_2px_4px_rgba(0,0,0,0.6)] group-hover:border-[#FF1744] group-active:opacity-70 group-active:border-[#FF1744] transition-colors"
+        style={{backgroundColor: tier.color}}
       />
       <span
-        style={{
-          fontFamily: 'Bangers',
-          fontSize: 14,
-          letterSpacing: 1,
-          textAlign: 'center',
-          color: tier.color,
-        }}
+        className="font-[Bangers] text-sm tracking-wide text-center"
+        style={{color: tier.color}}
       >
         {tier.name}
       </span>
-      <span
-        style={{
-          fontFamily: 'Bangers',
-          fontSize: 11,
-          color: '#666',
-          letterSpacing: 1,
-          marginTop: 2,
-        }}
-      >
+      <span className="font-[Bangers] text-[11px] text-[#666] tracking-wide mt-0.5">
         {strikeText}
       </span>
     </button>

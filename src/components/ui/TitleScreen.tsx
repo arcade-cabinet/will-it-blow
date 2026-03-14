@@ -31,193 +31,46 @@ export function TitleScreen() {
   }
 
   return (
-    <>
-      <style>{`
-        @keyframes titleSwing {
-          0% { transform: rotate(-1deg); }
-          50% { transform: rotate(1deg); }
-          100% { transform: rotate(-1deg); }
-        }
-        @keyframes titleFadeIn {
-          from { opacity: 0; transform: translateY(30px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .title-start-btn:hover {
-          opacity: 0.8;
-        }
-        .title-start-btn:active {
-          opacity: 0.7;
-        }
-      `}</style>
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: '#0a0a0a',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          paddingLeft: 24,
-          paddingRight: 24,
-          zIndex: 100,
-          animation: 'titleFadeIn 1s ease-out',
-        }}
-      >
-        {/* Butcher shop sign */}
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            marginBottom: 48,
-            animation: 'titleSwing 6s ease-in-out infinite',
-            transformOrigin: 'top center',
-          }}
-        >
-          {/* Hanging chains */}
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              width: 200,
-              marginBottom: -2,
-            }}
-          >
-            <div
-              style={{
-                width: 3,
-                height: 24,
-                backgroundColor: '#555',
-                borderRadius: 1,
-              }}
-            />
-            <div
-              style={{
-                width: 3,
-                height: 24,
-                backgroundColor: '#555',
-                borderRadius: 1,
-              }}
-            />
-          </div>
-
-          <div
-            style={{
-              backgroundColor: '#1a0a00',
-              border: '4px solid #8B4513',
-              padding: 4,
-              boxShadow: '0 8px 16px rgba(0, 0, 0, 0.8)',
-            }}
-          >
-            {/* Outer border */}
-            <div
-              style={{
-                border: '2px solid #D2A24C',
-                paddingTop: 20,
-                paddingBottom: 20,
-                paddingLeft: 32,
-                paddingRight: 32,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-              }}
-            >
-              <span
-                style={{
-                  fontSize: 14,
-                  color: '#D2A24C',
-                  letterSpacing: 4,
-                  marginBottom: 4,
-                }}
-              >
-                Est. 1974
-              </span>
-              <h1
-                style={{
-                  fontSize: 48,
-                  fontWeight: 900,
-                  color: '#FF1744',
-                  textAlign: 'center',
-                  lineHeight: '52px',
-                  letterSpacing: 2,
-                  textShadow: '0 0 16px rgba(255, 23, 68, 0.4)',
-                  margin: 0,
-                  whiteSpace: 'pre-line',
-                }}
-              >
-                {'WILL IT\nBLOW?'}
-              </h1>
-              <div
-                style={{
-                  width: 120,
-                  height: 2,
-                  backgroundColor: '#D2A24C',
-                  marginTop: 12,
-                  marginBottom: 12,
-                }}
-              />
-              <span
-                style={{
-                  fontSize: 16,
-                  color: '#D2A24C',
-                  letterSpacing: 3,
-                }}
-              >
-                Fine Meats &amp; Sausages
-              </span>
-            </div>
-          </div>
+    <div className="fixed inset-0 bg-[#0a0a0a] flex flex-col items-center justify-center px-6 z-50 animate-[fadeInUp_1s_ease-out]">
+      {/* Butcher shop sign */}
+      <div className="flex flex-col items-center mb-12 animate-[swing_6s_ease-in-out_infinite] origin-top">
+        {/* Hanging chains */}
+        <div className="flex flex-row justify-between w-[200px] -mb-0.5">
+          <div className="w-[3px] h-6 bg-[#555] rounded-sm" />
+          <div className="w-[3px] h-6 bg-[#555] rounded-sm" />
         </div>
 
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 12,
-          }}
-        >
-          <button
-            type="button"
-            className="title-start-btn"
-            onClick={handleStart}
-            style={{
-              backgroundColor: '#D2A24C',
-              paddingTop: 16,
-              paddingBottom: 16,
-              paddingLeft: 32,
-              paddingRight: 32,
-              borderRadius: 8,
-              border: '4px solid #8B4513',
-              color: '#1a0a00',
-              fontSize: 24,
-              fontWeight: 900,
-              letterSpacing: 2,
-              cursor: 'pointer',
-            }}
-          >
-            START COOKING
-          </button>
+        <div className="bg-[#1a0a00] border-4 border-[#8B4513] p-1 shadow-[0_8px_16px_rgba(0,0,0,0.8)]">
+          {/* Outer border */}
+          <div className="border-2 border-[#D2A24C] py-5 px-8 flex flex-col items-center">
+            <span className="text-sm text-[#D2A24C] tracking-[4px] mb-1">
+              Est. 1974
+            </span>
+            <h1 className="text-5xl font-black text-[#FF1744] text-center leading-[52px] tracking-wider m-0 whitespace-pre-line drop-shadow-[0_0_16px_rgba(255,23,68,0.4)]">
+              {'WILL IT\nBLOW?'}
+            </h1>
+            <div className="w-[120px] h-0.5 bg-[#D2A24C] my-3" />
+            <span className="text-base text-[#D2A24C] tracking-[3px]">
+              Fine Meats &amp; Sausages
+            </span>
+          </div>
         </div>
-
-        {/* Footer */}
-        <p
-          style={{
-            fontSize: 12,
-            color: '#3a3a3a',
-            letterSpacing: 3,
-            marginTop: 48,
-            textAlign: 'center',
-          }}
-        >
-          Mr. Sausage's Fine Meats &amp; Sausages
-        </p>
       </div>
-    </>
+
+      <div className="flex flex-col items-center gap-3">
+        <button
+          type="button"
+          onClick={handleStart}
+          className="btn btn-lg bg-[#D2A24C] border-4 border-[#8B4513] text-[#1a0a00] text-2xl font-black tracking-wider hover:bg-[#c4943e] active:opacity-70"
+        >
+          START COOKING
+        </button>
+      </div>
+
+      {/* Footer */}
+      <p className="text-xs text-[#3a3a3a] tracking-[3px] mt-12 text-center">
+        Mr. Sausage's Fine Meats &amp; Sausages
+      </p>
+    </div>
   );
 }
