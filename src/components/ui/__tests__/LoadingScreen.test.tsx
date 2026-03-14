@@ -1,37 +1,26 @@
 import {vi} from 'vitest';
-import renderer, {act} from 'react-test-renderer';
+import {render, act} from '@testing-library/react';
 import {LoadingScreen} from '../LoadingScreen';
 
 describe('LoadingScreen', () => {
   it('renders without crashing', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<LoadingScreen progress={0} onReady={vi.fn()} />);
-    });
-    expect(tree!.toJSON()).toBeTruthy();
+    const {container} = render(<LoadingScreen progress={0} onReady={vi.fn()} />);
+    expect(container.innerHTML).toBeTruthy();
   });
 
   it('displays progress percentage', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<LoadingScreen progress={42} onReady={vi.fn()} />);
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('42');
+    const {container} = render(<LoadingScreen progress={42} onReady={vi.fn()} />);
+    expect(container.textContent).toContain('42');
   });
 
   it('shows horror-themed narrative messages', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<LoadingScreen progress={20} onReady={vi.fn()} />);
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    // Should show one of the narrative messages
+    const {container} = render(<LoadingScreen progress={20} onReady={vi.fn()} />);
+    const text = container.textContent!;
     const hasNarrative =
-      json.includes('PREPARING THE KITCHEN') ||
-      json.includes('SHARPENING KNIVES') ||
-      json.includes('HEATING THE GRINDER') ||
-      json.includes('READY');
+      text.includes('PREPARING THE KITCHEN') ||
+      text.includes('SHARPENING KNIVES') ||
+      text.includes('HEATING THE GRINDER') ||
+      text.includes('READY');
     expect(hasNarrative).toBe(true);
   });
 
@@ -70,10 +59,7 @@ describe('LoadingScreen', () => {
   it('calls onReady after 500ms when progress reaches 100', () => {
     vi.useFakeTimers();
     const onReady = vi.fn();
-    let _tree: renderer.ReactTestRenderer;
-    act(() => {
-      _tree = renderer.create(<LoadingScreen progress={100} onReady={onReady} />);
-    });
+    render(<LoadingScreen progress={100} onReady={onReady} />);
     expect(onReady).not.toHaveBeenCalled();
     act(() => {
       vi.advanceTimersByTime(500);
@@ -85,9 +71,7 @@ describe('LoadingScreen', () => {
   it('does not call onReady when progress is below 100', () => {
     vi.useFakeTimers();
     const onReady = vi.fn();
-    act(() => {
-      renderer.create(<LoadingScreen progress={99} onReady={onReady} />);
-    });
+    render(<LoadingScreen progress={99} onReady={onReady} />);
     act(() => {
       vi.advanceTimersByTime(1000);
     });

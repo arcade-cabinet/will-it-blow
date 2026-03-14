@@ -63,17 +63,16 @@ describe('PlayerCapsule (Spec §9)', () => {
     expect(typeof PlayerCapsule).toBe('function');
   });
 
-  it('spawns at kitchen center (0, 2, 2) — high enough to clear terrain', () => {
-    // SPAWN_POSITION[1]=15 ensures the capsule falls onto terrain rather than
-    // clipping into it. X=8, Z=8 is the Rootmere village center tile.
-    expect(SPAWN_POSITION).toEqual([0, 2, 2]);
+  it('spawns at kitchen position (2, 0, 3) from player.json config', () => {
+    // spawnPosition from src/config/player.json: [2.0, 0, 3.0]
+    expect(SPAWN_POSITION).toEqual([2, 0, 3]);
   });
 
   it('SPAWN_POSITION X/Z match createPlayerEntity ECS spawn (no first-frame desync)', () => {
     // The Rapier body and the ECS player entity must start at the same X/Z so that
     // playerQuery.entities[0].position is correct before the first useFrame runs.
-    expect(SPAWN_POSITION[0]).toBe(0); // X
-    expect(SPAWN_POSITION[2]).toBe(2); // Z
+    expect(SPAWN_POSITION[0]).toBe(2); // X
+    expect(SPAWN_POSITION[2]).toBe(3); // Z
   });
 });
 

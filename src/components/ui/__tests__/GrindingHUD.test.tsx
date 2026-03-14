@@ -1,58 +1,35 @@
-import renderer, {act} from 'react-test-renderer';
+import {render} from '@testing-library/react';
 import {GrindingHUD} from '../GrindingHUD';
 
 describe('GrindingHUD', () => {
   it('renders without crashing', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<GrindingHUD speed={50} progress={30} />);
-    });
-    expect(tree!.toJSON()).toBeTruthy();
+    const {container} = render(<GrindingHUD speed={50} progress={30} />);
+    expect(container.innerHTML).toBeTruthy();
   });
 
   it('displays speed zone indicator', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<GrindingHUD speed={50} progress={30} />);
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('SPEED');
+    const {container} = render(<GrindingHUD speed={50} progress={30} />);
+    expect(container.textContent).toContain('SPEED');
   });
 
   it('displays progress bar', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<GrindingHUD speed={50} progress={75} />);
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('PROGRESS');
+    const {container} = render(<GrindingHUD speed={50} progress={75} />);
+    expect(container.textContent).toContain('PROGRESS');
   });
 
   it('shows slow zone for low speed', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<GrindingHUD speed={15} progress={30} />);
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('SLOW');
+    const {container} = render(<GrindingHUD speed={15} progress={30} />);
+    expect(container.textContent).toContain('SLOW');
   });
 
   it('shows good zone for medium speed', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<GrindingHUD speed={50} progress={30} />);
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('GOOD');
+    const {container} = render(<GrindingHUD speed={50} progress={30} />);
+    expect(container.textContent).toContain('GOOD');
   });
 
   it('shows fast zone for high speed', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<GrindingHUD speed={90} progress={30} />);
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('FAST');
+    const {container} = render(<GrindingHUD speed={90} progress={30} />);
+    expect(container.textContent).toContain('FAST');
   });
 
   it('is a pure presentational component (no store imports)', () => {

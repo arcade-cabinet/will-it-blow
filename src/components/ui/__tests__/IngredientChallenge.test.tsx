@@ -1,5 +1,5 @@
 import {vi} from 'vitest';
-import renderer, {act} from 'react-test-renderer';
+import {render, screen, fireEvent} from '@testing-library/react';
 import {IngredientChallenge} from '../IngredientChallenge';
 
 const mockIngredients = [
@@ -12,94 +12,70 @@ const mockIngredients = [
 
 describe('IngredientChallenge', () => {
   it('renders without crashing', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(
-        <IngredientChallenge
-          ingredients={mockIngredients}
-          requiredCount={3}
-          onComplete={vi.fn()}
-          onStrike={vi.fn()}
-        />,
-      );
-    });
-    expect(tree!.toJSON()).toBeTruthy();
+    const {container} = render(
+      <IngredientChallenge
+        ingredients={mockIngredients}
+        requiredCount={3}
+        onComplete={vi.fn()}
+        onStrike={vi.fn()}
+      />,
+    );
+    expect(container.innerHTML).toBeTruthy();
   });
 
   it('displays available ingredients', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(
-        <IngredientChallenge
-          ingredients={mockIngredients}
-          requiredCount={3}
-          onComplete={vi.fn()}
-          onStrike={vi.fn()}
-        />,
-      );
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('Lobster');
-    expect(json).toContain('Big Mac');
-    expect(json).toContain('SpaghettiOs');
+    const {container} = render(
+      <IngredientChallenge
+        ingredients={mockIngredients}
+        requiredCount={3}
+        onComplete={vi.fn()}
+        onStrike={vi.fn()}
+      />,
+    );
+    const text = container.textContent!;
+    expect(text).toContain('Lobster');
+    expect(text).toContain('Big Mac');
+    expect(text).toContain('SpaghettiOs');
   });
 
   it('shows required count', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(
-        <IngredientChallenge
-          ingredients={mockIngredients}
-          requiredCount={3}
-          onComplete={vi.fn()}
-          onStrike={vi.fn()}
-        />,
-      );
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('3');
+    const {container} = render(
+      <IngredientChallenge
+        ingredients={mockIngredients}
+        requiredCount={3}
+        onComplete={vi.fn()}
+        onStrike={vi.fn()}
+      />,
+    );
+    expect(container.textContent).toContain('3');
   });
 
   it('allows selecting ingredients', () => {
-    const onComplete = vi.fn();
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(
-        <IngredientChallenge
-          ingredients={mockIngredients}
-          requiredCount={3}
-          onComplete={onComplete}
-          onStrike={vi.fn()}
-        />,
-      );
-    });
-    // Find ingredient buttons
-    const root = tree!.root;
-    const ingredientButtons = root.findAllByProps({accessibilityRole: 'button'});
-    expect(ingredientButtons.length).toBeGreaterThan(0);
+    render(
+      <IngredientChallenge
+        ingredients={mockIngredients}
+        requiredCount={3}
+        onComplete={vi.fn()}
+        onStrike={vi.fn()}
+      />,
+    );
+    // Find ingredient buttons by their accessibility label
+    const button = screen.getByLabelText('Select Lobster');
+    expect(button).toBeDefined();
   });
 
   it('calls onComplete with selected IDs when required count is met', () => {
     const onComplete = vi.fn();
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(
-        <IngredientChallenge
-          ingredients={mockIngredients}
-          requiredCount={1}
-          onComplete={onComplete}
-          onStrike={vi.fn()}
-        />,
-      );
-    });
-    const root = tree!.root;
-    const buttons = root.findAllByProps({accessibilityRole: 'button'});
-    // Click the first ingredient
-    if (buttons.length > 0) {
-      act(() => {
-        buttons[0].props.onPress();
-      });
-    }
+    render(
+      <IngredientChallenge
+        ingredients={mockIngredients}
+        requiredCount={1}
+        onComplete={onComplete}
+        onStrike={vi.fn()}
+      />,
+    );
+    const button = screen.getByLabelText('Select Lobster');
+    fireEvent.click(button);
     expect(onComplete).toHaveBeenCalled();
   });
 

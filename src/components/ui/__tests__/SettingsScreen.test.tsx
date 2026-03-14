@@ -1,5 +1,5 @@
 import {vi} from 'vitest';
-import renderer, {act} from 'react-test-renderer';
+import {render, screen, fireEvent} from '@testing-library/react';
 import {SettingsScreen} from '../SettingsScreen';
 
 const defaultProps = {
@@ -14,69 +14,40 @@ const defaultProps = {
 
 describe('SettingsScreen', () => {
   it('renders without crashing', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<SettingsScreen {...defaultProps} />);
-    });
-    expect(tree!.toJSON()).toBeTruthy();
+    const {container} = render(<SettingsScreen {...defaultProps} />);
+    expect(container.innerHTML).toBeTruthy();
   });
 
   it('displays SETTINGS title', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<SettingsScreen {...defaultProps} />);
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('SETTINGS');
+    const {container} = render(<SettingsScreen {...defaultProps} />);
+    expect(container.textContent).toContain('SETTINGS');
   });
 
   it('displays SFX volume', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<SettingsScreen {...defaultProps} />);
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('SFX');
+    const {container} = render(<SettingsScreen {...defaultProps} />);
+    expect(container.textContent).toContain('SFX');
   });
 
   it('displays Music volume', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<SettingsScreen {...defaultProps} />);
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('MUSIC');
+    const {container} = render(<SettingsScreen {...defaultProps} />);
+    expect(container.textContent).toContain('MUSIC');
   });
 
   it('displays haptics toggle', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<SettingsScreen {...defaultProps} />);
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('HAPTICS');
+    const {container} = render(<SettingsScreen {...defaultProps} />);
+    expect(container.textContent).toContain('HAPTICS');
   });
 
   it('displays back button', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<SettingsScreen {...defaultProps} />);
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('BACK');
+    const {container} = render(<SettingsScreen {...defaultProps} />);
+    expect(container.textContent).toContain('BACK');
   });
 
   it('calls onBack when back button is pressed', () => {
     const onBack = vi.fn();
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<SettingsScreen {...defaultProps} onBack={onBack} />);
-    });
-    const backButton = tree!.root.findAllByProps({accessibilityLabel: 'Back to main menu'});
-    expect(backButton.length).toBeGreaterThan(0);
-    act(() => {
-      backButton[0].props.onPress();
-    });
+    render(<SettingsScreen {...defaultProps} onBack={onBack} />);
+    const backButton = screen.getByLabelText('Back to main menu');
+    fireEvent.click(backButton);
     expect(onBack).toHaveBeenCalled();
   });
 

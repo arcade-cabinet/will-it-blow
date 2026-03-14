@@ -1,50 +1,31 @@
-import renderer, {act} from 'react-test-renderer';
+import {render} from '@testing-library/react';
 import {BlowoutHUD} from '../BlowoutHUD';
 
 describe('BlowoutHUD', () => {
   it('renders without crashing', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<BlowoutHUD pressure={50} leftTied={true} rightTied={false} />);
-    });
-    expect(tree!.toJSON()).toBeTruthy();
+    const {container} = render(<BlowoutHUD pressure={50} leftTied={true} rightTied={false} />);
+    expect(container.innerHTML).toBeTruthy();
   });
 
   it('displays pressure indicator', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<BlowoutHUD pressure={50} leftTied={true} rightTied={false} />);
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('PRESSURE');
+    const {container} = render(<BlowoutHUD pressure={50} leftTied={true} rightTied={false} />);
+    expect(container.textContent).toContain('PRESSURE');
   });
 
   it('displays tie status', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<BlowoutHUD pressure={50} leftTied={true} rightTied={false} />);
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('LEFT');
-    expect(json).toContain('RIGHT');
+    const {container} = render(<BlowoutHUD pressure={50} leftTied={true} rightTied={false} />);
+    expect(container.textContent).toContain('LEFT');
+    expect(container.textContent).toContain('RIGHT');
   });
 
   it('shows tied status correctly', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<BlowoutHUD pressure={50} leftTied={true} rightTied={true} />);
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('TIED');
+    const {container} = render(<BlowoutHUD pressure={50} leftTied={true} rightTied={true} />);
+    expect(container.textContent).toContain('TIED');
   });
 
   it('shows untied status correctly', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<BlowoutHUD pressure={50} leftTied={false} rightTied={false} />);
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('OPEN');
+    const {container} = render(<BlowoutHUD pressure={50} leftTied={false} rightTied={false} />);
+    expect(container.textContent).toContain('OPEN');
   });
 
   it('is a pure presentational component (no store imports)', () => {

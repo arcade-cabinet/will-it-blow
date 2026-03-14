@@ -1,5 +1,5 @@
 import {vi} from 'vitest';
-import renderer, {act} from 'react-test-renderer';
+import {render, screen, fireEvent} from '@testing-library/react';
 import {RoundTransition} from '../RoundTransition';
 
 const defaultProps = {
@@ -12,62 +12,35 @@ const defaultProps = {
 
 describe('RoundTransition', () => {
   it('renders round number', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<RoundTransition {...defaultProps} />);
-    });
-    const container = tree!.root.findByProps({accessibilityLabel: 'Round 2 of 5 complete'});
-    expect(container).toBeDefined();
+    render(<RoundTransition {...defaultProps} />);
+    expect(screen.getByLabelText('Round 2 of 5 complete')).toBeDefined();
   });
 
   it('renders round score', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<RoundTransition {...defaultProps} />);
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('78');
+    const {container} = render(<RoundTransition {...defaultProps} />);
+    expect(container.textContent).toContain('78');
   });
 
   it('renders total score', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<RoundTransition {...defaultProps} />);
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('156');
+    const {container} = render(<RoundTransition {...defaultProps} />);
+    expect(container.textContent).toContain('156');
   });
 
   it('renders NEXT ROUND button', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<RoundTransition {...defaultProps} />);
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('NEXT ROUND');
+    const {container} = render(<RoundTransition {...defaultProps} />);
+    expect(container.textContent).toContain('NEXT ROUND');
   });
 
   it('calls onNextRound when button pressed', () => {
     const onNextRound = vi.fn();
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<RoundTransition {...defaultProps} onNextRound={onNextRound} />);
-    });
-    const button = tree!.root.findByProps({accessibilityLabel: 'Next round'});
-    act(() => {
-      button.props.onPress();
-    });
+    render(<RoundTransition {...defaultProps} onNextRound={onNextRound} />);
+    const button = screen.getByLabelText('Next round');
+    fireEvent.click(button);
     expect(onNextRound).toHaveBeenCalledTimes(1);
   });
 
   it('has accessibility label with round info', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<RoundTransition {...defaultProps} />);
-    });
-    const container = tree!.root.findByProps({
-      accessibilityLabel: 'Round 2 of 5 complete',
-    });
-    expect(container).toBeDefined();
+    render(<RoundTransition {...defaultProps} />);
+    expect(screen.getByLabelText('Round 2 of 5 complete')).toBeDefined();
   });
 });

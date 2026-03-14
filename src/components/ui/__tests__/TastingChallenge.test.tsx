@@ -1,5 +1,5 @@
 import {vi} from 'vitest';
-import renderer, {act} from 'react-test-renderer';
+import {render, act} from '@testing-library/react';
 import {TastingChallenge} from '../TastingChallenge';
 
 const defaultProps = {
@@ -19,58 +19,42 @@ describe('TastingChallenge', () => {
   });
 
   it('renders without crashing', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<TastingChallenge {...defaultProps} />);
-    });
-    expect(tree!.toJSON()).toBeTruthy();
+    const {container} = render(<TastingChallenge {...defaultProps} />);
+    expect(container.innerHTML).toBeTruthy();
   });
 
   it('starts with FORM score visible', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<TastingChallenge {...defaultProps} />);
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('FORM');
-    expect(json).toContain('85');
+    const {container} = render(<TastingChallenge {...defaultProps} />);
+    const text = container.textContent!;
+    expect(text).toContain('FORM');
+    expect(text).toContain('85');
   });
 
   it('reveals INGREDIENTS after advancing time', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<TastingChallenge {...defaultProps} />);
-    });
-    // Advance past first phase (form -> ingredients)
+    const {container} = render(<TastingChallenge {...defaultProps} />);
     act(() => {
       vi.advanceTimersByTime(1600);
     });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('INGREDIENTS');
-    expect(json).toContain('90');
+    const text = container.textContent!;
+    expect(text).toContain('INGREDIENTS');
+    expect(text).toContain('90');
   });
 
   it('reveals COOK score after more time', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<TastingChallenge {...defaultProps} />);
-    });
+    const {container} = render(<TastingChallenge {...defaultProps} />);
     act(() => {
       vi.advanceTimersByTime(1600);
     }); // form -> ingredients
     act(() => {
       vi.advanceTimersByTime(1600);
     }); // ingredients -> cook
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('COOK');
-    expect(json).toContain('78');
+    const text = container.textContent!;
+    expect(text).toContain('COOK');
+    expect(text).toContain('78');
   });
 
   it('reveals DEMAND bonus in total phase', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<TastingChallenge {...defaultProps} />);
-    });
+    const {container} = render(<TastingChallenge {...defaultProps} />);
     act(() => {
       vi.advanceTimersByTime(1600);
     }); // form -> ingredients
@@ -80,16 +64,13 @@ describe('TastingChallenge', () => {
     act(() => {
       vi.advanceTimersByTime(1600);
     }); // cook -> total
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('DEMAND');
-    expect(json).toContain('TOTAL');
+    const text = container.textContent!;
+    expect(text).toContain('DEMAND');
+    expect(text).toContain('TOTAL');
   });
 
   it('reveals rank badge', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<TastingChallenge {...defaultProps} />);
-    });
+    const {container} = render(<TastingChallenge {...defaultProps} />);
     act(() => {
       vi.advanceTimersByTime(1600);
     }); // form -> ingredients
@@ -102,8 +83,7 @@ describe('TastingChallenge', () => {
     act(() => {
       vi.advanceTimersByTime(1600);
     }); // total -> rank
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('A');
+    expect(container.textContent).toContain('A');
   });
 
   it('uses rank-specific colors', () => {
@@ -120,9 +100,7 @@ describe('TastingChallenge', () => {
 
   it('calls onComplete at the end', () => {
     const onComplete = vi.fn();
-    act(() => {
-      renderer.create(<TastingChallenge {...defaultProps} onComplete={onComplete} />);
-    });
+    render(<TastingChallenge {...defaultProps} onComplete={onComplete} />);
     // Advance through all 6 phases: form, ingredients, cook, total, rank, done
     for (let i = 0; i < 6; i++) {
       act(() => {

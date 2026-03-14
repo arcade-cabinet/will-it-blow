@@ -1,75 +1,45 @@
-import renderer, {act} from 'react-test-renderer';
+import {render} from '@testing-library/react';
 import {CookingHUD} from '../CookingHUD';
 
 describe('CookingHUD', () => {
   it('renders without crashing', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(
-        <CookingHUD temperature={150} targetZone={[140, 160]} timeInZone={3} />,
-      );
-    });
-    expect(tree!.toJSON()).toBeTruthy();
+    const {container} = render(
+      <CookingHUD temperature={150} targetZone={[140, 160]} timeInZone={3} />,
+    );
+    expect(container.innerHTML).toBeTruthy();
   });
 
   it('displays temperature gauge', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(
-        <CookingHUD temperature={150} targetZone={[140, 160]} timeInZone={3} />,
-      );
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('150');
+    const {container} = render(
+      <CookingHUD temperature={150} targetZone={[140, 160]} timeInZone={3} />,
+    );
+    expect(container.textContent).toContain('150');
   });
 
   it('displays target zone', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(
-        <CookingHUD temperature={150} targetZone={[140, 160]} timeInZone={3} />,
-      );
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('TARGET');
+    const {container} = render(
+      <CookingHUD temperature={150} targetZone={[140, 160]} timeInZone={3} />,
+    );
+    expect(container.textContent).toContain('TARGET');
   });
 
   it('shows in-zone indicator when temperature is in target range', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(
-        <CookingHUD temperature={150} targetZone={[140, 160]} timeInZone={3} />,
-      );
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('IN ZONE');
+    const {container} = render(
+      <CookingHUD temperature={150} targetZone={[140, 160]} timeInZone={3} />,
+    );
+    expect(container.textContent).toContain('IN ZONE');
   });
 
   it('does not show in-zone badge when temperature is outside range', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(
-        <CookingHUD temperature={200} targetZone={[140, 160]} timeInZone={0} />,
-      );
-    });
-    // The "IN ZONE" badge should not be shown (though "TIME IN ZONE" label still appears)
-    const root = tree!.root;
-    const _inZoneBadges = root.findAllByProps({
-      style: expect.objectContaining({borderColor: '#4CAF50', borderWidth: 2}),
-    });
-    // No badge with the specific inZoneBadge style
-    const badgeTexts = root.findAll(node => {
-      try {
-        return (
-          node.type === 'Text' &&
-          node.children?.includes('IN ZONE') &&
-          node.parent?.props?.style?.borderRadius === 8
-        );
-      } catch {
-        return false;
-      }
-    });
-    expect(badgeTexts.length).toBe(0);
+    const {container} = render(
+      <CookingHUD temperature={200} targetZone={[140, 160]} timeInZone={0} />,
+    );
+    // "IN ZONE" badge should not appear (only "TIME IN ZONE" label)
+    const text = container.textContent!;
+    expect(text).toContain('TIME IN ZONE');
+    // Remove "TIME IN ZONE" and check remaining text doesn't have "IN ZONE"
+    const withoutTimeLabel = text.replace('TIME IN ZONE', '');
+    expect(withoutTimeLabel).not.toContain('IN ZONE');
   });
 
   it('is a pure presentational component (no store imports)', () => {

@@ -1,5 +1,5 @@
 import {vi} from 'vitest';
-import renderer, {act} from 'react-test-renderer';
+import {render, screen, fireEvent} from '@testing-library/react';
 
 vi.mock('../../../engine/AudioEngine', () => ({
   audioEngine: {
@@ -26,61 +26,39 @@ const defaultProps = {
 
 describe('GameOverScreen', () => {
   it('renders without crashing', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<GameOverScreen {...defaultProps} />);
-    });
-    expect(tree!.toJSON()).toBeTruthy();
+    const {container} = render(<GameOverScreen {...defaultProps} />);
+    expect(container.innerHTML).toBeTruthy();
   });
 
   it('displays rank badge', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<GameOverScreen {...defaultProps} />);
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('S');
+    const {container} = render(<GameOverScreen {...defaultProps} />);
+    expect(container.textContent).toContain('S');
   });
 
   it('displays per-challenge score breakdown', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<GameOverScreen {...defaultProps} />);
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('Ingredients');
-    expect(json).toContain('85');
-    expect(json).toContain('Grinding');
-    expect(json).toContain('95');
+    const {container} = render(<GameOverScreen {...defaultProps} />);
+    const text = container.textContent!;
+    expect(text).toContain('Ingredients');
+    expect(text).toContain('85');
+    expect(text).toContain('Grinding');
+    expect(text).toContain('95');
   });
 
   it('displays demand bonus', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<GameOverScreen {...defaultProps} />);
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('DEMAND BONUS');
-    // The bonus value "+" and "5" are separate children in the React tree
-    expect(json).toContain('"5"');
+    const {container} = render(<GameOverScreen {...defaultProps} />);
+    const text = container.textContent!;
+    expect(text).toContain('DEMAND BONUS');
+    expect(text).toContain('5');
   });
 
   it('displays PLAY AGAIN button', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<GameOverScreen {...defaultProps} />);
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('PLAY AGAIN');
+    const {container} = render(<GameOverScreen {...defaultProps} />);
+    expect(container.textContent).toContain('PLAY AGAIN');
   });
 
   it('displays MENU button', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<GameOverScreen {...defaultProps} />);
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('MENU');
+    const {container} = render(<GameOverScreen {...defaultProps} />);
+    expect(container.textContent).toContain('MENU');
   });
 
   it('uses gold color for S rank', () => {
@@ -116,42 +94,23 @@ describe('GameOverScreen', () => {
   });
 
   it('renders F rank with blood red', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<GameOverScreen {...defaultProps} rank="F" totalScore={20} />);
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('F');
+    const {container} = render(<GameOverScreen {...defaultProps} rank="F" totalScore={20} />);
+    expect(container.textContent).toContain('F');
   });
 
   it('calls onPlayAgain when PLAY AGAIN is pressed', () => {
     const onPlayAgain = vi.fn();
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<GameOverScreen {...defaultProps} onPlayAgain={onPlayAgain} />);
-    });
-    // Find and trigger the PLAY AGAIN button
-    const root = tree!.root;
-    const buttons = root.findAllByProps({accessibilityLabel: 'Start new game'});
-    expect(buttons.length).toBeGreaterThan(0);
-    act(() => {
-      buttons[0].props.onPress();
-    });
+    render(<GameOverScreen {...defaultProps} onPlayAgain={onPlayAgain} />);
+    const button = screen.getByLabelText('Start new game');
+    fireEvent.click(button);
     expect(onPlayAgain).toHaveBeenCalled();
   });
 
   it('calls onMenu when MENU is pressed', () => {
     const onMenu = vi.fn();
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<GameOverScreen {...defaultProps} onMenu={onMenu} />);
-    });
-    const root = tree!.root;
-    const buttons = root.findAllByProps({accessibilityLabel: 'Return to main menu'});
-    expect(buttons.length).toBeGreaterThan(0);
-    act(() => {
-      buttons[0].props.onPress();
-    });
+    render(<GameOverScreen {...defaultProps} onMenu={onMenu} />);
+    const button = screen.getByLabelText('Return to main menu');
+    fireEvent.click(button);
     expect(onMenu).toHaveBeenCalled();
   });
 });

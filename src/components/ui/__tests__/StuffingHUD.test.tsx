@@ -1,49 +1,30 @@
-import renderer, {act} from 'react-test-renderer';
+import {render} from '@testing-library/react';
 import {StuffingHUD} from '../StuffingHUD';
 
 describe('StuffingHUD', () => {
   it('renders without crashing', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<StuffingHUD pressure={40} fillLevel={60} />);
-    });
-    expect(tree!.toJSON()).toBeTruthy();
+    const {container} = render(<StuffingHUD pressure={40} fillLevel={60} />);
+    expect(container.innerHTML).toBeTruthy();
   });
 
   it('displays pressure gauge', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<StuffingHUD pressure={40} fillLevel={60} />);
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('PRESSURE');
+    const {container} = render(<StuffingHUD pressure={40} fillLevel={60} />);
+    expect(container.textContent).toContain('PRESSURE');
   });
 
   it('displays fill bar', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<StuffingHUD pressure={40} fillLevel={60} />);
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('FILL');
+    const {container} = render(<StuffingHUD pressure={40} fillLevel={60} />);
+    expect(container.textContent).toContain('FILL');
   });
 
   it('shows warning at high pressure', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<StuffingHUD pressure={90} fillLevel={60} />);
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('DANGER');
+    const {container} = render(<StuffingHUD pressure={90} fillLevel={60} />);
+    expect(container.textContent).toContain('DANGER');
   });
 
   it('does not show warning at low pressure', () => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<StuffingHUD pressure={30} fillLevel={60} />);
-    });
-    const json = JSON.stringify(tree!.toJSON());
-    expect(json).not.toContain('DANGER');
+    const {container} = render(<StuffingHUD pressure={30} fillLevel={60} />);
+    expect(container.textContent).not.toContain('DANGER');
   });
 
   it('is a pure presentational component (no store imports)', () => {
