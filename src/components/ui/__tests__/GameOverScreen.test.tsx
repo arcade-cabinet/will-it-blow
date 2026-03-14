@@ -1,5 +1,5 @@
+import {fireEvent, render, screen} from '@testing-library/react';
 import {vi} from 'vitest';
-import {render, screen, fireEvent} from '@testing-library/react';
 
 vi.mock('../../../engine/AudioEngine', () => ({
   audioEngine: {

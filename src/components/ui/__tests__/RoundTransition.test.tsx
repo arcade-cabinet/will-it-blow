@@ -1,5 +1,5 @@
+import {fireEvent, render, screen} from '@testing-library/react';
 import {vi} from 'vitest';
-import {render, screen, fireEvent} from '@testing-library/react';
 import {RoundTransition} from '../RoundTransition';
 
 const defaultProps = {

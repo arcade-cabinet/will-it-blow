@@ -1,4 +1,5 @@
 import {vi} from 'vitest';
+
 /**
  * Tests for useMouseLook — pointer lock + mouse delta camera rotation (Spec §23).
  *

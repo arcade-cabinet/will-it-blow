@@ -1,4 +1,5 @@
 import {vi} from 'vitest';
+
 /**
  * Tests for usePhysicsMovement — WASD velocity applied to Rapier capsule (Spec §23).
  *

@@ -43,9 +43,7 @@ export function TitleScreen() {
         <div className="bg-[#1a0a00] border-4 border-[#8B4513] p-1 shadow-[0_8px_16px_rgba(0,0,0,0.8)]">
           {/* Outer border */}
           <div className="border-2 border-[#D2A24C] py-5 px-8 flex flex-col items-center">
-            <span className="text-sm text-[#D2A24C] tracking-[4px] mb-1">
-              Est. 1974
-            </span>
+            <span className="text-sm text-[#D2A24C] tracking-[4px] mb-1">Est. 1974</span>
             <h1 className="text-5xl font-black text-[#FF1744] text-center leading-[52px] tracking-wider m-0 whitespace-pre-line drop-shadow-[0_0_16px_rgba(255,23,68,0.4)]">
               {'WILL IT\nBLOW?'}
             </h1>

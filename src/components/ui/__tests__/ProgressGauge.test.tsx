@@ -55,9 +55,7 @@ describe('ProgressGauge', () => {
   });
 
   it('turns red when value exceeds danger threshold', () => {
-    const {container} = render(
-      <ProgressGauge value={85} label="PRESSURE" dangerThreshold={80} />,
-    );
+    const {container} = render(<ProgressGauge value={85} label="PRESSURE" dangerThreshold={80} />);
     // #FF1744 = rgb(255, 23, 68)
     const html = container.innerHTML;
     expect(html.includes('#FF1744') || html.includes('rgb(255, 23, 68)')).toBe(true);
@@ -73,9 +71,7 @@ describe('ProgressGauge', () => {
   });
 
   it('renders a danger threshold marker when dangerThreshold is set', () => {
-    const {container} = render(
-      <ProgressGauge value={50} label="PRESSURE" dangerThreshold={75} />,
-    );
+    const {container} = render(<ProgressGauge value={50} label="PRESSURE" dangerThreshold={75} />);
     expect(container.innerHTML).toContain('75%');
   });
 

@@ -9,8 +9,8 @@
  * - Component cleanup -- timer cleared on unmount
  */
 
+import {act, fireEvent, render, screen} from '@testing-library/react';
 import {vi} from 'vitest';
-import {render, screen, fireEvent, act} from '@testing-library/react';
 import {useGameStore} from '../../../ecs/hooks';
 import {TieGesture} from '../TieGesture';
 

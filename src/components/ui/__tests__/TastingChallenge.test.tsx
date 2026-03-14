@@ -1,5 +1,5 @@
+import {act, render} from '@testing-library/react';
 import {vi} from 'vitest';
-import {render, act} from '@testing-library/react';
 import {TastingChallenge} from '../TastingChallenge';
 
 const defaultProps = {

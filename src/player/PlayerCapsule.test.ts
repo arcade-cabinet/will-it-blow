@@ -1,4 +1,5 @@
 import {vi} from 'vitest';
+
 /**
  * Tests for PlayerCapsule physics body (Spec §9).
  *

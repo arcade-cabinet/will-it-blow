@@ -47,7 +47,9 @@ export const View = React.forwardRef<HTMLDivElement, any>(({children, ...props},
 View.displayName = 'View';
 
 export const Text = React.forwardRef<HTMLSpanElement, any>(({children, onPress, ...props}, ref) => (
-  <span ref={ref} {...mapRNProps({...props, onPress})}>{children}</span>
+  <span ref={ref} {...mapRNProps({...props, onPress})}>
+    {children}
+  </span>
 ));
 Text.displayName = 'Text';
 
@@ -76,7 +78,9 @@ export const Animated = {
     </div>
   )),
   Text: React.forwardRef<HTMLSpanElement, any>(({children, ...props}, ref) => (
-    <span ref={ref} {...mapRNProps(props)}>{children}</span>
+    <span ref={ref} {...mapRNProps(props)}>
+      {children}
+    </span>
   )),
   Value: class {
     _value: number;
