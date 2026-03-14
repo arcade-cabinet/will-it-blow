@@ -11,8 +11,8 @@ import {Suspense} from 'react';
 import * as THREE from 'three';
 import {IntroSequence} from './components/camera/IntroSequence';
 import {PlayerHands} from './components/camera/PlayerHands';
-import {FirstPersonControls} from './components/camera/FirstPersonControls';
 import {MrSausage3D} from './components/characters/MrSausage3D';
+import {SwipeFPSControls} from './components/controls/SwipeFPSControls';
 import {BasementRoom} from './components/environment/BasementRoom';
 import {Prop} from './components/environment/Prop';
 import {ScatterProps} from './components/environment/ScatterProps';
@@ -30,10 +30,11 @@ import {Sink} from './components/stations/Sink';
 import {Stove} from './components/stations/Stove';
 import {Stuffer} from './components/stations/Stuffer';
 import {TV} from './components/stations/TV';
+import {usePersistence} from './db/usePersistence';
 import {useGameStore} from './ecs/hooks';
 import {GameOrchestrator} from './engine/GameOrchestrator';
-// TODO: usePersistence requires op-sqlite which is not available in Vite web build
-// import {usePersistence} from './db/usePersistence';
+import {FPSCamera} from './player/FPSCamera';
+import {PlayerCapsule} from './player/PlayerCapsule';
 
 // --- Console Warning Overrides to keep dev env clean of upstream noise ---
 const origWarn = console.warn;
@@ -58,7 +59,7 @@ console.error = (...args: unknown[]) => {
 };
 // -----------------------------------------------------------------------
 
-/** Temporary title screen — plain HTML until RN UI components are rewritten for web. */
+/** Temporary title screen — plain HTML until UI components are polished. */
 function TempTitleScreen() {
   const setAppPhase = useGameStore(s => s.setAppPhase);
   return (
@@ -73,12 +74,8 @@ function TempTitleScreen() {
         justifyContent: 'center',
       }}
     >
-      <h1 style={{color: '#FF1744', fontSize: 48, fontWeight: 900, margin: 0}}>
-        WILL IT BLOW?
-      </h1>
-      <p style={{color: '#D2A24C', marginTop: 16, fontSize: 18}}>
-        Fine Meats &amp; Sausages
-      </p>
+      <h1 style={{color: '#FF1744', fontSize: 48, fontWeight: 900, margin: 0}}>WILL IT BLOW?</h1>
+      <p style={{color: '#D2A24C', marginTop: 16, fontSize: 18}}>Fine Meats &amp; Sausages</p>
       <button
         type="button"
         onClick={() => setAppPhase('playing')}
@@ -108,6 +105,10 @@ function GameContent() {
   return (
     <>
       <Physics gravity={[0, -9.81, 0]}>
+        {/* Player physics body + FPS camera (inside Physics) */}
+        <PlayerCapsule />
+        <FPSCamera />
+
         <BasementRoom />
         <SurrealText />
         <KitchenSetPieces />
@@ -145,9 +146,6 @@ function GameContent() {
         <TrapDoorAnimation position={[0, 3, 0]} />
       </Physics>
 
-      {/* FPS Controls — WASD movement + mouse look */}
-      <FirstPersonControls />
-
       <PlayerHands />
 
       {introActive && <IntroSequence />}
@@ -157,8 +155,7 @@ function GameContent() {
 
 export function App() {
   const appPhase = useGameStore(state => state.appPhase);
-  // TODO: re-enable persistence when sql.js driver replaces op-sqlite
-  // usePersistence();
+  usePersistence();
 
   return (
     <div style={{width: '100vw', height: '100vh', background: '#000'}}>
@@ -189,6 +186,9 @@ export function App() {
               <GameContent />
             </Suspense>
           </Canvas>
+
+          {/* Invisible touch overlay for mobile FPS controls */}
+          <SwipeFPSControls />
 
           {/* GameOrchestrator — non-visual state machine, outside Canvas */}
           <GameOrchestrator />
