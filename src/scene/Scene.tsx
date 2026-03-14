@@ -11,6 +11,7 @@ import {
   DefaultLight,
   FilamentScene,
   FilamentView,
+  Skybox,
   useWorld,
 } from 'react-native-filament';
 import {useCallback, useRef} from 'react';
@@ -19,7 +20,10 @@ import type {RenderCallback} from 'react-native-filament';
 import {IntroSequence} from './IntroSequence';
 import {Kitchen} from './Kitchen';
 import {KitchenLighting} from './Lighting';
+import {MrSausage} from './MrSausage';
 import {PlayerController} from './PlayerController';
+import {PlayerHands} from './PlayerHands';
+import {Sausage} from './sausage/Sausage';
 import {SurrealText} from './SurrealText';
 import {TouchControls} from './TouchControls';
 import {BlowoutStation} from './stations/BlowoutStation';
@@ -69,6 +73,8 @@ export function GameScene() {
       {/* Layer 1: 3D Filament scene */}
       <FilamentScene>
         <FilamentView style={StyleSheet.absoluteFill} renderCallback={onFrame}>
+          {/* Dark horror skybox — sealed basement, no sky visible */}
+          <Skybox colorInHex="#0a0a0a" />
           <KitchenLighting />
           <PlayerController world={world} />
           <Kitchen world={world} />
@@ -80,6 +86,11 @@ export function GameScene() {
           <Stove world={world} />
           <Sink world={world} />
           <TV world={world} />
+
+          {/* Characters + objects */}
+          <MrSausage />
+          <PlayerHands />
+          <Sausage />
         </FilamentView>
       </FilamentScene>
 

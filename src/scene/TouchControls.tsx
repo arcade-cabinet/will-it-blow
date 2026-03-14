@@ -1,13 +1,13 @@
 /**
  * @module TouchControls
- * Invisible dual-zone touch overlay for FPS movement + look + interact.
+ * Invisible touch overlay for FPS movement + look + station interactions.
  *
- * Left half: virtual joystick (drag for movement direction)
- * Right half: drag for camera yaw/pitch
- * Tap anywhere: interact with current station (phase-dependent)
+ * Left half: drag for movement (invisible joystick)
+ * Right half: drag for camera look (yaw/pitch)
+ * Tap: phase-specific interaction (select ingredient, chop, tie, etc.)
+ * Vertical drag (during GRINDING/STUFFING/COOKING): fills station meter
  *
- * This is a React Native overlay positioned OVER the FilamentView.
- * It's invisible — the player sees only the 3D scene and their hands.
+ * All interactions drive Koota ECS state + audio engine.
  */
 
 import {useRef, useCallback} from 'react';
@@ -21,6 +21,9 @@ const {width: SCREEN_WIDTH} = Dimensions.get('window');
 const HALF_SCREEN = SCREEN_WIDTH / 2;
 const REQUIRED_INGREDIENTS = 3;
 
+// How much each drag pixel fills the meter (0→1 scale)
+const DRAG_FILL_RATE = 0.003;
+
 interface TouchControlsProps {
   onLook: (dx: number, dy: number) => void;
   onMove: (x: number, z: number) => void;
@@ -32,26 +35,22 @@ export function TouchControls({onLook, onMove, onMoveEnd}: TouchControlsProps) {
   const setGamePhase = useGameStore(s => s.setGamePhase);
   const chopCountRef = useRef(0);
   const ingredientIndexRef = useRef(0);
-  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastDragYRef = useRef(0);
 
-  // Handle tap interaction based on current game phase
+  // TAP interaction — phase-specific
   const handleTap = useCallback(() => {
     const store = useGameStore.getState();
 
     switch (gamePhase) {
       case 'SELECT_INGREDIENTS': {
-        // Cycle through ingredients, add one per tap
         const available = INGREDIENT_MODELS.filter(
           ing => !store.selectedIngredientIds.includes(ing.id),
         );
         if (available.length === 0) break;
-
         const ingredient = available[ingredientIndexRef.current % available.length];
         ingredientIndexRef.current++;
         store.addSelectedIngredientId(ingredient.id);
         audioEngine.playSound('click');
-
-        // After selecting required number, advance phase
         if (store.selectedIngredientIds.length + 1 >= REQUIRED_INGREDIENTS) {
           setGamePhase('CHOPPING');
         }
@@ -66,48 +65,30 @@ export function TouchControls({onLook, onMove, onMoveEnd}: TouchControlsProps) {
         }
         break;
       case 'FILL_GRINDER':
+        // Tap to load chunks → start grinding
+        audioEngine.playSound('click');
         setGamePhase('GRINDING');
-        break;
-      case 'GRINDING':
-        // Each tap grinds — advance groundMeatVol
-        useGameStore.getState().setGroundMeatVol((prev: number) => {
-          const next = Math.min(1, prev + 0.2);
-          if (next >= 1) setGamePhase('MOVE_BOWL');
-          return next;
-        });
         break;
       case 'MOVE_BOWL':
         setGamePhase('ATTACH_CASING');
         break;
       case 'ATTACH_CASING':
+        // Tap to attach casing
+        audioEngine.playSound('click');
         setGamePhase('STUFFING');
         break;
-      case 'STUFFING':
-        audioEngine.playSound('squelch');
-        useGameStore.getState().setStuffLevel((prev: number) => {
-          const next = Math.min(1, prev + 0.2);
-          if (next >= 1) setGamePhase('TIE_CASING');
-          return next;
-        });
-        break;
       case 'TIE_CASING': {
-        // Two taps needed: tie left, then tie right
         if (!store.casingTied) {
-          // First tap: mark as tied
           store.setCasingTied(true);
           audioEngine.playSound('tie');
         } else {
-          // Already tied — advance
           setGamePhase('BLOWOUT');
         }
         break;
       }
       case 'BLOWOUT': {
-        // Each tap builds pressure — check burst probability
         audioEngine.playSound('pressure');
-        const burstChance = Math.random();
-        if (burstChance < 0.3) {
-          // Burst! (30% chance per tap)
+        if (Math.random() < 0.3) {
           audioEngine.playSound('burst');
         }
         setGamePhase('MOVE_SAUSAGE');
@@ -117,15 +98,8 @@ export function TouchControls({onLook, onMove, onMoveEnd}: TouchControlsProps) {
         setGamePhase('MOVE_PAN');
         break;
       case 'MOVE_PAN':
+        audioEngine.playSound('click');
         setGamePhase('COOKING');
-        break;
-      case 'COOKING':
-        audioEngine.playSound('sizzle');
-        useGameStore.getState().setCookLevel((prev: number) => {
-          const next = Math.min(1, prev + 0.2);
-          if (next >= 1) setGamePhase('DONE');
-          return next;
-        });
         break;
       case 'DONE':
         if (!store.finalScore?.calculated) {
@@ -133,12 +107,64 @@ export function TouchControls({onLook, onMove, onMoveEnd}: TouchControlsProps) {
           audioEngine.playSound('rankReveal');
         }
         break;
+      // GRINDING, STUFFING, COOKING handled by drag gesture below
     }
   }, [gamePhase, setGamePhase]);
 
-  // Right-side look gesture
+  // VERTICAL DRAG for fill-based phases (grinding, stuffing, cooking)
+  const handleVerticalDrag = useCallback(
+    (translationY: number) => {
+      const store = useGameStore.getState();
+      const dragDelta = Math.abs(translationY - lastDragYRef.current) * DRAG_FILL_RATE;
+      lastDragYRef.current = translationY;
+
+      if (dragDelta < 0.001) return;
+
+      switch (gamePhase) {
+        case 'GRINDING':
+          audioEngine.setGrinderSpeed(0.5);
+          store.setGroundMeatVol((prev: number) => {
+            const next = Math.min(1, prev + dragDelta);
+            if (next >= 1) setGamePhase('MOVE_BOWL');
+            return next;
+          });
+          break;
+        case 'STUFFING':
+          audioEngine.playSound('squelch');
+          store.setStuffLevel((prev: number) => {
+            const next = Math.min(1, prev + dragDelta);
+            if (next >= 1) setGamePhase('TIE_CASING');
+            return next;
+          });
+          break;
+        case 'COOKING':
+          audioEngine.setSizzleLevel(0.5);
+          store.setCookLevel((prev: number) => {
+            const next = Math.min(1, prev + dragDelta);
+            if (next >= 1) setGamePhase('DONE');
+            return next;
+          });
+          break;
+      }
+    },
+    [gamePhase, setGamePhase],
+  );
+
+  // Right-side look gesture (also handles vertical drag during fill phases)
   const lookGesture = Gesture.Pan()
+    .onBegin(() => {
+      lastDragYRef.current = 0;
+    })
     .onUpdate(e => {
+      // During fill phases, ANY vertical drag fills the meter
+      const isFillPhase =
+        gamePhase === 'GRINDING' || gamePhase === 'STUFFING' || gamePhase === 'COOKING';
+      if (isFillPhase) {
+        handleVerticalDrag(e.translationY);
+        return;
+      }
+
+      // Normal look: right side only
       if (e.absoluteX < HALF_SCREEN) return;
       onLook(e.velocityX * 0.001, e.velocityY * 0.001);
     });
@@ -147,6 +173,9 @@ export function TouchControls({onLook, onMove, onMoveEnd}: TouchControlsProps) {
   const moveGesture = Gesture.Pan()
     .onUpdate(e => {
       if (e.absoluteX > HALF_SCREEN) return;
+      const isFillPhase =
+        gamePhase === 'GRINDING' || gamePhase === 'STUFFING' || gamePhase === 'COOKING';
+      if (isFillPhase) return; // Disable movement during fill phases
       const dx = Math.max(-1, Math.min(1, e.translationX / 80));
       const dz = Math.max(-1, Math.min(1, -e.translationY / 80));
       onMove(dx, dz);
@@ -155,11 +184,10 @@ export function TouchControls({onLook, onMove, onMoveEnd}: TouchControlsProps) {
       onMoveEnd();
     });
 
-  // Tap gesture for station interaction
-  const tapGesture = Gesture.Tap()
-    .onEnd(() => {
-      handleTap();
-    });
+  // Tap gesture
+  const tapGesture = Gesture.Tap().onEnd(() => {
+    handleTap();
+  });
 
   const composed = Gesture.Simultaneous(
     Gesture.Simultaneous(lookGesture, moveGesture),
