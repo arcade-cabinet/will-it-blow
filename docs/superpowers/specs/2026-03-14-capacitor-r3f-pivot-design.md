@@ -121,8 +121,23 @@ All 85 files deleted in commit `6acdb4a` ("chainsaw: delete 55 R3F source files"
 - Config accessor tests
 
 **Audio:**
-- AudioEngine.ts (Howler version from port-reference, to be rewritten for Tone.js)
-- assetUrl.ts
+- AudioEngine.ts (raw Web Audio API version from port-reference — works in browser as-is, Tone.js rewrite is Phase 2 enhancement)
+
+**Note:** `assetUrl.ts` was deleted and not preserved. Not needed — Vite serves `public/` at root, so asset paths are just `/models/foo.glb`. Remove any `assetUrl()` imports from restored files.
+
+## What Needs Rewrite (RN → Web)
+
+**TitleScreen.tsx + DifficultySelector.tsx:** These use React Native primitives (`Animated`, `StyleSheet`, `Text`, `TouchableOpacity`, `View`, `Pressable`). Must be rewritten to standard HTML/CSS:
+- `View` → `div`
+- `Text` → `span`/`p`
+- `TouchableOpacity`/`Pressable` → `button`
+- `StyleSheet.create` → CSS modules or inline styles
+- `Animated` → CSS transitions or framer-motion
+- `accessibilityRole`/`accessibilityLabel` → standard `role`/`aria-label`
+
+**GameOrchestrator.tsx:** Has a `typeof window.addEventListener !== 'function'` guard added for RN. Remove the guard — `window.addEventListener` always exists in a browser.
+
+**assetUrl.ts:** Was deleted and not preserved in port-reference. Not needed — Vite serves `public/` at root, so asset paths are just `/models/foo.glb`, `/audio/bar.ogg`. All GLB loading calls (`useGLTF`, `useTexture`) already use these paths in the R3F components. Delete any references to `assetUrl` in restored files and use direct `/public` paths.
 
 ## What Stays As-Is
 
@@ -131,10 +146,9 @@ All 85 files deleted in commit `6acdb4a` ("chainsaw: delete 55 R3F source files"
 - `src/config/` — all 25+ JSON config files + TypeScript accessors
 - `src/data/dialogue/` — all 8 dialogue files
 - `src/db/schema.ts`, `src/db/queries.ts`, `src/db/drizzleQueries.ts` — schema and queries unchanged
-- `src/components/ui/TitleScreen.tsx`, `DifficultySelector.tsx` — title screen UI
 - `src/input/InputManager.ts` + test
 - `public/` — all models, audio, textures, fonts
-- `docs/` — all documentation
+- `docs/` — all documentation (AGENTS.md, CLAUDE.md updated as part of implementation)
 - `biome.json` — lint config
 
 ## Integration Points
@@ -153,28 +167,43 @@ The `hooks.ts` on this branch exposes a Zustand-compatible API — `useGameStore
 
 ### 2. AudioEngine → Tone.js
 
-The restored AudioEngine gets rewritten to use Tone.js:
+The port-reference `AudioEngine.ts` uses raw Web Audio API (`AudioContext`) — NOT Howler.js despite Howler being in deps. This already works in a browser. Phase 1: restore the Web Audio API version as-is (it works in Vite/browser). Phase 2 (enhancement): rewrite to Tone.js for procedural capabilities:
 - `Tone.Player` for sample playback (chop, grind, sizzle, etc.)
 - `Tone.Synth` / `Tone.NoiseSynth` for procedural horror ambience
 - `Tone.Transport` for scheduling phase-based audio cues
 - `Tone.Filter` / `Tone.Reverb` / `Tone.Distortion` for real-time effects
 - Same public API surface (`play`, `loop`, `stop`)
 
-### 3. db/client.ts → capacitor-community/sqlite
+Phase 2 is not a blocker for the pivot — the existing Web Audio engine works fine.
 
-Only file that needs a real rewrite. Same Drizzle ORM schema and queries. Different driver connection:
+### 3. db/client.ts → sql.js everywhere (with Capacitor SQLite optional)
+
+Drizzle ORM has a first-party `sql.js` driver (`drizzle-orm/sql-js`) but does NOT have a driver for `@capacitor-community/sqlite`. Strategy:
+
+**Phase 1:** Use `sql.js` (WASM SQLite) everywhere — works in browser AND in Capacitor WebView. Drizzle's `drizzle(sqlJsDb)` driver is well-supported. This is the simplest path and avoids writing a custom adapter.
+
 ```typescript
-// Before (op-sqlite)
-import {open} from '@op-engineering/op-sqlite';
-const db = open({name: 'willitblow.db'});
+import initSqlJs from 'sql.js';
+import {drizzle} from 'drizzle-orm/sql-js';
 
-// After (capacitor-community/sqlite)
-import {CapacitorSQLite, SQLiteConnection} from '@capacitor-community/sqlite';
-const sqlite = new SQLiteConnection(CapacitorSQLite);
-const db = await sqlite.createConnection('willitblow', false, 'no-encryption', 1, false);
+const SQL = await initSqlJs();
+const sqlDb = new SQL.Database();
+export const db = drizzle(sqlDb);
 ```
 
-Web dev fallback uses `sql.js` (WASM SQLite) so `pnpm dev` works in a browser without the Capacitor native shell.
+**Phase 2 (optional):** If sql.js performance is insufficient on mobile, write a thin Drizzle adapter for `@capacitor-community/sqlite`. But sql.js in a WebView is fast enough for a game save file.
+
+### 4. Gesture handling
+
+`@use-gesture/react` replaces `react-native-gesture-handler`. The R3F components on main already used `@use-gesture/react` for desktop — `useDrag`, `useGesture` hooks. `SwipeFPSControls.tsx` needs a check that it uses `@use-gesture/react` (not RN gesture handler). The restored R3F components from commit `6acdb4a~1` should already have the correct imports since they were written for web.
+
+### 5. Docs update
+
+These files must be updated atomically with implementation:
+- `AGENTS.md` — remove all "native-first" / "no web" / Filament / Maestro references
+- `CLAUDE.md` — update commands, architecture description
+- `docs/memory-bank/techContext.md` — update tech stack
+- `docs/memory-bank/activeContext.md` — update current state
 
 ## Dependencies
 
@@ -210,6 +239,59 @@ babel-jest, @babel/core, @babel/generator, @babel/preset-env, @babel/runtime
 koota, drizzle-orm, react, react-dom
 biome, typescript, zod
 ```
+
+## Migration Order
+
+This is NOT a big bang. Each phase produces a verifiable checkpoint.
+
+**Phase 1 — Scaffold (checkpoint: blank R3F canvas renders in browser)**
+1. Nuke `package.json` deps, write new one with Vite + R3F + Capacitor deps
+2. Create `vite.config.ts`, `index.html`, `src/main.tsx`
+3. Create `vitest.config.ts`
+4. Delete: `babel.config.js`, `metro.config.js`, `.npmrc`, `app.json`, `jest.config.js`, `jest.setup.js`
+5. Delete: `src/scene/`, `src/audio/AudioEngine.ts` (expo-audio version), `__mocks__/react-native-filament.js`, other RN mocks
+6. Delete: Expo-generated `ios/`, `android/`
+7. Verify: `pnpm dev` shows a blank R3F `<Canvas>` in browser
+
+**Phase 2 — Restore R3F components (checkpoint: kitchen renders with furniture)**
+1. `git restore` all 85 deleted files from commit `6acdb4a~1`
+2. Find-and-replace `useGameStore` imports: `../../store/gameStore` → `../../ecs/hooks`
+3. Remove any `assetUrl()` calls — replace with direct `/models/foo.glb` paths
+4. Wire restored components into `main.tsx` App
+5. Verify: kitchen scene renders in browser with furniture + horror props
+
+**Phase 3 — Rewrite RN UI + persistence (checkpoint: full game loop works in browser)**
+1. Rewrite `TitleScreen.tsx` + `DifficultySelector.tsx` from RN primitives to HTML/CSS
+2. Rewrite `db/client.ts` for sql.js + Drizzle
+3. Restore AudioEngine (Web Audio API version, works as-is)
+4. Restore Playwright config + E2E specs
+5. Verify: can play a full round in browser — title → difficulty → kitchen → cook → score
+
+**Phase 4 — Capacitor native shell (checkpoint: iOS + Android apps launch)**
+1. `npx cap init`, create `capacitor.config.ts`
+2. `npx cap add ios && npx cap add android`
+3. `pnpm build && npx cap sync`
+4. Verify: Capacitor iOS/Android apps launch and show the game
+
+**Phase 5 — Tests + polish (checkpoint: all tests green)**
+1. Migrate Jest tests to Vitest (`jest.fn()` → `vi.fn()`, etc.)
+2. Run Vitest, fix failures
+3. Run Playwright E2E, fix failures
+4. Update AGENTS.md, CLAUDE.md, memory bank docs
+5. Tone.js AudioEngine enhancement (Phase 2 audio — not a blocker)
+
+## Capacitor Plugins
+
+Beyond the core `@capacitor/core`, `@capacitor/ios`, `@capacitor/android`:
+
+| Plugin | Purpose | Replaces |
+|--------|---------|----------|
+| `@capacitor-community/sqlite` | Optional native SQLite (Phase 2, if sql.js insufficient) | op-sqlite |
+| `@capacitor/haptics` | Vibration feedback | expo-haptics |
+| `@capacitor/screen-orientation` | Lock to portrait/landscape | expo-screen-orientation |
+| `@capacitor-community/keep-awake` | Prevent screen sleep during gameplay | expo-keep-awake |
+
+These are optional — only add if actually used in game code. None are Phase 1 blockers.
 
 ## Dev Workflow
 
