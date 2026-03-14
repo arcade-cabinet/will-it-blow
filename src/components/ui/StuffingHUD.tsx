@@ -3,9 +3,10 @@
  * Pure presentational HUD overlay for the stuffing station.
  * Props-driven: receives pressure and fillLevel, renders read-only display.
  * No store access -- all data flows through props.
+ *
+ * NOT used during gameplay (diegetic feedback via SurrealText).
+ * Rewritten from react-native to web HTML/CSS.
  */
-
-import {StyleSheet, Text, View} from 'react-native';
 
 interface StuffingHUDProps {
   /** Current casing pressure (0-100) */
@@ -21,49 +22,47 @@ export function StuffingHUD({pressure, fillLevel}: StuffingHUDProps) {
   const pressureColor = isDanger ? '#FF1744' : pressure > 60 ? '#FFC107' : '#4CAF50';
 
   return (
-    <View style={styles.container} pointerEvents="box-none">
+    <div style={styles.container}>
       {/* Pressure gauge */}
-      <View style={styles.gaugeContainer}>
-        <Text style={styles.label}>PRESSURE</Text>
-        <View style={styles.barTrack}>
-          <View
-            style={[
-              styles.barFill,
-              {
-                width: `${Math.min(100, Math.max(0, pressure))}%`,
-                backgroundColor: pressureColor,
-              },
-            ]}
+      <div style={styles.gaugeContainer}>
+        <div style={styles.label}>PRESSURE</div>
+        <div style={styles.barTrack}>
+          <div
+            style={{
+              ...styles.barFill,
+              width: `${Math.min(100, Math.max(0, pressure))}%`,
+              backgroundColor: pressureColor,
+            }}
           />
-        </View>
-        <Text style={[styles.valueText, {color: pressureColor}]}>{Math.round(pressure)}%</Text>
-        {isDanger && <Text style={styles.dangerText}>DANGER</Text>}
-      </View>
+        </div>
+        <div style={{...styles.valueText, color: pressureColor}}>{Math.round(pressure)}%</div>
+        {isDanger && <div style={styles.dangerText}>DANGER</div>}
+      </div>
 
       {/* Fill bar */}
-      <View style={styles.fillContainer}>
-        <Text style={styles.label}>FILL</Text>
-        <View style={styles.barTrack}>
-          <View
-            style={[
-              styles.barFill,
-              {
-                width: `${Math.min(100, Math.max(0, fillLevel))}%`,
-                backgroundColor: '#4CAF50',
-              },
-            ]}
+      <div style={styles.fillContainer}>
+        <div style={styles.label}>FILL</div>
+        <div style={styles.barTrack}>
+          <div
+            style={{
+              ...styles.barFill,
+              width: `${Math.min(100, Math.max(0, fillLevel))}%`,
+              backgroundColor: '#4CAF50',
+            }}
           />
-        </View>
-        <Text style={styles.valueText}>{Math.round(fillLevel)}%</Text>
-      </View>
-    </View>
+        </div>
+        <div style={styles.valueText}>{Math.round(fillLevel)}%</div>
+      </div>
+    </div>
   );
 }
 
-const styles = StyleSheet.create({
+const styles: Record<string, React.CSSProperties> = {
   container: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    inset: 0,
     zIndex: 50,
+    pointerEvents: 'none',
   },
   gaugeContainer: {
     position: 'absolute',
@@ -71,8 +70,7 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
     backgroundColor: 'rgba(10, 10, 10, 0.88)',
-    borderWidth: 2,
-    borderColor: '#333',
+    border: '2px solid #333',
     borderRadius: 12,
     padding: 12,
   },
@@ -82,14 +80,13 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
     backgroundColor: 'rgba(10, 10, 10, 0.88)',
-    borderWidth: 2,
-    borderColor: '#333',
+    border: '2px solid #333',
     borderRadius: 12,
     padding: 12,
   },
   label: {
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: 900,
     fontFamily: 'Bangers',
     color: '#888',
     letterSpacing: 3,
@@ -107,7 +104,7 @@ const styles = StyleSheet.create({
   },
   valueText: {
     fontSize: 16,
-    fontWeight: '900',
+    fontWeight: 900,
     fontFamily: 'Bangers',
     color: '#E0E0E0',
     letterSpacing: 2,
@@ -116,14 +113,12 @@ const styles = StyleSheet.create({
   },
   dangerText: {
     fontSize: 20,
-    fontWeight: '900',
+    fontWeight: 900,
     fontFamily: 'Bangers',
     color: '#FF1744',
     letterSpacing: 4,
     textAlign: 'center',
     marginTop: 4,
-    textShadowColor: 'rgba(255, 23, 68, 0.8)',
-    textShadowOffset: {width: 0, height: 0},
-    textShadowRadius: 12,
+    textShadow: '0 0 12px rgba(255, 23, 68, 0.8)',
   },
-});
+};

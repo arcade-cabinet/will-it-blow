@@ -3,9 +3,10 @@
  * Pure presentational HUD overlay for the blowout station.
  * Props-driven: receives pressure and tie status, renders read-only display.
  * No store access -- all data flows through props.
+ *
+ * NOT used during gameplay (diegetic feedback via SurrealText).
+ * Rewritten from react-native to web HTML/CSS.
  */
-
-import {StyleSheet, Text, View} from 'react-native';
 
 interface BlowoutHUDProps {
   /** Current sausage pressure (0-100) */
@@ -20,49 +21,49 @@ export function BlowoutHUD({pressure, leftTied, rightTied}: BlowoutHUDProps) {
   const pressureColor = pressure > 80 ? '#FF1744' : pressure > 50 ? '#FFC107' : '#4CAF50';
 
   return (
-    <View style={styles.container} pointerEvents="box-none">
+    <div style={styles.container}>
       {/* Pressure gauge */}
-      <View style={styles.pressureContainer}>
-        <Text style={styles.label}>PRESSURE</Text>
-        <View style={styles.barTrack}>
-          <View
-            style={[
-              styles.barFill,
-              {
-                width: `${Math.min(100, Math.max(0, pressure))}%`,
-                backgroundColor: pressureColor,
-              },
-            ]}
+      <div style={styles.pressureContainer}>
+        <div style={styles.label}>PRESSURE</div>
+        <div style={styles.barTrack}>
+          <div
+            style={{
+              ...styles.barFill,
+              width: `${Math.min(100, Math.max(0, pressure))}%`,
+              backgroundColor: pressureColor,
+            }}
           />
-        </View>
-        <Text style={[styles.pressureValue, {color: pressureColor}]}>{Math.round(pressure)}%</Text>
-      </View>
+        </div>
+        <div style={{...styles.pressureValue, color: pressureColor}}>{Math.round(pressure)}%</div>
+      </div>
 
       {/* Tie status */}
-      <View style={styles.tieContainer}>
-        <View style={styles.tieRow}>
-          <View style={styles.tieItem}>
-            <Text style={styles.tieLabel}>LEFT</Text>
-            <Text style={[styles.tieStatus, leftTied ? styles.tied : styles.open]}>
+      <div style={styles.tieContainer}>
+        <div style={styles.tieRow}>
+          <div style={styles.tieItem}>
+            <div style={styles.tieLabel}>LEFT</div>
+            <div style={{...styles.tieStatus, ...(leftTied ? styles.tied : styles.open)}}>
               {leftTied ? 'TIED' : 'OPEN'}
-            </Text>
-          </View>
-          <View style={styles.tieItem}>
-            <Text style={styles.tieLabel}>RIGHT</Text>
-            <Text style={[styles.tieStatus, rightTied ? styles.tied : styles.open]}>
+            </div>
+          </div>
+          <div style={styles.tieItem}>
+            <div style={styles.tieLabel}>RIGHT</div>
+            <div style={{...styles.tieStatus, ...(rightTied ? styles.tied : styles.open)}}>
               {rightTied ? 'TIED' : 'OPEN'}
-            </Text>
-          </View>
-        </View>
-      </View>
-    </View>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
-const styles = StyleSheet.create({
+const styles: Record<string, React.CSSProperties> = {
   container: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    inset: 0,
     zIndex: 50,
+    pointerEvents: 'none',
   },
   pressureContainer: {
     position: 'absolute',
@@ -70,14 +71,13 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
     backgroundColor: 'rgba(10, 10, 10, 0.88)',
-    borderWidth: 2,
-    borderColor: '#333',
+    border: '2px solid #333',
     borderRadius: 12,
     padding: 12,
   },
   label: {
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: 900,
     fontFamily: 'Bangers',
     color: '#888',
     letterSpacing: 3,
@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
   },
   pressureValue: {
     fontSize: 20,
-    fontWeight: '900',
+    fontWeight: 900,
     fontFamily: 'Bangers',
     letterSpacing: 2,
     textAlign: 'center',
@@ -107,21 +107,23 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
     backgroundColor: 'rgba(10, 10, 10, 0.88)',
-    borderWidth: 2,
-    borderColor: '#333',
+    border: '2px solid #333',
     borderRadius: 12,
     padding: 12,
   },
   tieRow: {
+    display: 'flex',
     flexDirection: 'row',
     justifyContent: 'space-around',
   },
   tieItem: {
+    display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
   },
   tieLabel: {
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: 900,
     fontFamily: 'Bangers',
     color: '#888',
     letterSpacing: 3,
@@ -129,7 +131,7 @@ const styles = StyleSheet.create({
   },
   tieStatus: {
     fontSize: 18,
-    fontWeight: '900',
+    fontWeight: 900,
     fontFamily: 'Bangers',
     letterSpacing: 2,
   },
@@ -139,4 +141,4 @@ const styles = StyleSheet.create({
   open: {
     color: '#FF1744',
   },
-});
+};

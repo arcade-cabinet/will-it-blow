@@ -1,157 +1,140 @@
-import {useEffect, useRef} from 'react';
-import {type GestureResponderEvent, PanResponder, StyleSheet, View} from 'react-native';
+/**
+ * @module SwipeFPSControls
+ * Web-compatible dual-zone touch controls for mobile FPS movement.
+ *
+ * Left half (0-40% width): movement joystick
+ * Right half (60-100% width): camera look
+ * Tap anywhere: interact
+ *
+ * Uses standard web pointer events (no react-native PanResponder).
+ */
+
+import {useCallback, useRef} from 'react';
+import {useGameStore} from '../../ecs/hooks';
 
 const TAP_MAX_DURATION = 250;
 const TAP_MAX_DISTANCE = 10;
 const MOVE_ZONE_RADIUS = 80;
 
 interface SwipeFPSControlsProps {
-  joystickRef: React.RefObject<{x: number; y: number}>;
-  onLookDrag?: (dx: number, dy: number) => void;
-  onInteract?: () => void;
+  children?: React.ReactNode;
 }
 
-export function SwipeFPSControls({joystickRef, onLookDrag, onInteract}: SwipeFPSControlsProps) {
-  const moveStartRef = useRef({x: 0, y: 0});
-  const moveStartTimeRef = useRef(0);
-  const moveTotalDistRef = useRef(0);
+export function SwipeFPSControls({children}: SwipeFPSControlsProps) {
+  const addLookDelta = useGameStore(s => s.addLookDelta);
+  const setJoystick = useGameStore(s => s.setJoystick);
+  const triggerInteract = useGameStore(s => s.triggerInteract);
 
-  const lookLastRef = useRef({x: 0, y: 0});
-  const lookStartTimeRef = useRef(0);
-  const lookStartPosRef = useRef({x: 0, y: 0});
-  const lookMaxDistRef = useRef(0);
+  // Track active pointers (supports multi-touch: one for move, one for look)
+  const pointers = useRef<
+    Map<
+      number,
+      {
+        startX: number;
+        startY: number;
+        lastX: number;
+        lastY: number;
+        startTime: number;
+        maxDist: number;
+        zone: 'move' | 'look';
+      }
+    >
+  >(new Map());
 
-  const onLookDragRef = useRef(onLookDrag);
-  useEffect(() => {
-    onLookDragRef.current = onLookDrag;
-  }, [onLookDrag]);
+  const getZone = useCallback((clientX: number): 'move' | 'look' => {
+    const w = window.innerWidth;
+    return clientX < w * 0.4 ? 'move' : 'look';
+  }, []);
 
-  const onInteractRef = useRef(onInteract);
-  useEffect(() => {
-    onInteractRef.current = onInteract;
-  }, [onInteract]);
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      const zone = getZone(e.clientX);
+      pointers.current.set(e.pointerId, {
+        startX: e.clientX,
+        startY: e.clientY,
+        lastX: e.clientX,
+        lastY: e.clientY,
+        startTime: Date.now(),
+        maxDist: 0,
+        zone,
+      });
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    },
+    [getZone],
+  );
 
-  const movePanResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      const ptr = pointers.current.get(e.pointerId);
+      if (!ptr) return;
 
-      onPanResponderGrant: (evt: GestureResponderEvent) => {
-        const touch = evt.nativeEvent;
-        moveStartRef.current.x = touch.pageX;
-        moveStartRef.current.y = touch.pageY;
-        moveStartTimeRef.current = performance.now();
-        moveTotalDistRef.current = 0;
-        if (joystickRef.current) {
-          joystickRef.current.x = 0;
-          joystickRef.current.y = 0;
-        }
-      },
+      const dx = e.clientX - ptr.lastX;
+      const dy = e.clientY - ptr.lastY;
 
-      onPanResponderMove: (evt: GestureResponderEvent) => {
-        const touch = evt.nativeEvent;
-        const dx = touch.pageX - moveStartRef.current.x;
-        const dy = touch.pageY - moveStartRef.current.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        moveTotalDistRef.current = Math.max(moveTotalDistRef.current, dist);
+      // Track total distance from start for tap detection
+      const fromStartDx = e.clientX - ptr.startX;
+      const fromStartDy = e.clientY - ptr.startY;
+      const fromStartDist = Math.sqrt(fromStartDx * fromStartDx + fromStartDy * fromStartDy);
+      ptr.maxDist = Math.max(ptr.maxDist, fromStartDist);
 
-        if (!joystickRef.current) return;
-
+      if (ptr.zone === 'look') {
+        addLookDelta(dx, dy);
+      } else {
+        // Movement joystick: dx/dy from start position
+        const dist = Math.sqrt(fromStartDx * fromStartDx + fromStartDy * fromStartDy);
         const scale = Math.min(dist, MOVE_ZONE_RADIUS) / MOVE_ZONE_RADIUS;
         if (dist < 1) {
-          joystickRef.current.x = 0;
-          joystickRef.current.y = 0;
+          setJoystick(0, 0);
         } else {
-          const nx = dx / dist;
-          const ny = dy / dist;
-          joystickRef.current.x = nx * scale;
-          joystickRef.current.y = -(ny * scale);
+          const nx = fromStartDx / dist;
+          const ny = fromStartDy / dist;
+          setJoystick(nx * scale, -(ny * scale));
         }
-      },
+      }
 
-      onPanResponderRelease: () => {
-        if (joystickRef.current) {
-          joystickRef.current.x = 0;
-          joystickRef.current.y = 0;
+      ptr.lastX = e.clientX;
+      ptr.lastY = e.clientY;
+    },
+    [addLookDelta, setJoystick],
+  );
+
+  const handlePointerUp = useCallback(
+    (e: React.PointerEvent) => {
+      const ptr = pointers.current.get(e.pointerId);
+      if (ptr) {
+        // Reset joystick when move zone released
+        if (ptr.zone === 'move') {
+          setJoystick(0, 0);
         }
-        const duration = performance.now() - moveStartTimeRef.current;
-        if (duration < TAP_MAX_DURATION && moveTotalDistRef.current < TAP_MAX_DISTANCE) {
-          onInteractRef.current?.();
+
+        // Detect tap (quick, short distance)
+        const elapsed = Date.now() - ptr.startTime;
+        if (elapsed < TAP_MAX_DURATION && ptr.maxDist < TAP_MAX_DISTANCE) {
+          triggerInteract();
         }
-      },
 
-      onPanResponderTerminate: () => {
-        if (joystickRef.current) {
-          joystickRef.current.x = 0;
-          joystickRef.current.y = 0;
-        }
-      },
-    }),
-  ).current;
-
-  const lookPanResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-
-      onPanResponderGrant: (evt: GestureResponderEvent) => {
-        const touch = evt.nativeEvent;
-        lookLastRef.current.x = touch.pageX;
-        lookLastRef.current.y = touch.pageY;
-        lookStartTimeRef.current = performance.now();
-        lookStartPosRef.current.x = touch.pageX;
-        lookStartPosRef.current.y = touch.pageY;
-        lookMaxDistRef.current = 0;
-      },
-
-      onPanResponderMove: (evt: GestureResponderEvent) => {
-        const touch = evt.nativeEvent;
-        const dx = touch.pageX - lookLastRef.current.x;
-        const dy = touch.pageY - lookLastRef.current.y;
-        lookLastRef.current.x = touch.pageX;
-        lookLastRef.current.y = touch.pageY;
-        const fromStartDx = touch.pageX - lookStartPosRef.current.x;
-        const fromStartDy = touch.pageY - lookStartPosRef.current.y;
-        const fromStartDist = Math.sqrt(fromStartDx * fromStartDx + fromStartDy * fromStartDy);
-        lookMaxDistRef.current = Math.max(lookMaxDistRef.current, fromStartDist);
-        onLookDragRef.current?.(dx, dy);
-      },
-
-      onPanResponderRelease: () => {
-        const duration = performance.now() - lookStartTimeRef.current;
-        if (duration < TAP_MAX_DURATION && lookMaxDistRef.current < TAP_MAX_DISTANCE) {
-          onInteractRef.current?.();
-        }
-      },
-    }),
-  ).current;
+        pointers.current.delete(e.pointerId);
+      }
+    },
+    [setJoystick, triggerInteract],
+  );
 
   return (
-    <View style={styles.touchSurface} testID="touch-surface">
-      <View style={styles.moveZone} testID="move-zone" {...movePanResponder.panHandlers} />
-      <View style={styles.lookZone} testID="look-zone" {...lookPanResponder.panHandlers} />
-    </View>
+    <div
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      style={{
+        position: 'absolute',
+        inset: 0,
+        zIndex: 15,
+        touchAction: 'none',
+      }}
+    >
+      {children}
+    </div>
   );
 }
 
-const styles = StyleSheet.create({
-  touchSurface: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 15,
-    flexDirection: 'row',
-  },
-  moveZone: {
-    width: '50%',
-    height: '100%',
-  },
-  lookZone: {
-    width: '50%',
-    height: '100%',
-  },
-});
-
-export {TAP_MAX_DURATION, TAP_MAX_DISTANCE, MOVE_ZONE_RADIUS};
+export {MOVE_ZONE_RADIUS, TAP_MAX_DISTANCE, TAP_MAX_DURATION};

@@ -4,14 +4,12 @@
  *
  * Props-driven: receives progress (0-100) and onReady callback.
  * Dark background (#0a0a0a) with blood-red (#FF1744) progress fill.
- * Shows narrative messages that cycle based on progress:
- * "PREPARING THE KITCHEN...", "SHARPENING KNIVES...", "HEATING THE GRINDER...", "READY."
+ * Shows narrative messages that cycle based on progress.
  *
- * When progress reaches 100, calls onReady after 500ms delay.
+ * Rewritten from react-native to web HTML/CSS with CSS transitions.
  */
 
-import {useEffect, useRef} from 'react';
-import {Animated, StyleSheet, Text, View} from 'react-native';
+import {useEffect, useRef, useState} from 'react';
 
 interface LoadingScreenProps {
   /** Loading progress 0-100 */
@@ -35,21 +33,13 @@ function getNarrativeMessage(progress: number): string {
 }
 
 export function LoadingScreen({progress, onReady}: LoadingScreenProps) {
-  const reducedMotion = false;
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [opacity, setOpacity] = useState(0);
   const onReadyCalledRef = useRef(false);
 
   useEffect(() => {
-    if (reducedMotion) {
-      fadeAnim.setValue(1);
-      return;
-    }
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 600,
-      useNativeDriver: true,
-    }).start();
-  }, [fadeAnim]);
+    // Fade in
+    requestAnimationFrame(() => setOpacity(1));
+  }, []);
 
   // Call onReady after 500ms when progress reaches 100
   useEffect(() => {
@@ -66,27 +56,39 @@ export function LoadingScreen({progress, onReady}: LoadingScreenProps) {
   const narrativeMessage = getNarrativeMessage(clampedProgress);
 
   return (
-    <Animated.View
-      style={[styles.container, {opacity: fadeAnim}]}
-      accessibilityLabel={`Loading game assets, ${clampedProgress}% complete`}
+    <div
+      style={{
+        ...styles.container,
+        opacity,
+        transition: 'opacity 600ms ease-out',
+      }}
+      role="status"
+      aria-label={`Loading game assets, ${clampedProgress}% complete`}
     >
       {/* Narrative message */}
-      <Text style={styles.narrativeText}>{narrativeMessage}</Text>
+      <div style={styles.narrativeText}>{narrativeMessage}</div>
 
       {/* Progress bar */}
-      <View
+      <div
         style={styles.progressContainer}
-        accessibilityRole="progressbar"
-        accessibilityValue={{min: 0, max: 100, now: clampedProgress}}
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={clampedProgress}
       >
-        <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, {width: `${clampedProgress}%`}]} />
-        </View>
-      </View>
+        <div style={styles.progressTrack}>
+          <div
+            style={{
+              ...styles.progressFill,
+              width: `${clampedProgress}%`,
+            }}
+          />
+        </div>
+      </div>
 
       {/* Percentage */}
-      <Text style={styles.percentText}>{clampedProgress}%</Text>
-    </Animated.View>
+      <div style={styles.percentText}>{clampedProgress}%</div>
+    </div>
   );
 }
 
@@ -96,30 +98,33 @@ export function LoadingScreen({progress, onReady}: LoadingScreenProps) {
  */
 export function LoadingScreenError({message, onRetry}: {message: string; onRetry: () => void}) {
   return (
-    <View style={styles.container}>
-      <Text style={styles.errorText} accessibilityRole="alert">
+    <div style={styles.container}>
+      <div style={styles.errorText} role="alert">
         {message}
-      </Text>
-      <View
+      </div>
+      <button
+        type="button"
         style={styles.retryButton}
-        accessibilityRole="button"
-        accessibilityLabel="Retry loading assets"
+        onClick={onRetry}
+        aria-label="Retry loading assets"
       >
-        <Text style={styles.retryText} onPress={onRetry}>
-          RETRY
-        </Text>
-      </View>
-    </View>
+        <span style={styles.retryText}>RETRY</span>
+      </button>
+    </div>
   );
 }
 
-const styles = StyleSheet.create({
+const styles: Record<string, React.CSSProperties> = {
   container: {
+    display: 'flex',
+    flexDirection: 'column',
     flex: 1,
     backgroundColor: '#0a0a0a',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 32,
+    padding: '0 32px',
+    width: '100vw',
+    height: '100vh',
   },
   narrativeText: {
     fontFamily: 'Bangers',
@@ -128,9 +133,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: 3,
     marginBottom: 32,
-    textShadowColor: 'rgba(255, 23, 68, 0.6)',
-    textShadowOffset: {width: 0, height: 0},
-    textShadowRadius: 12,
+    textShadow: '0 0 12px rgba(255, 23, 68, 0.6)',
   },
   progressContainer: {
     width: '100%',
@@ -142,17 +145,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a',
     borderRadius: 8,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#333',
+    border: '1px solid #333',
   },
   progressFill: {
     height: '100%',
     backgroundColor: '#FF1744',
     borderRadius: 8,
-    shadowColor: '#FF1744',
-    shadowOffset: {width: 0, height: 0},
-    shadowOpacity: 0.8,
-    shadowRadius: 8,
+    boxShadow: '0 0 8px rgba(255, 23, 68, 0.8)',
+    transition: 'width 300ms ease-out',
   },
   percentText: {
     fontFamily: 'Bangers',
@@ -170,9 +170,11 @@ const styles = StyleSheet.create({
   },
   retryButton: {
     backgroundColor: '#C2442D',
-    paddingHorizontal: 32,
-    paddingVertical: 12,
+    padding: '12px 32px',
     borderRadius: 8,
+    border: 'none',
+    cursor: 'pointer',
+    outline: 'none',
   },
   retryText: {
     fontFamily: 'Bangers',
@@ -180,4 +182,4 @@ const styles = StyleSheet.create({
     color: '#fff',
     letterSpacing: 2,
   },
-});
+};

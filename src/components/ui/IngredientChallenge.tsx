@@ -5,10 +5,11 @@
  * Shows available ingredients. Player picks the required count.
  * Correct picks get gold highlight; wrong picks trigger red flash + onStrike.
  * Calls onComplete with selected IDs when the required count is reached.
+ *
+ * Rewritten from react-native to web HTML/CSS.
  */
 
 import {useCallback, useState} from 'react';
-import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 
 interface IngredientItem {
   id: string;
@@ -41,7 +42,6 @@ export function IngredientChallenge({
     (id: string) => {
       if (completed) return;
       if (selectedIds.includes(id)) {
-        // Tapping an already-selected ingredient counts as a wrong pick
         setFlashType('wrong');
         setFlashId(id);
         onStrike();
@@ -55,7 +55,6 @@ export function IngredientChallenge({
       const newSelected = [...selectedIds, id];
       setSelectedIds(newSelected);
 
-      // Show gold highlight for picks
       setFlashType('correct');
       setFlashId(id);
       setTimeout(() => {
@@ -72,20 +71,20 @@ export function IngredientChallenge({
   );
 
   return (
-    <View style={styles.container} pointerEvents="box-none">
+    <div style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>SELECT INGREDIENTS</Text>
-        <Text style={styles.subtitle}>
+      <div style={styles.header}>
+        <div style={styles.title}>SELECT INGREDIENTS</div>
+        <div style={styles.subtitle}>
           Pick {requiredCount} ingredient{requiredCount !== 1 ? 's' : ''}
-        </Text>
-        <Text style={styles.counter}>
+        </div>
+        <div style={styles.counter}>
           {selectedIds.length} / {requiredCount}
-        </Text>
-      </View>
+        </div>
+      </div>
 
       {/* Ingredient grid */}
-      <View style={styles.grid}>
+      <div style={styles.grid}>
         {ingredients.map(item => {
           const isSelected = selectedIds.includes(item.id);
           const isFlashing = flashId === item.id;
@@ -94,58 +93,63 @@ export function IngredientChallenge({
               ? styles.goldHighlight
               : isFlashing && flashType === 'wrong'
                 ? styles.redFlash
-                : null;
+                : {};
 
           return (
-            <TouchableOpacity
+            <button
+              type="button"
               key={item.id}
-              style={[styles.ingredientButton, isSelected && styles.selectedButton, flashStyle]}
-              onPress={() => handleSelect(item.id)}
+              style={{
+                ...styles.ingredientButton,
+                ...(isSelected ? styles.selectedButton : {}),
+                ...flashStyle,
+              }}
+              onClick={() => handleSelect(item.id)}
               disabled={isSelected || completed}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel={`Select ${item.name}`}
-              accessibilityState={{selected: isSelected, disabled: isSelected || completed}}
+              aria-label={`Select ${item.name}`}
+              aria-pressed={isSelected}
             >
-              <Text style={[styles.ingredientText, isSelected && styles.selectedText]}>
+              <span style={{...styles.ingredientText, ...(isSelected ? styles.selectedText : {})}}>
                 {item.name}
-              </Text>
-            </TouchableOpacity>
+              </span>
+            </button>
           );
         })}
-      </View>
+      </div>
 
       {/* Completion message */}
       {completed && (
-        <View style={styles.completionBanner}>
-          <Text style={styles.completionText}>INGREDIENTS SELECTED!</Text>
-        </View>
+        <div style={styles.completionBanner}>
+          <span style={styles.completionText}>INGREDIENTS SELECTED!</span>
+        </div>
       )}
-    </View>
+    </div>
   );
 }
 
-const styles = StyleSheet.create({
+const styles: Record<string, React.CSSProperties> = {
   container: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    inset: 0,
     zIndex: 50,
     backgroundColor: 'rgba(10, 10, 10, 0.85)',
     padding: 16,
+    pointerEvents: 'auto',
   },
   header: {
+    display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
     marginTop: 40,
     marginBottom: 24,
   },
   title: {
     fontSize: 28,
-    fontWeight: '900',
+    fontWeight: 900,
     fontFamily: 'Bangers',
     color: '#FF1744',
     letterSpacing: 4,
-    textShadowColor: 'rgba(255, 23, 68, 0.6)',
-    textShadowOffset: {width: 0, height: 0},
-    textShadowRadius: 12,
+    textShadow: '0 0 12px rgba(255, 23, 68, 0.6)',
   },
   subtitle: {
     fontSize: 16,
@@ -156,28 +160,30 @@ const styles = StyleSheet.create({
   },
   counter: {
     fontSize: 22,
-    fontWeight: '900',
+    fontWeight: 900,
     fontFamily: 'Bangers',
     color: '#FFC832',
     letterSpacing: 2,
     marginTop: 8,
   },
   grid: {
+    display: 'flex',
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
     gap: 12,
-    paddingHorizontal: 8,
+    padding: '0 8px',
   },
   ingredientButton: {
     backgroundColor: 'rgba(20, 20, 20, 0.9)',
-    borderWidth: 2,
-    borderColor: '#444',
+    border: '2px solid #444',
     borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    padding: '12px 20px',
     minWidth: 120,
-    alignItems: 'center',
+    textAlign: 'center',
+    cursor: 'pointer',
+    outline: 'none',
+    transition: 'background-color 200ms, border-color 200ms, box-shadow 200ms',
   },
   selectedButton: {
     borderColor: '#FFD700',
@@ -186,10 +192,7 @@ const styles = StyleSheet.create({
   goldHighlight: {
     borderColor: '#FFD700',
     backgroundColor: 'rgba(255, 215, 0, 0.3)',
-    shadowColor: '#FFD700',
-    shadowOffset: {width: 0, height: 0},
-    shadowOpacity: 0.8,
-    shadowRadius: 12,
+    boxShadow: '0 0 12px rgba(255, 215, 0, 0.8)',
   },
   redFlash: {
     borderColor: '#FF1744',
@@ -197,7 +200,7 @@ const styles = StyleSheet.create({
   },
   ingredientText: {
     fontSize: 16,
-    fontWeight: '900',
+    fontWeight: 900,
     fontFamily: 'Bangers',
     color: '#E0E0E0',
     letterSpacing: 1,
@@ -210,16 +213,15 @@ const styles = StyleSheet.create({
     bottom: 60,
     left: 0,
     right: 0,
-    alignItems: 'center',
+    display: 'flex',
+    justifyContent: 'center',
   },
   completionText: {
     fontSize: 24,
-    fontWeight: '900',
+    fontWeight: 900,
     fontFamily: 'Bangers',
     color: '#4CAF50',
     letterSpacing: 4,
-    textShadowColor: 'rgba(76, 175, 80, 0.6)',
-    textShadowOffset: {width: 0, height: 0},
-    textShadowRadius: 12,
+    textShadow: '0 0 12px rgba(76, 175, 80, 0.6)',
   },
-});
+};

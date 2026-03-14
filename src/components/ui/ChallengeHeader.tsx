@@ -2,11 +2,10 @@
  * @module ChallengeHeader
  * Top-of-screen HUD showing the current challenge number and name.
  *
- * Reads `gamePhase` from the Zustand store and maps it to a player-facing
- * challenge number (1-7). Returns null for transition phases.
+ * NOT used during gameplay (diegetic feedback via SurrealText).
+ * Rewritten from react-native to web HTML/CSS.
  */
 
-import {StyleSheet, Text, View} from 'react-native';
 import {type GamePhase, useGameStore} from '../../ecs/hooks';
 
 /** Maps GamePhase values to player-facing challenge info. Transition phases return null. */
@@ -31,41 +30,41 @@ export function ChallengeHeader() {
   if (!challenge) return null;
 
   return (
-    <View
+    <section
       style={styles.container}
-      accessibilityLabel={`Challenge ${challenge.number} of ${TOTAL_CHALLENGES}: ${challenge.name}`}
+      aria-label={`Challenge ${challenge.number} of ${TOTAL_CHALLENGES}: ${challenge.name}`}
     >
-      <Text style={styles.challengeNumber} accessibilityRole="text">
+      <div style={styles.challengeNumber}>
         CHALLENGE {challenge.number}/{TOTAL_CHALLENGES}
-      </Text>
-      <Text style={styles.challengeName} accessibilityRole="header">
-        {challenge.name}
-      </Text>
-    </View>
+      </div>
+      <h2 style={styles.challengeName}>{challenge.name}</h2>
+    </section>
   );
 }
 
-const styles = StyleSheet.create({
+const styles: Record<string, React.CSSProperties> = {
   container: {
     position: 'absolute',
     top: 16,
     left: 16,
     right: 16,
+    display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
     zIndex: 70,
   },
   challengeNumber: {
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: 900,
     color: '#888',
     letterSpacing: 3,
     marginBottom: 2,
   },
   challengeName: {
     fontSize: 22,
-    fontWeight: '900',
+    fontWeight: 900,
     color: '#FF1744',
     letterSpacing: 2,
     textAlign: 'center',
   },
-});
+};

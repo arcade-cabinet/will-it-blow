@@ -3,9 +3,10 @@
  * Pure presentational HUD overlay for the grinding station.
  * Props-driven: receives speed and progress, renders read-only display.
  * No store access -- all data flows through props.
+ *
+ * NOT used during gameplay (diegetic feedback via SurrealText).
+ * Rewritten from react-native to web HTML/CSS.
  */
-
-import {StyleSheet, Text, View} from 'react-native';
 
 interface GrindingHUDProps {
   /** Current grind speed (0-100) */
@@ -36,40 +37,46 @@ export function GrindingHUD({speed, progress}: GrindingHUDProps) {
   const zoneColor = getZoneColor(zone);
 
   return (
-    <View style={styles.container} pointerEvents="box-none">
+    <div style={styles.container}>
       {/* Speed zone indicator */}
-      <View style={styles.speedContainer}>
-        <Text style={styles.label}>SPEED</Text>
-        <Text style={[styles.zoneText, {color: zoneColor}]}>{zone}</Text>
-        <View style={styles.speedBarTrack}>
-          <View
-            style={[
-              styles.speedBarFill,
-              {width: `${Math.min(100, Math.max(0, speed))}%`, backgroundColor: zoneColor},
-            ]}
+      <div style={styles.speedContainer}>
+        <div style={styles.label}>SPEED</div>
+        <div style={{...styles.zoneText, color: zoneColor}}>{zone}</div>
+        <div style={styles.speedBarTrack}>
+          <div
+            style={{
+              ...styles.speedBarFill,
+              width: `${Math.min(100, Math.max(0, speed))}%`,
+              backgroundColor: zoneColor,
+            }}
           />
-        </View>
-      </View>
+        </div>
+      </div>
 
       {/* Progress bar */}
-      <View style={styles.progressContainer}>
-        <Text style={styles.label}>PROGRESS</Text>
-        <View style={styles.progressBarTrack}>
-          <View
-            style={[styles.progressBarFill, {width: `${Math.min(100, Math.max(0, progress))}%`}]}
+      <div style={styles.progressContainer}>
+        <div style={styles.label}>PROGRESS</div>
+        <div style={styles.progressBarTrack}>
+          <div
+            style={{
+              ...styles.progressBarFill,
+              width: `${Math.min(100, Math.max(0, progress))}%`,
+            }}
           />
-        </View>
-        <Text style={styles.percentText}>{Math.round(progress)}%</Text>
-      </View>
-    </View>
+        </div>
+        <div style={styles.percentText}>{Math.round(progress)}%</div>
+      </div>
+    </div>
   );
 }
 
-const styles = StyleSheet.create({
+const styles: Record<string, React.CSSProperties> = {
   container: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    inset: 0,
     zIndex: 50,
     padding: 16,
+    pointerEvents: 'none',
   },
   speedContainer: {
     position: 'absolute',
@@ -77,14 +84,13 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
     backgroundColor: 'rgba(10, 10, 10, 0.88)',
-    borderWidth: 2,
-    borderColor: '#333',
+    border: '2px solid #333',
     borderRadius: 12,
     padding: 12,
   },
   label: {
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: 900,
     fontFamily: 'Bangers',
     color: '#888',
     letterSpacing: 3,
@@ -92,7 +98,7 @@ const styles = StyleSheet.create({
   },
   zoneText: {
     fontSize: 22,
-    fontWeight: '900',
+    fontWeight: 900,
     fontFamily: 'Bangers',
     letterSpacing: 3,
     marginBottom: 8,
@@ -113,8 +119,7 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
     backgroundColor: 'rgba(10, 10, 10, 0.88)',
-    borderWidth: 2,
-    borderColor: '#333',
+    border: '2px solid #333',
     borderRadius: 12,
     padding: 12,
   },
@@ -131,11 +136,11 @@ const styles = StyleSheet.create({
   },
   percentText: {
     fontSize: 16,
-    fontWeight: '900',
+    fontWeight: 900,
     fontFamily: 'Bangers',
     color: '#E0E0E0',
     letterSpacing: 2,
     textAlign: 'center',
     marginTop: 4,
   },
-});
+};

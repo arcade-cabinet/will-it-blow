@@ -1,5 +1,12 @@
-import {useCallback, useEffect, useRef, useState} from 'react';
-import {Animated, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+/**
+ * @module TieGesture
+ * Web-compatible tie gesture overlay for the TIE_CASING phase.
+ *
+ * Player taps each end of the sausage to tie a knot. Both ends must be tied
+ * to complete the challenge. Uses CSS animations instead of react-native Animated.
+ */
+
+import {useCallback, useEffect, useState} from 'react';
 import {useGameStore} from '../../ecs/hooks';
 
 export function TieGesture({onComplete}: {onComplete: () => void}) {
@@ -7,34 +14,26 @@ export function TieGesture({onComplete}: {onComplete: () => void}) {
 
   const [leftTied, setLeftTied] = useState(false);
   const [rightTied, setRightTied] = useState(false);
-
-  const leftScaleRef = useRef(new Animated.Value(1));
-  const rightScaleRef = useRef(new Animated.Value(1));
-
-  const animateTie = useCallback((scaleAnim: Animated.Value, onDone: () => void) => {
-    Animated.sequence([
-      Animated.timing(scaleAnim, {
-        toValue: 1.3,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 0.55,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start(onDone);
-  }, []);
+  const [leftAnimating, setLeftAnimating] = useState(false);
+  const [rightAnimating, setRightAnimating] = useState(false);
 
   const handleLeftTie = useCallback(() => {
-    if (leftTied) return;
-    animateTie(leftScaleRef.current, () => setLeftTied(true));
-  }, [leftTied, animateTie]);
+    if (leftTied || leftAnimating) return;
+    setLeftAnimating(true);
+    setTimeout(() => {
+      setLeftTied(true);
+      setLeftAnimating(false);
+    }, 300);
+  }, [leftTied, leftAnimating]);
 
   const handleRightTie = useCallback(() => {
-    if (rightTied) return;
-    animateTie(rightScaleRef.current, () => setRightTied(true));
-  }, [rightTied, animateTie]);
+    if (rightTied || rightAnimating) return;
+    setRightAnimating(true);
+    setTimeout(() => {
+      setRightTied(true);
+      setRightAnimating(false);
+    }, 300);
+  }, [rightTied, rightAnimating]);
 
   useEffect(() => {
     if (!leftTied || !rightTied) return;
@@ -48,100 +47,114 @@ export function TieGesture({onComplete}: {onComplete: () => void}) {
   const bothTied = leftTied && rightTied;
 
   return (
-    <View style={styles.container} pointerEvents="box-none">
-      <View style={styles.instructionBanner}>
-        <Text style={styles.instructionText}>TIE THE CASING</Text>
-        <Text style={styles.subText}>Tap each end to tie a knot</Text>
-      </View>
+    <div style={styles.container}>
+      {/* Instruction Banner */}
+      <div style={styles.instructionBanner}>
+        <div style={styles.instructionText}>TIE THE CASING</div>
+        <div style={styles.subText}>Tap each end to tie a knot</div>
+      </div>
 
-      <View style={styles.sausageRow}>
-        <TouchableOpacity
-          testID="tie-left"
-          style={styles.tiePointWrapper}
-          onPress={handleLeftTie}
-          activeOpacity={0.7}
+      {/* Sausage Row */}
+      <div style={styles.sausageRow}>
+        <button
+          type="button"
+          data-testid="tie-left"
+          style={{
+            ...styles.tiePointWrapper,
+            cursor: leftTied ? 'default' : 'pointer',
+          }}
+          onClick={handleLeftTie}
           disabled={leftTied}
         >
-          <Animated.View
-            style={[
-              styles.tiePoint,
-              leftTied && styles.tiePointTied,
-              {transform: [{scale: leftScaleRef.current}]},
-            ]}
+          <div
+            style={{
+              ...styles.tiePoint,
+              ...(leftTied ? styles.tiePointTied : {}),
+              transform: leftAnimating ? 'scale(1.3)' : leftTied ? 'scale(0.55)' : 'scale(1)',
+              transition: 'transform 200ms ease-out, background-color 200ms, border-color 200ms',
+            }}
           >
-            <Text style={styles.tiePointLabel}>{leftTied ? 'X' : 'TIE'}</Text>
-          </Animated.View>
-        </TouchableOpacity>
+            <span style={styles.tiePointLabel}>{leftTied ? 'X' : 'TIE'}</span>
+          </div>
+        </button>
 
-        <View style={styles.casingBody}>
+        <div style={styles.casingBody}>
           {(leftTied || rightTied) && (
-            <View
-              style={[
-                styles.knotIndicator,
-                leftTied && styles.knotLeft,
-                rightTied && styles.knotRight,
-              ]}
+            <div
+              style={{
+                ...styles.knotIndicator,
+                ...(leftTied && !rightTied ? styles.knotLeft : {}),
+                ...(rightTied && !leftTied ? styles.knotRight : {}),
+              }}
             />
           )}
-        </View>
+        </div>
 
-        <TouchableOpacity
-          testID="tie-right"
-          style={styles.tiePointWrapper}
-          onPress={handleRightTie}
-          activeOpacity={0.7}
+        <button
+          type="button"
+          data-testid="tie-right"
+          style={{
+            ...styles.tiePointWrapper,
+            cursor: rightTied ? 'default' : 'pointer',
+          }}
+          onClick={handleRightTie}
           disabled={rightTied}
         >
-          <Animated.View
-            style={[
-              styles.tiePoint,
-              rightTied && styles.tiePointTied,
-              {transform: [{scale: rightScaleRef.current}]},
-            ]}
+          <div
+            style={{
+              ...styles.tiePoint,
+              ...(rightTied ? styles.tiePointTied : {}),
+              transform: rightAnimating ? 'scale(1.3)' : rightTied ? 'scale(0.55)' : 'scale(1)',
+              transition: 'transform 200ms ease-out, background-color 200ms, border-color 200ms',
+            }}
           >
-            <Text style={styles.tiePointLabel}>{rightTied ? 'X' : 'TIE'}</Text>
-          </Animated.View>
-        </TouchableOpacity>
-      </View>
+            <span style={styles.tiePointLabel}>{rightTied ? 'X' : 'TIE'}</span>
+          </div>
+        </button>
+      </div>
 
+      {/* Status */}
       {bothTied ? (
-        <View style={styles.completeBanner}>
-          <Text style={styles.completeText}>CASING SECURED</Text>
-        </View>
+        <div style={styles.completeBanner}>
+          <span style={styles.completeText}>CASING SECURED</span>
+        </div>
       ) : (
-        <View style={styles.statusRow}>
-          <Text style={[styles.statusDot, leftTied && styles.statusDotDone]}>
-            {leftTied ? '✓' : '○'} LEFT
-          </Text>
-          <Text style={[styles.statusDot, rightTied && styles.statusDotDone]}>
-            {rightTied ? '✓' : '○'} RIGHT
-          </Text>
-        </View>
+        <div style={styles.statusRow}>
+          <span style={{...styles.statusDot, ...(leftTied ? styles.statusDotDone : {})}}>
+            {leftTied ? '\u2713' : '\u25CB'} LEFT
+          </span>
+          <span style={{...styles.statusDot, ...(rightTied ? styles.statusDotDone : {})}}>
+            {rightTied ? '\u2713' : '\u25CB'} RIGHT
+          </span>
+        </div>
       )}
-    </View>
+    </div>
   );
 }
 
-const styles = StyleSheet.create({
+const styles: Record<string, React.CSSProperties> = {
   container: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    inset: 0,
+    display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 60,
+    pointerEvents: 'none',
   },
   instructionBanner: {
     backgroundColor: 'rgba(10, 10, 10, 0.92)',
-    borderWidth: 2,
-    borderColor: '#FFC832',
+    border: '2px solid #FFC832',
     borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 24,
+    padding: '10px 24px',
     marginBottom: 32,
-    alignItems: 'center',
+    textAlign: 'center',
+    pointerEvents: 'auto',
   },
   instructionText: {
     fontSize: 28,
-    fontWeight: '900',
+    fontWeight: 900,
     color: '#FFC832',
     letterSpacing: 4,
   },
@@ -152,20 +165,25 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   sausageRow: {
+    display: 'flex',
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 24,
+    pointerEvents: 'auto',
   },
   tiePointWrapper: {
     padding: 8,
+    background: 'none',
+    border: 'none',
+    outline: 'none',
   },
   tiePoint: {
     width: 70,
     height: 70,
     borderRadius: 35,
     backgroundColor: 'rgba(255, 200, 50, 0.15)',
-    borderWidth: 3,
-    borderColor: '#FFC832',
+    border: '3px solid #FFC832',
+    display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -175,7 +193,7 @@ const styles = StyleSheet.create({
   },
   tiePointLabel: {
     fontSize: 16,
-    fontWeight: '900',
+    fontWeight: 900,
     color: '#FFC832',
     letterSpacing: 2,
   },
@@ -184,9 +202,9 @@ const styles = StyleSheet.create({
     height: 36,
     backgroundColor: 'rgba(200, 120, 100, 0.5)',
     borderRadius: 18,
-    marginHorizontal: 8,
-    borderWidth: 2,
-    borderColor: 'rgba(200, 120, 100, 0.8)',
+    margin: '0 8px',
+    border: '2px solid rgba(200, 120, 100, 0.8)',
+    display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -205,8 +223,10 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   statusRow: {
+    display: 'flex',
     flexDirection: 'row',
     gap: 24,
+    pointerEvents: 'auto',
   },
   statusDot: {
     fontSize: 18,
@@ -218,16 +238,15 @@ const styles = StyleSheet.create({
   },
   completeBanner: {
     backgroundColor: 'rgba(76, 175, 80, 0.2)',
-    borderWidth: 2,
-    borderColor: '#4CAF50',
+    border: '2px solid #4CAF50',
     borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 24,
+    padding: '8px 24px',
+    pointerEvents: 'auto',
   },
   completeText: {
     fontSize: 22,
-    fontWeight: '900',
+    fontWeight: 900,
     color: '#4CAF50',
     letterSpacing: 4,
   },
-});
+};

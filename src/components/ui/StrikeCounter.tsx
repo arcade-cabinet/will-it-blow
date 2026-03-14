@@ -2,10 +2,10 @@
  * @module StrikeCounter
  * HUD showing strike indicators (circles that turn to red X marks).
  *
- * Pure presentational — receives strikes/maxStrikes via props.
+ * Pure presentational -- receives strikes/maxStrikes via props.
+ * NOT used during gameplay (diegetic feedback via SurrealText).
+ * Rewritten from react-native to web HTML/CSS.
  */
-
-import {StyleSheet, Text, View} from 'react-native';
 
 interface StrikeCounterProps {
   strikes: number;
@@ -14,36 +14,37 @@ interface StrikeCounterProps {
 
 export function StrikeCounter({strikes, maxStrikes = 3}: StrikeCounterProps) {
   return (
-    <View
+    <div
       style={styles.container}
-      accessibilityRole="text"
-      accessibilityLabel={`${strikes} of ${maxStrikes} strikes used`}
+      role="status"
+      aria-label={`${strikes} of ${maxStrikes} strikes used`}
     >
       {Array.from({length: maxStrikes}, (_, i) => (
-        <Text
+        <span
           key={i}
-          style={[styles.strike, i < strikes ? styles.used : styles.unused]}
-          accessibilityLabel={i < strikes ? `Strike ${i + 1} used` : `Strike ${i + 1} remaining`}
+          style={{...styles.strike, ...(i < strikes ? styles.used : styles.unused)}}
+          title={i < strikes ? `Strike ${i + 1} used` : `Strike ${i + 1} remaining`}
         >
           {i < strikes ? '\u2715' : '\u25CB'}
-        </Text>
+        </span>
       ))}
-    </View>
+    </div>
   );
 }
 
-const styles = StyleSheet.create({
+const styles: Record<string, React.CSSProperties> = {
   container: {
     position: 'absolute',
     top: 16,
     left: 16,
+    display: 'flex',
     flexDirection: 'row',
     gap: 8,
     zIndex: 80,
   },
   strike: {
     fontSize: 24,
-    fontWeight: '900',
+    fontWeight: 900,
   },
   used: {
     color: '#FF1744',
@@ -51,4 +52,4 @@ const styles = StyleSheet.create({
   unused: {
     color: '#555',
   },
-});
+};

@@ -6,18 +6,13 @@
  * Features:
  * - Labeled bar with percentage readout
  * - Configurable fill color (default green #4CAF50)
- * - Optional danger threshold marker: a red vertical line at the
- *   threshold position; bar fill turns red (#FF1744) when value exceeds it
- * - Glow shadow on the fill when value > 5% for visual feedback
+ * - Optional danger threshold marker
+ * - Glow shadow on the fill when value > 5%
  * - Value is clamped to [0, 100] before rendering
  *
- * @param props.value - Current value (0-100, clamped)
- * @param props.label - Uppercase label shown left of the bar
- * @param props.color - Fill color below danger threshold (default '#4CAF50')
- * @param props.dangerThreshold - Value above which fill turns red; renders a marker line
+ * NOT used during gameplay (diegetic feedback via SurrealText).
+ * Rewritten from react-native to web HTML/CSS.
  */
-
-import {StyleSheet, Text, View} from 'react-native';
 
 interface ProgressGaugeProps {
   value: number; // 0-100
@@ -38,46 +33,45 @@ export function ProgressGauge({
   const percentage = Math.round(clampedValue);
 
   return (
-    <View
+    <div
       style={styles.container}
-      accessibilityRole="progressbar"
-      accessibilityLabel={label}
-      accessibilityValue={{min: 0, max: 100, now: percentage}}
+      role="progressbar"
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={percentage}
     >
-      <View style={styles.labelRow}>
-        <Text style={styles.label}>{label}</Text>
-        <Text style={[styles.percentage, {color: fillColor}]}>{percentage}%</Text>
-      </View>
-      <View style={styles.track}>
-        <View
-          style={[
-            styles.fill,
-            {
-              width: `${clampedValue}%`,
-              backgroundColor: fillColor,
-            },
-            clampedValue > 5 && {
-              shadowColor: fillColor,
-              shadowOffset: {width: 0, height: 0},
-              shadowOpacity: 0.6,
-              shadowRadius: 6,
-              elevation: 4,
-            },
-          ]}
+      <div style={styles.labelRow}>
+        <span style={styles.label}>{label}</span>
+        <span style={{...styles.percentage, color: fillColor}}>{percentage}%</span>
+      </div>
+      <div style={styles.track}>
+        <div
+          style={{
+            ...styles.fill,
+            width: `${clampedValue}%`,
+            backgroundColor: fillColor,
+            ...(clampedValue > 5
+              ? {
+                  boxShadow: `0 0 6px ${fillColor}`,
+                }
+              : {}),
+          }}
         />
         {dangerThreshold !== undefined && (
-          <View style={[styles.thresholdMarker, {left: `${dangerThreshold}%`}]} />
+          <div style={{...styles.thresholdMarker, left: `${dangerThreshold}%`}} />
         )}
-      </View>
-    </View>
+      </div>
+    </div>
   );
 }
 
-const styles = StyleSheet.create({
+const styles: Record<string, React.CSSProperties> = {
   container: {
     width: '100%',
   },
   labelRow: {
+    display: 'flex',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -85,7 +79,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '900',
+    fontWeight: 900,
     fontFamily: 'Bangers',
     color: '#E0E0E0',
     letterSpacing: 1,
@@ -93,7 +87,7 @@ const styles = StyleSheet.create({
   },
   percentage: {
     fontSize: 14,
-    fontWeight: '900',
+    fontWeight: 900,
     fontFamily: 'Bangers',
     letterSpacing: 1,
   },
@@ -102,8 +96,7 @@ const styles = StyleSheet.create({
     height: 18,
     backgroundColor: '#222',
     borderRadius: 9,
-    borderWidth: 1,
-    borderColor: '#444',
+    border: '1px solid #444',
     overflow: 'hidden',
     position: 'relative',
   },
@@ -118,4 +111,4 @@ const styles = StyleSheet.create({
     width: 2,
     backgroundColor: '#FF1744',
   },
-});
+};

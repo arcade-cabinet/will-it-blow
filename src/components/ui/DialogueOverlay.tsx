@@ -1,5 +1,15 @@
+/**
+ * @module DialogueOverlay
+ * Web-compatible dialogue overlay with typewriter effect.
+ *
+ * NOTE: Per design rules, this is NOT used during gameplay (all dialogue
+ * goes through SurrealText on kitchen surfaces). Kept as a utility in case
+ * it's needed for pre-game or debug contexts.
+ *
+ * Rewritten from react-native to web HTML/CSS.
+ */
+
 import {useCallback, useEffect, useRef, useState} from 'react';
-import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {useGameStore} from '../../ecs/hooks';
 import {type DialogueChoice, DialogueEngine, type DialogueLine} from '../../engine/DialogueEngine';
 
@@ -115,64 +125,63 @@ export function DialogueOverlay({lines, onComplete}: DialogueOverlayProps) {
   const speakerColor = currentLine.speaker === 'sausage' ? '#FF1744' : '#FFC832';
 
   return (
-    <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={handleTap}>
-      <View style={styles.dialogueBox}>
-        <Text style={[styles.speakerLabel, {color: speakerColor}]}>{speakerLabel}</Text>
+    <div style={styles.overlay} onClick={handleTap} onKeyDown={undefined}>
+      <div style={styles.dialogueBox}>
+        <div style={{...styles.speakerLabel, color: speakerColor}}>{speakerLabel}</div>
 
-        <Text style={styles.dialogueText}>{displayedText}</Text>
+        <div style={styles.dialogueText}>{displayedText}</div>
 
-        {!isTyping && choices.length === 0 && (
-          <Text style={styles.tapHint}>Tap to continue...</Text>
-        )}
+        {!isTyping && choices.length === 0 && <div style={styles.tapHint}>Tap to continue...</div>}
 
         {!isTyping && choices.length > 0 && (
-          <View style={styles.choiceContainer}>
+          <div style={styles.choiceContainer}>
             {choices.map((choice, index) => (
-              <TouchableOpacity
+              <button
                 key={index}
+                type="button"
                 style={styles.choiceButton}
-                onPress={() => handleChoice(index)}
-                activeOpacity={0.7}
+                onClick={e => {
+                  e.stopPropagation();
+                  handleChoice(index);
+                }}
               >
-                <Text style={styles.choiceText}>{choice.text}</Text>
-              </TouchableOpacity>
+                <span style={styles.choiceText}>{choice.text}</span>
+              </button>
             ))}
-          </View>
+          </div>
         )}
-      </View>
-    </TouchableOpacity>
+      </div>
+    </div>
   );
 }
 
-const styles = StyleSheet.create({
+const styles: Record<string, React.CSSProperties> = {
   overlay: {
     position: 'absolute',
     bottom: 20,
     left: '10%',
     width: '80%',
     zIndex: 90,
-    paddingHorizontal: 16,
-    paddingBottom: 24,
-    pointerEvents: 'auto',
+    padding: '0 16px 24px',
+    cursor: 'pointer',
   },
   dialogueBox: {
     backgroundColor: 'rgba(10, 10, 10, 0.92)',
-    borderWidth: 2,
-    borderColor: '#333',
+    border: '2px solid #333',
     borderRadius: 12,
     padding: 16,
     minHeight: 80,
   },
   speakerLabel: {
     fontSize: 16,
-    fontWeight: '900',
+    fontWeight: 900,
     letterSpacing: 2,
     marginBottom: 8,
   },
   dialogueText: {
     fontSize: 16,
     color: '#E0E0E0',
-    lineHeight: 22,
+    lineHeight: '22px',
     letterSpacing: 0.3,
   },
   tapHint: {
@@ -184,19 +193,22 @@ const styles = StyleSheet.create({
   },
   choiceContainer: {
     marginTop: 12,
+    display: 'flex',
+    flexDirection: 'column',
     gap: 8,
   },
   choiceButton: {
-    borderWidth: 2,
-    borderColor: '#FFC832',
+    border: '2px solid #FFC832',
     borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    padding: '10px 16px',
     backgroundColor: 'rgba(255, 200, 50, 0.08)',
+    cursor: 'pointer',
+    textAlign: 'left',
+    outline: 'none',
   },
   choiceText: {
     fontSize: 16,
     color: '#FFC832',
     letterSpacing: 0.5,
   },
-});
+};

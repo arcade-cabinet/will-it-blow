@@ -7,10 +7,11 @@
  * per-challenge score breakdown, demand bonus details, and action buttons.
  *
  * Rank colors: S=Gold(#FFD700), A=Silver(#C0C0C0), B=Bronze(#CD7F32), F=Blood Red(#FF1744)
+ *
+ * Rewritten from react-native to web HTML/CSS with CSS transitions.
  */
 
-import {useEffect, useRef} from 'react';
-import {Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {useEffect, useState} from 'react';
 
 interface GameOverScreenProps {
   /** Rank badge letter: S, A, B, or F */
@@ -42,147 +43,130 @@ export function GameOverScreen({
   onPlayAgain,
   onMenu,
 }: GameOverScreenProps) {
-  const reducedMotion = false;
-  const verdict = {rank};
   const rankColor = RANK_COLORS[rank] ?? '#FF1744';
-
-  // Rank scale-in animation
-  const rankScale = useRef(new Animated.Value(0.3)).current;
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [visible, setVisible] = useState(false);
+  const [rankScale, setRankScale] = useState(false);
 
   useEffect(() => {
-    if (reducedMotion) {
-      fadeAnim.setValue(1);
-      rankScale.setValue(1);
-    } else {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 600,
-          useNativeDriver: true,
-        }),
-        Animated.spring(rankScale, {
-          toValue: 1,
-          friction: 5,
-          tension: 60,
-          useNativeDriver: true,
-          delay: 300,
-        }),
-      ]).start();
-    }
-  }, [fadeAnim, rankScale]);
+    requestAnimationFrame(() => setVisible(true));
+    const timer = setTimeout(() => setRankScale(true), 300);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
-    <Animated.View style={[styles.overlay, {opacity: fadeAnim}]}>
-      <ScrollView contentContainerStyle={styles.scrollContent} style={styles.scrollView}>
-        <View style={styles.content}>
+    <div
+      style={{
+        ...styles.overlay,
+        opacity: visible ? 1 : 0,
+        transition: 'opacity 600ms ease-out',
+      }}
+    >
+      <div style={styles.scrollView}>
+        <div style={styles.content}>
           {/* Rank letter */}
-          <Animated.Text
-            style={[
-              styles.rankLetter,
-              {
-                color: rankColor,
-                transform: [{scale: rankScale}],
-                textShadowColor: rankColor,
-              },
-            ]}
-            accessibilityRole="text"
-            accessibilityLabel={`Rank ${verdict.rank}`}
+          <div
+            style={{
+              ...styles.rankLetter,
+              color: rankColor,
+              textShadow: `0 0 30px ${rankColor}`,
+              transform: rankScale ? 'scale(1)' : 'scale(0.3)',
+              transition: 'transform 500ms cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+            }}
+            title={`Rank ${rank}`}
           >
             {rank}
-          </Animated.Text>
+          </div>
 
           {/* Total score */}
-          <Text style={styles.verdictTitle} accessibilityRole="header">
-            TOTAL SCORE
-          </Text>
-          <View style={styles.scoreCard}>
-            <Text style={[styles.scoreValue, {color: rankColor}]}>{Math.round(totalScore)}</Text>
-          </View>
+          <h2 style={styles.verdictTitle}>TOTAL SCORE</h2>
+          <div style={styles.scoreCard}>
+            <span style={{...styles.scoreValue, color: rankColor}}>{Math.round(totalScore)}</span>
+          </div>
 
           {/* Per-challenge score breakdown */}
-          <View style={styles.challengeScores}>
+          <div style={styles.challengeScores}>
             {breakdown.map((item, i) => (
-              <View key={i} style={styles.challengeScoreRow}>
-                <Text style={styles.challengeScoreLabel}>{item.label}</Text>
-                <Text style={styles.challengeScoreValue}>{Math.round(item.score)}</Text>
-              </View>
+              <div key={i} style={styles.challengeScoreRow}>
+                <span style={styles.challengeScoreLabel}>{item.label}</span>
+                <span style={styles.challengeScoreValue}>{Math.round(item.score)}</span>
+              </div>
             ))}
-          </View>
+          </div>
 
           {/* Demand bonus */}
           {demandBonus !== 0 && (
-            <View style={styles.demandBonusContainer}>
-              <Text style={styles.demandBonusLabel}>DEMAND BONUS</Text>
-              <Text
-                style={[styles.demandBonusValue, {color: demandBonus > 0 ? '#4CAF50' : '#FF1744'}]}
+            <div style={styles.demandBonusContainer}>
+              <span style={styles.demandBonusLabel}>DEMAND BONUS</span>
+              <span
+                style={{
+                  ...styles.demandBonusValue,
+                  color: demandBonus > 0 ? '#4CAF50' : '#FF1744',
+                }}
               >
                 {demandBonus > 0 ? '+' : ''}
                 {demandBonus}
-              </Text>
-            </View>
+              </span>
+            </div>
           )}
 
           {/* Buttons */}
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
+          <div style={styles.buttonContainer}>
+            <button
+              type="button"
               style={styles.newGameButton}
-              onPress={onPlayAgain}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel="Start new game"
+              onClick={onPlayAgain}
+              aria-label="Start new game"
             >
-              <Text style={styles.buttonText}>PLAY AGAIN</Text>
-            </TouchableOpacity>
+              <span style={styles.buttonText}>PLAY AGAIN</span>
+            </button>
 
-            <TouchableOpacity
+            <button
+              type="button"
               style={styles.menuButton}
-              onPress={onMenu}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel="Return to main menu"
+              onClick={onMenu}
+              aria-label="Return to main menu"
             >
-              <Text style={styles.menuButtonText}>MENU</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollView>
-    </Animated.View>
+              <span style={styles.menuButtonText}>MENU</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
-const styles = StyleSheet.create({
+const styles: Record<string, React.CSSProperties> = {
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    inset: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.9)',
     zIndex: 100,
   },
   scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 40,
+    width: '100%',
+    height: '100%',
+    overflow: 'auto',
   },
   content: {
+    display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
-    paddingHorizontal: 24,
+    padding: '40px 24px',
     width: '100%',
     maxWidth: 420,
+    margin: '0 auto',
+    minHeight: '100%',
+    justifyContent: 'center',
   },
   rankLetter: {
     fontSize: 72,
-    fontWeight: '900',
+    fontWeight: 900,
     fontFamily: 'Bangers',
-    textShadowOffset: {width: 0, height: 0},
-    textShadowRadius: 30,
     marginBottom: 8,
   },
   verdictTitle: {
     fontSize: 28,
-    fontWeight: '900',
+    fontWeight: 900,
     fontFamily: 'Bangers',
     color: '#E0E0E0',
     letterSpacing: 2,
@@ -191,29 +175,32 @@ const styles = StyleSheet.create({
   },
   scoreCard: {
     backgroundColor: 'rgba(20, 20, 20, 0.9)',
-    borderWidth: 1,
-    borderColor: '#333',
+    border: '1px solid #333',
     borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 32,
+    padding: '16px 32px',
+    display: 'flex',
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 20,
   },
   scoreValue: {
     fontSize: 42,
-    fontWeight: '900',
+    fontWeight: 900,
     fontFamily: 'Bangers',
     letterSpacing: 2,
   },
   challengeScores: {
     width: '100%',
     marginBottom: 16,
+    display: 'flex',
+    flexDirection: 'column',
     gap: 6,
   },
   challengeScoreRow: {
+    display: 'flex',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    padding: '0 16px',
   },
   challengeScoreLabel: {
     fontSize: 14,
@@ -223,75 +210,75 @@ const styles = StyleSheet.create({
   },
   challengeScoreValue: {
     fontSize: 14,
-    fontWeight: '900',
+    fontWeight: 900,
     fontFamily: 'Bangers',
     color: '#E0E0E0',
     letterSpacing: 1,
   },
   demandBonusContainer: {
+    display: 'flex',
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
-    paddingHorizontal: 16,
+    padding: '12px 16px',
     marginBottom: 32,
     backgroundColor: 'rgba(20, 20, 20, 0.9)',
-    borderWidth: 1,
-    borderColor: '#333',
+    border: '1px solid #333',
     borderRadius: 8,
-    paddingVertical: 12,
+    boxSizing: 'border-box',
   },
   demandBonusLabel: {
     fontSize: 14,
-    fontWeight: '900',
+    fontWeight: 900,
     fontFamily: 'Bangers',
     color: '#D2A24C',
     letterSpacing: 2,
   },
   demandBonusValue: {
     fontSize: 18,
-    fontWeight: '900',
+    fontWeight: 900,
     fontFamily: 'Bangers',
     letterSpacing: 2,
   },
   buttonContainer: {
     width: '100%',
+    display: 'flex',
+    flexDirection: 'column',
     gap: 12,
   },
   newGameButton: {
     backgroundColor: '#B71C1C',
-    borderWidth: 2,
-    borderColor: '#FF1744',
+    border: '2px solid #FF1744',
     borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 36,
-    shadowColor: '#FF1744',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 8,
+    padding: '16px 36px',
+    boxShadow: '0 4px 12px rgba(255, 23, 68, 0.4)',
+    cursor: 'pointer',
+    outline: 'none',
   },
   menuButton: {
     backgroundColor: '#333',
-    borderWidth: 2,
-    borderColor: '#555',
+    border: '2px solid #555',
     borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 36,
+    padding: '14px 36px',
+    cursor: 'pointer',
+    outline: 'none',
   },
   buttonText: {
     color: '#FFFFFF',
     fontSize: 22,
-    fontWeight: '900',
+    fontWeight: 900,
     fontFamily: 'Bangers',
     textAlign: 'center',
     letterSpacing: 1,
+    display: 'block',
   },
   menuButtonText: {
     color: '#AAA',
     fontSize: 18,
-    fontWeight: '900',
+    fontWeight: 900,
     fontFamily: 'Bangers',
     textAlign: 'center',
     letterSpacing: 1,
+    display: 'block',
   },
-});
+};

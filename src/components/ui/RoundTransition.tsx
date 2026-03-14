@@ -5,9 +5,9 @@
  * Props-driven (no ChallengeRegistry dependency):
  *  - roundNumber, totalRounds, roundScore, totalScore
  *  - onNextRound callback
+ *
+ * Rewritten from react-native to web HTML/CSS.
  */
-
-import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 
 interface RoundTransitionProps {
   roundNumber: number;
@@ -34,65 +34,61 @@ export function RoundTransition({
           : '#FF1744';
 
   return (
-    <View
+    <section
       style={styles.container}
-      accessibilityLabel={`Round ${roundNumber} of ${totalRounds} complete`}
+      aria-label={`Round ${roundNumber} of ${totalRounds} complete`}
     >
-      <View style={styles.card}>
-        <Text style={styles.roundLabel} accessibilityRole="header">
+      <div style={styles.card}>
+        <h2 style={styles.roundLabel}>
           ROUND {roundNumber} OF {totalRounds}
-        </Text>
+        </h2>
 
-        <View style={styles.divider} />
+        <div style={styles.divider} />
 
-        <View style={styles.scoreRow}>
-          <Text style={styles.scoreLabel}>ROUND SCORE</Text>
-          <Text style={[styles.scoreValue, {color: scoreColor}]}>{Math.round(roundScore)}</Text>
-        </View>
+        <div style={styles.scoreRow}>
+          <span style={styles.scoreLabel}>ROUND SCORE</span>
+          <span style={{...styles.scoreValue, color: scoreColor}}>{Math.round(roundScore)}</span>
+        </div>
 
-        <View style={styles.scoreRow}>
-          <Text style={styles.scoreLabel}>TOTAL</Text>
-          <Text style={[styles.scoreValue, {color: '#FFC832'}]}>{Math.round(totalScore)}</Text>
-        </View>
+        <div style={styles.scoreRow}>
+          <span style={styles.scoreLabel}>TOTAL</span>
+          <span style={{...styles.scoreValue, color: '#FFC832'}}>{Math.round(totalScore)}</span>
+        </div>
 
-        <View style={styles.divider} />
+        <div style={styles.divider} />
 
-        <TouchableOpacity
-          style={styles.button}
-          onPress={onNextRound}
-          activeOpacity={0.8}
-          accessibilityRole="button"
-          accessibilityLabel="Next round"
-        >
-          <Text style={styles.buttonText}>NEXT ROUND</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+        <button type="button" style={styles.button} onClick={onNextRound} aria-label="Next round">
+          <span style={styles.buttonText}>NEXT ROUND</span>
+        </button>
+      </div>
+    </section>
   );
 }
 
-const styles = StyleSheet.create({
+const styles: Record<string, React.CSSProperties> = {
   container: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    inset: 0,
     zIndex: 100,
+    display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(5, 0, 0, 0.9)',
   },
   card: {
     backgroundColor: '#1a0505',
-    borderWidth: 2,
-    borderColor: '#8B0000',
+    border: '2px solid #8B0000',
     borderRadius: 4,
-    paddingVertical: 28,
-    paddingHorizontal: 32,
+    padding: '28px 32px',
     minWidth: 300,
     maxWidth: 420,
+    display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
   },
   roundLabel: {
     fontSize: 28,
-    fontWeight: '900',
+    fontWeight: 900,
     color: '#FF1744',
     letterSpacing: 4,
     textAlign: 'center',
@@ -101,39 +97,40 @@ const styles = StyleSheet.create({
     height: 2,
     backgroundColor: '#8B0000',
     width: '100%',
-    marginVertical: 16,
+    margin: '16px 0',
     opacity: 0.6,
   },
   scoreRow: {
+    display: 'flex',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     width: '100%',
-    paddingVertical: 6,
+    padding: '6px 0',
   },
   scoreLabel: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: 700,
     color: '#ccc',
     letterSpacing: 2,
   },
   scoreValue: {
     fontSize: 28,
-    fontWeight: '900',
+    fontWeight: 900,
     letterSpacing: 2,
   },
   button: {
     backgroundColor: '#D2A24C',
-    paddingVertical: 14,
-    paddingHorizontal: 28,
+    padding: '14px 28px',
     borderRadius: 8,
-    borderWidth: 3,
-    borderColor: '#8B4513',
+    border: '3px solid #8B4513',
+    cursor: 'pointer',
+    outline: 'none',
   },
   buttonText: {
     color: '#1a0a00',
     fontSize: 20,
-    fontWeight: '900',
+    fontWeight: 900,
     letterSpacing: 2,
   },
-});
+};

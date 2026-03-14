@@ -3,9 +3,10 @@
  * Pure presentational HUD overlay for the cooking station.
  * Props-driven: receives temperature, target zone, and time in zone.
  * No store access -- all data flows through props.
+ *
+ * NOT used during gameplay (diegetic feedback via SurrealText).
+ * Rewritten from react-native to web HTML/CSS.
  */
-
-import {StyleSheet, Text, View} from 'react-native';
 
 interface CookingHUDProps {
   /** Current temperature in degrees */
@@ -27,84 +28,82 @@ export function CookingHUD({temperature, targetZone, timeInZone}: CookingHUDProp
   };
 
   return (
-    <View style={styles.container} pointerEvents="box-none">
+    <div style={styles.container}>
       {/* Temperature readout */}
-      <View style={styles.tempContainer}>
-        <Text style={[styles.tempValue, {color: getTempColor()}]}>
+      <div style={styles.tempContainer}>
+        <div style={{...styles.tempValue, color: getTempColor()}}>
           {Math.round(temperature)}
           {'\u00B0'}F
-        </Text>
-        <Text style={styles.targetText}>
+        </div>
+        <div style={styles.targetText}>
           TARGET: {minTarget}
           {'\u00B0'} - {maxTarget}
           {'\u00B0'}F
-        </Text>
+        </div>
         {inZone && (
-          <View style={styles.inZoneBadge}>
-            <Text style={styles.inZoneText}>IN ZONE</Text>
-          </View>
+          <div style={styles.inZoneBadge}>
+            <span style={styles.inZoneText}>IN ZONE</span>
+          </div>
         )}
-      </View>
+      </div>
 
       {/* Zone time indicator */}
-      <View style={styles.timeContainer}>
-        <Text style={styles.label}>TIME IN ZONE</Text>
-        <Text style={styles.timeValue}>{timeInZone.toFixed(1)}s</Text>
-      </View>
+      <div style={styles.timeContainer}>
+        <div style={styles.label}>TIME IN ZONE</div>
+        <div style={styles.timeValue}>{timeInZone.toFixed(1)}s</div>
+      </div>
 
       {/* Temperature bar */}
-      <View style={styles.barContainer}>
-        <View style={styles.barTrack}>
+      <div style={styles.barContainer}>
+        <div style={styles.barTrack}>
           {/* Target zone indicator */}
-          <View
-            style={[
-              styles.targetZoneIndicator,
-              {
-                left: `${Math.min(100, Math.max(0, (minTarget / 400) * 100))}%`,
-                width: `${Math.min(100, ((maxTarget - minTarget) / 400) * 100)}%`,
-              },
-            ]}
+          <div
+            style={{
+              ...styles.targetZoneIndicator,
+              left: `${Math.min(100, Math.max(0, (minTarget / 400) * 100))}%`,
+              width: `${Math.min(100, ((maxTarget - minTarget) / 400) * 100)}%`,
+            }}
           />
           {/* Temperature needle */}
-          <View
-            style={[
-              styles.tempNeedle,
-              {
-                left: `${Math.min(100, Math.max(0, (temperature / 400) * 100))}%`,
-                backgroundColor: getTempColor(),
-              },
-            ]}
+          <div
+            style={{
+              ...styles.tempNeedle,
+              left: `${Math.min(100, Math.max(0, (temperature / 400) * 100))}%`,
+              backgroundColor: getTempColor(),
+            }}
           />
-        </View>
-      </View>
-    </View>
+        </div>
+      </div>
+    </div>
   );
 }
 
-const styles = StyleSheet.create({
+const styles: Record<string, React.CSSProperties> = {
   container: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    inset: 0,
     zIndex: 50,
+    pointerEvents: 'none',
   },
   tempContainer: {
     position: 'absolute',
     top: 60,
     left: 0,
     right: 0,
+    display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
   },
   tempValue: {
     fontSize: 48,
-    fontWeight: '900',
+    fontWeight: 900,
     fontFamily: 'Bangers',
     letterSpacing: 4,
-    textShadowColor: 'rgba(0, 0, 0, 0.8)',
-    textShadowOffset: {width: 2, height: 2},
-    textShadowRadius: 12,
+    textShadow: '2px 2px 12px rgba(0, 0, 0, 0.8)',
   },
   targetText: {
     fontSize: 14,
-    fontWeight: '900',
+    fontWeight: 900,
     fontFamily: 'Bangers',
     color: '#999',
     letterSpacing: 2,
@@ -113,15 +112,13 @@ const styles = StyleSheet.create({
   inZoneBadge: {
     marginTop: 8,
     backgroundColor: 'rgba(76, 175, 80, 0.25)',
-    borderWidth: 2,
-    borderColor: '#4CAF50',
+    border: '2px solid #4CAF50',
     borderRadius: 8,
-    paddingVertical: 4,
-    paddingHorizontal: 16,
+    padding: '4px 16px',
   },
   inZoneText: {
     fontSize: 18,
-    fontWeight: '900',
+    fontWeight: 900,
     fontFamily: 'Bangers',
     color: '#4CAF50',
     letterSpacing: 4,
@@ -131,18 +128,20 @@ const styles = StyleSheet.create({
     top: 180,
     left: 0,
     right: 0,
+    display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
   },
   label: {
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: 900,
     fontFamily: 'Bangers',
     color: '#888',
     letterSpacing: 3,
   },
   timeValue: {
     fontSize: 24,
-    fontWeight: '900',
+    fontWeight: 900,
     fontFamily: 'Bangers',
     color: '#FFC832',
     letterSpacing: 2,
@@ -154,8 +153,7 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
     backgroundColor: 'rgba(10, 10, 10, 0.88)',
-    borderWidth: 2,
-    borderColor: '#333',
+    border: '2px solid #333',
     borderRadius: 12,
     padding: 12,
   },
@@ -171,9 +169,8 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     backgroundColor: 'rgba(76, 175, 80, 0.3)',
-    borderLeftWidth: 2,
-    borderRightWidth: 2,
-    borderColor: '#4CAF50',
+    borderLeft: '2px solid #4CAF50',
+    borderRight: '2px solid #4CAF50',
   },
   tempNeedle: {
     position: 'absolute',
@@ -182,4 +179,4 @@ const styles = StyleSheet.create({
     width: 4,
     borderRadius: 2,
   },
-});
+};
