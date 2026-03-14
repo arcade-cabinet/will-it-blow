@@ -2,28 +2,14 @@
   "expo": {
     "name": "WillItBlow",
     "slug": "will-it-blow",
-    "version": "0.0.1",
-    "platforms": [
-      "ios",
-      "android",
-      "web"
-    ],
-    "web": {
-      "bundler": "metro",
-      "output": "single"
-    },
+    "version": "0.1.0",
+    "platforms": ["ios", "android"],
     "android": {
       "package": "com.jbcom.willitblow"
     },
-    "plugins": [
-      "expo-sqlite",
-      "expo-asset"
-    ],
-    "experiments": {
-      "baseUrl": "/will-it-blow"
-    },
     "ios": {
       "bundleIdentifier": "com.jbcom.willitblow"
-    }
+    },
+    "plugins": ["expo-asset"]
   }
 }
