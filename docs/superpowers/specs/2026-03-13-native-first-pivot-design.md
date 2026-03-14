@@ -239,7 +239,13 @@ SurrealText renders game state as 3D text on surfaces. For Maestro to detect thi
 1. `npx expo run:ios` with current `@react-three/rapier` code
 2. Verify Rapier WASM initializes without the browser race condition
 3. If it works → keep `@react-three/rapier`, only fix `Sausage.tsx` direct require
-4. If it fails → fall back to manual collision detection (raycasting + AABB)
+4. **If it fails → FULL PIVOT to react-native-filament (Margelo)**
+   - `react-native-filament` is Google's Filament engine with React Native bindings
+   - It includes its own physics (Bullet), PBR rendering, and GLB loading
+   - This means rewriting ALL R3F station components to Filament's `<Model>`, `<Light>`, `<Camera>` API
+   - It is a major rewrite but is the ONLY viable native 3D option if R3F+Rapier fails
+   - See: https://github.com/margelo/react-native-filament
+   - If this path is taken, a NEW design spec must be written for the Filament migration
 5. **This gates all subsequent phases.** Do not proceed until physics is confirmed.
 
 ### Phase 1: Chainsaw (delete + swap deps)
