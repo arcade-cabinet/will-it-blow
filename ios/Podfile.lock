@@ -2522,7 +2522,7 @@ DEPENDENCIES:
   - "React-logger (from `../node_modules/.pnpm/react-native@0.83.2_@babel+core@7.29.0_@react-native-community+cli@20.1.2_typescript@5._91de8cd460d1da5450905e0536d58af5/node_modules/react-native/ReactCommon/logger`)"
   - "React-Mapbuffer (from `../node_modules/.pnpm/react-native@0.83.2_@babel+core@7.29.0_@react-native-community+cli@20.1.2_typescript@5._91de8cd460d1da5450905e0536d58af5/node_modules/react-native/ReactCommon`)"
   - "React-microtasksnativemodule (from `../node_modules/.pnpm/react-native@0.83.2_@babel+core@7.29.0_@react-native-community+cli@20.1.2_typescript@5._91de8cd460d1da5450905e0536d58af5/node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)"
-  - "react-native-filament (from `../node_modules/.pnpm/react-native-filament@1.9.0_react-native-worklets-core@1.6.3_react-native@0.83.2_@babel_2adccc9f92caadfc3b7962584d3c4d77/node_modules/react-native-filament`)"
+  - "react-native-filament (from `../node_modules/.pnpm/react-native-filament@1.9.0_patch_hash=bdb52c475f14b5f5946fcd9648e8d494ace7400c47053df7_38ed5984a4e2a486e952927b8bc40ad8/node_modules/react-native-filament`)"
   - "react-native-worklets-core (from `../node_modules/.pnpm/react-native-worklets-core@1.6.3_react-native@0.83.2_@babel+core@7.29.0_@react-native-c_7ce58168dba964debc0365363dbfc2e0/node_modules/react-native-worklets-core`)"
   - "React-NativeModulesApple (from `../node_modules/.pnpm/react-native@0.83.2_@babel+core@7.29.0_@react-native-community+cli@20.1.2_typescript@5._91de8cd460d1da5450905e0536d58af5/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)"
   - "React-networking (from `../node_modules/.pnpm/react-native@0.83.2_@babel+core@7.29.0_@react-native-community+cli@20.1.2_typescript@5._91de8cd460d1da5450905e0536d58af5/node_modules/react-native/ReactCommon/react/networking`)"
@@ -2681,7 +2681,7 @@ EXTERNAL SOURCES:
   React-microtasksnativemodule:
     :path: "../node_modules/.pnpm/react-native@0.83.2_@babel+core@7.29.0_@react-native-community+cli@20.1.2_typescript@5._91de8cd460d1da5450905e0536d58af5/node_modules/react-native/ReactCommon/react/nativemodule/microtasks"
   react-native-filament:
-    :path: "../node_modules/.pnpm/react-native-filament@1.9.0_react-native-worklets-core@1.6.3_react-native@0.83.2_@babel_2adccc9f92caadfc3b7962584d3c4d77/node_modules/react-native-filament"
+    :path: "../node_modules/.pnpm/react-native-filament@1.9.0_patch_hash=bdb52c475f14b5f5946fcd9648e8d494ace7400c47053df7_38ed5984a4e2a486e952927b8bc40ad8/node_modules/react-native-filament"
   react-native-worklets-core:
     :path: "../node_modules/.pnpm/react-native-worklets-core@1.6.3_react-native@0.83.2_@babel+core@7.29.0_@react-native-c_7ce58168dba964debc0365363dbfc2e0/node_modules/react-native-worklets-core"
   React-NativeModulesApple:

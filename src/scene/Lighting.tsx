@@ -1,26 +1,60 @@
 /**
  * @module Lighting
- * Horror kitchen lighting — dim ambient + positioned point lights.
+ * Horror kitchen lighting — matches R3F original setup:
+ * - Directional light from ceiling (sun-like, casts shadows)
+ * - Warm point light at center ceiling (main illumination)
+ * - Red emergency point light near back wall
+ * - Dim under-counter glow
  *
- * The kitchen is a sealed basement. Lighting creates claustrophobic
- * atmosphere: single overhead fluorescent (flickering), dim red emergency
- * light near the door, warm under-counter glow near stations.
- *
- * Filament's DefaultLight provides indirect illumination. Point lights
- * will be added as Entity lights once we have transform access in the
- * render callback for flicker animation.
+ * R3F original had:
+ *   ambientLight intensity=0.4
+ *   directionalLight at [0, 2.5, 0] intensity=1.0
+ *   pointLight at [0, 2.0, 0] intensity=50 distance=10 color=#ffeedd
  */
 
-import {DefaultLight} from 'react-native-filament';
+import {DefaultLight, Light} from 'react-native-filament';
 
-/**
- * Kitchen lighting setup. DefaultLight provides base illumination.
- *
- * Future: Add positioned point lights with flicker animation:
- * - Center ceiling fluorescent: [0, 2.9, 0], intensity 500, warm white
- * - Emergency red: [-2.5, 2.5, 3.5], intensity 100, #FF1744
- * - Under-counter glow: [1, 0.3, -1], intensity 50, #FFEEDD
- */
 export function KitchenLighting() {
-  return <DefaultLight />;
+  return (
+    <>
+      {/* Indirect/ambient base illumination */}
+      <DefaultLight />
+
+      {/* Main overhead — directional from ceiling, casting shadows */}
+      <Light
+        type="directional"
+        intensity={30000}
+        colorKelvin={4500}
+        direction={[0, -1, -0.2]}
+        castShadows={true}
+      />
+
+      {/* Center ceiling warm point light — main scene illumination */}
+      <Light
+        type="point"
+        intensity={50000}
+        colorKelvin={3200}
+        position={[0, 2.5, 0]}
+        falloffRadius={12}
+      />
+
+      {/* Emergency red light near back wall */}
+      <Light
+        type="point"
+        intensity={8000}
+        colorKelvin={1800}
+        position={[-2.5, 2.5, -3.5]}
+        falloffRadius={5}
+      />
+
+      {/* Under-counter warm glow near stations */}
+      <Light
+        type="point"
+        intensity={5000}
+        colorKelvin={2700}
+        position={[1, 0.5, -2]}
+        falloffRadius={4}
+      />
+    </>
+  );
 }

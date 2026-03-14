@@ -14,8 +14,8 @@ import {useFilamentContext} from 'react-native-filament';
 
 // Dark basement fog — near-black with sickly green undertone
 const FOG_COLOR = {r: 0.02, g: 0.03, b: 0.02};
-const FOG_DISTANCE = 4; // Starts close — claustrophobic
-const FOG_MAX_OPACITY = 0.85; // Thick but not total blackout
+const FOG_DISTANCE = 12; // Starts further out — room is 8m deep
+const FOG_MAX_OPACITY = 0.6; // Subtle, not blinding
 
 export function HorrorFog() {
   const {view} = useFilamentContext();

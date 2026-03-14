@@ -37,9 +37,9 @@ export function PlayerController({world}: PlayerControllerProps) {
       : undefined,
   );
 
-  // Camera at player spawn eye height, looking into kitchen center
-  const eyePos: [number, number, number] = [SPAWN[0], SPAWN[1] + EYE_HEIGHT, SPAWN[2]];
-  const lookAt: [number, number, number] = [0, 1.2, -2];
+  // Camera at ground + eye height, looking into kitchen center
+  const eyePos: [number, number, number] = [SPAWN[0], EYE_HEIGHT, SPAWN[2]];
+  const lookAt: [number, number, number] = [0, 1.2, -1];
 
   return <Camera cameraPosition={eyePos} cameraTarget={lookAt} near={0.1} far={50} />;
 }
