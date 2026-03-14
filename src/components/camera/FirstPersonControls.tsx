@@ -1,6 +1,5 @@
 import {useFrame, useThree} from '@react-three/fiber';
 import {useEffect, useRef} from 'react';
-import {Platform} from 'react-native';
 import * as THREE from 'three';
 import {type Posture, useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
@@ -41,7 +40,7 @@ export function FirstPersonControls() {
   }, [camera]);
 
   useEffect(() => {
-    if (Platform.OS !== 'web') return;
+    // Always web in Vite build
 
     let keyCooldown = false;
 

@@ -30,9 +30,9 @@ export function Grinder() {
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
   const [metalMap, metalNormal, metalRough] = useTexture([
-    require('../../../assets/textures/concrete_color.jpg'),
-    require('../../../assets/textures/concrete_normal.jpg'),
-    require('../../../assets/textures/concrete_roughness.jpg'),
+    '/textures/concrete_color.jpg',
+    '/textures/concrete_normal.jpg',
+    '/textures/concrete_roughness.jpg',
   ]);
 
   const metalMat = useMemo(

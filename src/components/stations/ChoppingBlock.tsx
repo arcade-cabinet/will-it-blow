@@ -7,9 +7,9 @@ import {audioEngine} from '../../engine/AudioEngine';
 
 export function ChoppingBlock() {
   const [colorMap, normalMap, roughnessMap] = useTexture([
-    require('../../../assets/textures/grime_base_color.jpg'),
-    require('../../../assets/textures/grime_base_normal.jpg'),
-    require('../../../assets/textures/grime_base_roughness.jpg'),
+    '/textures/grime_base_color.jpg',
+    '/textures/grime_base_normal.jpg',
+    '/textures/grime_base_roughness.jpg',
   ]);
 
   const gamePhase = useGameStore(state => state.gamePhase);
