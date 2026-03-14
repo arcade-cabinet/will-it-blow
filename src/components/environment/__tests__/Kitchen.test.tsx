@@ -1,9 +1,10 @@
+import {vi} from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import {Kitchen} from '../Kitchen';
 
-jest.mock('@react-three/drei', () => ({
-  ...jest.requireActual('@react-three/drei'),
-  useGLTF: jest.fn(() => ({
+vi.mock('@react-three/drei', () => ({
+  ...vi.importActual('@react-three/drei'),
+  useGLTF: vi.fn(() => ({
     scene: new (require('three/webgpu').Group)(),
     nodes: {},
     materials: {},

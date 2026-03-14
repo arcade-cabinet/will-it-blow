@@ -1,3 +1,4 @@
+import {vi} from 'vitest';
 /**
  * Tests for usePhysicsMovement — WASD velocity applied to Rapier capsule (Spec §23).
  *
@@ -6,17 +7,17 @@
  * WebGL context for frame execution).
  */
 
-jest.mock('@react-three/fiber', () => ({
-  useFrame: jest.fn(),
+vi.mock('@react-three/fiber', () => ({
+  useFrame: vi.fn(),
 }));
 
-jest.mock('three', () => ({
-  Vector3: jest.fn().mockImplementation((x = 0, y = 0, z = 0) => ({
+vi.mock('three', () => ({
+  Vector3: vi.fn().mockImplementation((x = 0, y = 0, z = 0) => ({
     x,
     y,
     z,
-    set: jest.fn(),
-    normalize: jest.fn().mockReturnThis(),
+    set: vi.fn(),
+    normalize: vi.fn().mockReturnThis(),
   })),
 }));
 

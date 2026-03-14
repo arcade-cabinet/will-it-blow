@@ -12,7 +12,6 @@
  * - No glow shadow when value <= 5
  */
 
-import {describe, expect, it} from '@jest/globals';
 import renderer, {act} from 'react-test-renderer';
 import {ProgressGauge} from '../ProgressGauge';
 

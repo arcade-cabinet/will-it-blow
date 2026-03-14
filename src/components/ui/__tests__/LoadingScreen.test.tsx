@@ -1,4 +1,4 @@
-import {describe, expect, it, jest} from '@jest/globals';
+import {vi} from 'vitest';
 import renderer, {act} from 'react-test-renderer';
 import {LoadingScreen} from '../LoadingScreen';
 
@@ -6,7 +6,7 @@ describe('LoadingScreen', () => {
   it('renders without crashing', () => {
     let tree: renderer.ReactTestRenderer;
     act(() => {
-      tree = renderer.create(<LoadingScreen progress={0} onReady={jest.fn()} />);
+      tree = renderer.create(<LoadingScreen progress={0} onReady={vi.fn()} />);
     });
     expect(tree!.toJSON()).toBeTruthy();
   });
@@ -14,7 +14,7 @@ describe('LoadingScreen', () => {
   it('displays progress percentage', () => {
     let tree: renderer.ReactTestRenderer;
     act(() => {
-      tree = renderer.create(<LoadingScreen progress={42} onReady={jest.fn()} />);
+      tree = renderer.create(<LoadingScreen progress={42} onReady={vi.fn()} />);
     });
     const json = JSON.stringify(tree!.toJSON());
     expect(json).toContain('42');
@@ -23,7 +23,7 @@ describe('LoadingScreen', () => {
   it('shows horror-themed narrative messages', () => {
     let tree: renderer.ReactTestRenderer;
     act(() => {
-      tree = renderer.create(<LoadingScreen progress={20} onReady={jest.fn()} />);
+      tree = renderer.create(<LoadingScreen progress={20} onReady={vi.fn()} />);
     });
     const json = JSON.stringify(tree!.toJSON());
     // Should show one of the narrative messages
@@ -68,31 +68,31 @@ describe('LoadingScreen', () => {
   });
 
   it('calls onReady after 500ms when progress reaches 100', () => {
-    jest.useFakeTimers();
-    const onReady = jest.fn();
+    vi.useFakeTimers();
+    const onReady = vi.fn();
     let _tree: renderer.ReactTestRenderer;
     act(() => {
       _tree = renderer.create(<LoadingScreen progress={100} onReady={onReady} />);
     });
     expect(onReady).not.toHaveBeenCalled();
     act(() => {
-      jest.advanceTimersByTime(500);
+      vi.advanceTimersByTime(500);
     });
     expect(onReady).toHaveBeenCalledTimes(1);
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   it('does not call onReady when progress is below 100', () => {
-    jest.useFakeTimers();
-    const onReady = jest.fn();
+    vi.useFakeTimers();
+    const onReady = vi.fn();
     act(() => {
       renderer.create(<LoadingScreen progress={99} onReady={onReady} />);
     });
     act(() => {
-      jest.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(1000);
     });
     expect(onReady).not.toHaveBeenCalled();
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   it('is a pure presentational component with props', () => {

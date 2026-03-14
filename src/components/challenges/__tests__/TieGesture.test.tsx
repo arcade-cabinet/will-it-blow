@@ -9,7 +9,7 @@
  * - Component cleanup — timer cleared on unmount
  */
 
-import {afterEach, beforeEach, describe, expect, it, jest} from '@jest/globals';
+import {vi} from 'vitest';
 import renderer, {act} from 'react-test-renderer';
 import {useGameStore} from '../../../ecs/hooks';
 import {TieGesture} from '../TieGesture';
@@ -22,13 +22,13 @@ const reset = () =>
   });
 
 beforeEach(() => {
-  jest.useFakeTimers();
+  vi.useFakeTimers();
   reset();
 });
 
 afterEach(() => {
-  jest.useRealTimers();
-  jest.restoreAllMocks();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 // ---------------------------------------------------------------------------
@@ -54,7 +54,7 @@ describe('TieGesture rendering', () => {
   it('renders without crashing', () => {
     let tree: renderer.ReactTestRenderer;
     act(() => {
-      tree = renderer.create(<TieGesture onComplete={jest.fn()} />);
+      tree = renderer.create(<TieGesture onComplete={vi.fn()} />);
     });
     expect(tree!.toJSON()).not.toBeNull();
   });
@@ -62,7 +62,7 @@ describe('TieGesture rendering', () => {
   it('renders two tie-point buttons (tie-left, tie-right)', () => {
     let tree: renderer.ReactTestRenderer;
     act(() => {
-      tree = renderer.create(<TieGesture onComplete={jest.fn()} />);
+      tree = renderer.create(<TieGesture onComplete={vi.fn()} />);
     });
     expect(() => tree!.root.findByProps({testID: 'tie-left'})).not.toThrow();
     expect(() => tree!.root.findByProps({testID: 'tie-right'})).not.toThrow();
@@ -71,7 +71,7 @@ describe('TieGesture rendering', () => {
   it('shows "TIE THE CASING" instruction text', () => {
     let tree: renderer.ReactTestRenderer;
     act(() => {
-      tree = renderer.create(<TieGesture onComplete={jest.fn()} />);
+      tree = renderer.create(<TieGesture onComplete={vi.fn()} />);
     });
     const flat = JSON.stringify(tree!.toJSON());
     expect(flat).toContain('TIE THE CASING');
@@ -84,7 +84,7 @@ describe('TieGesture rendering', () => {
 
 describe('tie gesture logic', () => {
   it('does not call onComplete after tying only the left end', () => {
-    const onComplete = jest.fn();
+    const onComplete = vi.fn();
     let tree: renderer.ReactTestRenderer;
     act(() => {
       tree = renderer.create(<TieGesture onComplete={onComplete} />);
@@ -92,26 +92,26 @@ describe('tie gesture logic', () => {
 
     pressNode(tree!, 'tie-left');
     // Advance past completion delay
-    act(() => jest.advanceTimersByTime(1000));
+    act(() => vi.advanceTimersByTime(1000));
 
     expect(onComplete).not.toHaveBeenCalled();
   });
 
   it('does not call onComplete after tying only the right end', () => {
-    const onComplete = jest.fn();
+    const onComplete = vi.fn();
     let tree: renderer.ReactTestRenderer;
     act(() => {
       tree = renderer.create(<TieGesture onComplete={onComplete} />);
     });
 
     pressNode(tree!, 'tie-right');
-    act(() => jest.advanceTimersByTime(1000));
+    act(() => vi.advanceTimersByTime(1000));
 
     expect(onComplete).not.toHaveBeenCalled();
   });
 
   it('calls onComplete after tying left then right (with 600ms completion delay)', () => {
-    const onComplete = jest.fn();
+    const onComplete = vi.fn();
     let tree: renderer.ReactTestRenderer;
     act(() => {
       tree = renderer.create(<TieGesture onComplete={onComplete} />);
@@ -119,30 +119,30 @@ describe('tie gesture logic', () => {
 
     pressNode(tree!, 'tie-left');
     // Flush Animated.sequence callbacks so setLeftTied(true) fires
-    act(() => jest.runAllTimers());
+    act(() => vi.runAllTimers());
 
     pressNode(tree!, 'tie-right');
     // Flush second animation so setRightTied(true) fires
-    act(() => jest.runAllTimers());
+    act(() => vi.runAllTimers());
     // Flush the 600ms completion setTimeout (fires after setCasingTied)
-    act(() => jest.runAllTimers());
+    act(() => vi.runAllTimers());
 
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
 
   it('calls onComplete after tying right then left', () => {
-    const onComplete = jest.fn();
+    const onComplete = vi.fn();
     let tree: renderer.ReactTestRenderer;
     act(() => {
       tree = renderer.create(<TieGesture onComplete={onComplete} />);
     });
 
     pressNode(tree!, 'tie-right');
-    act(() => jest.runAllTimers());
+    act(() => vi.runAllTimers());
 
     pressNode(tree!, 'tie-left');
-    act(() => jest.runAllTimers());
-    act(() => jest.runAllTimers());
+    act(() => vi.runAllTimers());
+    act(() => vi.runAllTimers());
 
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
@@ -150,37 +150,37 @@ describe('tie gesture logic', () => {
   it('calls setCasingTied(true) when both ends are tied', () => {
     let tree: renderer.ReactTestRenderer;
     act(() => {
-      tree = renderer.create(<TieGesture onComplete={jest.fn()} />);
+      tree = renderer.create(<TieGesture onComplete={vi.fn()} />);
     });
 
     expect(store().casingTied).toBe(false);
 
     pressNode(tree!, 'tie-left');
-    act(() => jest.runAllTimers());
+    act(() => vi.runAllTimers());
     pressNode(tree!, 'tie-right');
-    act(() => jest.runAllTimers());
+    act(() => vi.runAllTimers());
 
     expect(store().casingTied).toBe(true);
   });
 
   it('does not call onComplete more than once if both buttons tapped again', () => {
-    const onComplete = jest.fn();
+    const onComplete = vi.fn();
     let tree: renderer.ReactTestRenderer;
     act(() => {
       tree = renderer.create(<TieGesture onComplete={onComplete} />);
     });
 
     pressNode(tree!, 'tie-left');
-    act(() => jest.runAllTimers());
+    act(() => vi.runAllTimers());
     pressNode(tree!, 'tie-right');
-    act(() => jest.runAllTimers());
+    act(() => vi.runAllTimers());
     // Flush the 600ms completion timeout
-    act(() => jest.runAllTimers());
+    act(() => vi.runAllTimers());
 
     expect(onComplete).toHaveBeenCalledTimes(1);
 
     // Advance more time — should not double-fire
-    act(() => jest.advanceTimersByTime(3000));
+    act(() => vi.advanceTimersByTime(3000));
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
 });
@@ -193,7 +193,7 @@ describe('cleanup', () => {
   it('cleans up completion timer on unmount without throwing', () => {
     let tree: renderer.ReactTestRenderer;
     act(() => {
-      tree = renderer.create(<TieGesture onComplete={jest.fn()} />);
+      tree = renderer.create(<TieGesture onComplete={vi.fn()} />);
     });
 
     pressNode(tree!, 'tie-left');
@@ -203,6 +203,6 @@ describe('cleanup', () => {
     act(() => tree!.unmount());
 
     // Advancing timers should not throw
-    expect(() => act(() => jest.advanceTimersByTime(1000))).not.toThrow();
+    expect(() => act(() => vi.advanceTimersByTime(1000))).not.toThrow();
   });
 });

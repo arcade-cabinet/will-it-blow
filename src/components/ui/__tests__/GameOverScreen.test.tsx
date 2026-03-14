@@ -1,9 +1,9 @@
-import {describe, expect, it, jest} from '@jest/globals';
+import {vi} from 'vitest';
 import renderer, {act} from 'react-test-renderer';
 
-jest.mock('../../../engine/AudioEngine', () => ({
+vi.mock('../../../engine/AudioEngine', () => ({
   audioEngine: {
-    playRatingSong: jest.fn(),
+    playRatingSong: vi.fn(),
   },
 }));
 
@@ -20,8 +20,8 @@ const defaultProps = {
     {label: 'Cooking', score: 100},
   ],
   demandBonus: 5,
-  onPlayAgain: jest.fn(),
-  onMenu: jest.fn(),
+  onPlayAgain: vi.fn(),
+  onMenu: vi.fn(),
 };
 
 describe('GameOverScreen', () => {
@@ -125,7 +125,7 @@ describe('GameOverScreen', () => {
   });
 
   it('calls onPlayAgain when PLAY AGAIN is pressed', () => {
-    const onPlayAgain = jest.fn();
+    const onPlayAgain = vi.fn();
     let tree: renderer.ReactTestRenderer;
     act(() => {
       tree = renderer.create(<GameOverScreen {...defaultProps} onPlayAgain={onPlayAgain} />);
@@ -141,7 +141,7 @@ describe('GameOverScreen', () => {
   });
 
   it('calls onMenu when MENU is pressed', () => {
-    const onMenu = jest.fn();
+    const onMenu = vi.fn();
     let tree: renderer.ReactTestRenderer;
     act(() => {
       tree = renderer.create(<GameOverScreen {...defaultProps} onMenu={onMenu} />);

@@ -1,3 +1,4 @@
+import {vi} from 'vitest';
 /**
  * Tests for useMouseLook — pointer lock + mouse delta camera rotation (Spec §23).
  *
@@ -5,17 +6,17 @@
  * useMouseLook is smoke-tested only (requires R3F context for frame execution).
  */
 
-jest.mock('@react-three/fiber', () => ({
-  useFrame: jest.fn(),
-  useThree: jest.fn().mockReturnValue({
+vi.mock('@react-three/fiber', () => ({
+  useFrame: vi.fn(),
+  useThree: vi.fn().mockReturnValue({
     camera: {
       rotation: {order: 'XYZ', x: 0, y: 0, z: 0},
     },
     gl: {
       domElement: {
-        addEventListener: jest.fn(),
-        removeEventListener: jest.fn(),
-        requestPointerLock: jest.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        requestPointerLock: vi.fn(),
       },
     },
   }),

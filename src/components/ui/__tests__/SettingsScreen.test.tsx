@@ -1,4 +1,4 @@
-import {describe, expect, it, jest} from '@jest/globals';
+import {vi} from 'vitest';
 import renderer, {act} from 'react-test-renderer';
 import {SettingsScreen} from '../SettingsScreen';
 
@@ -6,10 +6,10 @@ const defaultProps = {
   sfxVolume: 80,
   musicVolume: 70,
   hapticsEnabled: true,
-  onSfxChange: jest.fn(),
-  onMusicChange: jest.fn(),
-  onHapticsToggle: jest.fn(),
-  onBack: jest.fn(),
+  onSfxChange: vi.fn(),
+  onMusicChange: vi.fn(),
+  onHapticsToggle: vi.fn(),
+  onBack: vi.fn(),
 };
 
 describe('SettingsScreen', () => {
@@ -67,7 +67,7 @@ describe('SettingsScreen', () => {
   });
 
   it('calls onBack when back button is pressed', () => {
-    const onBack = jest.fn();
+    const onBack = vi.fn();
     let tree: renderer.ReactTestRenderer;
     act(() => {
       tree = renderer.create(<SettingsScreen {...defaultProps} onBack={onBack} />);

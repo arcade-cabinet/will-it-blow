@@ -1,4 +1,4 @@
-import {describe, expect, it, jest} from '@jest/globals';
+import {vi} from 'vitest';
 import renderer, {act} from 'react-test-renderer';
 import {TastingChallenge} from '../TastingChallenge';
 
@@ -6,16 +6,16 @@ const defaultProps = {
   scores: {form: 85, ingredients: 90, cook: 78},
   demandBonus: 5,
   rank: 'A' as string,
-  onComplete: jest.fn(),
+  onComplete: vi.fn(),
 };
 
 describe('TastingChallenge', () => {
   beforeEach(() => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   it('renders without crashing', () => {
@@ -43,7 +43,7 @@ describe('TastingChallenge', () => {
     });
     // Advance past first phase (form -> ingredients)
     act(() => {
-      jest.advanceTimersByTime(1600);
+      vi.advanceTimersByTime(1600);
     });
     const json = JSON.stringify(tree!.toJSON());
     expect(json).toContain('INGREDIENTS');
@@ -56,10 +56,10 @@ describe('TastingChallenge', () => {
       tree = renderer.create(<TastingChallenge {...defaultProps} />);
     });
     act(() => {
-      jest.advanceTimersByTime(1600);
+      vi.advanceTimersByTime(1600);
     }); // form -> ingredients
     act(() => {
-      jest.advanceTimersByTime(1600);
+      vi.advanceTimersByTime(1600);
     }); // ingredients -> cook
     const json = JSON.stringify(tree!.toJSON());
     expect(json).toContain('COOK');
@@ -72,13 +72,13 @@ describe('TastingChallenge', () => {
       tree = renderer.create(<TastingChallenge {...defaultProps} />);
     });
     act(() => {
-      jest.advanceTimersByTime(1600);
+      vi.advanceTimersByTime(1600);
     }); // form -> ingredients
     act(() => {
-      jest.advanceTimersByTime(1600);
+      vi.advanceTimersByTime(1600);
     }); // ingredients -> cook
     act(() => {
-      jest.advanceTimersByTime(1600);
+      vi.advanceTimersByTime(1600);
     }); // cook -> total
     const json = JSON.stringify(tree!.toJSON());
     expect(json).toContain('DEMAND');
@@ -91,16 +91,16 @@ describe('TastingChallenge', () => {
       tree = renderer.create(<TastingChallenge {...defaultProps} />);
     });
     act(() => {
-      jest.advanceTimersByTime(1600);
+      vi.advanceTimersByTime(1600);
     }); // form -> ingredients
     act(() => {
-      jest.advanceTimersByTime(1600);
+      vi.advanceTimersByTime(1600);
     }); // ingredients -> cook
     act(() => {
-      jest.advanceTimersByTime(1600);
+      vi.advanceTimersByTime(1600);
     }); // cook -> total
     act(() => {
-      jest.advanceTimersByTime(1600);
+      vi.advanceTimersByTime(1600);
     }); // total -> rank
     const json = JSON.stringify(tree!.toJSON());
     expect(json).toContain('A');
@@ -119,14 +119,14 @@ describe('TastingChallenge', () => {
   });
 
   it('calls onComplete at the end', () => {
-    const onComplete = jest.fn();
+    const onComplete = vi.fn();
     act(() => {
       renderer.create(<TastingChallenge {...defaultProps} onComplete={onComplete} />);
     });
     // Advance through all 6 phases: form, ingredients, cook, total, rank, done
     for (let i = 0; i < 6; i++) {
       act(() => {
-        jest.advanceTimersByTime(1600);
+        vi.advanceTimersByTime(1600);
       });
     }
     expect(onComplete).toHaveBeenCalled();

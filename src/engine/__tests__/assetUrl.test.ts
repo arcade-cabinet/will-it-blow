@@ -1,3 +1,4 @@
+import {vi} from 'vitest';
 /**
  * Tests for assetUrl.ts — verifies correct base path detection for both
  * localhost development and GitHub Pages deployment (/will-it-blow/ prefix).
@@ -7,7 +8,7 @@
 // and clear the module cache between tests.
 
 beforeEach(() => {
-  jest.resetModules();
+  vi.resetModules();
 });
 
 describe('getWebBasePath', () => {

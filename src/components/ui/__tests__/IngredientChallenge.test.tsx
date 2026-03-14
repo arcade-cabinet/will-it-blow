@@ -1,4 +1,4 @@
-import {describe, expect, it, jest} from '@jest/globals';
+import {vi} from 'vitest';
 import renderer, {act} from 'react-test-renderer';
 import {IngredientChallenge} from '../IngredientChallenge';
 
@@ -18,8 +18,8 @@ describe('IngredientChallenge', () => {
         <IngredientChallenge
           ingredients={mockIngredients}
           requiredCount={3}
-          onComplete={jest.fn()}
-          onStrike={jest.fn()}
+          onComplete={vi.fn()}
+          onStrike={vi.fn()}
         />,
       );
     });
@@ -33,8 +33,8 @@ describe('IngredientChallenge', () => {
         <IngredientChallenge
           ingredients={mockIngredients}
           requiredCount={3}
-          onComplete={jest.fn()}
-          onStrike={jest.fn()}
+          onComplete={vi.fn()}
+          onStrike={vi.fn()}
         />,
       );
     });
@@ -51,8 +51,8 @@ describe('IngredientChallenge', () => {
         <IngredientChallenge
           ingredients={mockIngredients}
           requiredCount={3}
-          onComplete={jest.fn()}
-          onStrike={jest.fn()}
+          onComplete={vi.fn()}
+          onStrike={vi.fn()}
         />,
       );
     });
@@ -61,7 +61,7 @@ describe('IngredientChallenge', () => {
   });
 
   it('allows selecting ingredients', () => {
-    const onComplete = jest.fn();
+    const onComplete = vi.fn();
     let tree: renderer.ReactTestRenderer;
     act(() => {
       tree = renderer.create(
@@ -69,7 +69,7 @@ describe('IngredientChallenge', () => {
           ingredients={mockIngredients}
           requiredCount={3}
           onComplete={onComplete}
-          onStrike={jest.fn()}
+          onStrike={vi.fn()}
         />,
       );
     });
@@ -80,7 +80,7 @@ describe('IngredientChallenge', () => {
   });
 
   it('calls onComplete with selected IDs when required count is met', () => {
-    const onComplete = jest.fn();
+    const onComplete = vi.fn();
     let tree: renderer.ReactTestRenderer;
     act(() => {
       tree = renderer.create(
@@ -88,7 +88,7 @@ describe('IngredientChallenge', () => {
           ingredients={mockIngredients}
           requiredCount={1}
           onComplete={onComplete}
-          onStrike={jest.fn()}
+          onStrike={vi.fn()}
         />,
       );
     });

@@ -1,3 +1,4 @@
+import {vi} from 'vitest';
 /**
  * Tests for PlayerCapsule physics body (Spec §9).
  *
@@ -5,32 +6,32 @@
  * (R3F / Rapier require WebGL context, mocked here).
  */
 
-jest.mock('@react-three/rapier', () => ({
-  RigidBody: jest.fn(),
-  CapsuleCollider: jest.fn(),
+vi.mock('@react-three/rapier', () => ({
+  RigidBody: vi.fn(),
+  CapsuleCollider: vi.fn(),
 }));
 
-jest.mock('@react-three/fiber', () => ({
-  useFrame: jest.fn(),
+vi.mock('@react-three/fiber', () => ({
+  useFrame: vi.fn(),
 }));
 
-jest.mock('three', () => ({
-  Vector3: jest.fn().mockImplementation((x = 0, y = 0, z = 0) => ({x, y, z})),
+vi.mock('three', () => ({
+  Vector3: vi.fn().mockImplementation((x = 0, y = 0, z = 0) => ({x, y, z})),
 }));
 
-jest.mock('./usePhysicsMovement', () => ({
-  usePhysicsMovement: jest.fn(),
+vi.mock('./usePhysicsMovement', () => ({
+  usePhysicsMovement: vi.fn(),
 }));
 
-jest.mock('./useJump', () => ({
-  useJump: jest.fn(),
+vi.mock('./useJump', () => ({
+  useJump: vi.fn(),
 }));
 
 // bridgeActions and teleport not used in will-it-blow
 
 const mockPlayerEntity = {position: {x: 0, y: 0, z: 0}};
 
-jest.mock('../ecs/queries', () => ({
+vi.mock('../ecs/queries', () => ({
   playerQuery: {entities: [mockPlayerEntity]},
 }));
 
@@ -91,7 +92,7 @@ describe('PlayerCapsule Rapier-to-ECS sync (Spec §9)', () => {
 
   it('writes Rapier body translation to ECS player position when both exist', () => {
     // Simulate the useFrame sync closure: body present, playerEntity present
-    const mockBody = {translation: jest.fn(() => ({x: 3, y: 1.5, z: -7}))};
+    const mockBody = {translation: vi.fn(() => ({x: 3, y: 1.5, z: -7}))};
     const body = mockBody;
     const playerEntity = mockPlayerEntity;
     if (body && playerEntity) {

@@ -1,4 +1,3 @@
-import {describe, expect, it} from '@jest/globals';
 import renderer, {act} from 'react-test-renderer';
 import {BlowoutHUD} from '../BlowoutHUD';
 

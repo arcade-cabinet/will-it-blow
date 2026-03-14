@@ -1,4 +1,4 @@
-import {describe, expect, it, jest} from '@jest/globals';
+import {vi} from 'vitest';
 import renderer, {act} from 'react-test-renderer';
 import {RoundTransition} from '../RoundTransition';
 
@@ -7,7 +7,7 @@ const defaultProps = {
   totalRounds: 5,
   roundScore: 78,
   totalScore: 156,
-  onNextRound: jest.fn(),
+  onNextRound: vi.fn(),
 };
 
 describe('RoundTransition', () => {
@@ -48,7 +48,7 @@ describe('RoundTransition', () => {
   });
 
   it('calls onNextRound when button pressed', () => {
-    const onNextRound = jest.fn();
+    const onNextRound = vi.fn();
     let tree: renderer.ReactTestRenderer;
     act(() => {
       tree = renderer.create(<RoundTransition {...defaultProps} onNextRound={onNextRound} />);

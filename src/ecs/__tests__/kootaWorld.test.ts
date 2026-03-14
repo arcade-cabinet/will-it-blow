@@ -1,4 +1,3 @@
-import {beforeEach, describe, expect, it} from '@jest/globals';
 import {ecsWorld, resetWorld} from '../kootaWorld';
 import {PhaseTag, SausageTrait, StationTrait} from '../traits';
 
