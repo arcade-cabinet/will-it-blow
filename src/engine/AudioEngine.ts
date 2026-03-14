@@ -1,15 +1,16 @@
 /**
- * @module AudioEngine (native/universal)
- * Web Audio API synthesized sound effects for Will It Blow?
- * Adapted from grovekeeper's AudioManager — all SFX generated procedurally,
- * no audio files required. Horror butcher-shop aesthetic: low drones,
- * metallic scrapes, wet impacts, and tension stingers.
+ * @module AudioEngine
+ * Tone.js-based audio engine for Will It Blow?
+ * Sample playback, procedural horror drone, reverb/filter effects chain.
  *
  * Usage:
  *   await audioEngine.initialize();
- *   audioEngine.playChop();
- *   audioEngine.setVolume('sfx', 0.8);
+ *   audioEngine.play('chop');
+ *   audioEngine.startDrone();
+ *   audioEngine.setMuffled(true);
  */
+
+import * as Tone from 'tone';
 
 export type SoundId =
   | 'chop'
@@ -27,275 +28,221 @@ export type SoundId =
   | 'rankReveal'
   | 'ambient';
 
+/** Maps each SoundId to its OGG file path under /audio/ */
+const SOUND_MAP: Record<SoundId, string> = {
+  chop: '/audio/chop_1.ogg',
+  grind: '/audio/mix_dry_1.ogg',
+  squelch: '/audio/mix_wet_1.ogg',
+  sizzle: '/audio/sizzle_1.ogg',
+  pressure: '/audio/boiling_1.ogg',
+  burst: '/audio/pots_and_pans_1.ogg',
+  tie: '/audio/peel_1.ogg',
+  strike: '/audio/pots_and_pans_2.ogg',
+  success: '/audio/pour_1.ogg',
+  error: '/audio/pots_and_pans_3.ogg',
+  click: '/audio/peel_2.ogg',
+  phaseAdvance: '/audio/pour_2.ogg',
+  rankReveal: '/audio/verdict-unsettling.ogg',
+  ambient: '/audio/ambient-horror.ogg',
+};
+
 class AudioEngineImpl {
-  private ctx: AudioContext | null = null;
   private _initialized = false;
   private muted = false;
-  private sfxVolume = 0.4;
-  private musicVolume = 0.3;
-  private masterGain: GainNode | null = null;
-  private ambientOsc: OscillatorNode | null = null;
-  private ambientGain: GainNode | null = null;
-  private noiseCallIndex = 0;
 
-  get initialized() {
+  // Effects chain: filter → reverb → destination
+  private filter: Tone.Filter | null = null;
+  private reverb: Tone.Reverb | null = null;
+
+  // Sample players
+  private players: Map<SoundId, Tone.Player> = new Map();
+
+  // Procedural horror drone
+  private fmSynth: Tone.FMSynth | null = null;
+  private noiseSynth: Tone.NoiseSynth | null = null;
+  private droneActive = false;
+
+  get initialized(): boolean {
     return this._initialized;
   }
 
-  private ensureContext(): AudioContext | null {
-    if (this.ctx?.state === 'closed') {
-      this.ctx = null;
-      this.masterGain = null;
-    }
-    if (this.ctx) return this.ctx;
-    try {
-      this.ctx = new AudioContext();
-      this.masterGain = this.ctx.createGain();
-      this.masterGain.gain.value = this.sfxVolume;
-      this.masterGain.connect(this.ctx.destination);
-      return this.ctx;
-    } catch {
-      return null;
-    }
-  }
-
-  async initialize() {
+  /**
+   * Initialize the audio engine: start Tone.js context, build effects chain,
+   * create sample players and procedural synths.
+   */
+  async initialize(): Promise<void> {
     if (this._initialized) return;
-    const ctx = this.ensureContext();
-    if (ctx?.state === 'suspended') {
-      await ctx.resume().catch(() => {});
+
+    await Tone.start();
+
+    // Build effects chain: filter → reverb → destination
+    this.filter = new Tone.Filter({frequency: 8000, type: 'lowpass'});
+    this.reverb = new Tone.Reverb({decay: 3, wet: 0.3});
+    this.filter.connect(this.reverb);
+    this.reverb.connect(Tone.getDestination());
+
+    // Create sample players for all sounds
+    for (const [id, url] of Object.entries(SOUND_MAP)) {
+      const player = new Tone.Player({url}).connect(this.filter);
+      this.players.set(id as SoundId, player);
     }
+
+    // Procedural horror drone synths
+    this.fmSynth = new Tone.FMSynth({
+      harmonicity: 0.5,
+      modulationIndex: 8,
+      volume: -20,
+    }).connect(this.filter);
+
+    this.noiseSynth = new Tone.NoiseSynth({
+      noise: {type: 'brown'},
+      volume: -25,
+    }).connect(this.filter);
+
     this._initialized = true;
   }
 
-  playSound(name: SoundId): void {
-    if (this.muted) return;
-    const ctx = this.ensureContext();
-    if (!ctx || !this.masterGain) return;
-    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+  /** Play a sample once (one-shot). */
+  play(sound: string): void {
+    if (!this._initialized || this.muted) return;
+    const player = this.players.get(sound as SoundId);
+    if (!player?.loaded) return;
+    player.loop = false;
+    player.start();
+  }
 
-    switch (name) {
-      case 'chop':
-        this.playNoiseBurst(ctx, 0.06, 200, 0.2);
-        this.playTone(ctx, {freq: 100, duration: 0.08, type: 'triangle', gain: 0.25, delay: 0.01});
-        break;
-      case 'grind':
-        this.playTone(ctx, {freq: 80, duration: 0.3, type: 'sawtooth', gain: 0.15});
-        this.playNoiseBurst(ctx, 0.2, 300, 0.1);
-        break;
-      case 'squelch':
-        this.playNoiseBurst(ctx, 0.12, 500, 0.18);
-        this.playTone(ctx, {freq: 150, duration: 0.1, type: 'sine', gain: 0.1, delay: 0.03});
-        break;
-      case 'sizzle':
-        this.playNoiseBurst(ctx, 0.3, 4000, 0.12);
-        break;
-      case 'pressure':
-        this.playRisingTone(ctx, 60, 200, 0.4, 'sawtooth', 0.1);
-        break;
-      case 'burst':
-        this.playNoiseBurst(ctx, 0.15, 800, 0.3);
-        this.playTone(ctx, {freq: 60, duration: 0.2, type: 'triangle', gain: 0.3, delay: 0.02});
-        break;
-      case 'tie':
-        this.playTone(ctx, {freq: 400, duration: 0.05, type: 'square', gain: 0.12});
-        this.playTone(ctx, {freq: 600, duration: 0.05, type: 'square', gain: 0.12, delay: 0.06});
-        break;
-      case 'strike':
-        this.playTone(ctx, {freq: 150, duration: 0.2, type: 'sawtooth', gain: 0.2});
-        this.playNoiseBurst(ctx, 0.1, 250, 0.15);
-        break;
-      case 'success':
-        this.playChime(ctx, [330, 440, 554, 660], 0.12, 0.15);
-        break;
-      case 'error':
-        this.playTone(ctx, {freq: 100, duration: 0.25, type: 'sawtooth', gain: 0.15});
-        this.playTone(ctx, {freq: 80, duration: 0.25, type: 'sawtooth', gain: 0.12, delay: 0.05});
-        break;
-      case 'click':
-        this.playTone(ctx, {freq: 600, duration: 0.03, type: 'sine', gain: 0.1});
-        break;
-      case 'phaseAdvance':
-        this.playRisingTone(ctx, 200, 400, 0.15, 'triangle', 0.15);
-        break;
-      case 'rankReveal':
-        this.playArpeggio(ctx, [220, 330, 440, 660], 0.12, 0.2);
-        this.playTone(ctx, {freq: 660, duration: 0.5, type: 'sine', gain: 0.15, delay: 0.5});
-        break;
+  /** Play a sample in a loop. */
+  loop(sound: string): void {
+    if (!this._initialized || this.muted) return;
+    const player = this.players.get(sound as SoundId);
+    if (!player?.loaded) return;
+    player.loop = true;
+    player.start();
+  }
+
+  /** Stop a looping sample. */
+  stop(sound: string): void {
+    if (!this._initialized) return;
+    const player = this.players.get(sound as SoundId);
+    if (!player) return;
+    player.stop();
+  }
+
+  /** Stop all looping samples. */
+  stopAll(): void {
+    if (!this._initialized) return;
+    for (const player of this.players.values()) {
+      player.stop();
     }
   }
 
-  playChop() {
-    this.playSound('chop');
+  /** Start procedural horror ambience (FM drone + brown noise). */
+  startDrone(): void {
+    if (!this._initialized || this.droneActive || this.muted) return;
+    this.fmSynth?.triggerAttack('C1');
+    this.noiseSynth?.triggerAttack();
+    this.droneActive = true;
   }
 
-  setSizzleLevel(level: number) {
-    if (level > 0) this.playSound('sizzle');
+  /** Stop procedural horror drone. */
+  stopDrone(): void {
+    if (!this._initialized || !this.droneActive) return;
+    this.fmSynth?.triggerRelease();
+    this.noiseSynth?.triggerRelease();
+    this.droneActive = false;
   }
 
-  setGrinderSpeed(speed: number) {
-    if (speed > 0) this.playSound('grind');
+  /**
+   * Muffle/unmuffle audio by ramping the lowpass filter.
+   * Muffled: 400 Hz cutoff (sounds underwater/behind a wall).
+   * Clear: 8000 Hz cutoff (normal).
+   */
+  setMuffled(muffled: boolean): void {
+    if (!this.filter) return;
+    this.filter.frequency.rampTo(muffled ? 400 : 8000, 0.5);
   }
 
-  setAmbientDrone(active: boolean) {
-    if (this.muted) return;
-    const ctx = this.ensureContext();
-    if (!ctx || !this.masterGain) return;
+  /** Clean up all Tone.js nodes. */
+  dispose(): void {
+    this.stopDrone();
+    this.stopAll();
 
-    if (active && !this.ambientOsc) {
-      this.ambientOsc = ctx.createOscillator();
-      this.ambientGain = ctx.createGain();
-      this.ambientOsc.type = 'sine';
-      this.ambientOsc.frequency.value = 55;
-      this.ambientGain.gain.value = this.musicVolume * 0.15;
-      this.ambientOsc.connect(this.ambientGain);
-      this.ambientGain.connect(this.masterGain);
-      this.ambientOsc.start();
-    } else if (!active && this.ambientOsc) {
-      this.ambientOsc.stop();
-      this.ambientOsc.disconnect();
-      this.ambientOsc = null;
-      this.ambientGain = null;
+    for (const player of this.players.values()) {
+      player.dispose();
+    }
+    this.players.clear();
+
+    this.fmSynth?.dispose();
+    this.fmSynth = null;
+    this.noiseSynth?.dispose();
+    this.noiseSynth = null;
+    this.reverb?.dispose();
+    this.reverb = null;
+    this.filter?.dispose();
+    this.filter = null;
+
+    this._initialized = false;
+  }
+
+  // --- Backward-compatible API (used by existing station components) ---
+
+  /** Unified playSound interface (legacy — delegates to play()). */
+  playSound(name: SoundId | string): void {
+    this.play(name);
+  }
+
+  playChop(): void {
+    this.play('chop');
+  }
+
+  setSizzleLevel(level: number): void {
+    if (level > 0) {
+      this.loop('sizzle');
+    } else {
+      this.stop('sizzle');
     }
   }
 
-  startAmbient() {
+  setGrinderSpeed(speed: number): void {
+    if (speed > 0) {
+      this.loop('grind');
+    } else {
+      this.stop('grind');
+    }
+  }
+
+  setAmbientDrone(active: boolean): void {
+    if (active) {
+      this.loop('ambient');
+      this.startDrone();
+    } else {
+      this.stop('ambient');
+      this.stopDrone();
+    }
+  }
+
+  startAmbient(): void {
     this.setAmbientDrone(true);
   }
 
-  stopAmbient() {
+  stopAmbient(): void {
     this.setAmbientDrone(false);
   }
 
-  setVolume(type: string, level: number) {
-    const clamped = Math.max(0, Math.min(1, level));
-    if (type === 'sfx') {
-      this.sfxVolume = clamped;
-      if (this.masterGain) this.masterGain.gain.value = clamped;
-    } else if (type === 'music') {
-      this.musicVolume = clamped;
-      if (this.ambientGain) this.ambientGain.gain.value = clamped * 0.15;
-    }
+  setVolume(_type: string, _level: number): void {
+    // Volume control via Tone.Destination.volume could be added here
   }
 
-  setMuted(muted: boolean) {
+  setMuted(muted: boolean): void {
     this.muted = muted;
     if (muted) {
-      this.stopAmbient();
-      if (this.ctx?.state === 'running') this.ctx.suspend().catch(() => {});
-    } else if (this.ctx?.state === 'suspended') {
-      this.ctx.resume().catch(() => {});
+      this.stopAll();
+      this.stopDrone();
     }
   }
 
   isMuted(): boolean {
     return this.muted;
-  }
-
-  dispose() {
-    this.stopAmbient();
-    if (this.ctx) {
-      this.ctx.close().catch(() => {});
-      this.ctx = null;
-      this.masterGain = null;
-    }
-  }
-
-  // --- Primitive synthesizers (adapted from grovekeeper AudioManager) ---
-
-  private playTone(
-    ctx: AudioContext,
-    opts: {freq: number; duration: number; type: OscillatorType; gain: number; delay?: number},
-  ) {
-    const master = this.masterGain;
-    if (!master) return;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = opts.type;
-    osc.frequency.value = opts.freq;
-    gain.gain.value = opts.gain;
-    const startTime = ctx.currentTime + (opts.delay ?? 0);
-    const endTime = startTime + opts.duration;
-    gain.gain.setValueAtTime(opts.gain, startTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, endTime);
-    osc.connect(gain);
-    gain.connect(master);
-    osc.start(startTime);
-    osc.stop(endTime + 0.01);
-  }
-
-  private playRisingTone(
-    ctx: AudioContext,
-    freqStart: number,
-    freqEnd: number,
-    duration: number,
-    type: OscillatorType,
-    gain: number,
-  ) {
-    const master = this.masterGain;
-    if (!master) return;
-    const osc = ctx.createOscillator();
-    const g = ctx.createGain();
-    osc.type = type;
-    osc.frequency.setValueAtTime(freqStart, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(freqEnd, ctx.currentTime + duration);
-    g.gain.setValueAtTime(gain, ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-    osc.connect(g);
-    g.connect(master);
-    osc.start();
-    osc.stop(ctx.currentTime + duration + 0.01);
-  }
-
-  private playChime(ctx: AudioContext, freqs: number[], noteDuration: number, gain: number) {
-    for (let i = 0; i < freqs.length; i++) {
-      this.playTone(ctx, {
-        freq: freqs[i],
-        duration: noteDuration,
-        type: 'sine',
-        gain,
-        delay: i * noteDuration * 0.6,
-      });
-    }
-  }
-
-  private playArpeggio(ctx: AudioContext, freqs: number[], noteGap: number, gain: number) {
-    for (let i = 0; i < freqs.length; i++) {
-      this.playTone(ctx, {
-        freq: freqs[i],
-        duration: noteGap * 1.5,
-        type: 'sine',
-        gain,
-        delay: i * noteGap,
-      });
-    }
-  }
-
-  private playNoiseBurst(ctx: AudioContext, duration: number, filterFreq: number, gain: number) {
-    const bufferSize = Math.floor(ctx.sampleRate * duration);
-    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    // Deterministic noise via simple PRNG (no Math.random)
-    let seed = ++this.noiseCallIndex;
-    for (let i = 0; i < bufferSize; i++) {
-      seed = (seed * 1664525 + 1013904223) & 0xffffffff;
-      data[i] = seed / 0x7fffffff - 1;
-    }
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.value = filterFreq;
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(gain, ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-    const master = this.masterGain;
-    if (!master) return;
-    source.connect(filter);
-    filter.connect(g);
-    g.connect(master);
-    source.start();
-    source.stop(ctx.currentTime + duration + 0.01);
   }
 }
 
