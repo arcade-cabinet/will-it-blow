@@ -1,13 +1,11 @@
 /**
  * @module AudioEngine
  * Native audio engine using expo-audio.
- *
- * Loads OGG samples from assets and plays them on demand.
- * Maps 14 sound IDs to audio files from public/audio/.
- *
- * TODO: Wire expo-audio Sound.createAsync for each sample.
- * Currently a functional skeleton that logs plays.
+ * Uses createAudioPlayer() for one-shot and looping playback.
  */
+
+import {createAudioPlayer, setIsAudioActiveAsync} from 'expo-audio';
+import type {AudioPlayer} from 'expo-audio';
 
 export type SoundId =
   | 'chop'
@@ -25,10 +23,17 @@ export type SoundId =
   | 'rankReveal'
   | 'ambient';
 
+const SOUND_MAP: Partial<Record<SoundId, number>> = {
+  chop: require('../../public/audio/chop_1.ogg'),
+  sizzle: require('../../public/audio/sizzle_1.ogg'),
+  ambient: require('../../public/audio/ambient-horror.ogg'),
+};
+
 class AudioEngineImpl {
   private _initialized = false;
   private muted = false;
   private sfxVolume = 0.8;
+  private activePlayers: Map<string, AudioPlayer> = new Map();
 
   get initialized() {
     return this._initialized;
@@ -36,28 +41,75 @@ class AudioEngineImpl {
 
   async initialize() {
     if (this._initialized) return;
-    // TODO: await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
-    this._initialized = true;
+    try {
+      await setIsAudioActiveAsync(true);
+      this._initialized = true;
+    } catch (err) {
+      console.warn('[AudioEngine] init failed:', err);
+    }
   }
 
-  async playSound(name: SoundId) {
+  playSound(name: SoundId) {
     if (this.muted || !this._initialized) return;
-    // TODO: load and play OGG via expo-audio
-    console.log(`[audio] ${name}`);
+    const source = SOUND_MAP[name];
+    if (!source) return;
+
+    try {
+      const player = createAudioPlayer(source);
+      player.volume = this.sfxVolume;
+      player.play();
+    } catch (err) {
+      console.warn(`[AudioEngine] playSound(${name}) failed:`, err);
+    }
   }
 
   playChop() {
     this.playSound('chop');
   }
-  setSizzleLevel(_level: number) {
-    /* TODO: loop sizzle sample */
+
+  setSizzleLevel(level: number) {
+    if (this.muted || !this._initialized) return;
+    if (level > 0 && !this.activePlayers.has('sizzle')) {
+      const source = SOUND_MAP.sizzle;
+      if (!source) return;
+      try {
+        const player = createAudioPlayer(source);
+        player.volume = this.sfxVolume * level;
+        player.loop = true;
+        player.play();
+        this.activePlayers.set('sizzle', player);
+      } catch {}
+    } else if (level === 0 && this.activePlayers.has('sizzle')) {
+      const player = this.activePlayers.get('sizzle');
+      player?.pause();
+      player?.remove();
+      this.activePlayers.delete('sizzle');
+    }
   }
+
   setGrinderSpeed(_speed: number) {
-    /* TODO: loop grind sample */
+    // Future: looping grinder sample
   }
-  setAmbientDrone(_active: boolean) {
-    /* TODO: ambient loop */
+
+  setAmbientDrone(active: boolean) {
+    if (active && !this.activePlayers.has('ambient')) {
+      const source = SOUND_MAP.ambient;
+      if (!source) return;
+      try {
+        const player = createAudioPlayer(source);
+        player.volume = this.sfxVolume * 0.3;
+        player.loop = true;
+        player.play();
+        this.activePlayers.set('ambient', player);
+      } catch {}
+    } else if (!active && this.activePlayers.has('ambient')) {
+      const player = this.activePlayers.get('ambient');
+      player?.pause();
+      player?.remove();
+      this.activePlayers.delete('ambient');
+    }
   }
+
   startAmbient() {
     this.setAmbientDrone(true);
   }
@@ -69,12 +121,17 @@ class AudioEngineImpl {
   }
   setMuted(muted: boolean) {
     this.muted = muted;
+    if (muted) this.stopAmbient();
   }
   isMuted() {
     return this.muted;
   }
   dispose() {
-    /* TODO: unload all sounds */
+    for (const [, player] of this.activePlayers) {
+      player.pause();
+      player.remove();
+    }
+    this.activePlayers.clear();
   }
 }
 

@@ -16,6 +16,7 @@ import {
 import {useCallback, useRef} from 'react';
 import {StyleSheet, View} from 'react-native';
 import type {RenderCallback} from 'react-native-filament';
+import {IntroSequence} from './IntroSequence';
 import {Kitchen} from './Kitchen';
 import {KitchenLighting} from './Lighting';
 import {PlayerController} from './PlayerController';
@@ -82,7 +83,10 @@ export function GameScene() {
         </FilamentView>
       </FilamentScene>
 
-      {/* Layer 2: Diegetic text — blood text showing game state */}
+      {/* Layer 2: Intro sequence — eyelid blink/wake-up */}
+      <IntroSequence />
+
+      {/* Layer 3: Diegetic text — blood text showing game state */}
       <SurrealText />
 
       {/* Layer 3: Invisible touch controls */}
