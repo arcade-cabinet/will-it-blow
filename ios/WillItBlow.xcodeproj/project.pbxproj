@@ -7,26 +7,26 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		12484777D6300B2F2EA41EBF /* libPods-WillItBlow.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 12384CB69D849E2F4AB78F1D /* libPods-WillItBlow.a */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
-		1BC0FBAB7B8D3A15EF94ACA7 /* libPods-WillItBlow.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1415A7A6270C02D0D6F263F7 /* libPods-WillItBlow.a */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		41CAADC02FA223682BEAE626 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D55134EB57B6DFDBAF3498D /* ExpoModulesProvider.swift */; };
-		5757027D191756036A714632 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 8212831606E62A537D3CA66C /* PrivacyInfo.xcprivacy */; };
+		593DE33AF4924CB68BAAA50F /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 566618CFE4FB84B700B628F3 /* ExpoModulesProvider.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
+		EA50F388000556FB684B53D7 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7F5934D731395B96BE522705 /* PrivacyInfo.xcprivacy */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		12384CB69D849E2F4AB78F1D /* libPods-WillItBlow.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-WillItBlow.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07F961A680F5B00A75B9A /* WillItBlow.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WillItBlow.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = WillItBlow/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = WillItBlow/Info.plist; sourceTree = "<group>"; };
-		1415A7A6270C02D0D6F263F7 /* libPods-WillItBlow.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-WillItBlow.a"; sourceTree = BUILT_PRODUCTS_DIR; };
-		4D55134EB57B6DFDBAF3498D /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-WillItBlow/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
-		6682875E73717FF29C90ADF5 /* Pods-WillItBlow.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-WillItBlow.debug.xcconfig"; path = "Target Support Files/Pods-WillItBlow/Pods-WillItBlow.debug.xcconfig"; sourceTree = "<group>"; };
-		8212831606E62A537D3CA66C /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = WillItBlow/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		8E1887F3B347F247513A2615 /* Pods-WillItBlow.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-WillItBlow.release.xcconfig"; path = "Target Support Files/Pods-WillItBlow/Pods-WillItBlow.release.xcconfig"; sourceTree = "<group>"; };
+		566618CFE4FB84B700B628F3 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-WillItBlow/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		7F5934D731395B96BE522705 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = WillItBlow/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = WillItBlow/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
+		BE51B31B2D0022461E11448D /* Pods-WillItBlow.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-WillItBlow.release.xcconfig"; path = "Target Support Files/Pods-WillItBlow/Pods-WillItBlow.release.xcconfig"; sourceTree = "<group>"; };
+		E344446F068272F43A562BB7 /* Pods-WillItBlow.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-WillItBlow.debug.xcconfig"; path = "Target Support Files/Pods-WillItBlow/Pods-WillItBlow.debug.xcconfig"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = WillItBlow/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* WillItBlow-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "WillItBlow-Bridging-Header.h"; path = "WillItBlow/WillItBlow-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -37,23 +37,13 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1BC0FBAB7B8D3A15EF94ACA7 /* libPods-WillItBlow.a in Frameworks */,
+				12484777D6300B2F2EA41EBF /* libPods-WillItBlow.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		11B7802DF70B8DCD90DE7356 /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				6682875E73717FF29C90ADF5 /* Pods-WillItBlow.debug.xcconfig */,
-				8E1887F3B347F247513A2615 /* Pods-WillItBlow.release.xcconfig */,
-			);
-			name = Pods;
-			path = Pods;
-			sourceTree = "<group>";
-		};
 		13B07FAE1A68108700A75B9A /* WillItBlow */ = {
 			isa = PBXGroup;
 			children = (
@@ -63,7 +53,7 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				8212831606E62A537D3CA66C /* PrivacyInfo.xcprivacy */,
+				7F5934D731395B96BE522705 /* PrivacyInfo.xcprivacy */,
 			);
 			name = WillItBlow;
 			sourceTree = "<group>";
@@ -72,25 +62,27 @@
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				1415A7A6270C02D0D6F263F7 /* libPods-WillItBlow.a */,
+				12384CB69D849E2F4AB78F1D /* libPods-WillItBlow.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		3A3681C893D861985F1E6DA8 /* WillItBlow */ = {
+		4EDCA6F6F5B9BC47FF29356C /* WillItBlow */ = {
 			isa = PBXGroup;
 			children = (
-				4D55134EB57B6DFDBAF3498D /* ExpoModulesProvider.swift */,
+				566618CFE4FB84B700B628F3 /* ExpoModulesProvider.swift */,
 			);
 			name = WillItBlow;
 			sourceTree = "<group>";
 		};
-		5314C226B382C2A3E7FCA55C /* ExpoModulesProviders */ = {
+		704B3CC02567F69A1A57F3CB /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				3A3681C893D861985F1E6DA8 /* WillItBlow */,
+				E344446F068272F43A562BB7 /* Pods-WillItBlow.debug.xcconfig */,
+				BE51B31B2D0022461E11448D /* Pods-WillItBlow.release.xcconfig */,
 			);
-			name = ExpoModulesProviders;
+			name = Pods;
+			path = Pods;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -107,8 +99,8 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				11B7802DF70B8DCD90DE7356 /* Pods */,
-				5314C226B382C2A3E7FCA55C /* ExpoModulesProviders */,
+				704B3CC02567F69A1A57F3CB /* Pods */,
+				85114D3E65AD1FFDFA3A76DF /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -121,6 +113,14 @@
 				13B07F961A680F5B00A75B9A /* WillItBlow.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		85114D3E65AD1FFDFA3A76DF /* ExpoModulesProviders */ = {
+			isa = PBXGroup;
+			children = (
+				4EDCA6F6F5B9BC47FF29356C /* WillItBlow */,
+			);
+			name = ExpoModulesProviders;
 			sourceTree = "<group>";
 		};
 		BB2F792B24A3F905000567C9 /* Supporting */ = {
@@ -140,13 +140,13 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "WillItBlow" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				1223E64A3501561973528819 /* [Expo] Configure project */,
+				3A6D04A71D8DC506BFFEDDC3 /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				6A624668BA862F965700EB8A /* [CP] Embed Pods Frameworks */,
+				D675624AE9086AC779229EB2 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -196,7 +196,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				5757027D191756036A714632 /* PrivacyInfo.xcprivacy in Resources */,
+				EA50F388000556FB684B53D7 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -242,7 +242,7 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		1223E64A3501561973528819 /* [Expo] Configure project */ = {
+		3A6D04A71D8DC506BFFEDDC3 /* [Expo] Configure project */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -265,28 +265,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-WillItBlow/expo-configure-project.sh\"\n";
-		};
-		6A624668BA862F965700EB8A /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-WillItBlow/Pods-WillItBlow-frameworks.sh",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/React-Core-prebuilt/React.framework/React",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/ReactNativeDependencies/ReactNativeDependencies.framework/ReactNativeDependencies",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermesvm.framework/hermesvm",
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputPaths = (
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/React.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/ReactNativeDependencies.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermesvm.framework",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-WillItBlow/Pods-WillItBlow-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
 		};
 		800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -322,6 +300,28 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-WillItBlow/Pods-WillItBlow-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
+		D675624AE9086AC779229EB2 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-WillItBlow/Pods-WillItBlow-frameworks.sh",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/React-Core-prebuilt/React.framework/React",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/ReactNativeDependencies/ReactNativeDependencies.framework/ReactNativeDependencies",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermesvm.framework/hermesvm",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/React.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/ReactNativeDependencies.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermesvm.framework",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-WillItBlow/Pods-WillItBlow-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -330,7 +330,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				41CAADC02FA223682BEAE626 /* ExpoModulesProvider.swift in Sources */,
+				593DE33AF4924CB68BAAA50F /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -339,7 +339,7 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 6682875E73717FF29C90ADF5 /* Pods-WillItBlow.debug.xcconfig */;
+			baseConfigurationReference = E344446F068272F43A562BB7 /* Pods-WillItBlow.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -375,7 +375,7 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 8E1887F3B347F247513A2615 /* Pods-WillItBlow.release.xcconfig */;
+			baseConfigurationReference = BE51B31B2D0022461E11448D /* Pods-WillItBlow.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;

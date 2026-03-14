@@ -52,7 +52,7 @@ export function GameOrchestrator() {
   }, [gamePhase, calculateFinalScore]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || typeof window.addEventListener !== 'function') return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       // Dev shortcut to progress through the game phases
