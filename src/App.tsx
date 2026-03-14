@@ -7,7 +7,7 @@
  */
 import {Canvas} from '@react-three/fiber';
 import {Physics} from '@react-three/rapier';
-import {Suspense} from 'react';
+import {Suspense, useEffect, useState} from 'react';
 import * as THREE from 'three';
 import {IntroSequence} from './components/camera/IntroSequence';
 import {PlayerHands} from './components/camera/PlayerHands';
@@ -35,6 +35,17 @@ import {useGameStore} from './ecs/hooks';
 import {GameOrchestrator} from './engine/GameOrchestrator';
 import {FPSCamera} from './player/FPSCamera';
 import {PlayerCapsule} from './player/PlayerCapsule';
+
+// --- Pre-initialize Rapier WASM from public/ to avoid Vite pre-bundling issues ---
+// Vite's optimizeDeps breaks the import.meta.url-based WASM loading in
+// @dimforge/rapier3d-compat. Serving the WASM from public/ and calling init()
+// early ensures it's loaded before <Physics> mounts. init() is idempotent, so
+// the subsequent call from @react-three/rapier is a no-op.
+const rapierReady = import('@dimforge/rapier3d-compat').then(RAPIER =>
+  (RAPIER.init as (input?: {module_or_path: string}) => Promise<void>)({
+    module_or_path: '/rapier_wasm3d_bg.wasm',
+  }),
+);
 
 // --- Console Warning Overrides to keep dev env clean of upstream noise ---
 const origWarn = console.warn;
@@ -155,13 +166,19 @@ function GameContent() {
 
 export function App() {
   const appPhase = useGameStore(state => state.appPhase);
+  const [physicsReady, setPhysicsReady] = useState(false);
   usePersistence();
+
+  // Wait for Rapier WASM to finish loading before rendering the 3D scene
+  useEffect(() => {
+    rapierReady.then(() => setPhysicsReady(true));
+  }, []);
 
   return (
     <div style={{width: '100vw', height: '100vh', background: '#000'}}>
       {appPhase === 'title' && <TempTitleScreen />}
 
-      {appPhase === 'playing' && (
+      {appPhase === 'playing' && physicsReady && (
         <>
           <Canvas
             shadows={{type: THREE.PCFShadowMap}}

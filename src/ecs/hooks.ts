@@ -678,7 +678,11 @@ useGameStore.setState = (partial: Partial<GameState>) => {
   if (partial.casingTied !== undefined) actions.setCasingTied(partial.casingTied);
   if (partial.cookLevel !== undefined) actions.setCookLevel(partial.cookLevel);
   if (partial.playerPosition !== undefined) {
-    actions.setPlayerPosition(partial.playerPosition.x, partial.playerPosition.y, partial.playerPosition.z);
+    actions.setPlayerPosition(
+      partial.playerPosition.x,
+      partial.playerPosition.y,
+      partial.playerPosition.z,
+    );
   }
   if (partial.mrSausageReaction !== undefined) {
     actions.setMrSausageReaction(partial.mrSausageReaction);

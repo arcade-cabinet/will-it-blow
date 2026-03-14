@@ -6,5 +6,8 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {port: 3000, open: true},
   build: {outDir: 'dist', sourcemap: true},
-  assetsInclude: ['**/*.glb', '**/*.gltf'],
+  assetsInclude: ['**/*.glb', '**/*.gltf', '**/*.wasm'],
+  optimizeDeps: {
+    exclude: ['@dimforge/rapier3d-compat'],
+  },
 });

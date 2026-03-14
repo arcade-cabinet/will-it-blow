@@ -57,9 +57,9 @@ describe('SettingsScreen', () => {
       'utf8',
     );
     // Web HTML uses semantic elements and ARIA roles instead of RN accessibilityRole
-    expect(source).toContain('<h2');          // implicit heading role
-    expect(source).toContain('<button');      // implicit button role
+    expect(source).toContain('<h2'); // implicit heading role
+    expect(source).toContain('<button'); // implicit button role
     expect(source).toContain('role="switch"');
-    expect(source).toContain('aria-label=');  // adjustable sliders use aria-label
+    expect(source).toContain('aria-label='); // adjustable sliders use aria-label
   });
 });
