@@ -15,9 +15,11 @@ import {Dimensions, StyleSheet, View} from 'react-native';
 import {Gesture, GestureDetector} from 'react-native-gesture-handler';
 import {useGameStore} from '../ecs/hooks';
 import {audioEngine} from '../audio/AudioEngine';
+import {INGREDIENT_MODELS} from '../engine/Ingredients';
 
 const {width: SCREEN_WIDTH} = Dimensions.get('window');
 const HALF_SCREEN = SCREEN_WIDTH / 2;
+const REQUIRED_INGREDIENTS = 3;
 
 interface TouchControlsProps {
   onLook: (dx: number, dy: number) => void;
@@ -29,13 +31,32 @@ export function TouchControls({onLook, onMove, onMoveEnd}: TouchControlsProps) {
   const gamePhase = useGameStore(s => s.gamePhase);
   const setGamePhase = useGameStore(s => s.setGamePhase);
   const chopCountRef = useRef(0);
+  const ingredientIndexRef = useRef(0);
+  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Handle tap interaction based on current game phase
   const handleTap = useCallback(() => {
+    const store = useGameStore.getState();
+
     switch (gamePhase) {
-      case 'SELECT_INGREDIENTS':
-        // TODO: cycle through ingredients, add to selection
+      case 'SELECT_INGREDIENTS': {
+        // Cycle through ingredients, add one per tap
+        const available = INGREDIENT_MODELS.filter(
+          ing => !store.selectedIngredientIds.includes(ing.id),
+        );
+        if (available.length === 0) break;
+
+        const ingredient = available[ingredientIndexRef.current % available.length];
+        ingredientIndexRef.current++;
+        store.addSelectedIngredientId(ingredient.id);
+        audioEngine.playSound('click');
+
+        // After selecting required number, advance phase
+        if (store.selectedIngredientIds.length + 1 >= REQUIRED_INGREDIENTS) {
+          setGamePhase('CHOPPING');
+        }
         break;
+      }
       case 'CHOPPING':
         audioEngine.playChop();
         chopCountRef.current += 1;
@@ -69,13 +90,29 @@ export function TouchControls({onLook, onMove, onMoveEnd}: TouchControlsProps) {
           return next;
         });
         break;
-      case 'TIE_CASING':
-        useGameStore.getState().setCasingTied(true);
-        setGamePhase('BLOWOUT');
+      case 'TIE_CASING': {
+        // Two taps needed: tie left, then tie right
+        if (!store.casingTied) {
+          // First tap: mark as tied
+          store.setCasingTied(true);
+          audioEngine.playSound('tie');
+        } else {
+          // Already tied — advance
+          setGamePhase('BLOWOUT');
+        }
         break;
-      case 'BLOWOUT':
+      }
+      case 'BLOWOUT': {
+        // Each tap builds pressure — check burst probability
+        audioEngine.playSound('pressure');
+        const burstChance = Math.random();
+        if (burstChance < 0.3) {
+          // Burst! (30% chance per tap)
+          audioEngine.playSound('burst');
+        }
         setGamePhase('MOVE_SAUSAGE');
         break;
+      }
       case 'MOVE_SAUSAGE':
         setGamePhase('MOVE_PAN');
         break;
@@ -91,7 +128,10 @@ export function TouchControls({onLook, onMove, onMoveEnd}: TouchControlsProps) {
         });
         break;
       case 'DONE':
-        useGameStore.getState().calculateFinalScore();
+        if (!store.finalScore?.calculated) {
+          store.calculateFinalScore();
+          audioEngine.playSound('rankReveal');
+        }
         break;
     }
   }, [gamePhase, setGamePhase]);
