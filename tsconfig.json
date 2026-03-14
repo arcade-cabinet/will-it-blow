@@ -1,23 +1,20 @@
 {
-  "extends": "expo/tsconfig.base",
   "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
     "strict": true,
+    "esModuleInterop": true,
     "skipLibCheck": true,
-    "resolveJsonModule": true
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "types": ["vitest/globals"]
   },
-  "exclude": [
-    "node_modules",
-    "__tests__",
-    "e2e",
-    "android",
-    "ios",
-    "**/*.test.ts",
-    "**/*.test.tsx",
-    "jest.setup.js",
-    "jest.config.js",
-    "babel.config.js",
-    "metro.config.js",
-    "scripts",
-    "docs/port-reference"
-  ]
+  "include": ["src", "src/vite-env.d.ts"],
+  "exclude": ["node_modules", "dist", "ios", "android"]
 }
