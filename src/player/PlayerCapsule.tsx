@@ -13,6 +13,7 @@ import type {RapierRigidBody} from '@react-three/rapier';
 import {CapsuleCollider, RigidBody} from '@react-three/rapier';
 import {useRef} from 'react';
 import playerConfig from '../config/player.json';
+import {useGameStore} from '../ecs/hooks';
 import {useJump} from './useJump';
 import {usePhysicsMovement} from './usePhysicsMovement';
 
@@ -36,14 +37,14 @@ export const PlayerCapsule = ({moveDirection = {x: 0, z: 0}}: PlayerCapsuleProps
   usePhysicsMovement(rigidBodyRef, moveDirection);
   useJump(rigidBodyRef);
 
-  // Sync Rapier body position to a ref that FPSCamera reads.
-  // TODO: When Koota replaces Zustand, sync to PlayerTrait instead.
+  const setPlayerPosition = useGameStore(s => s.setPlayerPosition);
+
+  // Sync Rapier body position to Koota ECS PlayerTrait each frame.
   useFrame(() => {
     const body = rigidBodyRef.current;
     if (!body) return;
     const t = body.translation();
-    // Store on window for FPSCamera to read (temporary until Koota wiring)
-    (window as any).__playerPos = {x: t.x, y: t.y, z: t.z};
+    setPlayerPosition(t.x, t.y, t.z);
   });
 
   return (

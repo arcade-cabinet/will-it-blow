@@ -131,6 +131,7 @@ export interface GameState {
     flairPoints: {reason: string; points: number}[];
   };
 
+  playerPosition: {x: number; y: number; z: number};
   joystick: {x: number; y: number};
   lookDelta: {x: number; y: number};
   interactPulse: number;
@@ -161,6 +162,7 @@ export interface GameActions {
   returnToMenu: () => void;
   startNewGame: () => void;
 
+  setPlayerPosition: (x: number, y: number, z: number) => void;
   setJoystick: (x: number, y: number) => void;
   addLookDelta: (dx: number, dy: number) => void;
   consumeLookDelta: () => {x: number; y: number};
@@ -227,6 +229,7 @@ function getSnapshot(): GameState & GameActions {
       flairPoints: parseJsonArray<{reason: string; points: number}>(score?.flairPointsJson ?? '[]'),
     },
 
+    playerPosition: {x: player?.posX ?? 0, y: player?.posY ?? 0, z: player?.posZ ?? 0},
     joystick: {x: player?.joystickX ?? 0, y: player?.joystickY ?? 0},
     lookDelta: {x: player?.lookDeltaX ?? 0, y: player?.lookDeltaY ?? 0},
     interactPulse: player?.interactPulse ?? 0,
@@ -588,6 +591,15 @@ const actions: GameActions = {
     notify();
   },
 
+  setPlayerPosition(x: number, y: number, z: number) {
+    const e = getSingleton(PlayerTrait);
+    if (e) {
+      e.set(PlayerTrait, {posX: x, posY: y, posZ: z});
+      // No notify() — this is called every frame from useFrame.
+      // FPSCamera reads it directly from the ECS trait, not via React subscription.
+    }
+  },
+
   setJoystick(x: number, y: number) {
     const e = getSingleton(PlayerTrait);
     if (e) {
@@ -665,6 +677,9 @@ useGameStore.setState = (partial: Partial<GameState>) => {
   if (partial.stuffLevel !== undefined) actions.setStuffLevel(partial.stuffLevel);
   if (partial.casingTied !== undefined) actions.setCasingTied(partial.casingTied);
   if (partial.cookLevel !== undefined) actions.setCookLevel(partial.cookLevel);
+  if (partial.playerPosition !== undefined) {
+    actions.setPlayerPosition(partial.playerPosition.x, partial.playerPosition.y, partial.playerPosition.z);
+  }
   if (partial.mrSausageReaction !== undefined) {
     actions.setMrSausageReaction(partial.mrSausageReaction);
   }

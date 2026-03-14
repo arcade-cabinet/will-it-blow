@@ -124,7 +124,7 @@ export const RoundTrait = trait({
   usedCombosJson: '[]' as string,
 });
 
-/** Player entity state — intro, posture, idle, input. */
+/** Player entity state — intro, posture, idle, input, position. */
 export const PlayerTrait = trait({
   introActive: true as boolean,
   introPhase: 0 as number,
@@ -132,6 +132,10 @@ export const PlayerTrait = trait({
   idleTime: 0 as number,
   strikes: 0 as number,
   maxStrikes: 3 as number,
+  // World-space position (synced from physics capsule each frame)
+  posX: 0 as number,
+  posY: 0 as number,
+  posZ: 0 as number,
   // Input state (for mobile controls bridging to 3D)
   joystickX: 0 as number,
   joystickY: 0 as number,
