@@ -1,27 +1,16 @@
 import {Box, Plane} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
 import {RigidBody} from '@react-three/rapier';
-import {useMemo, useRef} from 'react';
-import * as THREE from 'three';
-
-// CRT shader disabled for native — three/tsl crashes on Hermes runtime
-// TODO: Rewrite CRT effect without TSL NodeMaterial for native compatibility
+import {useMemo} from 'react';
+import type * as THREE from 'three';
+import {createCrtMaterial} from '../effects/CrtShader';
 
 export function TV() {
-  const materialRef = useRef<THREE.MeshBasicMaterial>(null);
-
-  // Simple green CRT fallback instead of TSL shader
-  const crtMaterial = useMemo(
-    () => new THREE.MeshBasicMaterial({color: 0x002200, transparent: true, opacity: 0.9}),
-    [],
-  );
+  const crtMaterial = useMemo(() => createCrtMaterial('crt-tv'), []);
 
   useFrame(state => {
-    if (materialRef.current) {
-      // Subtle flicker
-      const flicker = 0.85 + Math.sin(state.clock.elapsedTime * 8) * 0.15;
-      materialRef.current.opacity = flicker;
-    }
+    const uniforms = (crtMaterial as THREE.ShaderMaterial).uniforms;
+    uniforms.uTime.value = state.clock.elapsedTime;
   });
 
   return (
@@ -40,9 +29,9 @@ export function TV() {
         </Box>
       </RigidBody>
 
-      {/* TV Screen */}
+      {/* TV Screen — CRT shader effect */}
       <Plane args={[0.65, 0.8]} position={[0.81, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
-        <primitive object={crtMaterial} ref={materialRef} attach="material" />
+        <primitive object={crtMaterial} attach="material" />
       </Plane>
     </group>
   );
