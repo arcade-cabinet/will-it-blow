@@ -26,9 +26,12 @@ export async function persistSession(data: {
       .where(eq(gameSession.id, data.id));
     return data.id;
   }
-  const result = await db
-    .insert(gameSession)
-    .values({startedAt: new Date(), difficulty: data.difficulty, finalScore: data.finalScore ?? null, rank: data.rank ?? null});
+  const _result = await db.insert(gameSession).values({
+    startedAt: new Date(),
+    difficulty: data.difficulty,
+    finalScore: data.finalScore ?? null,
+    rank: data.rank ?? null,
+  });
   return null; // op-sqlite doesn't return lastInsertRowId via Drizzle the same way
 }
 

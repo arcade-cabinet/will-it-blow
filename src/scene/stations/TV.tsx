@@ -7,9 +7,15 @@
  * custom .mat material file — this is a convincing approximation.
  */
 
-import {Model, useBoxShape, useRigidBody, useModel, useFilamentContext} from 'react-native-filament';
-import type {DiscreteDynamicWorld} from 'react-native-filament';
 import {useEffect} from 'react';
+import type {DiscreteDynamicWorld} from 'react-native-filament';
+import {
+  Model,
+  useBoxShape,
+  useFilamentContext,
+  useModel,
+  useRigidBody,
+} from 'react-native-filament';
 import {useSharedValue} from 'react-native-worklets-core';
 
 const POSITION: [number, number, number] = [-2.8, 1.8, 0];

@@ -4,8 +4,8 @@
  * Uses createAudioPlayer() for one-shot and looping playback.
  */
 
-import {createAudioPlayer, setIsAudioActiveAsync} from 'expo-audio';
 import type {AudioPlayer} from 'expo-audio';
+import {createAudioPlayer, setIsAudioActiveAsync} from 'expo-audio';
 
 export type SoundId =
   | 'chop'

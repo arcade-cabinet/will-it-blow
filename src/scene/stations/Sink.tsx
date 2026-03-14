@@ -8,8 +8,8 @@
  * - Uses washing_machine.glb as placeholder
  */
 
-import {Model, useBoxShape, useRigidBody} from 'react-native-filament';
 import type {DiscreteDynamicWorld} from 'react-native-filament';
+import {Model, useBoxShape, useRigidBody} from 'react-native-filament';
 
 const POSITION: [number, number, number] = [2.5, 0, 1.0];
 
@@ -22,9 +22,6 @@ export function Sink({world}: SinkProps) {
   useRigidBody({id: 'sink', mass: 0, shape, world, origin: POSITION});
 
   return (
-    <Model
-      source={require('../../../public/models/washing_machine.glb')}
-      translate={POSITION}
-    />
+    <Model source={require('../../../public/models/washing_machine.glb')} translate={POSITION} />
   );
 }

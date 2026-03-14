@@ -1,5 +1,5 @@
 import {describe, expect, it} from '@jest/globals';
-import {hydrateSession, loadSettings, saveSettings, persistSession} from '../drizzleQueries';
+import {hydrateSession, loadSettings, persistSession, saveSettings} from '../drizzleQueries';
 
 // Mock the entire client module
 jest.mock('../client', () => ({

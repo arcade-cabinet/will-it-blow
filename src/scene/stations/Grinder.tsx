@@ -11,9 +11,15 @@
  * in the parent Scene's renderCallback.
  */
 
-import {Model, useBoxShape, useRigidBody, useModel, useFilamentContext} from 'react-native-filament';
+import {useEffect} from 'react';
 import type {DiscreteDynamicWorld} from 'react-native-filament';
-import {useCallback, useEffect} from 'react';
+import {
+  Model,
+  useBoxShape,
+  useFilamentContext,
+  useModel,
+  useRigidBody,
+} from 'react-native-filament';
 import {useSharedValue} from 'react-native-worklets-core';
 import {useGameStore} from '../../ecs/hooks';
 
@@ -55,10 +61,5 @@ export function Grinder({world}: GrinderProps) {
     return () => clearInterval(interval);
   }, [isGrinding, model, transformManager, rotation]);
 
-  return (
-    <Model
-      source={require('../../../public/models/meat_grinder.glb')}
-      translate={POSITION}
-    />
-  );
+  return <Model source={require('../../../public/models/meat_grinder.glb')} translate={POSITION} />;
 }

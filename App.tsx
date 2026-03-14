@@ -8,8 +8,8 @@ import React, {Suspense} from 'react';
 import {ActivityIndicator, StyleSheet, View} from 'react-native';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {TitleScreen} from './src/components/ui/TitleScreen';
-import {useGameStore} from './src/ecs/hooks';
 import {usePersistence} from './src/db/usePersistence';
+import {useGameStore} from './src/ecs/hooks';
 import {GameOrchestrator} from './src/engine/GameOrchestrator';
 
 const LazyGameScene = React.lazy(() =>

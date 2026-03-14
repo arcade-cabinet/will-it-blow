@@ -13,12 +13,12 @@
  * - bodyRotZ (flinch lean, disgust turn)
  */
 
-import {Model, useModel, useFilamentContext} from 'react-native-filament';
 import {useEffect} from 'react';
+import {Model, useFilamentContext, useModel} from 'react-native-filament';
 import {useSharedValue} from 'react-native-worklets-core';
-import {useGameStore} from '../ecs/hooks';
-import {REACTIONS} from '../characters/reactions';
 import type {Reaction} from '../characters/reactions';
+import {REACTIONS} from '../characters/reactions';
+import {useGameStore} from '../ecs/hooks';
 
 const TV_POSITION: [number, number, number] = [-2.8, 1.2, 0];
 

@@ -10,8 +10,8 @@
  * - Uses fridge.glb model
  */
 
-import {Model, useBoxShape, useRigidBody} from 'react-native-filament';
 import type {DiscreteDynamicWorld} from 'react-native-filament';
+import {Model, useBoxShape, useRigidBody} from 'react-native-filament';
 
 const POSITION: [number, number, number] = [-2.5, 0, -3.5];
 
@@ -23,10 +23,5 @@ export function ChestFreezer({world}: ChestFreezerProps) {
   const shape = useBoxShape(0.5, 0.8, 0.5);
   useRigidBody({id: 'freezer', mass: 0, shape, world, origin: POSITION});
 
-  return (
-    <Model
-      source={require('../../../public/models/fridge.glb')}
-      translate={POSITION}
-    />
-  );
+  return <Model source={require('../../../public/models/fridge.glb')} translate={POSITION} />;
 }

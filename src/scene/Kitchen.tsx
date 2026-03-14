@@ -17,53 +17,186 @@
  * so the player capsule can't fall through or walk through them.
  */
 
-import {Model, useRigidBody, useStaticPlaneShape, useBoxShape} from 'react-native-filament';
 import type {DiscreteDynamicWorld} from 'react-native-filament';
+import {Model, useBoxShape, useRigidBody, useStaticPlaneShape} from 'react-native-filament';
 
 // Kitchen furniture GLBs from public/models/
 const FURNITURE = [
-  {source: require('../../public/models/workplan.glb'), position: [0, 0, -3] as [number, number, number], scale: 1},
-  {source: require('../../public/models/workplan_001.glb'), position: [2, 0, -3] as [number, number, number], scale: 1},
-  {source: require('../../public/models/kitchen_oven_large.glb'), position: [2.5, 0, -3.5] as [number, number, number], scale: 1},
-  {source: require('../../public/models/fridge.glb'), position: [-2.5, 0, -3.5] as [number, number, number], scale: 1},
-  {source: require('../../public/models/kitchen_cabinet1.glb'), position: [-2, 0, -3.8] as [number, number, number], scale: 1},
-  {source: require('../../public/models/kitchen_cabinet2.glb'), position: [-1, 0, -3.8] as [number, number, number], scale: 1},
-  {source: require('../../public/models/shelf_small.glb'), position: [2.8, 1.5, 0] as [number, number, number], scale: 1},
-  {source: require('../../public/models/knife_holder.glb'), position: [1.5, 0.8, -3.5] as [number, number, number], scale: 1},
-  {source: require('../../public/models/utensil_holder.glb'), position: [0.5, 0.8, -3.5] as [number, number, number], scale: 1},
-  {source: require('../../public/models/cutting_board.glb'), position: [1.5, 0.45, 0] as [number, number, number], scale: 1},
-  {source: require('../../public/models/mixing_bowl.glb'), position: [-0.6, 0.45, 0] as [number, number, number], scale: 1},
-  {source: require('../../public/models/meat_grinder.glb'), position: [-1.5, 0.45, -1] as [number, number, number], scale: 1},
-  {source: require('../../public/models/frying_pan.glb'), position: [2, 0.85, -2] as [number, number, number], scale: 1},
-  {source: require('../../public/models/pot.glb'), position: [1.5, 0.85, -2.5] as [number, number, number], scale: 1},
-  {source: require('../../public/models/table_styloo.glb'), position: [0, 0, 2] as [number, number, number], scale: 1},
-  {source: require('../../public/models/chair_styloo.glb'), position: [0.5, 0, 2.5] as [number, number, number], scale: 1},
-  {source: require('../../public/models/trashcan_cylindric.glb'), position: [-2.5, 0, 2] as [number, number, number], scale: 1},
-  {source: require('../../public/models/toaster.glb'), position: [0, 0.85, -3.5] as [number, number, number], scale: 0.8},
-  {source: require('../../public/models/washing_machine.glb'), position: [-2.8, 0, -1] as [number, number, number], scale: 1},
+  {
+    source: require('../../public/models/workplan.glb'),
+    position: [0, 0, -3] as [number, number, number],
+    scale: 1,
+  },
+  {
+    source: require('../../public/models/workplan_001.glb'),
+    position: [2, 0, -3] as [number, number, number],
+    scale: 1,
+  },
+  {
+    source: require('../../public/models/kitchen_oven_large.glb'),
+    position: [2.5, 0, -3.5] as [number, number, number],
+    scale: 1,
+  },
+  {
+    source: require('../../public/models/fridge.glb'),
+    position: [-2.5, 0, -3.5] as [number, number, number],
+    scale: 1,
+  },
+  {
+    source: require('../../public/models/kitchen_cabinet1.glb'),
+    position: [-2, 0, -3.8] as [number, number, number],
+    scale: 1,
+  },
+  {
+    source: require('../../public/models/kitchen_cabinet2.glb'),
+    position: [-1, 0, -3.8] as [number, number, number],
+    scale: 1,
+  },
+  {
+    source: require('../../public/models/shelf_small.glb'),
+    position: [2.8, 1.5, 0] as [number, number, number],
+    scale: 1,
+  },
+  {
+    source: require('../../public/models/knife_holder.glb'),
+    position: [1.5, 0.8, -3.5] as [number, number, number],
+    scale: 1,
+  },
+  {
+    source: require('../../public/models/utensil_holder.glb'),
+    position: [0.5, 0.8, -3.5] as [number, number, number],
+    scale: 1,
+  },
+  {
+    source: require('../../public/models/cutting_board.glb'),
+    position: [1.5, 0.45, 0] as [number, number, number],
+    scale: 1,
+  },
+  {
+    source: require('../../public/models/mixing_bowl.glb'),
+    position: [-0.6, 0.45, 0] as [number, number, number],
+    scale: 1,
+  },
+  {
+    source: require('../../public/models/meat_grinder.glb'),
+    position: [-1.5, 0.45, -1] as [number, number, number],
+    scale: 1,
+  },
+  {
+    source: require('../../public/models/frying_pan.glb'),
+    position: [2, 0.85, -2] as [number, number, number],
+    scale: 1,
+  },
+  {
+    source: require('../../public/models/pot.glb'),
+    position: [1.5, 0.85, -2.5] as [number, number, number],
+    scale: 1,
+  },
+  {
+    source: require('../../public/models/table_styloo.glb'),
+    position: [0, 0, 2] as [number, number, number],
+    scale: 1,
+  },
+  {
+    source: require('../../public/models/chair_styloo.glb'),
+    position: [0.5, 0, 2.5] as [number, number, number],
+    scale: 1,
+  },
+  {
+    source: require('../../public/models/trashcan_cylindric.glb'),
+    position: [-2.5, 0, 2] as [number, number, number],
+    scale: 1,
+  },
+  {
+    source: require('../../public/models/toaster.glb'),
+    position: [0, 0.85, -3.5] as [number, number, number],
+    scale: 0.8,
+  },
+  {
+    source: require('../../public/models/washing_machine.glb'),
+    position: [-2.8, 0, -1] as [number, number, number],
+    scale: 1,
+  },
 ];
 
 // Horror prop GLBs
 const HORROR_PROPS = [
-  {source: require('../../public/models/horror/metal_barrel_hr_1.glb'), position: [2.5, 0, 3] as [number, number, number]},
-  {source: require('../../public/models/horror/metal_barrel_hr_2.glb'), position: [2.2, 0, 3.5] as [number, number, number]},
-  {source: require('../../public/models/horror/cage_mx_1.glb'), position: [-2.5, 0, 3.5] as [number, number, number]},
-  {source: require('../../public/models/horror/saw_blade_1.glb'), position: [2.9, 1.8, -1] as [number, number, number]},
-  {source: require('../../public/models/horror/machete_mx_1.glb'), position: [-2.8, 1.5, 1] as [number, number, number]},
-  {source: require('../../public/models/horror/mask_mx_1.glb'), position: [-2.9, 2, -2] as [number, number, number]},
-  {source: require('../../public/models/horror/mask_mx_3.glb'), position: [2.9, 2, -2.5] as [number, number, number]},
-  {source: require('../../public/models/horror/fishing_hook_mx_1.glb'), position: [0, 2.8, 0] as [number, number, number]},
-  {source: require('../../public/models/horror/fishing_hook_mx_2.glb'), position: [1, 2.8, -1] as [number, number, number]},
-  {source: require('../../public/models/horror/wooden_plank_1.glb'), position: [-1, 0, 3.8] as [number, number, number]},
-  {source: require('../../public/models/horror/pipes_hr_1.glb'), position: [0, 2.5, -3.9] as [number, number, number]},
-  {source: require('../../public/models/horror/wires_hr_1.glb'), position: [1, 2.5, -3.9] as [number, number, number]},
-  {source: require('../../public/models/horror/poster_cx_4.glb'), position: [-1, 1.5, -3.95] as [number, number, number]},
-  {source: require('../../public/models/horror/lamp_mx_3_on.glb'), position: [0, 2.9, 0] as [number, number, number]},
-  {source: require('../../public/models/horror/cardboard_box_1.glb'), position: [-2, 0, 1] as [number, number, number]},
-  {source: require('../../public/models/horror/brick_mx_1.glb'), position: [2.95, 0.5, 1] as [number, number, number]},
-  {source: require('../../public/models/horror/brick_mx_2.glb'), position: [2.95, 0.5, -0.5] as [number, number, number]},
-  {source: require('../../public/models/horror/graffiti_mx_1.glb'), position: [2.95, 1.5, 2] as [number, number, number]},
-  {source: require('../../public/models/horror/graffiti_mx_2.glb'), position: [-2.95, 1.5, -1] as [number, number, number]},
+  {
+    source: require('../../public/models/horror/metal_barrel_hr_1.glb'),
+    position: [2.5, 0, 3] as [number, number, number],
+  },
+  {
+    source: require('../../public/models/horror/metal_barrel_hr_2.glb'),
+    position: [2.2, 0, 3.5] as [number, number, number],
+  },
+  {
+    source: require('../../public/models/horror/cage_mx_1.glb'),
+    position: [-2.5, 0, 3.5] as [number, number, number],
+  },
+  {
+    source: require('../../public/models/horror/saw_blade_1.glb'),
+    position: [2.9, 1.8, -1] as [number, number, number],
+  },
+  {
+    source: require('../../public/models/horror/machete_mx_1.glb'),
+    position: [-2.8, 1.5, 1] as [number, number, number],
+  },
+  {
+    source: require('../../public/models/horror/mask_mx_1.glb'),
+    position: [-2.9, 2, -2] as [number, number, number],
+  },
+  {
+    source: require('../../public/models/horror/mask_mx_3.glb'),
+    position: [2.9, 2, -2.5] as [number, number, number],
+  },
+  {
+    source: require('../../public/models/horror/fishing_hook_mx_1.glb'),
+    position: [0, 2.8, 0] as [number, number, number],
+  },
+  {
+    source: require('../../public/models/horror/fishing_hook_mx_2.glb'),
+    position: [1, 2.8, -1] as [number, number, number],
+  },
+  {
+    source: require('../../public/models/horror/wooden_plank_1.glb'),
+    position: [-1, 0, 3.8] as [number, number, number],
+  },
+  {
+    source: require('../../public/models/horror/pipes_hr_1.glb'),
+    position: [0, 2.5, -3.9] as [number, number, number],
+  },
+  {
+    source: require('../../public/models/horror/wires_hr_1.glb'),
+    position: [1, 2.5, -3.9] as [number, number, number],
+  },
+  {
+    source: require('../../public/models/horror/poster_cx_4.glb'),
+    position: [-1, 1.5, -3.95] as [number, number, number],
+  },
+  {
+    source: require('../../public/models/horror/lamp_mx_3_on.glb'),
+    position: [0, 2.9, 0] as [number, number, number],
+  },
+  {
+    source: require('../../public/models/horror/cardboard_box_1.glb'),
+    position: [-2, 0, 1] as [number, number, number],
+  },
+  {
+    source: require('../../public/models/horror/brick_mx_1.glb'),
+    position: [2.95, 0.5, 1] as [number, number, number],
+  },
+  {
+    source: require('../../public/models/horror/brick_mx_2.glb'),
+    position: [2.95, 0.5, -0.5] as [number, number, number],
+  },
+  {
+    source: require('../../public/models/horror/graffiti_mx_1.glb'),
+    position: [2.95, 1.5, 2] as [number, number, number],
+  },
+  {
+    source: require('../../public/models/horror/graffiti_mx_2.glb'),
+    position: [-2.95, 1.5, -1] as [number, number, number],
+  },
 ];
 
 interface KitchenProps {
@@ -103,11 +236,7 @@ export function Kitchen({world}: KitchenProps) {
 
       {/* Horror props */}
       {HORROR_PROPS.map((item, i) => (
-        <Model
-          key={`horror-${i}`}
-          source={item.source}
-          translate={item.position}
-        />
+        <Model key={`horror-${i}`} source={item.source} translate={item.position} />
       ))}
     </>
   );

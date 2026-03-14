@@ -7,12 +7,8 @@
  * Phase 3: Gesture-based movement (left side virtual joystick)
  */
 
-import {
-  Camera,
-  useCylinderShape,
-  useRigidBody,
-} from 'react-native-filament';
 import type {DiscreteDynamicWorld} from 'react-native-filament';
+import {Camera, useCylinderShape, useRigidBody} from 'react-native-filament';
 import playerConfig from '../config/player.json';
 
 const EYE_HEIGHT = playerConfig.capsule.eyeHeight;
@@ -45,12 +41,5 @@ export function PlayerController({world}: PlayerControllerProps) {
   const eyePos: [number, number, number] = [SPAWN[0], SPAWN[1] + EYE_HEIGHT, SPAWN[2]];
   const lookAt: [number, number, number] = [0, 1.2, -2];
 
-  return (
-    <Camera
-      cameraPosition={eyePos}
-      cameraTarget={lookAt}
-      near={0.1}
-      far={50}
-    />
-  );
+  return <Camera cameraPosition={eyePos} cameraTarget={lookAt} near={0.1} far={50} />;
 }

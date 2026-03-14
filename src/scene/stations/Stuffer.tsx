@@ -6,9 +6,15 @@
  * back and forth during STUFFING phase to simulate crank turning.
  */
 
-import {Model, useBoxShape, useRigidBody, useModel, useFilamentContext} from 'react-native-filament';
-import type {DiscreteDynamicWorld} from 'react-native-filament';
 import {useEffect} from 'react';
+import type {DiscreteDynamicWorld} from 'react-native-filament';
+import {
+  Model,
+  useBoxShape,
+  useFilamentContext,
+  useModel,
+  useRigidBody,
+} from 'react-native-filament';
 import {useSharedValue} from 'react-native-worklets-core';
 import {useGameStore} from '../../ecs/hooks';
 
@@ -48,9 +54,6 @@ export function Stuffer({world}: StufferProps) {
   }, [isStuffing, model, transformManager, wobble]);
 
   return (
-    <Model
-      source={require('../../../public/models/island_counter.glb')}
-      translate={POSITION}
-    />
+    <Model source={require('../../../public/models/island_counter.glb')} translate={POSITION} />
   );
 }

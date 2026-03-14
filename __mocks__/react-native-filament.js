@@ -1,5 +1,5 @@
 // Mock for react-native-filament in Jest tests
-const React = require('react');
+const _React = require('react');
 
 module.exports = {
   FilamentScene: ({children}) => children,

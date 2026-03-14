@@ -30,26 +30,80 @@ const FLOOR_TILES = [
 // Walls: use brick GLBs stacked for wall segments
 const WALL_BRICKS = [
   // Back wall (Z = -4)
-  {source: require('../../public/models/horror/brick_mx_1.glb'), position: [-2, 0.5, -3.9] as [number, number, number]},
-  {source: require('../../public/models/horror/brick_mx_2.glb'), position: [0, 0.5, -3.9] as [number, number, number]},
-  {source: require('../../public/models/horror/brick_mx_1.glb'), position: [2, 0.5, -3.9] as [number, number, number]},
-  {source: require('../../public/models/horror/brick_mx_2.glb'), position: [-2, 1.5, -3.9] as [number, number, number]},
-  {source: require('../../public/models/horror/brick_mx_1.glb'), position: [0, 1.5, -3.9] as [number, number, number]},
-  {source: require('../../public/models/horror/brick_mx_2.glb'), position: [2, 1.5, -3.9] as [number, number, number]},
+  {
+    source: require('../../public/models/horror/brick_mx_1.glb'),
+    position: [-2, 0.5, -3.9] as [number, number, number],
+  },
+  {
+    source: require('../../public/models/horror/brick_mx_2.glb'),
+    position: [0, 0.5, -3.9] as [number, number, number],
+  },
+  {
+    source: require('../../public/models/horror/brick_mx_1.glb'),
+    position: [2, 0.5, -3.9] as [number, number, number],
+  },
+  {
+    source: require('../../public/models/horror/brick_mx_2.glb'),
+    position: [-2, 1.5, -3.9] as [number, number, number],
+  },
+  {
+    source: require('../../public/models/horror/brick_mx_1.glb'),
+    position: [0, 1.5, -3.9] as [number, number, number],
+  },
+  {
+    source: require('../../public/models/horror/brick_mx_2.glb'),
+    position: [2, 1.5, -3.9] as [number, number, number],
+  },
   // Left wall (X = -3)
-  {source: require('../../public/models/horror/brick_mx_1.glb'), position: [-2.9, 0.5, -2] as [number, number, number]},
-  {source: require('../../public/models/horror/brick_mx_2.glb'), position: [-2.9, 0.5, 0] as [number, number, number]},
-  {source: require('../../public/models/horror/brick_mx_1.glb'), position: [-2.9, 0.5, 2] as [number, number, number]},
-  {source: require('../../public/models/horror/brick_mx_2.glb'), position: [-2.9, 1.5, -2] as [number, number, number]},
-  {source: require('../../public/models/horror/brick_mx_1.glb'), position: [-2.9, 1.5, 0] as [number, number, number]},
-  {source: require('../../public/models/horror/brick_mx_2.glb'), position: [-2.9, 1.5, 2] as [number, number, number]},
+  {
+    source: require('../../public/models/horror/brick_mx_1.glb'),
+    position: [-2.9, 0.5, -2] as [number, number, number],
+  },
+  {
+    source: require('../../public/models/horror/brick_mx_2.glb'),
+    position: [-2.9, 0.5, 0] as [number, number, number],
+  },
+  {
+    source: require('../../public/models/horror/brick_mx_1.glb'),
+    position: [-2.9, 0.5, 2] as [number, number, number],
+  },
+  {
+    source: require('../../public/models/horror/brick_mx_2.glb'),
+    position: [-2.9, 1.5, -2] as [number, number, number],
+  },
+  {
+    source: require('../../public/models/horror/brick_mx_1.glb'),
+    position: [-2.9, 1.5, 0] as [number, number, number],
+  },
+  {
+    source: require('../../public/models/horror/brick_mx_2.glb'),
+    position: [-2.9, 1.5, 2] as [number, number, number],
+  },
   // Right wall (X = 3)
-  {source: require('../../public/models/horror/brick_mx_2.glb'), position: [2.9, 0.5, -2] as [number, number, number]},
-  {source: require('../../public/models/horror/brick_mx_1.glb'), position: [2.9, 0.5, 0] as [number, number, number]},
-  {source: require('../../public/models/horror/brick_mx_2.glb'), position: [2.9, 0.5, 2] as [number, number, number]},
-  {source: require('../../public/models/horror/brick_mx_1.glb'), position: [2.9, 1.5, -2] as [number, number, number]},
-  {source: require('../../public/models/horror/brick_mx_2.glb'), position: [2.9, 1.5, 0] as [number, number, number]},
-  {source: require('../../public/models/horror/brick_mx_1.glb'), position: [2.9, 1.5, 2] as [number, number, number]},
+  {
+    source: require('../../public/models/horror/brick_mx_2.glb'),
+    position: [2.9, 0.5, -2] as [number, number, number],
+  },
+  {
+    source: require('../../public/models/horror/brick_mx_1.glb'),
+    position: [2.9, 0.5, 0] as [number, number, number],
+  },
+  {
+    source: require('../../public/models/horror/brick_mx_2.glb'),
+    position: [2.9, 0.5, 2] as [number, number, number],
+  },
+  {
+    source: require('../../public/models/horror/brick_mx_1.glb'),
+    position: [2.9, 1.5, -2] as [number, number, number],
+  },
+  {
+    source: require('../../public/models/horror/brick_mx_2.glb'),
+    position: [2.9, 1.5, 0] as [number, number, number],
+  },
+  {
+    source: require('../../public/models/horror/brick_mx_1.glb'),
+    position: [2.9, 1.5, 2] as [number, number, number],
+  },
 ];
 
 // Mattress at player spawn position

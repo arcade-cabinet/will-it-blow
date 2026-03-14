@@ -6,9 +6,15 @@
  * heat/sizzle visual feedback.
  */
 
-import {Model, useBoxShape, useRigidBody, useModel, useFilamentContext} from 'react-native-filament';
-import type {DiscreteDynamicWorld} from 'react-native-filament';
 import {useEffect} from 'react';
+import type {DiscreteDynamicWorld} from 'react-native-filament';
+import {
+  Model,
+  useBoxShape,
+  useFilamentContext,
+  useModel,
+  useRigidBody,
+} from 'react-native-filament';
 import {useSharedValue} from 'react-native-worklets-core';
 import {useGameStore} from '../../ecs/hooks';
 
@@ -36,20 +42,13 @@ export function Stove({world}: StoveProps) {
       pulse.value += 0.1;
       if (model.state === 'loaded' && model.rootEntity) {
         const s = 1 + Math.sin(pulse.value * 3) * 0.01; // Very subtle
-        transformManager.setEntityScale(
-          model.rootEntity,
-          [s, s, s],
-          false,
-        );
+        transformManager.setEntityScale(model.rootEntity, [s, s, s], false);
       }
     }, 16);
     return () => clearInterval(interval);
   }, [isCooking, model, transformManager, pulse]);
 
   return (
-    <Model
-      source={require('../../../public/models/kitchen_oven_large.glb')}
-      translate={POSITION}
-    />
+    <Model source={require('../../../public/models/kitchen_oven_large.glb')} translate={POSITION} />
   );
 }

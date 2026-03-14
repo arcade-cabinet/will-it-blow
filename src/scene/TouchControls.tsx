@@ -10,11 +10,11 @@
  * All interactions drive Koota ECS state + audio engine.
  */
 
-import {useRef, useCallback} from 'react';
+import {useCallback, useRef} from 'react';
 import {Dimensions, StyleSheet, View} from 'react-native';
 import {Gesture, GestureDetector} from 'react-native-gesture-handler';
-import {useGameStore} from '../ecs/hooks';
 import {audioEngine} from '../audio/AudioEngine';
+import {useGameStore} from '../ecs/hooks';
 import {INGREDIENT_MODELS} from '../engine/Ingredients';
 
 const {width: SCREEN_WIDTH} = Dimensions.get('window');
@@ -189,10 +189,7 @@ export function TouchControls({onLook, onMove, onMoveEnd}: TouchControlsProps) {
     handleTap();
   });
 
-  const composed = Gesture.Simultaneous(
-    Gesture.Simultaneous(lookGesture, moveGesture),
-    tapGesture,
-  );
+  const composed = Gesture.Simultaneous(Gesture.Simultaneous(lookGesture, moveGesture), tapGesture);
 
   return (
     <GestureDetector gesture={composed}>

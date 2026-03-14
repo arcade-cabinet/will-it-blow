@@ -7,26 +7,20 @@
  * 2. TouchControls overlay (invisible — handles FPS look/move/interact)
  */
 
-import {
-  DefaultLight,
-  FilamentScene,
-  FilamentView,
-  Skybox,
-  useWorld,
-} from 'react-native-filament';
 import {useCallback, useRef} from 'react';
 import {StyleSheet, View} from 'react-native';
 import type {RenderCallback} from 'react-native-filament';
+import {FilamentScene, FilamentView, Skybox, useWorld} from 'react-native-filament';
+import {useGameStore} from '../ecs/hooks';
 import {IntroSequence} from './IntroSequence';
 import {Kitchen} from './Kitchen';
 import {KitchenLighting} from './Lighting';
 import {MrSausage} from './MrSausage';
-import {Room} from './Room';
 import {PlayerController} from './PlayerController';
 import {PlayerHands} from './PlayerHands';
-import {Sausage} from './sausage/Sausage';
+import {Room} from './Room';
 import {SurrealText} from './SurrealText';
-import {TouchControls} from './TouchControls';
+import {Sausage} from './sausage/Sausage';
 import {BlowoutStation} from './stations/BlowoutStation';
 import {ChestFreezer} from './stations/ChestFreezer';
 import {ChoppingBlock} from './stations/ChoppingBlock';
@@ -35,11 +29,11 @@ import {Sink} from './stations/Sink';
 import {Stove} from './stations/Stove';
 import {Stuffer} from './stations/Stuffer';
 import {TV} from './stations/TV';
-import {useGameStore} from '../ecs/hooks';
+import {TouchControls} from './TouchControls';
 
 export function GameScene() {
   const world = useWorld(0, -9.8, 0);
-  const gamePhase = useGameStore(s => s.gamePhase);
+  const _gamePhase = useGameStore(s => s.gamePhase);
 
   // Camera look state — mutated by touch controls
   const yawRef = useRef(0);
@@ -104,11 +98,7 @@ export function GameScene() {
 
       {/* Layer 3: Invisible touch controls */}
       <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-        <TouchControls
-          onLook={handleLook}
-          onMove={handleMove}
-          onMoveEnd={handleMoveEnd}
-        />
+        <TouchControls onLook={handleLook} onMove={handleMove} onMoveEnd={handleMoveEnd} />
       </View>
     </View>
   );

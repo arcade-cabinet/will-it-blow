@@ -9,8 +9,8 @@
  * - Audio: pressure, burst sounds
  */
 
-import {Model, useBoxShape, useRigidBody} from 'react-native-filament';
 import type {DiscreteDynamicWorld} from 'react-native-filament';
+import {Model, useBoxShape, useRigidBody} from 'react-native-filament';
 
 const POSITION: [number, number, number] = [0, 0.4, 1.5];
 
@@ -22,10 +22,5 @@ export function BlowoutStation({world}: BlowoutStationProps) {
   const shape = useBoxShape(0.5, 0.3, 0.5);
   useRigidBody({id: 'blowout', mass: 0, shape, world, origin: POSITION});
 
-  return (
-    <Model
-      source={require('../../../public/models/plate_big.glb')}
-      translate={POSITION}
-    />
-  );
+  return <Model source={require('../../../public/models/plate_big.glb')} translate={POSITION} />;
 }
