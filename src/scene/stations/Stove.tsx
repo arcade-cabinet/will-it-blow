@@ -16,6 +16,7 @@ import {
   useRigidBody,
 } from 'react-native-filament';
 import {useSharedValue} from 'react-native-worklets-core';
+import {MODELS} from '../../assets/registry';
 import {useGameStore} from '../../ecs/hooks';
 
 const POSITION: [number, number, number] = [2.0, 0, -2.5];
@@ -31,7 +32,7 @@ export function Stove({world}: StoveProps) {
   const shape = useBoxShape(0.6, 0.5, 0.6);
   useRigidBody({id: 'stove', mass: 0, shape, world, origin: POSITION});
 
-  const model = useModel(require('../../../public/models/kitchen_oven_large.glb'));
+  const model = useModel(MODELS.ovenLarge);
   const {transformManager} = useFilamentContext();
   const pulse = useSharedValue(0);
 
@@ -48,7 +49,5 @@ export function Stove({world}: StoveProps) {
     return () => clearInterval(interval);
   }, [isCooking, model, transformManager, pulse]);
 
-  return (
-    <Model source={require('../../../public/models/kitchen_oven_large.glb')} translate={POSITION} />
-  );
+  return <Model source={MODELS.ovenLarge} translate={POSITION} />;
 }

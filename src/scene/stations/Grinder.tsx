@@ -21,6 +21,7 @@ import {
   useRigidBody,
 } from 'react-native-filament';
 import {useSharedValue} from 'react-native-worklets-core';
+import {MODELS} from '../../assets/registry';
 import {useGameStore} from '../../ecs/hooks';
 
 const POSITION: [number, number, number] = [-1.5, 0.4, -1.0];
@@ -38,7 +39,7 @@ export function Grinder({world}: GrinderProps) {
   useRigidBody({id: 'grinder', mass: 0, shape, world, origin: POSITION});
 
   // Model + animation
-  const model = useModel(require('../../../public/models/meat_grinder.glb'));
+  const model = useModel(MODELS.meatGrinder);
   const {transformManager} = useFilamentContext();
 
   // Rotation animation via shared value
@@ -61,5 +62,5 @@ export function Grinder({world}: GrinderProps) {
     return () => clearInterval(interval);
   }, [isGrinding, model, transformManager, rotation]);
 
-  return <Model source={require('../../../public/models/meat_grinder.glb')} translate={POSITION} />;
+  return <Model source={MODELS.meatGrinder} translate={POSITION} />;
 }

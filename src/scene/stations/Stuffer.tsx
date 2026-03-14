@@ -16,6 +16,7 @@ import {
   useRigidBody,
 } from 'react-native-filament';
 import {useSharedValue} from 'react-native-worklets-core';
+import {MODELS} from '../../assets/registry';
 import {useGameStore} from '../../ecs/hooks';
 
 const POSITION: [number, number, number] = [0.5, 0.4, -1.5];
@@ -31,7 +32,7 @@ export function Stuffer({world}: StufferProps) {
   const shape = useBoxShape(0.4, 0.5, 0.4);
   useRigidBody({id: 'stuffer', mass: 0, shape, world, origin: POSITION});
 
-  const model = useModel(require('../../../public/models/island_counter.glb'));
+  const model = useModel(MODELS.islandCounter);
   const {transformManager} = useFilamentContext();
   const wobble = useSharedValue(0);
 
@@ -53,7 +54,5 @@ export function Stuffer({world}: StufferProps) {
     return () => clearInterval(interval);
   }, [isStuffing, model, transformManager, wobble]);
 
-  return (
-    <Model source={require('../../../public/models/island_counter.glb')} translate={POSITION} />
-  );
+  return <Model source={MODELS.islandCounter} translate={POSITION} />;
 }

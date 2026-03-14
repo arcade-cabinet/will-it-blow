@@ -16,6 +16,7 @@
 
 import type {DiscreteDynamicWorld} from 'react-native-filament';
 import {Model, useBoxShape, useRigidBody} from 'react-native-filament';
+import {MODELS} from '../../assets/registry';
 import {useGameStore} from '../../ecs/hooks';
 
 const POSITION: [number, number, number] = [1.5, 0.4, 0];
@@ -31,7 +32,5 @@ export function ChoppingBlock({world}: ChoppingBlockProps) {
   const shape = useBoxShape(0.5, 0.4, 0.5);
   useRigidBody({id: 'chopping-block', mass: 0, shape, world, origin: POSITION});
 
-  return (
-    <Model source={require('../../../public/models/cutting_board.glb')} translate={POSITION} />
-  );
+  return <Model source={MODELS.cuttingBoard} translate={POSITION} />;
 }

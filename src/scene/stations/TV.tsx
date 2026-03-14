@@ -17,6 +17,7 @@ import {
   useRigidBody,
 } from 'react-native-filament';
 import {useSharedValue} from 'react-native-worklets-core';
+import {MODELS} from '../../assets/registry';
 
 const POSITION: [number, number, number] = [-2.8, 1.8, 0];
 
@@ -28,7 +29,7 @@ export function TV({world}: TVProps) {
   const shape = useBoxShape(0.4, 0.4, 0.5);
   useRigidBody({id: 'tv', mass: 0, shape, world, origin: POSITION});
 
-  const model = useModel(require('../../../public/models/toaster.glb'));
+  const model = useModel(MODELS.toaster);
   const {transformManager} = useFilamentContext();
   const flicker = useSharedValue(0);
 
@@ -57,11 +58,5 @@ export function TV({world}: TVProps) {
     return () => clearInterval(interval);
   }, [model, transformManager, flicker]);
 
-  return (
-    <Model
-      source={require('../../../public/models/toaster.glb')}
-      translate={POSITION}
-      scale={[2, 2, 2]}
-    />
-  );
+  return <Model source={MODELS.toaster} translate={POSITION} scale={[2, 2, 2]} />;
 }

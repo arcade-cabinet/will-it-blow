@@ -17,6 +17,7 @@
  */
 
 import {Model} from 'react-native-filament';
+import {MODELS} from '../../assets/registry';
 import {useGameStore} from '../../ecs/hooks';
 
 // Station positions where sausage appears
@@ -42,7 +43,7 @@ export function Sausage() {
 
   return (
     <Model
-      source={require('../../../public/models/Flesh.glb')}
+      source={MODELS.flesh}
       translate={position}
       scale={[0.15, 0.15, 0.5]} // Elongated sausage shape
     />

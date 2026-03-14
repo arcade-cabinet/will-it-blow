@@ -13,6 +13,7 @@
  */
 
 import {Model} from 'react-native-filament';
+import {MODELS} from '../assets/registry';
 
 // Floor: use workplan models as floor tiles
 const FLOOR_TILES = [
@@ -31,77 +32,77 @@ const FLOOR_TILES = [
 const WALL_BRICKS = [
   // Back wall (Z = -4)
   {
-    source: require('../../public/models/horror/brick_mx_1.glb'),
+    source: MODELS.brick1,
     position: [-2, 0.5, -3.9] as [number, number, number],
   },
   {
-    source: require('../../public/models/horror/brick_mx_2.glb'),
+    source: MODELS.brick2,
     position: [0, 0.5, -3.9] as [number, number, number],
   },
   {
-    source: require('../../public/models/horror/brick_mx_1.glb'),
+    source: MODELS.brick1,
     position: [2, 0.5, -3.9] as [number, number, number],
   },
   {
-    source: require('../../public/models/horror/brick_mx_2.glb'),
+    source: MODELS.brick2,
     position: [-2, 1.5, -3.9] as [number, number, number],
   },
   {
-    source: require('../../public/models/horror/brick_mx_1.glb'),
+    source: MODELS.brick1,
     position: [0, 1.5, -3.9] as [number, number, number],
   },
   {
-    source: require('../../public/models/horror/brick_mx_2.glb'),
+    source: MODELS.brick2,
     position: [2, 1.5, -3.9] as [number, number, number],
   },
   // Left wall (X = -3)
   {
-    source: require('../../public/models/horror/brick_mx_1.glb'),
+    source: MODELS.brick1,
     position: [-2.9, 0.5, -2] as [number, number, number],
   },
   {
-    source: require('../../public/models/horror/brick_mx_2.glb'),
+    source: MODELS.brick2,
     position: [-2.9, 0.5, 0] as [number, number, number],
   },
   {
-    source: require('../../public/models/horror/brick_mx_1.glb'),
+    source: MODELS.brick1,
     position: [-2.9, 0.5, 2] as [number, number, number],
   },
   {
-    source: require('../../public/models/horror/brick_mx_2.glb'),
+    source: MODELS.brick2,
     position: [-2.9, 1.5, -2] as [number, number, number],
   },
   {
-    source: require('../../public/models/horror/brick_mx_1.glb'),
+    source: MODELS.brick1,
     position: [-2.9, 1.5, 0] as [number, number, number],
   },
   {
-    source: require('../../public/models/horror/brick_mx_2.glb'),
+    source: MODELS.brick2,
     position: [-2.9, 1.5, 2] as [number, number, number],
   },
   // Right wall (X = 3)
   {
-    source: require('../../public/models/horror/brick_mx_2.glb'),
+    source: MODELS.brick2,
     position: [2.9, 0.5, -2] as [number, number, number],
   },
   {
-    source: require('../../public/models/horror/brick_mx_1.glb'),
+    source: MODELS.brick1,
     position: [2.9, 0.5, 0] as [number, number, number],
   },
   {
-    source: require('../../public/models/horror/brick_mx_2.glb'),
+    source: MODELS.brick2,
     position: [2.9, 0.5, 2] as [number, number, number],
   },
   {
-    source: require('../../public/models/horror/brick_mx_1.glb'),
+    source: MODELS.brick1,
     position: [2.9, 1.5, -2] as [number, number, number],
   },
   {
-    source: require('../../public/models/horror/brick_mx_2.glb'),
+    source: MODELS.brick2,
     position: [2.9, 1.5, 0] as [number, number, number],
   },
   {
-    source: require('../../public/models/horror/brick_mx_1.glb'),
+    source: MODELS.brick1,
     position: [2.9, 1.5, 2] as [number, number, number],
   },
 ];
@@ -116,7 +117,7 @@ export function Room() {
       {FLOOR_TILES.map((tile, i) => (
         <Model
           key={`floor-${i}`}
-          source={require('../../public/models/workplan.glb')}
+          source={MODELS.workplan}
           translate={tile.position}
           scale={[1, 0.02, 1]}
         />
@@ -133,11 +134,7 @@ export function Room() {
       ))}
 
       {/* Mattress — player spawn */}
-      <Model
-        source={require('../../public/models/bandages.glb')}
-        translate={MATTRESS_POSITION}
-        scale={[2, 0.5, 3]}
-      />
+      <Model source={MODELS.bandages} translate={MATTRESS_POSITION} scale={[2, 0.5, 3]} />
     </>
   );
 }

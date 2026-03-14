@@ -10,6 +10,7 @@
 
 import type {DiscreteDynamicWorld} from 'react-native-filament';
 import {Model, useBoxShape, useRigidBody} from 'react-native-filament';
+import {MODELS} from '../../assets/registry';
 
 const POSITION: [number, number, number] = [2.5, 0, 1.0];
 
@@ -21,7 +22,5 @@ export function Sink({world}: SinkProps) {
   const shape = useBoxShape(0.4, 0.5, 0.4);
   useRigidBody({id: 'sink', mass: 0, shape, world, origin: POSITION});
 
-  return (
-    <Model source={require('../../../public/models/washing_machine.glb')} translate={POSITION} />
-  );
+  return <Model source={MODELS.washingMachine} translate={POSITION} />;
 }

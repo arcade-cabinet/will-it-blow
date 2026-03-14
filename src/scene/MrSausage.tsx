@@ -16,6 +16,7 @@
 import {useEffect} from 'react';
 import {Model, useFilamentContext, useModel} from 'react-native-filament';
 import {useSharedValue} from 'react-native-worklets-core';
+import {MODELS} from '../assets/registry';
 import type {Reaction} from '../characters/reactions';
 import {REACTIONS} from '../characters/reactions';
 import {useGameStore} from '../ecs/hooks';
@@ -26,7 +27,7 @@ export function MrSausage() {
   const reaction = useGameStore(s => s.mrSausageReaction) as Reaction;
   const reactionDef = REACTIONS[reaction] || REACTIONS.idle;
 
-  const model = useModel(require('../../public/models/Flesh.glb'));
+  const model = useModel(MODELS.flesh);
   const {transformManager} = useFilamentContext();
   const time = useSharedValue(0);
 
@@ -66,11 +67,5 @@ export function MrSausage() {
     return () => clearInterval(interval);
   }, [model, transformManager, reactionDef, time]);
 
-  return (
-    <Model
-      source={require('../../public/models/Flesh.glb')}
-      translate={TV_POSITION}
-      scale={[0.3, 0.3, 0.3]}
-    />
-  );
+  return <Model source={MODELS.flesh} translate={TV_POSITION} scale={[0.3, 0.3, 0.3]} />;
 }

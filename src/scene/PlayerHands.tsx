@@ -13,6 +13,7 @@
  */
 
 import {Model} from 'react-native-filament';
+import {MODELS} from '../assets/registry';
 import playerConfig from '../config/player.json';
 
 const SPAWN = playerConfig.capsule.spawnPosition as [number, number, number];
@@ -26,11 +27,5 @@ const HANDS_POSITION: [number, number, number] = [
 ];
 
 export function PlayerHands() {
-  return (
-    <Model
-      source={require('../../public/models/hands.glb')}
-      translate={HANDS_POSITION}
-      scale={[0.5, 0.5, 0.5]}
-    />
-  );
+  return <Model source={MODELS.hands} translate={HANDS_POSITION} scale={[0.5, 0.5, 0.5]} />;
 }

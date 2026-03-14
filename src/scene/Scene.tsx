@@ -12,6 +12,7 @@ import {StyleSheet, View} from 'react-native';
 import type {RenderCallback} from 'react-native-filament';
 import {FilamentScene, FilamentView, Skybox, useWorld} from 'react-native-filament';
 import {useGameStore} from '../ecs/hooks';
+import {HorrorFog} from './HorrorFog';
 import {IntroSequence} from './IntroSequence';
 import {Kitchen} from './Kitchen';
 import {KitchenLighting} from './Lighting';
@@ -71,6 +72,7 @@ export function GameScene() {
           {/* Dark horror skybox — sealed basement, no sky visible */}
           <Skybox colorInHex="#0a0a0a" />
           <KitchenLighting />
+          <HorrorFog />
           <PlayerController world={world} />
           <Room />
           <Kitchen world={world} />
