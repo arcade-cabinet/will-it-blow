@@ -1,0 +1,13 @@
+appId: com.jbcom.willitblow
+---
+- launchApp:
+    clearState: true
+- tapOn: "START COOKING"
+- tapOn:
+    text: "Medium"
+    index: 0
+# Wait for Filament scene to lazy-load
+- waitForAnimationToEnd:
+    timeout: 15000
+# The intro sequence plays (eyelids), then SurrealText shows
+- screenshot: "03-game-entered.png"

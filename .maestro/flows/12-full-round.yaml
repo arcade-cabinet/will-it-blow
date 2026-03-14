@@ -1,0 +1,98 @@
+appId: com.jbcom.willitblow
+---
+# Full game round: title → difficulty → all phases → score
+- launchApp:
+    clearState: true
+
+# Title → Difficulty
+- tapOn: "START COOKING"
+- tapOn:
+    text: "Medium"
+    index: 0
+
+# Wait for scene + intro to complete
+- waitForAnimationToEnd:
+    timeout: 20000
+
+# SELECT_INGREDIENTS (3 taps to select ingredients)
+- tapOn:
+    point: "50%,50%"
+- tapOn:
+    point: "50%,50%"
+- tapOn:
+    point: "50%,50%"
+
+# CHOPPING (5 taps)
+- tapOn:
+    point: "50%,50%"
+- tapOn:
+    point: "50%,50%"
+- tapOn:
+    point: "50%,50%"
+- tapOn:
+    point: "50%,50%"
+- tapOn:
+    point: "50%,50%"
+
+# FILL_GRINDER → GRINDING (1 tap + 5 taps)
+- tapOn:
+    point: "50%,50%"
+- tapOn:
+    point: "50%,50%"
+- tapOn:
+    point: "50%,50%"
+- tapOn:
+    point: "50%,50%"
+- tapOn:
+    point: "50%,50%"
+- tapOn:
+    point: "50%,50%"
+
+# MOVE_BOWL → ATTACH_CASING → STUFFING (1+1+5 taps)
+- tapOn:
+    point: "50%,50%"
+- tapOn:
+    point: "50%,50%"
+- tapOn:
+    point: "50%,50%"
+- tapOn:
+    point: "50%,50%"
+- tapOn:
+    point: "50%,50%"
+- tapOn:
+    point: "50%,50%"
+- tapOn:
+    point: "50%,50%"
+
+# TIE_CASING (2 taps)
+- tapOn:
+    point: "50%,50%"
+- tapOn:
+    point: "50%,50%"
+
+# BLOWOUT (1 tap)
+- tapOn:
+    point: "50%,50%"
+
+# MOVE_SAUSAGE → MOVE_PAN → COOKING (1+1+5 taps)
+- tapOn:
+    point: "50%,50%"
+- tapOn:
+    point: "50%,50%"
+- tapOn:
+    point: "50%,50%"
+- tapOn:
+    point: "50%,50%"
+- tapOn:
+    point: "50%,50%"
+- tapOn:
+    point: "50%,50%"
+- tapOn:
+    point: "50%,50%"
+
+# DONE — score calculated
+- tapOn:
+    point: "50%,50%"
+
+# Screenshot final state
+- screenshot: "12-full-round-complete.png"
