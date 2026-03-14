@@ -35,7 +35,7 @@ Entry point for all AI agents. Read this first, then follow the pointer chain.
 ### State Management
 - **Koota ECS** — the ONLY runtime state. 16 traits, Zustand-compatible hooks API via `src/ecs/hooks.ts`
 - **No Zustand.** Deleted. `src/store/gameStore.ts` does not exist.
-- **Persistence:** op-sqlite + drizzle-orm/op-sqlite (native SQLite, no WASM)
+- **Persistence:** Dual SQLite — sql.js (WASM) for web/dev + @capacitor-community/sqlite for native, unified via drizzle-orm/sql-js
 
 ### Physics
 - `@react-three/rapier` — kept, works on native via react-native-wgpu (browser WASM race does not occur on native)
@@ -80,7 +80,7 @@ Phases: SELECT_INGREDIENTS → CHOPPING → FILL_GRINDER → GRINDING → MOVE_B
 | `src/player/*.ts(x)` | FPS camera, capsule, mouse look, movement, jump |
 | `src/input/*.ts` | InputManager + providers |
 | `src/config/*.json` | 16 JSON config files |
-| `src/db/` | op-sqlite + Drizzle persistence |
+| `src/db/` | Dual SQLite + Drizzle persistence (sql.js web / capacitor-sqlite native) |
 | `.maestro/` | Maestro E2E test flows |
 
 ## Commands

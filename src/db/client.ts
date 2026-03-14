@@ -1,11 +1,10 @@
 /**
  * @module db/client
- * Native SQLite client via op-sqlite + Drizzle ORM.
- * No WASM, no SharedArrayBuffer — direct native C++ SQLite.
+ * Dual SQLite client — sql.js (WASM) for web/dev, @capacitor-community/sqlite for native.
+ * Exposes an async `getDb()` because sql.js must load its WASM binary before use.
  */
 
-import {open} from '@op-engineering/op-sqlite';
-import {drizzle} from 'drizzle-orm/op-sqlite';
+import type {SQLJsDatabase} from 'drizzle-orm/sql-js';
 import * as schema from './schema';
 
 const MIGRATION_SQL = `
@@ -47,16 +46,64 @@ CREATE TABLE IF NOT EXISTS "settings" (
 );
 `;
 
-let _db: ReturnType<typeof drizzle> | null = null;
+type DbInstance = SQLJsDatabase<typeof schema>;
 
-export function getDb() {
-  if (_db) return _db;
-  const opsqliteDb = open({name: 'willitblow.db'});
-  opsqliteDb.execute(MIGRATION_SQL);
-  _db = drizzle(opsqliteDb, {schema});
-  return _db;
+let dbInstance: DbInstance | null = null;
+let dbPromise: Promise<DbInstance> | null = null;
+
+/**
+ * Get the Drizzle database instance. Lazily initializes the correct driver:
+ * - Native (Capacitor): @capacitor-community/sqlite
+ * - Web/dev/test: sql.js (WASM SQLite in browser)
+ *
+ * The promise is cached so concurrent callers share the same init.
+ */
+export async function getDb(): Promise<DbInstance> {
+  if (dbInstance) return dbInstance;
+  if (dbPromise) return dbPromise;
+
+  dbPromise = initDb();
+  dbInstance = await dbPromise;
+  dbPromise = null;
+  return dbInstance;
 }
 
+async function initDb(): Promise<DbInstance> {
+  // Check for Capacitor native platform (iOS/Android)
+  const isNative = await detectNativePlatform();
+
+  if (isNative) {
+    const {createCapacitorDb} = await import('./capacitorAdapter');
+    const sqliteDb = await createCapacitorDb('willitblow');
+    await sqliteDb.exec(MIGRATION_SQL);
+    const {drizzle} = await import('drizzle-orm/sql-js');
+    return drizzle(sqliteDb as any, {schema});
+  }
+
+  // Web / dev / test — use sql.js (WASM)
+  const initSqlJs = (await import('sql.js')).default;
+  const SQL = await initSqlJs();
+  const sqlJsDb = new SQL.Database();
+  sqlJsDb.run(MIGRATION_SQL);
+  const {drizzle} = await import('drizzle-orm/sql-js');
+  return drizzle(sqlJsDb, {schema});
+}
+
+/**
+ * Detect whether we're running on a native Capacitor platform.
+ * Safely handles environments where @capacitor/core is not available.
+ */
+async function detectNativePlatform(): Promise<boolean> {
+  try {
+    const {Capacitor} = await import('@capacitor/core');
+    return Capacitor.isNativePlatform();
+  } catch {
+    return false;
+  }
+}
+
+/** Reset the cached DB instance (useful for tests). */
 export function resetDbClient() {
-  _db = null;
+  dbInstance = null;
+  dbPromise = null;
 }

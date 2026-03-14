@@ -46,6 +46,7 @@
     "@testing-library/react": "^16.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/sql.js": "^1.4.9",
     "@types/three": "^0.172.0",
     "@vitejs/plugin-react": "^4.0.0",
     "drizzle-kit": "^0.31.0",

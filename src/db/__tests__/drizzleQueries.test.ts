@@ -1,29 +1,30 @@
-import {describe, expect, it} from '@jest/globals';
-import {hydrateSession, loadSettings, persistSession, saveSettings} from '../drizzleQueries';
+import {describe, expect, it, vi} from 'vitest';
 
-// Mock the entire client module
-jest.mock('../client', () => ({
-  getDb: jest.fn(() => ({
-    select: jest.fn(() => ({
-      from: jest.fn(() => ({
-        where: jest.fn(() => ({
-          limit: jest.fn(() => Promise.resolve([])),
+// Mock the entire client module — getDb now returns a Promise
+vi.mock('../client', () => ({
+  getDb: vi.fn(async () => ({
+    select: vi.fn(() => ({
+      from: vi.fn(() => ({
+        where: vi.fn(() => ({
+          limit: vi.fn(() => Promise.resolve([])),
         })),
-        limit: jest.fn(() => Promise.resolve([])),
+        limit: vi.fn(() => Promise.resolve([])),
       })),
     })),
-    insert: jest.fn(() => ({
-      values: jest.fn(() => Promise.resolve({lastInsertRowId: 1})),
+    insert: vi.fn(() => ({
+      values: vi.fn(() => Promise.resolve({lastInsertRowId: 1})),
     })),
-    update: jest.fn(() => ({
-      set: jest.fn(() => ({
-        where: jest.fn(() => Promise.resolve()),
+    update: vi.fn(() => ({
+      set: vi.fn(() => ({
+        where: vi.fn(() => Promise.resolve()),
       })),
     })),
   })),
 }));
 
-describe('drizzleQueries (op-sqlite)', () => {
+import {hydrateSession, loadSettings, persistSession, saveSettings} from '../drizzleQueries';
+
+describe('drizzleQueries (dual driver)', () => {
   it('hydrateSession returns null when no session', async () => {
     const result = await hydrateSession();
     expect(result).toBeNull();

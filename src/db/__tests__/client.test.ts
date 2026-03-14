@@ -1,37 +1,60 @@
-import {describe, expect, it} from '@jest/globals';
+import {beforeEach, describe, expect, it, vi} from 'vitest';
 
-// Mock op-sqlite before importing client
-jest.mock('@op-engineering/op-sqlite', () => ({
-  open: jest.fn(() => ({
-    execute: jest.fn(),
+// Mock sql.js — return a factory that creates in-memory Database objects
+vi.mock('sql.js', () => ({
+  default: vi.fn(async () => ({
+    Database: class MockDatabase {
+      run(_sql: string) {}
+      prepare(_sql: string) {
+        return {
+          bind() {},
+          step() {
+            return false;
+          },
+          getAsObject() {
+            return {};
+          },
+          get() {
+            return [];
+          },
+          free() {},
+        };
+      }
+    },
   })),
 }));
 
-jest.mock('drizzle-orm/op-sqlite', () => ({
-  drizzle: jest.fn(() => ({select: jest.fn(), insert: jest.fn(), update: jest.fn()})),
+// Mock @capacitor/core — not on native in tests
+vi.mock('@capacitor/core', () => ({
+  Capacitor: {isNativePlatform: () => false},
+}));
+
+// Mock drizzle-orm/sql-js
+vi.mock('drizzle-orm/sql-js', () => ({
+  drizzle: vi.fn(() => ({select: vi.fn(), insert: vi.fn(), update: vi.fn()})),
 }));
 
 import {getDb, resetDbClient} from '../client';
 
-describe('db/client (op-sqlite)', () => {
+describe('db/client (dual driver)', () => {
   beforeEach(() => resetDbClient());
 
-  it('getDb returns a drizzle instance', () => {
-    const db = getDb();
+  it('getDb returns a drizzle instance', async () => {
+    const db = await getDb();
     expect(db).toBeDefined();
   });
 
-  it('getDb is idempotent', () => {
-    const db1 = getDb();
-    const db2 = getDb();
+  it('getDb is idempotent', async () => {
+    const db1 = await getDb();
+    const db2 = await getDb();
     expect(db1).toBe(db2);
   });
 
-  it('resetDbClient clears cache', () => {
-    getDb();
+  it('resetDbClient clears cache', async () => {
+    await getDb();
     resetDbClient();
     // After reset, getDb creates a new instance
-    const db = getDb();
+    const db = await getDb();
     expect(db).toBeDefined();
   });
 });
