@@ -25,8 +25,9 @@ function SurrealMessage({
   const materialRef = useRef<THREE.MeshStandardMaterial>(null);
 
   const state = useRef({
+    x: 0.0,
     y: 2.99,
-    z: 3.0,
+    z: 0.0,
     opacity: 0,
     rotX: Math.PI / 2,
   });
@@ -52,7 +53,7 @@ function SurrealMessage({
     }
 
     if (groupRef.current) {
-      groupRef.current.position.set(2.0, s.y, s.z);
+      groupRef.current.position.set(s.x, s.y, s.z);
       groupRef.current.rotation.set(s.rotX, 0, 0);
     }
 
@@ -65,8 +66,8 @@ function SurrealMessage({
   return (
     <group ref={groupRef}>
       <Text
-        fontSize={0.35}
-        maxWidth={3.5} // Forces text to wrap and stay within player FOV horizontally
+        fontSize={0.3}
+        maxWidth={5.0} // Text centered on ceiling, wider wrap for full-room visibility
         lineHeight={1.2}
         font={asset('/fonts/Nosifer-Regular.ttf')}
         anchorX="center"

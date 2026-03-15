@@ -3,6 +3,7 @@ import {useEffect, useMemo, useRef} from 'react';
 import * as THREE from 'three';
 import {useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
+import {setPitch} from '../../player/useMouseLook';
 
 export function IntroSequence() {
   const {camera, gl, scene} = useThree();
@@ -43,6 +44,10 @@ export function IntroSequence() {
     // Start muffled — eyes are closed
     audioEngine.setMuffled(true);
 
+    // Force camera to look UP at the ceiling (prone on mattress)
+    // setPitch writes to useMouseLook's pitchRef so it won't be overwritten
+    setPitch(Math.PI / 2 - 0.1);
+
     return () => {
       camera.remove(topLid);
       camera.remove(bottomLid);
@@ -53,14 +58,6 @@ export function IntroSequence() {
     };
   }, [camera, scene, topLid, bottomLid, gl]);
 
-  const startPos = new THREE.Vector3(2.0, 0.5, 3.0);
-  const lookCeiling = new THREE.Vector3(2.0, 5.0, 3.0);
-
-  useEffect(() => {
-    camera.position.copy(startPos);
-    camera.lookAt(lookCeiling);
-  }, [camera, lookCeiling, startPos]);
-
   useFrame((_state, delta) => {
     timeRef.current += delta;
     const t = timeRef.current;
@@ -68,6 +65,12 @@ export function IntroSequence() {
     let newPhase = phaseRef.current;
     let eyelidOpenness = 0;
     let blurAmount = 0;
+
+    // During the entire intro, force camera to look up at the ceiling
+    // This overrides useMouseLook's pitchRef via the module-level setPitch
+    if (t < 7.0) {
+      setPitch(Math.PI / 2 - 0.1);
+    }
 
     if (t < 2.0) {
       newPhase = 0;
@@ -116,8 +119,9 @@ export function IntroSequence() {
         setIntroPhase(2);
         setIntroActive(false);
         setPosture('standing');
-        // Eyes fully open — clear muffle
+        // Eyes fully open — clear muffle, reset pitch to level
         audioEngine.setMuffled(false);
+        setPitch(-0.05);
       }
     }
 
