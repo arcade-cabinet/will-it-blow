@@ -7,7 +7,7 @@
  */
 import {Canvas} from '@react-three/fiber';
 import {Physics} from '@react-three/rapier';
-import {Suspense} from 'react';
+import {Suspense, useEffect} from 'react';
 import * as THREE from 'three';
 import {IntroSequence} from './components/camera/IntroSequence';
 import {PlayerHands} from './components/camera/PlayerHands';
@@ -32,9 +32,11 @@ import {Stove} from './components/stations/Stove';
 import {Stuffer} from './components/stations/Stuffer';
 import {TV} from './components/stations/TV';
 import {GameOverScreen} from './components/ui/GameOverScreen';
+import {LoadingScreen} from './components/ui/LoadingScreen';
 import {TitleScreen} from './components/ui/TitleScreen';
 import {usePersistence} from './db/usePersistence';
 import {useGameStore} from './ecs/hooks';
+import {audioEngine} from './engine/AudioEngine';
 import {GameOrchestrator} from './engine/GameOrchestrator';
 import {FPSCamera} from './player/FPSCamera';
 import {PlayerCapsule} from './player/PlayerCapsule';
@@ -70,6 +72,14 @@ console.error = (...args: unknown[]) => {
 function GameContent() {
   const introActive = useGameStore(state => state.introActive);
   const mrSausageReaction = useGameStore(state => state.mrSausageReaction);
+
+  // Initialize Tone.js audio on mount and start the horror drone
+  useEffect(() => {
+    audioEngine.initialize().then(() => audioEngine.startDrone());
+    return () => {
+      audioEngine.stopDrone();
+    };
+  }, []);
 
   return (
     <>
@@ -153,7 +163,7 @@ export function App() {
       {appPhase === 'title' && <TitleScreen />}
 
       {appPhase === 'playing' && (
-        <>
+        <Suspense fallback={<LoadingScreen />}>
           <Canvas
             shadows={{type: THREE.PCFShadowMap}}
             gl={{toneMappingExposure: 1.0}}
@@ -188,7 +198,7 @@ export function App() {
 
           {/* GameOrchestrator — non-visual state machine, outside Canvas */}
           <GameOrchestrator />
-        </>
+        </Suspense>
       )}
 
       {appPhase === 'results' && <GameOverScreenWrapper />}

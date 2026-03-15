@@ -2,6 +2,7 @@ import {useFrame, useThree} from '@react-three/fiber';
 import {useEffect, useMemo, useRef} from 'react';
 import * as THREE from 'three';
 import {useGameStore} from '../../ecs/hooks';
+import {audioEngine} from '../../engine/AudioEngine';
 
 export function IntroSequence() {
   const {camera, gl, scene} = useThree();
@@ -9,6 +10,7 @@ export function IntroSequence() {
 
   const setIntroPhase = useGameStore(state => state.setIntroPhase);
   const setIntroActive = useGameStore(state => state.setIntroActive);
+  const setPosture = useGameStore(state => state.setPosture);
 
   const phaseRef = useRef(0);
 
@@ -38,9 +40,13 @@ export function IntroSequence() {
     camera.add(bottomLid);
     scene.add(camera);
 
+    // Start muffled — eyes are closed
+    audioEngine.setMuffled(true);
+
     return () => {
       camera.remove(topLid);
       camera.remove(bottomLid);
+      audioEngine.setMuffled(false);
       if (gl.domElement?.style) {
         gl.domElement.style.filter = 'none';
       }
@@ -67,6 +73,8 @@ export function IntroSequence() {
       newPhase = 0;
       eyelidOpenness = 0;
       blurAmount = 20;
+      // Eyes fully closed — muffle audio
+      audioEngine.setMuffled(true);
     } else if (t < 7.0) {
       newPhase = 1;
 
@@ -75,20 +83,30 @@ export function IntroSequence() {
       if (b < 1.0) {
         eyelidOpenness = Math.sin(b * Math.PI) * 0.3;
         blurAmount = 15;
+        // First blink peek — still muffled
+        audioEngine.setMuffled(true);
       } else if (b < 1.5) {
         eyelidOpenness = 0;
         blurAmount = 15;
+        // Eyes shut again — muffle
+        audioEngine.setMuffled(true);
       } else if (b < 3.0) {
         const p = (b - 1.5) / 1.5;
         eyelidOpenness = Math.sin(p * Math.PI) * 0.6;
         blurAmount = 15 - p * 8;
+        // Second blink — partially muffled
+        audioEngine.setMuffled(eyelidOpenness < 0.3);
       } else if (b < 3.5) {
         eyelidOpenness = 0;
         blurAmount = 7;
+        // Eyes shut again
+        audioEngine.setMuffled(true);
       } else {
         const p = (b - 3.5) / 1.5;
         eyelidOpenness = Math.min(1.0, p * 1.5);
         blurAmount = 7 * (1.0 - p);
+        // Eyes opening — clear muffle as they open
+        audioEngine.setMuffled(eyelidOpenness < 0.5);
       }
     } else {
       eyelidOpenness = 1.0;
@@ -97,6 +115,9 @@ export function IntroSequence() {
         phaseRef.current = 2;
         setIntroPhase(2);
         setIntroActive(false);
+        setPosture('standing');
+        // Eyes fully open — clear muffle
+        audioEngine.setMuffled(false);
       }
     }
 

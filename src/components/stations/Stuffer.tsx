@@ -2,7 +2,7 @@ import {Box, Cylinder, useTexture} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
 import {RigidBody} from '@react-three/rapier';
 import {useDrag} from '@use-gesture/react';
-import {useMemo, useRef, useState} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
 import {useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
@@ -87,12 +87,23 @@ export function Stuffer() {
     [],
   );
 
+  // Loop squelch sound during STUFFING phase, stop when leaving
+  useEffect(() => {
+    if (gamePhase === 'STUFFING') {
+      audioEngine.loop('squelch');
+    } else {
+      audioEngine.stop('squelch');
+    }
+    return () => {
+      audioEngine.stop('squelch');
+    };
+  }, [gamePhase]);
+
   const bindCrank = useDrag(({movement: [, my]}) => {
     if (gamePhase !== 'STUFFING') return;
 
     const newLevel = Math.max(0, Math.min(1.0, stuffLevel + my * 0.002));
     setStuffLevel(newLevel);
-    audioEngine.playSound('squelch');
 
     if (crankRef.current) {
       crankRef.current.rotation.x = -newLevel * Math.PI * 10;

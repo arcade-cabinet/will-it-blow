@@ -49,16 +49,11 @@ export function Sink() {
     [concreteColor, concreteNormal, concreteRoughness],
   );
 
-  // Play ambient water/sizzle sound (re-using sizzle as a water-like loop)
-  const waterSoundPlaying = useRef(false);
+  // Play ambient water loop when sink mounts, stop on unmount
   useEffect(() => {
-    // Start ambient water sound when sink mounts
-    if (!waterSoundPlaying.current) {
-      audioEngine.playSound('ambient');
-      waterSoundPlaying.current = true;
-    }
+    audioEngine.loop('ambient');
     return () => {
-      waterSoundPlaying.current = false;
+      audioEngine.stop('ambient');
     };
   }, []);
 
