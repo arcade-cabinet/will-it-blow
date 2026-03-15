@@ -1,3 +1,4 @@
+# LFS-track binary assets globally
 *.glb filter=lfs diff=lfs merge=lfs -text
 *.env filter=lfs diff=lfs merge=lfs -text
 *.jpg filter=lfs diff=lfs merge=lfs -text
@@ -6,3 +7,8 @@
 *.wasm filter=lfs diff=lfs merge=lfs -text
 *.ogg filter=lfs diff=lfs merge=lfs -text
 *.png filter=lfs diff=lfs merge=lfs -text
+
+# EXCLUDE public/ from LFS — these files are served by GitHub Pages
+# and must be real files, not LFS pointers.
+# Later rules override earlier ones in .gitattributes.
+public/** filter= diff= merge= -text

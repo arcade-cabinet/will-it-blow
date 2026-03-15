@@ -10,17 +10,13 @@ import type {PlaywrightTestConfig} from '@playwright/test';
 
 const isCI = !!process.env.CI;
 
-/** GPU-accelerated WebGL args for headless Chrome */
+/** GPU-accelerated WebGL args for headed Chrome */
 const GPU_ARGS = [
   '--no-sandbox',
   '--use-angle=gl',
   '--enable-webgl',
   '--ignore-gpu-blocklist',
   '--mute-audio',
-  '--disable-background-timer-throttling',
-  '--disable-backgrounding-occluded-windows',
-  '--disable-renderer-backgrounding',
-  '--window-position=9999,9999',
 ];
 
 const config: PlaywrightTestConfig = {
@@ -52,7 +48,7 @@ const config: PlaywrightTestConfig = {
       name: 'desktop',
       use: {
         browserName: 'chromium',
-        headless: true,
+        headless: false,
         viewport: {width: 1280, height: 720},
         launchOptions: {
           args: GPU_ARGS,
@@ -63,7 +59,7 @@ const config: PlaywrightTestConfig = {
       name: 'mobile',
       use: {
         browserName: 'chromium',
-        headless: true,
+        headless: false,
         viewport: {width: 390, height: 844},
         isMobile: true,
         hasTouch: true,

@@ -43,3 +43,9 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E tests (headed with virtual display)
+        run: xvfb-run --auto-servernum npx playwright test
