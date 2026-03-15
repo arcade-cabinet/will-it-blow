@@ -55,6 +55,20 @@ describe('SurrealText — source analysis', () => {
     it('accepts a surface placement prop', () => {
       expect(source).toContain('surface: SurfacePlacement');
     });
+
+    it('sets blood-red color on Text for readability', () => {
+      expect(source).toContain('color="#FF1744"');
+    });
+
+    it('uses black outline for contrast', () => {
+      expect(source).toContain('outlineColor="#000000"');
+      expect(source).toContain('outlineWidth={0.02}');
+    });
+
+    it('renders a dark background plane behind text for contrast', () => {
+      expect(source).toContain('<planeGeometry');
+      expect(source).toContain('meshBasicMaterial');
+    });
   });
 
   describe('phase-directed surface placement', () => {

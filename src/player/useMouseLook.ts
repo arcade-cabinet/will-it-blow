@@ -14,7 +14,7 @@
  */
 
 import {useFrame, useThree} from '@react-three/fiber';
-import {useEffect, useRef} from 'react';
+import {useCallback, useEffect, useRef} from 'react';
 import playerConfig from '../config/player.json';
 import {useGameStore} from '../ecs/hooks';
 
@@ -67,18 +67,24 @@ export function useMouseLook(): void {
   /** Start looking UP at the ceiling (intro begins prone on mattress).
    *  IntroSequence sets this to -0.05 when the intro completes. */
   const pitchRef = useRef(Math.PI / 2 - 0.1);
+  /** Tracks whether intro was active on the previous frame so we can
+   *  force-apply any pending pitch/yaw on the exact frame it ends. */
+  const wasIntroRef = useRef(true);
+
+  const onMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (document.pointerLockElement !== gl.domElement) return;
+      yawRef.current -= e.movementX * MOUSE_SENSITIVITY;
+      pitchRef.current = clampPitch(pitchRef.current - e.movementY * MOUSE_SENSITIVITY);
+    },
+    [gl],
+  );
 
   useEffect(() => {
     const canvas = gl.domElement;
 
     const onClick = () => {
       canvas.requestPointerLock();
-    };
-
-    const onMouseMove = (e: MouseEvent) => {
-      if (document.pointerLockElement !== canvas) return;
-      yawRef.current -= e.movementX * MOUSE_SENSITIVITY;
-      pitchRef.current = clampPitch(pitchRef.current - e.movementY * MOUSE_SENSITIVITY);
     };
 
     canvas.addEventListener('click', onClick);
@@ -88,16 +94,38 @@ export function useMouseLook(): void {
       canvas.removeEventListener('click', onClick);
       document.removeEventListener('mousemove', onMouseMove);
     };
-  }, [gl]);
+  }, [gl, onMouseMove]);
 
   useFrame(() => {
     // During intro, IntroSequence controls the camera directly — don't override.
     // Read directly from store (not React state) to avoid stale closure.
-    if (useGameStore.getState().introActive) {
+    const introActive = useGameStore.getState().introActive;
+
+    if (introActive) {
+      wasIntroRef.current = true;
       // Still consume pending values so they're applied when intro ends
-      if (_pendingYaw !== null) { yawRef.current = _pendingYaw; _pendingYaw = null; }
-      if (_pendingPitch !== null) { pitchRef.current = _pendingPitch; _pendingPitch = null; }
+      if (_pendingYaw !== null) {
+        yawRef.current = _pendingYaw;
+        _pendingYaw = null;
+      }
+      if (_pendingPitch !== null) {
+        pitchRef.current = _pendingPitch;
+        _pendingPitch = null;
+      }
       return;
+    }
+
+    // Intro just ended — force apply any pending values immediately
+    if (wasIntroRef.current) {
+      wasIntroRef.current = false;
+      if (_pendingPitch !== null) {
+        pitchRef.current = _pendingPitch;
+        _pendingPitch = null;
+      }
+      if (_pendingYaw !== null) {
+        yawRef.current = _pendingYaw;
+        _pendingYaw = null;
+      }
     }
 
     // Apply any pending override written by the debug bridge.

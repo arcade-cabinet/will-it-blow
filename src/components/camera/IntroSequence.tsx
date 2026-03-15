@@ -8,6 +8,9 @@ import {setPitch} from '../../player/useMouseLook';
 export function IntroSequence() {
   const {camera, gl, scene} = useThree();
   const timeRef = useRef(0);
+  /** Prevents the timer from advancing until the first useFrame actually fires,
+   *  so slow initial renders don't eat into the intro animation time. */
+  const firstFrameRef = useRef(false);
 
   const setIntroPhase = useGameStore(state => state.setIntroPhase);
   const setIntroActive = useGameStore(state => state.setIntroActive);
@@ -59,6 +62,14 @@ export function IntroSequence() {
   }, [camera, scene, topLid, bottomLid, gl]);
 
   useFrame((_state, delta) => {
+    // On the very first frame, reset the timer so that slow initial renders
+    // (asset loading, WASM init) don't eat into the intro animation time.
+    if (!firstFrameRef.current) {
+      firstFrameRef.current = true;
+      timeRef.current = 0;
+      return;
+    }
+
     timeRef.current += delta;
     const t = timeRef.current;
 
