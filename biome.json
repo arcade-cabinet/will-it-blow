@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.4.4/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.4.7/schema.json",
   "files": {
     "includes": [
       "**",
@@ -12,7 +12,9 @@
       "!!**/android",
       "!!**/ios",
       "!!**/docs/api",
+      "!!**/*.css",
       "!!**/coverage",
+      "!!**/vendor",
       "!!**/test-results",
       "!!**/playwright-report",
       "!!**/.playwright-mcp",
@@ -32,6 +34,17 @@
       "bracketSpacing": false
     }
   },
+  "css": {
+    "parser": {
+      "cssModules": true
+    },
+    "linter": {
+      "enabled": false
+    },
+    "formatter": {
+      "enabled": false
+    }
+  },
   "linter": {
     "rules": {
       "recommended": true,
@@ -47,7 +60,11 @@
         "noArrayIndexKey": "off"
       },
       "a11y": {
-        "noStaticElementInteractions": "off"
+        "noStaticElementInteractions": "off",
+        "useAriaPropsSupportedByRole": "warn"
+      },
+      "performance": {
+        "noAccumulatingSpread": "warn"
       }
     }
   }

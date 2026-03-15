@@ -1,6 +1,5 @@
-import {fireEvent, render, screen} from '@testing-library/react';
+import {fireEvent, render} from '@testing-library/react';
 import {vi} from 'vitest';
-import {resetWorld} from '../../../ecs/kootaWorld';
 
 // Mock the ecs hooks module
 const mockSetDifficulty = vi.fn();
