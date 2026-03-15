@@ -25,6 +25,10 @@ describe('SurrealText — source analysis', () => {
       expect(source).toContain('useGameStore');
       expect(source).toContain("from '../../ecs/hooks'");
     });
+
+    it('imports GamePhase type from ecs/hooks', () => {
+      expect(source).toContain("import type {GamePhase} from '../../ecs/hooks'");
+    });
   });
 
   describe('SurrealMessage component', () => {
@@ -46,6 +50,71 @@ describe('SurrealText — source analysis', () => {
 
     it('supports dismiss animation with isDismissing prop', () => {
       expect(source).toContain('isDismissing');
+    });
+
+    it('accepts a surface placement prop', () => {
+      expect(source).toContain('surface: SurfacePlacement');
+    });
+  });
+
+  describe('phase-directed surface placement', () => {
+    it('defines PHASE_SURFACE mapping for all 13 game phases', () => {
+      expect(source).toContain('PHASE_SURFACE');
+      // Verify key phases are mapped
+      expect(source).toContain('SELECT_INGREDIENTS:');
+      expect(source).toContain('CHOPPING:');
+      expect(source).toContain('FILL_GRINDER:');
+      expect(source).toContain('GRINDING:');
+      expect(source).toContain('STUFFING:');
+      expect(source).toContain('TIE_CASING:');
+      expect(source).toContain('BLOWOUT:');
+      expect(source).toContain('COOKING:');
+      expect(source).toContain('DONE:');
+    });
+
+    it('places SELECT_INGREDIENTS text near the freezer back-left wall', () => {
+      expect(source).toContain('[-2.5, 1.5, -3.8]');
+    });
+
+    it('places CHOPPING text on the right wall near chopping block', () => {
+      expect(source).toContain('[2.9, 1.5, 0]');
+    });
+
+    it('places GRINDER phases on the left wall', () => {
+      expect(source).toContain('[-2.9, 1.5, -1]');
+    });
+
+    it('places STUFFER phases on the back wall center', () => {
+      expect(source).toContain('[0, 1.5, -3.8]');
+    });
+
+    it('places BLOWOUT text on the floor', () => {
+      expect(source).toContain('[0, 0.01, 1.5]');
+    });
+
+    it('places COOKING text on the right wall near the stove', () => {
+      expect(source).toContain('[2.9, 1.5, -2.5]');
+    });
+
+    it('places DONE text near the TV on left wall', () => {
+      expect(source).toContain('[-2.9, 1.8, 0]');
+    });
+  });
+
+  describe('three-layer text system', () => {
+    it('has a demands layer always on the ceiling', () => {
+      expect(source).toContain('CEILING_SURFACE');
+      expect(source).toContain('Demands');
+    });
+
+    it('has a Mr. Sausage taunt layer near the TV', () => {
+      expect(source).toContain('TV_WALL_SURFACE');
+      expect(source).toContain('taunt');
+    });
+
+    it('has phase instruction messages near active stations', () => {
+      expect(source).toContain('phaseMessages');
+      expect(source).toContain('Phase instructions');
     });
   });
 
@@ -83,12 +152,19 @@ describe('SurrealText — source analysis', () => {
     });
 
     it('has phase labels for gameplay', () => {
-      expect(source).toContain("WHAT'S IN THE BOX?");
+      expect(source).toContain('PICK 3 INGREDIENTS');
       expect(source).toContain('CHOP IT UP');
-      expect(source).toContain('FASTER!');
-      expect(source).toContain('FILL IT UP');
+      expect(source).toContain('GRIND IT DOWN');
+      expect(source).toContain('STUFF THE CASING');
       expect(source).toContain('TIE IT OFF');
       expect(source).toContain("DON'T LET IT BURN");
+    });
+
+    it('includes Mr. Sausage taunt lines per phase', () => {
+      expect(source).toContain('PHASE_TAUNTS');
+      expect(source).toContain('Choose wisely...');
+      expect(source).toContain('Feel the rhythm of the blade.');
+      expect(source).toContain("Don't you DARE burn it.");
     });
   });
 
