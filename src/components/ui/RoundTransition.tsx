@@ -1,136 +1,85 @@
 /**
  * @module RoundTransition
- * Between-round summary overlay.
+ * Brief between-round interstitial shown when transitioning to the next round.
  *
- * Props-driven (no ChallengeRegistry dependency):
- *  - roundNumber, totalRounds, roundScore, totalScore
- *  - onNextRound callback
+ * Full-screen dark overlay with "ROUND X/Y" in blood-red horror text,
+ * a diagonal cleaver slash animation, and screen shake. Auto-advances
+ * after 2 seconds by calling onComplete.
  *
- * Rewritten from react-native to web HTML/CSS.
+ * Uses Tailwind CSS + DaisyUI. CSS keyframes defined in index.css.
  */
+
+import {useEffect, useState} from 'react';
 
 interface RoundTransitionProps {
   roundNumber: number;
   totalRounds: number;
-  roundScore: number;
-  totalScore: number;
-  onNextRound: () => void;
+  onComplete: () => void;
 }
 
-export function RoundTransition({
-  roundNumber,
-  totalRounds,
-  roundScore,
-  totalScore,
-  onNextRound,
-}: RoundTransitionProps) {
-  const scoreColor =
-    roundScore >= 90
-      ? '#FFD700'
-      : roundScore >= 70
-        ? '#FFC832'
-        : roundScore >= 50
-          ? '#FF8C00'
-          : '#FF1744';
+export function RoundTransition({roundNumber, totalRounds, onComplete}: RoundTransitionProps) {
+  const [visible, setVisible] = useState(false);
+  const [slashActive, setSlashActive] = useState(false);
+
+  useEffect(() => {
+    // Fade in immediately
+    requestAnimationFrame(() => setVisible(true));
+
+    // Trigger slash after a beat
+    const slashTimer = setTimeout(() => setSlashActive(true), 400);
+
+    // Auto-advance after 2 seconds
+    const advanceTimer = setTimeout(() => {
+      onComplete();
+    }, 2000);
+
+    return () => {
+      clearTimeout(slashTimer);
+      clearTimeout(advanceTimer);
+    };
+  }, [onComplete]);
 
   return (
-    <section
-      style={styles.container}
-      aria-label={`Round ${roundNumber} of ${totalRounds} complete`}
+    <div
+      className={`fixed inset-0 z-[100] bg-black/95 flex items-center justify-center transition-opacity duration-500 ${
+        visible ? 'opacity-100' : 'opacity-0'
+      }`}
+      aria-label={`Round ${roundNumber} of ${totalRounds}`}
     >
-      <div style={styles.card}>
-        <h2 style={styles.roundLabel}>
-          ROUND {roundNumber} OF {totalRounds}
-        </h2>
-
-        <div style={styles.divider} />
-
-        <div style={styles.scoreRow}>
-          <span style={styles.scoreLabel}>ROUND SCORE</span>
-          <span style={{...styles.scoreValue, color: scoreColor}}>{Math.round(roundScore)}</span>
+      {/* Screen shake wrapper */}
+      <div className={visible ? 'animate-[horror-shake_0.6s_ease-in-out_0.3s]' : ''}>
+        {/* Round text */}
+        <div className="flex flex-col items-center gap-2">
+          <span className="text-lg font-[Bangers] text-gray-500 tracking-[6px] uppercase">
+            Prepare yourself
+          </span>
+          <h1 className="text-7xl sm:text-8xl font-black font-[Bangers] text-[#FF1744] tracking-wider drop-shadow-[0_0_30px_rgba(255,23,68,0.6)] animate-[horror-pulse_1.5s_ease-in-out_infinite]">
+            ROUND {roundNumber}
+          </h1>
+          <span className="text-2xl font-[Bangers] text-gray-400 tracking-[4px]">
+            OF {totalRounds}
+          </span>
         </div>
-
-        <div style={styles.scoreRow}>
-          <span style={styles.scoreLabel}>TOTAL</span>
-          <span style={{...styles.scoreValue, color: '#FFC832'}}>{Math.round(totalScore)}</span>
-        </div>
-
-        <div style={styles.divider} />
-
-        <button type="button" style={styles.button} onClick={onNextRound} aria-label="Next round">
-          <span style={styles.buttonText}>NEXT ROUND</span>
-        </button>
       </div>
-    </section>
+
+      {/* Cleaver slash line — diagonal across the screen */}
+      <div
+        className={`absolute inset-0 pointer-events-none overflow-hidden ${
+          slashActive ? 'animate-[slash-flash_0.3s_ease-out]' : 'opacity-0'
+        }`}
+      >
+        {/* Diagonal slash line */}
+        <div
+          className={`absolute top-0 left-1/2 w-[2px] h-[150%] bg-[#FF1744] origin-top -translate-x-1/2 rotate-[25deg] ${
+            slashActive
+              ? 'animate-[slash-cut_0.4s_cubic-bezier(0.22,1,0.36,1)_forwards]'
+              : 'scale-y-0'
+          }`}
+        >
+          {/* Glow effect on the slash */}
+          <div className="absolute inset-0 w-[6px] -translate-x-[2px] bg-[#FF1744]/30 blur-sm" />
+        </div>
+      </div>
+    </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    position: 'absolute',
-    inset: 0,
-    zIndex: 100,
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(5, 0, 0, 0.9)',
-  },
-  card: {
-    backgroundColor: '#1a0505',
-    border: '2px solid #8B0000',
-    borderRadius: 4,
-    padding: '28px 32px',
-    minWidth: 300,
-    maxWidth: 420,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-  },
-  roundLabel: {
-    fontSize: 28,
-    fontWeight: 900,
-    color: '#FF1744',
-    letterSpacing: 4,
-    textAlign: 'center',
-  },
-  divider: {
-    height: 2,
-    backgroundColor: '#8B0000',
-    width: '100%',
-    margin: '16px 0',
-    opacity: 0.6,
-  },
-  scoreRow: {
-    display: 'flex',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
-    padding: '6px 0',
-  },
-  scoreLabel: {
-    fontSize: 18,
-    fontWeight: 700,
-    color: '#ccc',
-    letterSpacing: 2,
-  },
-  scoreValue: {
-    fontSize: 28,
-    fontWeight: 900,
-    letterSpacing: 2,
-  },
-  button: {
-    backgroundColor: '#D2A24C',
-    padding: '14px 28px',
-    borderRadius: 8,
-    border: '3px solid #8B4513',
-    cursor: 'pointer',
-    outline: 'none',
-  },
-  buttonText: {
-    color: '#1a0a00',
-    fontSize: 20,
-    fontWeight: 900,
-    letterSpacing: 2,
-  },
-};

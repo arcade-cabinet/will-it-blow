@@ -7,7 +7,7 @@
  */
 import {Canvas} from '@react-three/fiber';
 import {Physics} from '@react-three/rapier';
-import {Suspense, useEffect} from 'react';
+import {Suspense, useCallback, useEffect, useState} from 'react';
 import * as THREE from 'three';
 import {IntroSequence} from './components/camera/IntroSequence';
 import {PlayerHands} from './components/camera/PlayerHands';
@@ -33,6 +33,7 @@ import {Stuffer} from './components/stations/Stuffer';
 import {TV} from './components/stations/TV';
 import {GameOverScreen} from './components/ui/GameOverScreen';
 import {LoadingScreen} from './components/ui/LoadingScreen';
+import {RoundTransition} from './components/ui/RoundTransition';
 import {TitleScreen} from './components/ui/TitleScreen';
 import {usePersistence} from './db/usePersistence';
 import {useGameStore} from './ecs/hooks';
@@ -156,7 +157,23 @@ function GameOverScreenWrapper() {
 export function App() {
   const appPhase = useGameStore(state => state.appPhase);
   const gamePhase = useGameStore(state => state.gamePhase);
+  const currentRound = useGameStore(state => state.currentRound);
+  const totalRounds = useGameStore(state => state.totalRounds);
+  const nextRound = useGameStore(state => state.nextRound);
+  const [showRoundTransition, setShowRoundTransition] = useState(false);
   usePersistence();
+
+  // When DONE phase is reached with rounds remaining, show round transition
+  useEffect(() => {
+    if (gamePhase === 'DONE' && currentRound < totalRounds && appPhase === 'playing') {
+      setShowRoundTransition(true);
+    }
+  }, [gamePhase, currentRound, totalRounds, appPhase]);
+
+  const handleRoundTransitionComplete = useCallback(() => {
+    setShowRoundTransition(false);
+    nextRound();
+  }, [nextRound]);
 
   return (
     <div style={{width: '100vw', height: '100vh', background: '#000'}}>
@@ -194,6 +211,15 @@ export function App() {
           {/* Tie Gesture overlay — only shown during TIE_CASING phase */}
           {gamePhase === 'TIE_CASING' && (
             <TieGesture onComplete={() => useGameStore.getState().setGamePhase('BLOWOUT')} />
+          )}
+
+          {/* Round transition overlay — shown between rounds */}
+          {showRoundTransition && (
+            <RoundTransition
+              roundNumber={currentRound + 1}
+              totalRounds={totalRounds}
+              onComplete={handleRoundTransitionComplete}
+            />
           )}
 
           {/* GameOrchestrator — non-visual state machine, outside Canvas */}
