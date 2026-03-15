@@ -3,10 +3,10 @@ title: 3D Rendering & Scene System
 domain: core
 status: current
 engine: r3f
-last-verified: 2026-03-01
+last-verified: 2026-03-13
 depends-on: [architecture, state-management]
 agent-context: scene-architect
-summary: R3F setup, materials, lighting, cameras, stations
+summary: R3F setup, materials, lighting, cameras, stations, CRT shader (TSL NodeMaterial), Kitchen GLB loading
 -->
 
 # 3D Rendering & Scene System

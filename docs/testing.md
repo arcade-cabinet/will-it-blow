@@ -3,36 +3,39 @@ title: Testing Strategy
 domain: core
 status: current
 engine: r3f
-last-verified: 2026-03-01
+last-verified: 2026-03-14
 depends-on: [3d-rendering, state-management, development-guide]
 agent-context: doc-keeper, challenge-dev
-summary: Jest testing strategy, R3F test-renderer, coverage
+summary: Vitest unit tests + Playwright E2E — testing strategy
 -->
 
 # Testing Strategy
 
 ## Overview
 
-Tests cover both **pure logic** and **R3F 3D component** behavior. R3F components are tested via `@react-three/test-renderer`, which renders the Three.js scene graph in Node.js without a canvas.
+Tests cover both **pure logic** and **R3F 3D component** behavior. R3F components are tested via `@react-three/test-renderer`, which renders the Three.js scene graph in Node.js without a canvas. E2E tests use **Playwright** with headless Chromium.
 
-- **Framework:** Jest 29.6.3 with `react-native` preset + `babel-preset-expo`
-- **Test count:** 259 tests across ~17 test files
-- **Runtime:** ~1.6 seconds
+- **Unit tests:** Vitest
+- **E2E tests:** Playwright
+- **Runtime:** ~2 seconds (unit tests)
 
 ## Running Tests
 
 ```bash
-# All tests
+# All unit tests
 pnpm test
 
-# CI mode (no watch, force exit)
-pnpm test -- --ci --forceExit
+# CI mode
+pnpm test:ci
 
 # Watch mode (development)
 pnpm test -- --watch
 
 # Single file
 pnpm test -- SausagePhysics
+
+# E2E tests (Playwright)
+pnpm test:e2e
 ```
 
 ## Test Files
@@ -121,15 +124,15 @@ Canvas mounting, CameraWalker, station visibility logic.
 1. **Audio engine** — Tone.js synthesis (would need audio context mock)
 2. **Visual correctness** — No screenshot regression tests (use Playwright MCP for manual verification)
 3. **Challenge overlay interactions** — Touch/drag handlers, timer logic, sub-phase transitions
-4. **Real GLB loading** — useGLTF is mocked; actual model parsing not tested in Jest
+4. **Real GLB loading** — useGLTF is mocked; actual model parsing not tested in Vitest
 
 ## Type Checking
 
 ```bash
-npx tsc --noEmit
+pnpm typecheck
 ```
 
-TypeScript strict mode is enabled. Source files should produce zero errors.
+TypeScript strict mode is enabled. Source files produce zero errors. Use `pnpm typecheck` (not `npx tsc --noEmit` directly) because Three.js recursive types require `--stack-size=8192`.
 
 ## CI Integration
 
@@ -137,7 +140,7 @@ TypeScript strict mode is enabled. Source files should produce zero errors.
 
 ```yaml
 - run: pnpm install --frozen-lockfile
-- run: pnpm test -- --ci --forceExit
+- run: pnpm test:ci
 ```
 
 ## Adding New Tests
@@ -170,8 +173,8 @@ it('renders the mesh', async () => {
 **Important:** Mock `useGLTF` if the component loads GLB files:
 
 ```tsx
-jest.mock('@react-three/drei', () => ({
-  useGLTF: jest.fn(() => ({
+vi.mock('@react-three/drei', () => ({
+  useGLTF: vi.fn(() => ({
     scene: new THREE.Group(),
     nodes: {},
     materials: {},

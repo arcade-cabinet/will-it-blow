@@ -3,7 +3,7 @@ title: Architecture Overview
 domain: core
 status: current
 engine: r3f
-last-verified: 2026-03-04
+last-verified: 2026-03-13
 depends-on: [state-management, 3d-rendering, game-design]
 agent-context: scene-architect, challenge-dev
 summary: System design, directory structure, data flow for R3F/WebGPU game
@@ -41,7 +41,7 @@ A single `GameWorld.tsx` works on all platforms — R3F's `<Canvas>` uses `WebGP
 
 Only remaining platform split:
 - `AudioEngine.web.ts` — Full Tone.js synthesis
-- `AudioEngine.ts` — Native stub (no-op placeholder)
+- `AudioEngine.ts` — Procedural Web Audio API synthesis (with native no-op fallback)
 
 ### Key Technology Choices
 
@@ -84,7 +84,7 @@ will-it-blow/
 │   │   ├── IngredientMatcher.ts     Tag/criteria matching for ingredient selection
 │   │   ├── SausagePhysics.ts        Pure scoring functions
 │   │   ├── DialogueEngine.ts        Dialogue tree walker
-│   │   ├── AudioEngine.ts           Native audio stub (no-op)
+│   │   ├── AudioEngine.ts           Procedural Web Audio API synthesis (native no-op fallback)
 │   │   └── AudioEngine.web.ts       Tone.js synthesis engine
 │   ├── ecs/
 │   │   ├── types.ts                  Entity type — all components as optional fields
@@ -96,9 +96,21 @@ will-it-blow/
 │   │   ├── InputManager.ts           Universal input with JSON bindings (keyboard/mouse/gamepad/touch)
 │   │   └── InputActions.ts           Engine-agnostic input abstraction
 │   ├── config/
+│   │   ├── audio.json                Phase-specific music mapping + spatial sounds (40+ OGG assets)
+│   │   ├── audio/manifest.json       Audio file manifest (ambient, SFX)
+│   │   ├── blowout.json              Blowout challenge config
+│   │   ├── camera.json               Camera positions and transitions
+│   │   ├── chopping.json             Chopping challenge config
+│   │   ├── demands.json              Mr. Sausage demand scoring config
+│   │   ├── dialogue.json             Dialogue system config
 │   │   ├── difficulty.json           5 tiers (Rare→Well Done): hints/strikes/timePressure/enemyChance
 │   │   ├── enemies.json              5 enemy types, 5 weapons, 4 spawn cabinets
-│   │   └── blowout.json              Blowout challenge config
+│   │   ├── grinder.json              Grinder challenge config
+│   │   ├── ingredients.json          Ingredient data config
+│   │   ├── rounds.json               Multi-round gameplay config
+│   │   ├── scoring.json              Scoring parameters
+│   │   ├── stove.json                Stove/cooking challenge config
+│   │   └── stuffer.json              Stuffer challenge config
 │   ├── components/
 │   │   ├── GameWorld.tsx             R3F Canvas, FPSController, station orchestrator
 │   │   ├── characters/
@@ -120,23 +132,29 @@ will-it-blow/
 │   │   │   └── __tests__/Ingredient3D.test.tsx
 │   │   ├── challenges/
 │   │   │   ├── IngredientChallenge.tsx Fridge: pick matching ingredients (bridge pattern)
-│   │   │   ├── ChoppingChallenge.tsx   Chopping: knife-work mechanic
+│   │   │   ├── ChoppingHUD.tsx         Chopping: thin read-only HUD (ECS orchestrator drives logic)
 │   │   │   ├── GrindingHUD.tsx         Grinder: thin read-only HUD (ECS orchestrator drives logic)
 │   │   │   ├── StuffingHUD.tsx         Stuffer: thin read-only HUD (ECS orchestrator drives logic)
 │   │   │   ├── CookingHUD.tsx          Stove: thin read-only HUD (ECS orchestrator drives logic)
 │   │   │   ├── BlowoutHUD.tsx          Blowout: tie gesture + scoring HUD
+│   │   │   ├── CleanupHUD.tsx          Cleanup: station cleanup mechanic HUD
+│   │   │   ├── CombatHUD.tsx           Enemy encounter HUD
+│   │   │   ├── HiddenObjectOverlay.tsx Cabinet drawer + assembly parts
+│   │   │   ├── TieGesture.tsx          Blowout tie gesture overlay
 │   │   │   └── TastingChallenge.tsx    Verdict: score reveal + rank (bridge pattern)
 │   │   ├── ui/
 │   │   │   ├── TitleScreen.tsx         Butcher shop menu + continue button
 │   │   │   ├── LoadingScreen.tsx       Asset preload + progress
 │   │   │   ├── DifficultySelector.tsx  "Choose Your Doneness" screen (5 tiers)
 │   │   │   ├── ChallengeHeader.tsx     "CHALLENGE N/7" header
+│   │   │   ├── ChallengeTransition.tsx Challenge transition title cards
 │   │   │   ├── StrikeCounter.tsx       3 lives display
-│   │   │   ├── HintButton.tsx          Hint trigger (stub)
+│   │   │   ├── HintButton.tsx          Hint trigger
+│   │   │   ├── HintDialogue.tsx        Hint dialogue overlay
 │   │   │   ├── ProgressGauge.tsx       Animated progress bar
+│   │   │   ├── SausageButton.tsx       Themed button component
 │   │   │   ├── DialogueOverlay.tsx     Typewriter text + choices
-│   │   │   ├── CombatHUD.tsx           Enemy encounter HUD
-│   │   │   ├── HiddenObjectOverlay.tsx Cabinet drawer + assembly parts
+│   │   │   ├── SettingsScreen.tsx      Music/SFX volume + mute toggles
 │   │   │   ├── RoundTransition.tsx     Multi-round transition UI
 │   │   │   └── GameOverScreen.tsx      Victory/defeat + rank badge
 │   │   └── __tests__/GameWorld.test.tsx

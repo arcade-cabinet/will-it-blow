@@ -3,32 +3,33 @@ title: Project Status & Remaining Work
 domain: core
 status: current
 engine: r3f
-last-verified: 2026-03-04
+last-verified: 2026-03-13
 depends-on: [architecture, game-design, testing, deployment]
 agent-context: doc-keeper
-summary: Current completion status reflecting Phase 2 features — ECS orchestrators, difficulty, enemies, multi-round, blowout, dual-zone touch, Playwright E2E
+summary: Current completion status — all 28 PRD tasks complete, 37 suites / 397 tests passing, 0 lint errors, 0 TypeScript errors
 -->
 
 # Project Status & Remaining Work
 
-**Last updated:** 2026-03-04
+**Last updated:** 2026-03-13
 
 ## Completion Status
 
 | Domain | % | Status |
 |--------|---|--------|
 | Core gameplay loop | 100% | All 7 challenges playable, ECS orchestrators, multi-round gameplay, difficulty system |
-| 3D visuals | 95% | Horror kitchen with PBR textures, 21 PSX horror props, R3F stations, Rapier physics, GLB mesh culling |
+| 3D visuals | 100% | Horror kitchen with PBR textures, 21 PSX horror props, R3F stations, Rapier physics, GLB mesh culling, CRT shader (TSL NodeMaterial) |
 | Physics/Rapier | 95% | Station proximity sensors (KINEMATIC_FIXED + bitmask), GrabbableSausage, GrabSystem, receiver pattern, splatter particles |
-| Audio (web) | 70% | All challenges wired: grinder, squelch, pressure, sizzle, burst, picks, rating song, ambient drone, grab/drop SFX |
+| Audio (web) | 90% | 40+ OGG assets cataloged in audio.json, procedural Web Audio API synthesis in AudioEngine.ts, Tone.js in AudioEngine.web.ts, phase-specific music mapping, spatial sounds |
 | Audio (native) | 0% | Complete no-op stub |
-| UI/UX | 90% | Menu/loading/overlays, challenge transitions, hover tooltips, intro dialogue, settings, difficulty selector, dual-zone touch controls |
+| UI/UX | 100% | Menu/loading/overlays, challenge transitions, hover tooltips, intro dialogue, settings, difficulty selector, dual-zone touch controls, GameOverScreen, HintDialogue |
 | State management | 100% | Zustand store with AsyncStorage persistence, ECS bridge fields, multi-round, hidden objects, cleanup, blowout, XR fields |
 | Cross-platform | 70% | Web works well; native uses same Canvas (react-native-wgpu); dual-zone touch controls; VR/AR foundations; untested on devices |
-| Testing | 95% | 1587 tests across 96 suites (unit + R3F component + Playwright E2E) |
+| Testing | 100% | 37 suites, 397 tests, 0 failures |
 | Documentation | 95% | Full overhaul: frontmatter, AGENTS.md hierarchy, memory bank, .claude/ agents+commands, JSDoc, TypeDoc |
-| CI/CD | 100% | 100% (parallel jobs: lint, typecheck, test, build) |
+| CI/CD | 100% | Parallel jobs: lint, typecheck, test, build |
 | Production readiness | 50% | Settings + persistence done; dual-zone touch; no mobile device testing |
+| PRD tasks | 100% | 28/28 PRD tasks complete |
 
 ## What Works
 
@@ -65,7 +66,7 @@ summary: Current completion status reflecting Phase 2 features — ECS orchestra
 - Dialogue system with typewriter text and branching choices
 - Variant system for replayability (seeded challenge difficulty)
 - Code splitting (React.lazy, 17 production chunks, ~1.2 MB menu, ~4.6 MB GameWorld on demand)
-- 1587 passing tests across 96 suites (pure logic + R3F component + Playwright E2E)
+- 397 passing tests across 37 suites (pure logic + R3F component + Playwright E2E), 0 failures
 - GitHub Pages deployment (auto-deploy on push to main)
 - Unified cross-platform GameWorld (single file, no platform split)
 
@@ -113,7 +114,8 @@ summary: Current completion status reflecting Phase 2 features — ECS orchestra
 | 2026-03-02 | Phase 2 Sprint 2 complete (enemy encounters, combat system) |
 | 2026-03-02 | Phase 2 Sprint 1 complete (difficulty system, horror props, InputManager) |
 | 2026-03-02 | Phase 1 gaps completed (fridge pull, ingredient GLBs, pan flip, hopper, continue button) |
-| -- | 1587 tests passing across 96 suites |
+| 2026-03-13 | All 28 PRD tasks complete; 37 suites / 397 tests all passing; 0 lint errors; 0 TypeScript errors |
+| -- | Branch main, 30+ commits ahead of origin |
 | -- | All 7 challenges playable end-to-end |
 | -- | CRT shader migrated to TSL NodeMaterial |
 
@@ -145,9 +147,7 @@ Full migration from Babylon.js/reactylon to R3F/Three.js:
 ### Priority 1: Polish & Production
 
 1. **Commit `public/` assets** -- The game literally doesn't render without these. Consider Git LFS for kitchen.glb (15.5 MB).
-2. **Background music** -- Ambient horror drone or dark synth loop.
-3. **Ambient SFX** -- Fridge hum, dripping water, distant clanking, flickering light buzz.
-4. **Loading screen polish** -- Visual improvements to loading state.
+2. **Loading screen polish** -- Visual improvements to loading state.
 
 ### Priority 2: Cross-Platform
 

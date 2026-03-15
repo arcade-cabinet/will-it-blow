@@ -1,19 +1,11 @@
 /**
  * @module IngredientMatcher
- * Tag-based matching system for the ingredient selection challenge.
- * Mr. Sausage demands ingredients with specific tags (e.g., "sweet", "meat").
- * This module derives tags from ingredient properties and checks whether
- * ingredients satisfy a given criteria — bridging the gap between the
- * Ingredient data model and the challenge variant's requirements.
+ * Matches ingredients against tag-based criteria for the ingredient selection
+ * challenge. Derives tags from both explicit definitions and stat thresholds.
  */
+import type {IngredientDef} from './Ingredients';
 
-import type {Ingredient} from './Ingredients';
-
-/**
- * Semantic tags derived from an ingredient's category and stats.
- * Tags are not stored on ingredients directly — they are computed
- * by {@link getIngredientTags} so the tag logic stays centralized here.
- */
+/** All recognized ingredient tags, including stat-derived ones. */
 export type IngredientTag =
   | 'sweet'
   | 'savory'
@@ -27,59 +19,20 @@ export type IngredientTag =
   | 'smooth'
   | 'chunky';
 
-/**
- * Criteria that an ingredient must satisfy to count as a "correct" pick.
- * All tags must match (AND logic) for the ingredient to qualify.
- */
 export interface IngredientCriteria {
-  /** Tags that the ingredient must have (all must match) */
   tags: string[];
-  /** Human-readable description for UI display (e.g., "sweet", "meat") */
   description?: string;
 }
 
 /**
- * Maps ingredient categories to their inherent tags.
- * Some categories grant multiple tags (e.g., 'comfort' implies both 'comfort' and 'savory').
+ * Derives all applicable tags for an ingredient based on its intrinsic tags and stats.
+ * Adds stat-derived tags: 'fancy' (tasteMod >= 4), 'chunky' (textureMod >= 3),
+ * 'smooth' (textureMod <= 1), 'savory' (food + tasteMod >= 3), 'absurd' (weird/trash).
+ * @param ingredient - The ingredient definition to tag.
+ * @returns Deduplicated array of all applicable tags.
  */
-const CATEGORY_TAG_MAP: Record<string, IngredientTag[]> = {
-  'fast food': ['fast-food', 'savory'],
-  canned: ['savory'],
-  fancy: ['fancy'],
-  absurd: ['absurd'],
-  sweet: ['sweet'],
-  spicy: ['spicy'],
-  comfort: ['comfort', 'savory'],
-  international: ['international', 'savory'],
-};
-
-/** Keywords in ingredient names that indicate the 'meat' tag (case-insensitive match). */
-const MEAT_KEYWORDS = ['lobster', 'beef', 'chicken', 'mac', 'corn dog', 'hot pocket', 'taco'];
-
-/**
- * Derives all applicable tags for an ingredient by combining three sources:
- * 1. **Category-based** — looked up from CATEGORY_TAG_MAP
- * 2. **Stat-based** — tasteMod >= 4 adds 'fancy', textureMod >= 3 adds 'chunky',
- *    textureMod <= 1 adds 'smooth'
- * 3. **Name-based** — keyword match against MEAT_KEYWORDS adds 'meat'
- *
- * @param ingredient - The ingredient to tag
- * @returns Deduplicated array of tags (order not guaranteed)
- *
- * @example
- * getIngredientTags(lobster) // ['fancy', 'chunky', 'meat']
- * getIngredientTags(water)   // ['absurd', 'smooth']
- */
-export function getIngredientTags(ingredient: Ingredient): IngredientTag[] {
-  const tagSet = new Set<IngredientTag>();
-
-  // Category-based tags
-  const categoryTags = CATEGORY_TAG_MAP[ingredient.category];
-  if (categoryTags) {
-    for (const tag of categoryTags) {
-      tagSet.add(tag);
-    }
-  }
+export function getIngredientTags(ingredient: IngredientDef): IngredientTag[] {
+  const tagSet = new Set<IngredientTag>(ingredient.tags as IngredientTag[]);
 
   // Stat-based tags
   if (ingredient.tasteMod >= 4) {
@@ -92,43 +45,37 @@ export function getIngredientTags(ingredient: Ingredient): IngredientTag[] {
     tagSet.add('smooth');
   }
 
-  // Meat detection by name
-  const lowerName = ingredient.name.toLowerCase();
-  for (const keyword of MEAT_KEYWORDS) {
-    if (lowerName.includes(keyword)) {
-      tagSet.add('meat');
-      break;
-    }
+  // Auto-tagging based on category if not already present
+  if (ingredient.category === 'food' && ingredient.tasteMod >= 3 && !tagSet.has('sweet')) {
+    tagSet.add('savory');
+  }
+  if (ingredient.category === 'weird' || ingredient.category === 'trash') {
+    tagSet.add('absurd');
   }
 
   return Array.from(tagSet);
 }
 
 /**
- * Tests whether a single ingredient satisfies the given criteria.
- * All tags in the criteria must be present on the ingredient (AND logic).
- *
- * @param ingredient - The ingredient to test
- * @param criteria - The tag requirements to check against
- * @returns `true` if the ingredient has every tag in the criteria
+ * Tests whether an ingredient satisfies all tags in the given criteria.
+ * @param ingredient - The ingredient to check.
+ * @param criteria - Tag-based criteria (all tags must match).
+ * @returns `true` if the ingredient has every required tag.
  */
-export function matchesCriteria(ingredient: Ingredient, criteria: IngredientCriteria): boolean {
+export function matchesCriteria(ingredient: IngredientDef, criteria: IngredientCriteria): boolean {
   const tags = getIngredientTags(ingredient);
   return criteria.tags.every(tag => tags.includes(tag as IngredientTag));
 }
 
 /**
- * Filters a list of ingredients down to only those matching the criteria.
- * Used during fridge pool generation to identify which indices are "correct"
- * picks for the current variant's demand.
- *
- * @param ingredients - Full pool of ingredients to filter
- * @param criteria - The tag requirements from the current challenge variant
- * @returns Subset of ingredients that satisfy all criteria tags
+ * Filters a list of ingredients to only those matching all criteria tags.
+ * @param ingredients - The full ingredient pool to filter.
+ * @param criteria - Tag-based criteria that each result must satisfy.
+ * @returns Subset of ingredients where every criteria tag is present.
  */
 export function filterMatchingIngredients(
-  ingredients: Ingredient[],
+  ingredients: IngredientDef[],
   criteria: IngredientCriteria,
-): Ingredient[] {
+): IngredientDef[] {
   return ingredients.filter(ingredient => matchesCriteria(ingredient, criteria));
 }

@@ -1,13 +1,12 @@
-<!--
+---
 title: Development Guide
 domain: core
 status: current
-engine: r3f
-last-verified: 2026-03-04
+last-verified: 2026-03-13
 depends-on: [architecture, state-management, 3d-rendering, testing]
 agent-context: scene-architect, challenge-dev, store-warden
 summary: Conventions, patterns, pitfalls, how to add features
--->
+---
 
 # Development Guide
 
@@ -222,3 +221,28 @@ Downloaded but not integrated:
 - `funny sausag.obj` (4.1 MB) — Legacy sausage model
 
 AmbientCG texture sources (not in repo, downloaded separately per material)
+
+## Planned Work
+
+### New Engine Modules
+- `MeatTexture.ts` — Canvas procedural meat texture generator (`generateMeatTexture(colorHex, fatRatio)`)
+- `GreaseSimulation.ts` — FBO wave equation shader (TSL NodeMaterial for WebGPU compatibility)
+- `BlowoutPhysics.ts` — Tube blow simulation + particle landing + scoring (pure functions)
+- `CleanupManager.ts` — Equipment grime tracking + washing progress per station
+- See `docs/plans/2026-03-01-sausage-factory-kitchen-design.md` Section 14 for full file manifest
+
+### New 3D Components
+- `FridgeInterior.tsx` — Procedural shelves + food GLB placement with depth awareness
+- `BasementStructure.tsx` — Exposed pipes, barred window, metal door, drain grate
+- `HorrorProps.tsx` — Data-driven horror prop placement from `horror-props.json`
+- `GrinderMechanics.tsx`, `StufferMechanics.tsx`, `CookingMechanics.tsx` — Procedural factory interactions
+- See `docs/plans/2026-03-01-sausage-factory-kitchen-plan.md` for implementation tasks
+
+### Critical Constraints for Future Work
+- Test count must never decrease — every new feature gets tests
+- Biome clean on every commit
+- ECS pattern for new game mechanics (orchestrators, not standalone components)
+- Thin HUDs only (read-only Zustand subscribers, zero input handling)
+- All tuning constants in JSON config files, never hardcoded
+- Web asset budget: 13MB initial, 8MB lazy-loaded maximum
+- See `docs/plans/2026-03-02-comprehensive-phase1-phase2-plan.md` Critical Constraints section

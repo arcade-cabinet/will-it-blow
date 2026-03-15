@@ -1,33 +1,27 @@
-import {Platform} from 'react-native';
-
 /**
- * Derive the Expo web base path from the HTML document.
- * Checks for a <base> tag first, then falls back to extracting the path
- * prefix from Expo's script tags (which are reliably prefixed with
- * experiments.baseUrl from app.json).
+ * Asset URL resolution for Vite builds.
  *
- * Returns '' when running on native or when no base path is detected
- * (i.e. deployed at the domain root).
+ * On GitHub Pages the app is served from a subdirectory (/will-it-blow/),
+ * so all public/ asset paths must be prefixed with the Vite base URL.
+ * `import.meta.env.BASE_URL` is '/' in dev and '/will-it-blow/' on Pages.
  */
+
+/** Return the Vite base path (e.g. '/' or '/will-it-blow/'). */
 export function getWebBasePath(): string {
-  if (typeof document === 'undefined') return '';
-  // 1. Honour <base> tag if present
-  const base = document.querySelector('base');
-  if (base?.href) return new URL(base.href).pathname.replace(/\/$/, '');
-  // 2. Fallback: Expo prefixes <script src> with experiments.baseUrl
-  const script = document.querySelector('script[src*="/_expo/"]');
-  const src = script?.getAttribute('src') ?? '';
-  if (!src) return '';
-  // Handle both absolute (https://...) and root-relative (/will-it-blow/...) src values
-  const url = src.startsWith('http') ? new URL(src) : new URL(src, document.baseURI);
-  // Strip the /_expo/... suffix to get just the base path
-  const basePath = url.pathname.replace(/\/_expo\/.*$/, '');
-  return basePath.replace(/\/$/, '');
+  return import.meta.env.BASE_URL;
 }
 
-/** Resolve a web asset URL under a subdirectory (e.g. 'models', 'textures') */
+/**
+ * Resolve a public asset URL under a subdirectory (e.g. 'models', 'textures').
+ * Handles the base path so assets work on both localhost and GitHub Pages.
+ *
+ * @example
+ *   getAssetUrl('models', 'kitchen.glb')  // '/will-it-blow/models/kitchen.glb'
+ *   getAssetUrl('audio', 'chop_1.ogg')    // '/will-it-blow/audio/chop_1.ogg'
+ *   getAssetUrl('textures')               // '/will-it-blow/textures/'
+ */
 export function getAssetUrl(subdir: string, filename?: string): string {
-  const basePath = Platform.OS === 'web' ? getWebBasePath() : '';
+  const base = import.meta.env.BASE_URL; // always ends with '/'
   const suffix = filename ? `${subdir}/${filename}` : `${subdir}/`;
-  return `${basePath}/${suffix}`;
+  return `${base}${suffix}`;
 }

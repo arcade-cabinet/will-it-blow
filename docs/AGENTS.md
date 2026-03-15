@@ -3,7 +3,7 @@ title: Documentation Index
 domain: reference
 status: current
 engine: r3f
-last-verified: 2026-03-04
+last-verified: 2026-03-13
 depends-on: []
 agent-context: doc-keeper
 summary: Master index of all docs — frontmatter schema, domain map, agent routing
@@ -102,7 +102,7 @@ Which docs relate to which code areas:
 | **3D / Scene** | `architecture.md`, `3d-rendering.md` | `src/components/GameWorld.tsx`, `src/components/kitchen/`, `src/components/controls/` |
 | **Gameplay** | `game-design.md`, `state-management.md` | `src/engine/`, `src/store/gameStore.ts`, `src/components/challenges/` |
 | **Infrastructure** | `deployment.md`, `testing.md`, `development-guide.md` | `.github/workflows/`, `jest.config.js`, `metro.config.js`, `app.json` |
-| **Audio** | `audio.md` | `src/audio/AudioEngine.web.ts`, `src/audio/AudioEngine.ts` |
+| **Audio** | `audio.md` | `src/engine/AudioEngine.web.ts`, `src/engine/AudioEngine.ts`, `src/config/audio.json` |
 | **Status** | `status.md` | N/A (meta-document tracking project completion) |
 
 ---

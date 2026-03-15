@@ -4,32 +4,33 @@ import {
   type IngredientCriteria,
   matchesCriteria,
 } from '../src/engine/IngredientMatcher';
-import {INGREDIENTS} from '../src/engine/Ingredients';
+import {INGREDIENT_MODELS} from '../src/engine/Ingredients';
 
-const findByName = (name: string) => INGREDIENTS.find(i => i.name === name)!;
+const findByName = (name: string) => INGREDIENT_MODELS.find(i => i.name === name)!;
 
 describe('getIngredientTags', () => {
   it('returns a tags array for any ingredient', () => {
-    for (const ing of INGREDIENTS) {
+    for (const ing of INGREDIENT_MODELS) {
       const tags = getIngredientTags(ing);
       expect(Array.isArray(tags)).toBe(true);
       expect(tags.length).toBeGreaterThan(0);
     }
   });
 
-  it('Lobster has fancy and meat tags', () => {
-    const tags = getIngredientTags(findByName('Lobster'));
+  it('Steak has fancy and meat tags', () => {
+    const tags = getIngredientTags(findByName('Raw Steak'));
     expect(tags).toContain('fancy');
     expect(tags).toContain('meat');
   });
 
-  it('Candy Cane has sweet tag', () => {
-    const tags = getIngredientTags(findByName('Candy Cane'));
+  it('Cake has sweet and comfort tags', () => {
+    const tags = getIngredientTags(findByName('Cake'));
     expect(tags).toContain('sweet');
+    expect(tags).toContain('comfort');
   });
 
-  it('Big Mac has savory and fast-food tags', () => {
-    const tags = getIngredientTags(findByName('Big Mac'));
+  it('Burger has savory and fast-food tags', () => {
+    const tags = getIngredientTags(findByName('Burger'));
     expect(tags).toContain('savory');
     expect(tags).toContain('fast-food');
   });
@@ -37,47 +38,47 @@ describe('getIngredientTags', () => {
 
 describe('matchesCriteria', () => {
   it('matches when ingredient has all required tags', () => {
-    const lobster = findByName('Lobster');
+    const steak = findByName('Raw Steak');
     const criteria: IngredientCriteria = {tags: ['fancy']};
-    expect(matchesCriteria(lobster, criteria)).toBe(true);
+    expect(matchesCriteria(steak, criteria)).toBe(true);
   });
 
   it('does not match when missing a tag', () => {
-    const candyCane = findByName('Candy Cane');
+    const cake = findByName('Cake');
     const criteria: IngredientCriteria = {tags: ['savory']};
-    expect(matchesCriteria(candyCane, criteria)).toBe(false);
+    expect(matchesCriteria(cake, criteria)).toBe(false);
   });
 
   it('works with multi-tag criteria', () => {
-    const lobster = findByName('Lobster');
+    const steak = findByName('Raw Steak');
     const criteria: IngredientCriteria = {
       tags: ['fancy', 'meat', 'chunky'],
     };
-    expect(matchesCriteria(lobster, criteria)).toBe(true);
+    expect(matchesCriteria(steak, criteria)).toBe(true);
 
     const missingCriteria: IngredientCriteria = {
       tags: ['fancy', 'sweet'],
     };
-    expect(matchesCriteria(lobster, missingCriteria)).toBe(false);
+    expect(matchesCriteria(steak, missingCriteria)).toBe(false);
   });
 });
 
 describe('filterMatchingIngredients', () => {
   it('returns only matching ingredients', () => {
-    const criteria: IngredientCriteria = {tags: ['absurd', 'smooth']};
-    const results = filterMatchingIngredients(INGREDIENTS, criteria);
+    const criteria: IngredientCriteria = {tags: ['absurd', 'chunky']};
+    const results = filterMatchingIngredients(INGREDIENT_MODELS, criteria);
     for (const ing of results) {
       const tags = getIngredientTags(ing);
       expect(tags).toContain('absurd');
-      expect(tags).toContain('smooth');
+      expect(tags).toContain('chunky');
     }
     expect(results.length).toBeGreaterThan(0);
   });
 
   it('returns fewer than total for any specific criteria', () => {
     const criteria: IngredientCriteria = {tags: ['fancy']};
-    const results = filterMatchingIngredients(INGREDIENTS, criteria);
+    const results = filterMatchingIngredients(INGREDIENT_MODELS, criteria);
     expect(results.length).toBeGreaterThan(0);
-    expect(results.length).toBeLessThan(INGREDIENTS.length);
+    expect(results.length).toBeLessThan(INGREDIENT_MODELS.length);
   });
 });

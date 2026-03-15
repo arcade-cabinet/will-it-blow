@@ -1,0 +1,13 @@
+{
+  "cookTargets": {
+    "rare": 0.15,
+    "medium": 0.45,
+    "well-done": 0.75,
+    "charred": 0.95
+  },
+  "cookThresholds": {
+    "rare": 0.25,
+    "medium": 0.6,
+    "wellDone": 0.85
+  }
+}

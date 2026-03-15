@@ -5,9 +5,9 @@ GitHub Copilot-specific instructions. For shared project knowledge, read the cro
 ## Required Reading (in order)
 
 1. **`AGENTS.md`** (project root) — Project overview, architecture, key files, commands, critical rules
-2. **`memory-bank/activeContext.md`** — Current session state and recent changes
-3. **`memory-bank/systemPatterns.md`** — Architecture patterns and conventions
-4. **`memory-bank/techContext.md`** — Tech stack, dependencies, CI/CD, and **common pitfalls**
+2. **`docs/memory-bank/activeContext.md`** — Current session state and recent changes
+3. **`docs/memory-bank/systemPatterns.md`** — Architecture patterns and conventions
+4. **`docs/memory-bank/techContext.md`** — Tech stack, dependencies, CI/CD, and **common pitfalls**
 5. **`docs/AGENTS.md`** — Documentation index (frontmatter schema, agent routing)
 
 Read these before doing any substantive work. All project knowledge lives there, not here.

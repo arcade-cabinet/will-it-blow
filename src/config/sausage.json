@@ -1,0 +1,27 @@
+{
+  "scoring": {
+    "tasteWeight": 0.6,
+    "textureWeight": 0.4,
+    "burstPenalty": -0.5,
+    "jitterRange": 1.5,
+    "maxRuffalos": 5,
+    "maxHoldDuration": 3,
+    "tasteMaxPoints": 60,
+    "blowMaxPoints": 20,
+    "burstBonusPoints": 20,
+    "maxScore": 100
+  },
+  "titleTiers": [
+    { "threshold": 0, "title": "Sausage Disaster" },
+    { "threshold": 20, "title": "Sausage Apprentice" },
+    { "threshold": 40, "title": "Sausage Maker" },
+    { "threshold": 60, "title": "Sausage Chef" },
+    { "threshold": 80, "title": "Sausage Master" },
+    { "threshold": 100, "title": "THE SAUSAGE KING" }
+  ],
+  "verdictThresholds": {
+    "S": 92,
+    "A": 75,
+    "B": 50
+  }
+}

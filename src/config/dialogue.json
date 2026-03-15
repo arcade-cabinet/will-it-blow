@@ -1,0 +1,23 @@
+{
+  "phaseMessages": {
+    "intro": "Hey, wake up lazybones",
+    "prone": "Come on, time to get up",
+    "proneIdle": "Use the arrow keys for God's sake",
+    "sitting": "Almost there, stand up",
+    "sittingIdle": "Use the arrow keys for God's sake",
+    "SELECT_INGREDIENTS": "WHAT'S IN THE BOX?",
+    "CHOPPING": "CHOP IT UP",
+    "FILL_GRINDER": "GRIND THE MEAT",
+    "GRINDING": "FASTER!",
+    "MOVE_BOWL": "TAKE IT TO THE STUFFER",
+    "ATTACH_CASING": "PREPARE THE CASING",
+    "STUFFING": "FILL IT UP",
+    "TIE_CASING": "TIE IT OFF",
+    "BLOWOUT": "WILL IT BLOW? (HOLD TO FIND OUT)",
+    "MOVE_SAUSAGE": "TO THE STOVE",
+    "MOVE_PAN": "TIME TO COOK",
+    "COOKING": "DON'T LET IT BURN",
+    "DONE_DEFAULT": "WILL IT BLOW? (CLICK CEREAL BOX TO RESTART)"
+  },
+  "idleThreshold": 10
+}

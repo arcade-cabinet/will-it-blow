@@ -1,50 +1,54 @@
 # CLAUDE.md — Will It Blow?
 
-Claude Code-specific instructions. For shared project knowledge, read the cross-agent docs below.
+Claude Code-specific instructions. All shared project knowledge lives in AGENTS.md and docs/.
 
-## Required Reading (in order)
+## Required Reading (MANDATORY — every session)
 
-1. **`AGENTS.md`** — Project overview, architecture, key files, commands, critical rules
-2. **`memory-bank/activeContext.md`** — Current session state and recent changes
-3. **`memory-bank/systemPatterns.md`** — Architecture patterns and conventions
-4. **`memory-bank/techContext.md`** — Tech stack, dependencies, CI/CD, and **common pitfalls**
-5. **`docs/AGENTS.md`** — Documentation index (frontmatter schema, agent routing)
+1. **`AGENTS.md`** — Project overview, architecture, commands, rules
+2. **`docs/memory-bank/AGENTS.md`** — Memory bank protocol, session context
 
-Read these before doing any substantive work. All project knowledge lives there, not here.
+Read these before doing any substantive work.
 
-## Claude Code Tools
-
-### Slash Commands (`.claude/commands/`)
+## Slash Commands
 
 | Command | Purpose |
 |---------|---------|
-| `/playtest` | Launch dev server + open Playwright for playtesting |
-| `/lint-and-test` | Run full Biome lint + Jest test suite |
+| `/lint-and-test` | Run full Biome lint + Vitest test suite |
 | `/update-docs` | Regenerate TypeDoc and update status.md |
 
-### Specialized Agents (`.claude/agents/`)
-
-| Agent | Role |
-|-------|------|
-| `scene-architect` | 3D scene, R3F components, furniture layout, lighting, materials |
-| `challenge-dev` | Challenge overlays, 3D stations, scoring, gameplay mechanics |
-| `store-warden` | Zustand store integrity, state machine transitions, action correctness |
-| `asset-pipeline` | GLB models, textures, Blender MCP, model optimization, asset URLs |
-| `doc-keeper` | Documentation maintenance, JSDoc, frontmatter, AGENTS.md, TypeDoc |
-
-### Quick Commands
+## Quick Commands
 
 ```bash
-pnpm test                     # Jest tests
-pnpm lint                     # Biome lint + format check
-pnpm format                   # Biome auto-fix
-pnpm typecheck                # TypeScript (needs --stack-size=8192)
-npx expo start --web          # Dev server
+pnpm dev          # Vite dev server
+pnpm build        # Production build
+pnpm test         # Vitest unit tests
+pnpm test:e2e     # Playwright E2E
+pnpm typecheck    # tsc --noEmit
+pnpm lint         # biome check
+pnpm format       # biome check --write
+pnpm cap:ios      # Capacitor iOS sync + open
+pnpm cap:android  # Capacitor Android sync + open
 ```
 
 ## Claude Code-Specific Behavior
 
-- **Do not run** `npx tsc --noEmit` directly — always use `pnpm typecheck` (increased stack size for Three.js types)
-- **Mock `useGLTF`** in any new test file that touches R3F components loading GLBs
 - **Use `pnpm`** for all package operations (not npm/yarn)
 - **Use `pnpm format`** before committing to satisfy Biome checks
+- **Biome 2.4** for all linting/formatting (not ESLint/Prettier)
+- **Uses Tailwind CSS + DaisyUI** for UI components
+- **Feature branches** — never push directly to main; use feat/* branches + PRs
+- **Squash merge** — preferred merge strategy
+- **No git worktrees** — they base off wrong commits every time
+- **No 2D overlays** during gameplay — diegetic only via SurrealText
+- **Koota ECS** for all state — no Zustand anywhere
+- **Mock `useGLTF`** in any new test file that touches R3F components loading GLBs
+
+## Agent Definitions (`.claude/agents/`)
+
+| Agent | Role |
+|-------|------|
+| `scene-architect` | 3D scene, R3F components, lighting, materials |
+| `challenge-dev` | 3D station interactions, scoring functions, gameplay mechanics |
+| `store-warden` | Koota ECS integrity, trait schemas, action correctness |
+| `asset-pipeline` | GLB models, textures, model optimization |
+| `doc-keeper` | Documentation maintenance, JSDoc, frontmatter, AGENTS.md |

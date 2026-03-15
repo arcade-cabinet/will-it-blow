@@ -1,130 +1,111 @@
 # AGENTS.md — Will It Blow?
 
-Entry point for all AI agents working in this codebase.
+Entry point for all AI agents. Read this first, then follow the pointer chain.
 
 ## Project Identity
 
-"Will It Blow?" is a first-person horror sausage-making mini-game (SAW meets cooking show). Built with React Native 0.83 + React Three Fiber 9.5 (Three.js 0.183 WebGPU) + Expo SDK 55. Cross-platform: web, iOS, Android. 7 sequential challenges (ingredients, chopping, grinding, stuffing, cooking, blowout, tasting). Single Zustand store + miniplex ECS. Live at https://arcade-cabinet.github.io/will-it-blow/.
+"Will It Blow?" is a first-person horror sausage-making mini-game (SAW meets cooking show). Built with React 19 + React Three Fiber + Three.js + Rapier + Capacitor 6. Web-first with native deployment via Capacitor (iOS/Android). 7 sequential challenges at kitchen stations. Koota ECS for all state. Total immersion — zero 2D overlays during gameplay. Tailwind CSS + DaisyUI for pre-game UI components.
 
-## Information Hierarchy
+## Documentation Chain
 
-| Location | What you'll find |
-|----------|-----------------|
-| `AGENTS.md` (this file) | High-level entry point — project overview, architecture, commands, rules |
-| `memory-bank/` | Persistent context — tech stack, patterns, pitfalls, progress (read `memory-bank/AGENTS.md` for order) |
-| `docs/AGENTS.md` | Full documentation index with frontmatter schema reference |
-| `docs/plans/AGENTS.md` | Plan archive (historical BabylonJS + completed R3F migration) |
-| `CLAUDE.md` | **Claude Code only** — tool-specific behavior, slash commands, agent definitions |
-| `.github/copilot-instructions.md` | **GitHub Copilot only** — tool-specific behavior |
-| `.claude/agents/` | Bespoke agent definitions (scene-architect, challenge-dev, store-warden, asset-pipeline, doc-keeper) |
-| `.claude/commands/` | Slash commands (playtest, lint-and-test, update-docs) |
-
-## Quick Start for Agents
-
-1. **Read this file** for project overview and key architecture
-2. **Read `memory-bank/activeContext.md`** for current state and recent changes
-3. **Read `memory-bank/systemPatterns.md`** for architecture patterns and conventions
-4. **Check `docs/AGENTS.md`** frontmatter index for relevant documentation
-5. **Check `.claude/agents/`** for your specialized role definition
+| Step | Location | What You'll Find |
+|------|----------|-----------------|
+| 1 | `AGENTS.md` (this file) | Project overview, architecture, commands, rules |
+| 2 | `docs/memory-bank/AGENTS.md` | Memory bank protocol — session context, read order |
+| 3 | `docs/memory-bank/*.md` | Persistent context: project brief, patterns, tech stack, progress |
+| 4 | `CLAUDE.md` | **Claude Code only** — slash commands, tool behavior |
+| 5 | `.claude/agents/` | Specialized agent definitions |
 
 ## Key Architecture
 
-### Two-Layer Rendering
+### Rendering & Platform
+- **Vite** dev server and production bundler
+- **React Three Fiber Canvas** with Three.js WebGL renderer
+- **Capacitor 6** for native iOS/Android deployment (web app wrapped in native shell)
+- Web is the primary dev target; Capacitor provides native access (haptics, SQLite, etc.)
 
-1. **React Three Fiber 3D scene** (`<Canvas>` with `WebGPURenderer`) — Kitchen GLB model + declarative station meshes + lighting
-2. **React Native overlay** — All UI (challenges, dialogue, menus, results)
+### Total Immersion (ZERO 2D HUD)
+- ALL gameplay feedback via SurrealText (3D blood-text on kitchen surfaces)
+- Mr. Sausage dialogue — blood letters on walls, melt/drip off
+- Dialogue choices — tappable 3D text
+- Phase instructions, strikes, scores, demands, verdict — all diegetic
+- NO overlays during gameplay
+- Pre-game only: TitleScreen + DifficultySelector (Tailwind + DaisyUI)
 
 ### State Management
+- **Koota ECS** — the ONLY runtime state. 16 traits, Zustand-compatible hooks API via `src/ecs/hooks.ts`
+- **No Zustand.** Deleted. `src/store/gameStore.ts` does not exist.
+- **Persistence:** sql.js (WASM) for web/dev + @nicepkg/capacitor-sqlite for native, unified via drizzle-orm
 
-Zustand store (`src/store/gameStore.ts`) — single source of truth. No React Context for game state.
+### Physics
+- `@react-three/rapier` — Rapier WASM physics (rigid bodies, colliders, sensors)
+- `Sausage.tsx` must use `useRapier()` context, NOT direct `require('@dimforge/rapier3d-compat')`
 
-### Challenge Patterns (Two Types)
+### FPS Controls (ported from grovekeeper)
+- `src/input/InputManager.ts` — unified polling, merges providers per-frame
+- `src/input/KeyboardMouseProvider.ts` — WASD + pointer lock
+- `src/input/TouchProvider.ts` — invisible dual-zone touch (left=move, right=look)
+- `src/player/FPSCamera.tsx` — eye height, head bob
+- `src/player/PlayerCapsule.tsx` — Rapier dynamic body, capsule collider
+- `src/player/useMouseLook.ts` — pointer lock, yaw/pitch
+- `src/player/usePhysicsMovement.ts` — camera-relative WASD velocity
+- Player walks freely. No camera rails.
 
-**ECS Orchestrator** (chopping, grinding, stuffing, cooking, blowout):
-- Orchestrator component OWNS game logic, spawns/despawns ECS entities
-- Thin HUD is read-only Zustand subscriber — zero input handling
-- Store bridge fields: `challengeTimeRemaining`, `challengeSpeedZone`, `challengePhase`
-
-**Bridge Pattern** (ingredients, tasting):
-- 2D overlay owns scoring logic, 3D station handles visuals
-- Overlay writes to store (progress, pressure, strikes)
-- Station reads from store via props (passed through GameWorld)
-- No direct communication between overlay and station
-
-### Target-Based Placement
-
-`resolveLayout()` (from `src/engine/layout/`) is the single source of truth for named targets computed from room dimensions. All furniture, stations, triggers, and waypoint markers reference those targets by name — no hardcoded coordinates.
+### Audio
+- **Tone.js** for procedural audio synthesis (SFX instruments + melodies)
 
 ### Game Flow
-
-```text
-menu -> difficulty -> loading -> ingredients -> chopping -> grinding -> stuffing -> cooking -> blowout -> tasting -> results
 ```
+title → difficulty → intro (blink/wake-up) → walk kitchen → 13 GamePhases → verdict
+```
+Phases: SELECT_INGREDIENTS → CHOPPING → FILL_GRINDER → GRINDING → MOVE_BOWL → ATTACH_CASING → STUFFING → TIE_CASING → BLOWOUT → MOVE_SAUSAGE → MOVE_PAN → COOKING → DONE
 
-Managed by `appPhase` (menu/loading/playing) and `currentChallenge` (0-6) in the store.
-
-### Code Splitting
-
-`App.tsx` uses `React.lazy()` + `Suspense` to split the bundle at phase boundaries. GameWorld (Three.js + R3F) is lazy-loaded and prefetched during the loading phase.
+### Testing
+- **Vitest** for unit tests
+- **Playwright** for E2E tests
 
 ## Key Files
 
 | File | Purpose |
 |------|---------|
-| `App.tsx` | Root layout — phase routing + code splitting + chunk prefetch |
-| `src/store/gameStore.ts` | Zustand store (all game state + actions) |
-| `src/engine/ChallengeRegistry.ts` | Challenge configs, variant selection, final verdict |
+| `App.tsx` | Root — phase routing, Canvas, Physics, scene composition |
+| `src/ecs/hooks.ts` | Koota-backed game state (replaces Zustand) |
+| `src/ecs/traits.ts` | 16 Koota traits (all game state) |
+| `src/ecs/kootaWorld.ts` | Singleton world, auto-bootstraps entities |
+| `src/ecs/actions.ts` | All game actions (22 mutations) |
+| `src/engine/GameOrchestrator.tsx` | Phase navigation + dev shortcuts (n/p keys) |
+| `src/engine/ChallengeRegistry.ts` | Challenge configs, variant selection, verdict |
 | `src/engine/SausagePhysics.ts` | 5 pure scoring functions |
-| `src/engine/Ingredients.ts` | 25 ingredients with stats |
-| `src/engine/FurnitureLayout.ts` | Target-based placement — resolveLayout(), FURNITURE_RULES |
-| `src/components/GameWorld.tsx` | R3F Canvas, FPS controller, station triggers, scene orchestrator |
-| `src/components/kitchen/*.tsx` | 3D station components (Fridge, Grinder, Stuffer, Stove, CRT TV) |
-| `src/ecs/` | Entity-component-system: types, world, systems, renderers, orchestrators |
-| `src/components/challenges/*.tsx` | 7 challenge overlays/HUDs (bridge overlays + thin ECS HUDs) |
-| `src/input/InputManager.ts` | Universal input with JSON bindings (keyboard/mouse/gamepad/touch) |
-| `src/components/controls/SwipeFPSControls.tsx` | Dual-zone touch: left=movement, right=look/interact |
-| `src/config/` | JSON configs: difficulty, enemies, blowout |
-| `e2e/` | Playwright E2E tests (5 mobile device profiles) |
-| `src/components/characters/MrSausage3D.tsx` | Procedural 3D character with reaction animations |
-| `src/components/effects/CrtShader.ts` | TSL NodeMaterial (chromatic aberration + scanlines) |
-| `src/components/ui/*.tsx` | Menu, loading, dialogue, progress, strikes, game over |
+| `src/engine/AudioEngine.ts` | Audio (Tone.js synthesis) |
+| `src/components/environment/SurrealText.tsx` | Diegetic feedback — blood text on surfaces |
+| `src/components/stations/*.tsx` | 9 station components (self-contained) |
+| `src/components/sausage/Sausage.tsx` | Bone-chain physics sausage |
+| `src/player/*.ts(x)` | FPS camera, capsule, mouse look, movement, jump |
+| `src/input/*.ts` | InputManager + providers |
+| `src/config/*.json` | 16 JSON config files |
+| `src/db/` | Dual SQLite + Drizzle persistence (sql.js web / capacitor-sqlite native) |
 
-## Commands Reference
+## Commands
 
 ```bash
-# Development
-npx expo start --web          # Web dev server (primary dev target)
-
-# Testing
-pnpm test                     # Run all Jest tests
-pnpm test:ci                  # CI mode (--ci --forceExit)
-
-# Linting & formatting (Biome)
-pnpm lint                     # Check lint + format errors
-pnpm format                   # Auto-fix lint + format errors
-
-# Type checking (needs increased stack for Three.js recursive types)
-pnpm typecheck
-
-# Documentation
-pnpm docs:build               # Generate TypeDoc API docs
+pnpm dev          # Vite dev server
+pnpm build        # Production build
+pnpm test         # Vitest unit tests
+pnpm test:e2e     # Playwright E2E
+pnpm typecheck    # tsc --noEmit
+pnpm lint         # biome check
+pnpm format       # biome check --write
+pnpm cap:ios      # Capacitor iOS sync + open
+pnpm cap:android  # Capacitor Android sync + open
 ```
 
 ## Critical Rules
 
-- **pnpm** for package management (not npm/yarn)
-- **Biome** for linting and formatting (not ESLint/Prettier)
-- **WebGPU** renderer — use TSL `NodeMaterial`, not raw GLSL `ShaderMaterial`
-- **Zustand** only for game state (no React Context)
-- **Target-based placement** — no hardcoded coordinates; everything derives from `resolveLayout()`
-- **useRef** for mutable state in `useFrame` callbacks (avoid stale closures)
-- **Feature branches** — branch protection on main; use feat/* branches and PRs
-- **Squash merge** — preferred merge strategy
-
-## Common Pitfalls
-
-11 documented pitfalls covering TypeScript, Metro, testing, and 3D geometry. See `memory-bank/techContext.md` § "Known Technical Pitfalls" for the full list.
-
-## CI/CD
-
-See `memory-bank/techContext.md` § "CI/CD" for workflow details. Live site: https://arcade-cabinet.github.io/will-it-blow/
+- **pnpm** for package management
+- **Biome** for linting/formatting
+- **Koota ECS** for all state — no Zustand, no React Context
+- **Diegetic only** — zero 2D overlays during gameplay
+- **Tailwind CSS + DaisyUI** for pre-game UI components
+- **useRef** for mutable state in `useFrame` (avoid stale closures)
+- **Feature branches** — branch protection on main
+- **No git worktrees** — they base off wrong commits

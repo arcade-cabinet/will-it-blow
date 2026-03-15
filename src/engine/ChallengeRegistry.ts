@@ -1,208 +1,80 @@
 /**
  * @module ChallengeRegistry
- * Central registry for challenge configurations, variant selection, and
- * final verdict calculation. Orchestrates the 7-challenge game flow:
- * ingredients -> chopping -> grinding -> stuffing -> cooking -> blowout -> tasting.
- *
- * Variant selection is deterministic per seed — the same variantSeed
- * always produces the same challenge parameters, ensuring fair replays.
+ * Maps GamePhase values to challenge configs, provides seeded variant
+ * selection and final verdict calculation.
  */
 
-import {config} from '../config';
-import type {
-  ChoppingVariant,
-  CookingVariant,
-  GrindingVariant,
-  IngredientVariant,
-  StuffingVariant,
-} from '../config/types';
-import {getChallengeAt, CHALLENGE_ORDER as MANIFEST_CHALLENGE_ORDER} from './ChallengeManifest';
+import scoringConfig from '../config/scoring.json';
+import type {GamePhase} from '../ecs/hooks';
 
-const INGREDIENT_VARIANTS = config.variants.ingredients;
-const CHOPPING_VARIANTS = config.variants.chopping;
-const GRINDING_VARIANTS = config.variants.grinding;
-const STUFFING_VARIANTS = config.variants.stuffing;
-const COOKING_VARIANTS = config.variants.cooking;
-
-/** Identifier for each of the 7 sequential challenge phases. */
-export type ChallengeId =
-  | 'ingredients'
-  | 'chopping'
-  | 'grinding'
-  | 'stuffing'
-  | 'cooking'
-  | 'blowout'
-  | 'tasting';
-
-/** The fixed sequence of challenges. Index matches `currentChallenge` in the store. */
-export const CHALLENGE_ORDER: ChallengeId[] = MANIFEST_CHALLENGE_ORDER as ChallengeId[];
-
-/** Total number of challenges — re-exported from ChallengeManifest for convenience. */
-export {TOTAL_CHALLENGES} from './ChallengeManifest';
-
-/** Static configuration for a single challenge (metadata, not gameplay params). */
 export interface ChallengeConfig {
-  /** Unique challenge identifier */
-  id: ChallengeId;
-  /** Human-readable name for UI display */
+  phase: GamePhase;
   name: string;
-  /** Target name in FurnitureLayout where this challenge takes place */
   station: string;
-  /** Camera position offset from the station target when the challenge is active */
-  cameraOffset: [number, number, number];
-  /** Player-facing description of the challenge objective */
-  description: string;
+  hasScoring: boolean;
 }
 
-/** Build CHALLENGE_CONFIGS from the manifest — single source of truth. */
-const CHALLENGE_CONFIGS: Record<ChallengeId, ChallengeConfig> = {} as Record<
-  ChallengeId,
-  ChallengeConfig
->;
-for (let i = 0; i < MANIFEST_CHALLENGE_ORDER.length; i++) {
-  const entry = getChallengeAt(i);
-  if (entry) {
-    const id = entry.id as ChallengeId;
-    CHALLENGE_CONFIGS[id] = {
-      id,
-      name: entry.name,
-      station: entry.station,
-      cameraOffset: entry.cameraOffset,
-      description: entry.description,
-    };
-  }
+const CHALLENGE_CONFIGS: ChallengeConfig[] = [
+  {
+    phase: 'SELECT_INGREDIENTS',
+    name: 'Select Ingredients',
+    station: 'ChestFreezer',
+    hasScoring: false,
+  },
+  {phase: 'CHOPPING', name: 'Chopping', station: 'ChoppingBlock', hasScoring: true},
+  {phase: 'FILL_GRINDER', name: 'Fill Grinder', station: 'Grinder', hasScoring: false},
+  {phase: 'GRINDING', name: 'Grinding', station: 'Grinder', hasScoring: true},
+  {phase: 'MOVE_BOWL', name: 'Move Bowl', station: 'Grinder', hasScoring: false},
+  {phase: 'ATTACH_CASING', name: 'Attach Casing', station: 'Stuffer', hasScoring: false},
+  {phase: 'STUFFING', name: 'Stuffing', station: 'Stuffer', hasScoring: true},
+  {phase: 'TIE_CASING', name: 'Tie Casing', station: 'BlowoutStation', hasScoring: true},
+  {phase: 'BLOWOUT', name: 'Blowout', station: 'BlowoutStation', hasScoring: true},
+  {phase: 'MOVE_SAUSAGE', name: 'Move Sausage', station: 'Stove', hasScoring: false},
+  {phase: 'MOVE_PAN', name: 'Move Pan', station: 'Stove', hasScoring: false},
+  {phase: 'COOKING', name: 'Cooking', station: 'Stove', hasScoring: true},
+  {phase: 'DONE', name: 'Tasting', station: 'TV', hasScoring: true},
+];
+
+const phaseToConfig = new Map(CHALLENGE_CONFIGS.map(c => [c.phase, c]));
+
+/** Get the challenge config for a given phase. */
+export function getChallengeConfig(phase: GamePhase): ChallengeConfig | undefined {
+  return phaseToConfig.get(phase);
 }
 
-/**
- * Returns the challenge config for the given id, or throws if invalid.
- *
- * @param id - The challenge identifier to look up
- * @returns The static config for that challenge
- * @throws {Error} If the id does not match any known challenge
- */
-export function getChallengeConfig(id: ChallengeId): ChallengeConfig {
-  const cfg = CHALLENGE_CONFIGS[id];
-  if (!cfg) {
-    throw new Error(`Invalid challenge id: ${id}`);
-  }
-  return cfg;
+/** Get all challenge configs. */
+export function getAllChallenges(): ChallengeConfig[] {
+  return [...CHALLENGE_CONFIGS];
 }
 
-/**
- * Seeded hash function for deterministic variant selection.
- * Uses the Knuth multiplicative hash (golden ratio prime 2654435761)
- * to distribute seeds evenly across the array range.
- *
- * @param seed - The game session seed (typically Date.now() at game start)
- * @param arrayLength - Number of variants to choose from
- * @returns An index in [0, arrayLength) that is deterministic for the given seed
- */
-function seededIndex(seed: number, arrayLength: number): number {
-  return Math.abs(((seed * 2654435761) >>> 0) % arrayLength);
+/** Deterministic variant selection using a seed. */
+export function seededVariant(seed: number, length: number): number {
+  if (length <= 0) return 0;
+  return ((seed * 2654435761) >>> 0) % length;
 }
 
-/**
- * Picks a deterministic variant for the given challenge and seed.
- * Each challenge type offsets the seed by its index (0-4) so the same
- * base seed produces different variants for different challenges.
- *
- * @param challengeId - Which challenge to pick a variant for
- * @param seed - The game session's variant seed
- * @returns The selected variant config, or `null` for blowout and tasting (which have no variants)
- */
-export function pickVariant(
-  challengeId: ChallengeId,
-  seed: number,
-): IngredientVariant | ChoppingVariant | GrindingVariant | StuffingVariant | CookingVariant | null {
-  switch (challengeId) {
-    case 'ingredients':
-      return INGREDIENT_VARIANTS[seededIndex(seed, INGREDIENT_VARIANTS.length)];
-    case 'chopping':
-      return CHOPPING_VARIANTS[seededIndex(seed + 1, CHOPPING_VARIANTS.length)];
-    case 'grinding':
-      return GRINDING_VARIANTS[seededIndex(seed + 2, GRINDING_VARIANTS.length)];
-    case 'stuffing':
-      return STUFFING_VARIANTS[seededIndex(seed + 3, STUFFING_VARIANTS.length)];
-    case 'cooking':
-      return COOKING_VARIANTS[seededIndex(seed + 4, COOKING_VARIANTS.length)];
-    case 'blowout':
-    case 'tasting':
-      return null;
-    default:
-      return null;
-  }
-}
+export type Rank = 'S' | 'A' | 'B' | 'F';
 
-/**
- * The final game verdict displayed on the results screen.
- * Only S-rank (>= 92) is a true victory — all others are degrees of failure.
- */
-export interface Verdict {
-  /** Letter grade: S (victory), A/B/F (defeat) */
-  rank: 'S' | 'A' | 'B' | 'F';
-  /** Title displayed to the player (e.g., "THE SAUSAGE KING") */
+export interface VerdictResult {
+  rank: Rank;
+  totalScore: number;
   title: string;
-  /** Mean of all challenge scores (0-100) */
-  averageScore: number;
-  /** Mr. Sausage's verdict dialogue */
-  message: string;
 }
 
-/**
- * Averages challenge scores and returns a final verdict.
- * If a demandBonus is provided, it is added to the average before ranking.
- *
- * Rank thresholds:
- * - S (>= 92): "THE SAUSAGE KING" — the only true victory
- * - A (>= 75): "Almost Worthy" — defeat, but close
- * - B (>= 50): "Mediocre" — defeat
- * - F (< 50):  "Unacceptable" — "You are the sausage now"
- *
- * @param challengeScores - Array of scores (0-100) from each completed challenge
- * @param demandBonus - Optional bonus/penalty from demand matching (added to average, clamped 0-100)
- * @returns Verdict with rank, title, average score, and Mr. Sausage's message
- * @throws {Error} If any score is non-finite (NaN, Infinity)
- */
-export function calculateFinalVerdict(challengeScores: number[], demandBonus?: number): Verdict {
-  if (challengeScores.length === 0) {
-    return {rank: 'F', averageScore: 0, title: 'FAILED', message: 'No challenges completed.'};
-  }
-  const bad = challengeScores.find(s => !Number.isFinite(s));
-  if (bad !== undefined) {
-    throw new Error(`calculateFinalVerdict received non-finite score: ${bad}`);
-  }
-  const rawAverage = challengeScores.reduce((sum, s) => sum + s, 0) / challengeScores.length;
-  const averageScore =
-    demandBonus !== undefined ? Math.max(0, Math.min(100, rawAverage + demandBonus)) : rawAverage;
+/** Calculate the final verdict from scores and demand bonus. */
+export function calculateFinalVerdict(scores: number[], demandBonus: number): VerdictResult {
+  const sum = scores.reduce((a, b) => a + b, 0);
+  const avg = scores.length > 0 ? sum / scores.length : 0;
+  const totalScore = Math.min(100, Math.max(0, avg + demandBonus));
 
-  if (averageScore >= 92) {
-    return {
-      rank: 'S',
-      title: 'THE SAUSAGE KING',
-      averageScore,
-      message: 'Perfection. You have earned my respect.',
-    };
-  }
-  if (averageScore >= 75) {
-    return {
-      rank: 'A',
-      title: 'Almost Worthy',
-      averageScore,
-      message: 'Close. So painfully close.',
-    };
-  }
-  if (averageScore >= 50) {
-    return {
-      rank: 'B',
-      title: 'Mediocre',
-      averageScore,
-      message: "I've eaten gas station sausages with more soul.",
-    };
-  }
-  return {
-    rank: 'F',
-    title: 'Unacceptable',
-    averageScore,
-    message: 'You are the sausage now.',
-  };
+  const thresholds = scoringConfig.rankThresholds;
+  const verdicts = scoringConfig.verdicts;
+
+  let rank: Rank;
+  if (totalScore >= thresholds.S) rank = 'S';
+  else if (totalScore >= thresholds.A) rank = 'A';
+  else if (totalScore >= thresholds.B) rank = 'B';
+  else rank = 'F';
+
+  return {rank, totalScore: Math.round(totalScore), title: verdicts[rank]};
 }

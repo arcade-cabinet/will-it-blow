@@ -2,70 +2,69 @@
  * @module ChallengeHeader
  * Top-of-screen HUD showing the current challenge number and name.
  *
- * Reads `currentChallenge` from the Zustand store and looks up the
- * challenge config from `ChallengeRegistry`. Renders as a centered
- * absolute-positioned overlay at zIndex 70 (below hints/strikes at 80,
- * below dialogue at 90).
- *
- * Returns null if the challenge index is out of range (e.g., during
- * transitions or before the first challenge starts).
+ * NOT used during gameplay (diegetic feedback via SurrealText).
+ * Rewritten from react-native to web HTML/CSS.
  */
 
-import {StyleSheet, Text, View} from 'react-native';
-import {CHALLENGE_ORDER, getChallengeConfig} from '../../engine/ChallengeRegistry';
-import {useGameStore} from '../../store/gameStore';
+import {type GamePhase, useGameStore} from '../../ecs/hooks';
 
-/** Displays "CHALLENGE N/5" label and the challenge name at the top of the screen. */
+/** Maps GamePhase values to player-facing challenge info. Transition phases return null. */
+const PHASE_TO_CHALLENGE: Partial<Record<GamePhase, {number: number; name: string}>> = {
+  SELECT_INGREDIENTS: {number: 1, name: 'SELECT INGREDIENTS'},
+  CHOPPING: {number: 2, name: 'CHOPPING'},
+  FILL_GRINDER: {number: 3, name: 'FILL GRINDER'},
+  GRINDING: {number: 3, name: 'GRINDING'},
+  STUFFING: {number: 4, name: 'STUFFING'},
+  TIE_CASING: {number: 5, name: 'TIE CASING'},
+  BLOWOUT: {number: 5, name: 'BLOWOUT'},
+  COOKING: {number: 6, name: 'COOKING'},
+  DONE: {number: 7, name: 'TASTING'},
+};
+
+const TOTAL_CHALLENGES = 7;
+
 export function ChallengeHeader() {
-  const {currentChallenge} = useGameStore();
+  const gamePhase = useGameStore(s => s.gamePhase);
 
-  const challengeId = CHALLENGE_ORDER[currentChallenge];
-  if (!challengeId) return null;
-
-  const config = getChallengeConfig(challengeId);
+  const challenge = PHASE_TO_CHALLENGE[gamePhase];
+  if (!challenge) return null;
 
   return (
-    <View
+    <section
       style={styles.container}
-      accessibilityLabel={`Challenge ${currentChallenge + 1} of ${CHALLENGE_ORDER.length}: ${config.name}`}
+      aria-label={`Challenge ${challenge.number} of ${TOTAL_CHALLENGES}: ${challenge.name}`}
     >
-      <Text style={styles.challengeNumber} accessibilityRole="text">
-        CHALLENGE {currentChallenge + 1}/{CHALLENGE_ORDER.length}
-      </Text>
-      <Text style={styles.challengeName} accessibilityRole="header">
-        {config.name}
-      </Text>
-    </View>
+      <div style={styles.challengeNumber}>
+        CHALLENGE {challenge.number}/{TOTAL_CHALLENGES}
+      </div>
+      <h2 style={styles.challengeName}>{challenge.name}</h2>
+    </section>
   );
 }
 
-const styles = StyleSheet.create({
+const styles: Record<string, React.CSSProperties> = {
   container: {
     position: 'absolute',
     top: 16,
     left: 16,
     right: 16,
+    display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
     zIndex: 70,
   },
   challengeNumber: {
     fontSize: 12,
-    fontWeight: '900',
-    fontFamily: 'Bangers',
+    fontWeight: 900,
     color: '#888',
     letterSpacing: 3,
-    textTransform: 'uppercase',
     marginBottom: 2,
   },
   challengeName: {
     fontSize: 22,
-    fontWeight: '900',
-    fontFamily: 'Bangers',
+    fontWeight: 900,
     color: '#FF1744',
     letterSpacing: 2,
     textAlign: 'center',
-    textShadowColor: 'rgba(255, 23, 68, 0.4)',
-    textShadowOffset: {width: 0, height: 0},
-    textShadowRadius: 10,
   },
-});
+};

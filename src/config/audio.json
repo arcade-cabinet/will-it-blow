@@ -1,53 +1,95 @@
 {
-  "challengeTracks": {
-    "ingredients": { "file": "music/track_exploration.ogg", "volume": -8 },
-    "chopping": { "file": "music/track_violence.ogg", "volume": -6 },
-    "grinding": { "file": "music/track_violence.ogg", "volume": -6 },
-    "stuffing": { "file": "music/track_death_metal.ogg", "volume": -8 },
-    "cooking": { "file": "music/track_revenge.ogg", "volume": -8 },
-    "blowout": { "file": "music/track_revenge.ogg", "volume": -6 },
-    "tasting": { "file": "music/track_dark.ogg", "volume": -10 }
+  "samples": {
+    "chop": [
+      { "url": "/audio/chop_1.ogg", "volume": -5 },
+      { "url": "/audio/chop_2.ogg", "volume": -5 },
+      { "url": "/audio/chop_3.ogg", "volume": -5 },
+      { "url": "/audio/chop_9.ogg", "volume": -5 }
+    ],
+    "sizzle": [
+      { "url": "/audio/sizzle_1.ogg", "volume": -15 },
+      { "url": "/audio/sizzle_2.ogg", "volume": -15 },
+      { "url": "/audio/sizzle_3.ogg", "volume": -15 },
+      { "url": "/audio/sizzle_8.ogg", "volume": -15 }
+    ],
+    "sizzleLoop": [
+      { "url": "/audio/sizzle_loop_1.ogg", "volume": -20, "loop": true },
+      { "url": "/audio/sizzle_loop_2.ogg", "volume": -20, "loop": true }
+    ],
+    "boiling": [
+      { "url": "/audio/boiling_1.ogg", "volume": -15 },
+      { "url": "/audio/boiling_2.ogg", "volume": -15 },
+      { "url": "/audio/boiling_3.ogg", "volume": -15 },
+      { "url": "/audio/boiling_4.ogg", "volume": -15 }
+    ],
+    "pour": [
+      { "url": "/audio/pour_1.ogg", "volume": -10 },
+      { "url": "/audio/pour_2.ogg", "volume": -10 },
+      { "url": "/audio/pour_3.ogg", "volume": -10 },
+      { "url": "/audio/pour_6.ogg", "volume": -10 }
+    ],
+    "peel": [
+      { "url": "/audio/peel_1.ogg", "volume": -8 },
+      { "url": "/audio/peel_2.ogg", "volume": -8 }
+    ],
+    "mixDry": [
+      { "url": "/audio/mix_dry_1.ogg", "volume": -10 },
+      { "url": "/audio/mix_dry_2.ogg", "volume": -10 }
+    ],
+    "mixWet": [
+      { "url": "/audio/mix_wet_1.ogg", "volume": -10 },
+      { "url": "/audio/mix_wet_2.ogg", "volume": -10 }
+    ],
+    "potsAndPans": [
+      { "url": "/audio/pots_and_pans_1.ogg", "volume": -8 },
+      { "url": "/audio/pots_and_pans_2.ogg", "volume": -8 },
+      { "url": "/audio/pots_and_pans_3.ogg", "volume": -8 },
+      { "url": "/audio/pots_and_pans_5.ogg", "volume": -8 }
+    ],
+    "panClang": [{ "url": "/audio/sfx/pan-clang.ogg", "volume": -5 }],
+    "verdictUnsettling": [{ "url": "/audio/verdict-unsettling.ogg", "volume": -10 }],
+    "ambientHorror": [{ "url": "/audio/ambient-horror.ogg", "volume": -25, "loop": true }]
   },
-  "victoryTrack": { "file": "music/track_unsettling_victory.ogg", "volume": -8 },
-  "enemyTrack": { "file": "music/track_kick_harder.ogg", "volume": -6 },
-  "defeatTrack": { "file": "music/track_boss_horror.ogg", "volume": -8 },
-  "crossfadeDuration": 2.0,
-  "spatialSounds": {
-    "fridge_hum": {
-      "file": "fridge_hum_loop.ogg",
-      "volume": -18,
-      "position": [-2.5, 1.0, -2.0],
-      "refDistance": 1.0,
-      "maxDistance": 8.0,
-      "rolloffFactor": 1.5,
-      "loop": true
-    },
-    "grinder_idle": {
-      "file": "grinder_idle_loop.ogg",
+  "music": {
+    "bossHorror": { "url": "/audio/music/track_boss_horror.ogg", "volume": -20, "loop": true },
+    "dark": { "url": "/audio/music/track_dark.ogg", "volume": -20, "loop": true },
+    "deathMetal": { "url": "/audio/music/track_death_metal.ogg", "volume": -18, "loop": true },
+    "exploration": { "url": "/audio/music/track_exploration.ogg", "volume": -22, "loop": true },
+    "kickHarder": { "url": "/audio/music/track_kick_harder.ogg", "volume": -18, "loop": true },
+    "revenge": { "url": "/audio/music/track_revenge.ogg", "volume": -20, "loop": true },
+    "unsettlingVictory": {
+      "url": "/audio/music/track_unsettling_victory.ogg",
       "volume": -20,
-      "position": [1.5, 0.9, -1.5],
-      "refDistance": 0.8,
-      "maxDistance": 6.0,
-      "rolloffFactor": 2.0,
       "loop": true
     },
-    "stove_sizzle": {
-      "file": "sizzle_loop_1.ogg",
-      "volume": -16,
-      "position": [2.0, 0.9, 1.5],
-      "refDistance": 1.0,
-      "maxDistance": 7.0,
-      "rolloffFactor": 1.5,
-      "loop": true
-    },
-    "drain_drip": {
-      "file": "drain_drip_loop.ogg",
-      "volume": -22,
-      "position": [0.0, 0.0, 0.0],
-      "refDistance": 0.5,
-      "maxDistance": 5.0,
-      "rolloffFactor": 2.5,
-      "loop": true
+    "violence": { "url": "/audio/music/track_violence.ogg", "volume": -18, "loop": true }
+  },
+  "phaseMusic": {
+    "SELECT_INGREDIENTS": "exploration",
+    "CHOPPING": "dark",
+    "GRINDING": "kickHarder",
+    "STUFFING": "revenge",
+    "TIE_CASING": "bossHorror",
+    "BLOWOUT": "violence",
+    "COOKING": "deathMetal",
+    "DONE": "unsettlingVictory"
+  },
+  "synths": {
+    "grinder": {
+      "harmonicity": 1.5,
+      "modulationIndex": 10,
+      "volume": -15,
+      "envelope": { "attack": 0.1, "decay": 0.2, "sustain": 1.0, "release": 0.5 }
     }
+  },
+  "sizzle": {
+    "baseVolume": -25,
+    "volumeRange": 15,
+    "rampTime": 0.1
+  },
+  "grinderSpeed": {
+    "baseHarmonicity": 1.0,
+    "harmonicityRange": 2.0,
+    "baseNote": "C1"
   }
 }

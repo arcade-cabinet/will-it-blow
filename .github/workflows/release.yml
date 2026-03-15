@@ -1,88 +1,23 @@
-name: Release — Build Android APKs
+name: Release
 
 on:
-  release:
-    types: [published]
+  push:
+    branches: [main]
 
 permissions:
   contents: write
+  pull-requests: write
 
 concurrency:
   group: release
   cancel-in-progress: false
 
 jobs:
-  # ─── Android Release APK Builds ─────────────────────────────
-  build-android:
-    name: Build Android Release APKs
+  release-please:
+    name: Release Please
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
+      - uses: googleapis/release-please-action@v4
         with:
-          version: 10
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - run: pnpm install --frozen-lockfile
-
-      - name: Generate native project (clean)
-        run: npx expo prebuild --platform android --clean --no-install
-
-      - name: Add async-storage local Maven repo
-        run: |
-          # async-storage v3 ships a KMP artifact in a local_repo/ directory
-          # that must be registered as a Maven repository for Gradle to find it
-          REPO_PATH="$(cd node_modules/@react-native-async-storage/async-storage/android/local_repo && pwd)"
-          sed -i "s|mavenCentral()|mavenCentral()\n    maven { url \"${REPO_PATH}\" }|" android/build.gradle
-
-      - name: Configure debug signing for release build
-        run: |
-          cat >> android/app/build.gradle << 'SIGNING'
-
-          android {
-              signingConfigs {
-                  release {
-                      storeFile file("debug.keystore")
-                      storePassword "android"
-                      keyAlias "androiddebugkey"
-                      keyPassword "android"
-                  }
-              }
-              buildTypes {
-                  release {
-                      signingConfig signingConfigs.release
-                  }
-              }
-          }
-          SIGNING
-
-      - name: Build release APKs (all architectures)
-        working-directory: android
-        run: ./gradlew assembleRelease
-
-      - name: List built APKs
-        run: find android/app/build/outputs/apk -name "*.apk" -type f
-
-      - name: Upload APKs to release
-        env:
-          GH_TOKEN: ${{ secrets.CI_GITHUB_TOKEN }}
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: |
-          for apk in android/app/build/outputs/apk/release/*.apk; do
-            filename=$(basename "$apk")
-            echo "Uploading $filename to release $RELEASE_TAG..."
-            gh release upload "$RELEASE_TAG" "$apk" --clobber
-          done
+          release-type: node
+          token: ${{ secrets.CI_GITHUB_TOKEN }}

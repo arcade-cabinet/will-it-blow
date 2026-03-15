@@ -1,0 +1,151 @@
+import {useGLTF} from '@react-three/drei';
+import {RigidBody} from '@react-three/rapier';
+import {useDrag} from '@use-gesture/react';
+import {useMemo, useRef, useState} from 'react';
+import * as THREE from 'three';
+import {useGameStore} from '../../ecs/hooks';
+import {INGREDIENT_MODELS as INGREDIENT_DEFS} from '../../engine/Ingredients';
+
+export function PhysicsFreezerChest() {
+  const {scene: fridgeScene} = useGLTF('/models/fridge.glb') as any;
+  const misc = useGLTF('/models/misc.glb') as any;
+
+  // Create an ice/frost overlay material
+  const frostMat = useMemo(
+    () =>
+      new THREE.MeshPhysicalMaterial({
+        color: '#eef5ff',
+        transmission: 0.8,
+        opacity: 0.6,
+        transparent: true,
+        roughness: 0.4,
+        clearcoat: 0.8,
+        thickness: 0.5,
+      }),
+    [],
+  );
+
+  // Pre-generate a list of ingredients to spawn inside the freezer bounds
+  // Uses the data-driven INGREDIENT_DEFS so each item has a proper string ID
+  // that maps to the scoring system in DemandScoring.ts
+  const spawnedIngredients = useMemo(() => {
+    const list = [];
+    // Spawn 25 random items for a totally packed toy chest
+    for (let i = 0; i < 25; i++) {
+      const def = INGREDIENT_DEFS[Math.floor(Math.random() * INGREDIENT_DEFS.length)];
+      list.push({
+        spawnIndex: i,
+        ingredientId: def.id, // string ID like 'banana', 'burger', etc.
+        path: def.path,
+        node: def.node,
+        scale: def.scale,
+        // Random position inside the bounds of the freezer tub
+        pos: [
+          (Math.random() - 0.5) * 1.5, // X width
+          Math.random() * 0.5 + 0.2, // Y height
+          (Math.random() - 0.5) * 1.0, // Z depth
+        ],
+        rot: [Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI],
+      });
+    }
+    return list;
+  }, []);
+
+  return (
+    <group position={[-1.5, 0.0, -3.2]} rotation={[0, 0, 0]}>
+      {/* Fridge Shell (Kinematic so items don't fall through) */}
+      {fridgeScene && (
+        <RigidBody type="fixed" colliders="trimesh">
+          <primitive object={fridgeScene.clone()} castShadow receiveShadow />
+        </RigidBody>
+      )}
+
+      {/* Physics "Toy Chest" Ingredients */}
+      {spawnedIngredients.map(item => (
+        <FreezerIngredient
+          key={item.spawnIndex}
+          def={item}
+          miscNodes={misc.nodes}
+          frostMat={frostMat}
+        />
+      ))}
+
+      {/* Frost/Cold Air overlay plane just above the contents */}
+      <mesh position={[0, 1.2, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[2.0, 1.2]} />
+        <meshBasicMaterial color="#aaccff" transparent opacity={0.1} depthWrite={false} />
+      </mesh>
+    </group>
+  );
+}
+
+// Individual draggable ingredient component
+function FreezerIngredient({def, miscNodes, frostMat: _frostMat}: any) {
+  const gltf = useGLTF(def.path) as any;
+  const ref = useRef<any>(null);
+  const [isGrabbed, setIsGrabbed] = useState(false);
+
+  const gamePhase = useGameStore(state => state.gamePhase);
+  const setGamePhase = useGameStore(state => state.setGamePhase);
+  const addSelectedIngredientId = useGameStore(state => state.addSelectedIngredientId);
+  const selectedIngredientIds = useGameStore(state => state.selectedIngredientIds);
+
+  // Allow player to reach in and grab an item
+  const bind = useDrag(({active, movement: [_x, _y]}) => {
+    setIsGrabbed(active);
+    if (active && ref.current && gamePhase === 'SELECT_INGREDIENTS') {
+      // Lift the object out of the freezer
+      // Stagger positions slightly so they don't overlap exactly
+      const count = selectedIngredientIds.length;
+      ref.current.setTranslation({x: -1.5 + count * 0.2, y: 2.0, z: -2.5}, true);
+      addSelectedIngredientId(def.ingredientId); // Use string ID for scoring
+    }
+
+    // When released, if we were in the selection phase and we have 3, progress
+    if (!active && gamePhase === 'SELECT_INGREDIENTS') {
+      if (selectedIngredientIds.length >= 2) {
+        // length was 2 before this click, so this is the 3rd
+        setGamePhase('CHOPPING');
+      }
+    }
+  });
+
+  let content = null;
+  if (def.node) {
+    if (miscNodes[def.node]) {
+      content = (
+        <mesh
+          geometry={miscNodes[def.node].geometry}
+          material={miscNodes[def.node].material}
+          scale={def.scale}
+        />
+      );
+    }
+  } else if (gltf.scene) {
+    content = <primitive object={gltf.scene.clone()} scale={def.scale} />;
+  }
+
+  if (!content) return null;
+
+  return (
+    <RigidBody
+      ref={ref}
+      position={def.pos}
+      rotation={def.rot}
+      colliders="hull"
+      mass={1}
+      type={isGrabbed ? 'kinematicPosition' : 'dynamic'}
+    >
+      {/* @ts-ignore */}
+      <group {...bind()}>
+        {content}
+        {/* Frost overlay logic could be applied here by wrapping or duplicating mesh with frostMat */}
+      </group>
+    </RigidBody>
+  );
+}
+
+// Preload all possible ingredients
+for (const m of INGREDIENT_DEFS) {
+  useGLTF.preload(m.path);
+}

@@ -1,13 +1,12 @@
-<!--
+---
 title: Deployment & CI/CD
 domain: core
 status: current
-engine: r3f
-last-verified: 2026-03-01
+last-verified: 2026-03-13
 depends-on: [testing, architecture]
 agent-context: asset-pipeline, doc-keeper
 summary: CI/CD pipeline, GitHub Pages, build commands
--->
+---
 
 # Deployment & CI/CD
 
@@ -137,3 +136,20 @@ The `public/` directory contains models and textures required for the game to ru
 Current active branches:
 - `feat/fix-visibility-and-lighting` — Lighting/material fixes (not pushed)
 - `feat/3d-fridge-selection` — 3D ingredient selection (in worktree, not pushed)
+
+## Planned Work
+
+### CI/CD Hardening
+- Add `pnpm typecheck` to CI workflow (type errors not currently caught in CI)
+- Add `pnpm lint` (Biome) to CI workflow
+- Run lint, typecheck, test, and build in parallel jobs
+- Add Expo web export build step to verify production build
+- Cache `node_modules` and pnpm store for faster CI runs
+- Android debug APK build step
+- See `docs/plans/2026-03-02-comprehensive-phase1-phase2-plan.md` Wave 0H
+
+### Asset Delivery
+- Consider Git LFS for `kitchen.glb` (15.5 MB) and other large binary assets
+- GLB asset swap plan targets ~700KB total (down from ~45MB) which would eliminate the LFS need
+- Parallel GLB preloading via `useGLTF.preload()` with `Promise.all` for many tiny GLBs
+- See `docs/plans/2026-03-01-sausage-factory-kitchen-design.md` Section 4

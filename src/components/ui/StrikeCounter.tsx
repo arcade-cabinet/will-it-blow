@@ -1,64 +1,55 @@
 /**
  * @module StrikeCounter
- * Top-left HUD showing 3 strike indicators (circles that turn to red X marks).
+ * HUD showing strike indicators (circles that turn to red X marks).
  *
- * Reads `strikes` from the Zustand store. Renders MAX_STRIKES (3) symbols:
- * used strikes show a red X with a glowing text shadow, unused strikes
- * show a dim gray circle. When strikes reaches 3, the game triggers
- * a defeat via the challenge overlay logic.
- *
- * Positioned at zIndex 80, same level as the HintButton.
+ * Pure presentational -- receives strikes/maxStrikes via props.
+ * NOT used during gameplay (diegetic feedback via SurrealText).
+ * Rewritten from react-native to web HTML/CSS.
  */
 
-import {StyleSheet, Text, View} from 'react-native';
-import {useGameStore} from '../../store/gameStore';
+interface StrikeCounterProps {
+  strikes: number;
+  maxStrikes?: number;
+}
 
-const MAX_STRIKES = 3;
-
-/** Displays 3 strike indicators — red X for used, gray circle for remaining. */
-export function StrikeCounter() {
-  const {strikes} = useGameStore();
-
+export function StrikeCounter({strikes, maxStrikes = 3}: StrikeCounterProps) {
   return (
-    <View
+    <div
       style={styles.container}
-      accessibilityRole="text"
-      accessibilityLabel={`${strikes} of ${MAX_STRIKES} strikes used`}
+      role="status"
+      aria-label={`${strikes} of ${maxStrikes} strikes used`}
     >
-      {Array.from({length: MAX_STRIKES}, (_, i) => (
-        <Text
+      {Array.from({length: maxStrikes}, (_, i) => (
+        <span
           key={i}
-          style={[styles.strike, i < strikes ? styles.used : styles.unused]}
-          accessibilityLabel={i < strikes ? `Strike ${i + 1} used` : `Strike ${i + 1} remaining`}
+          style={{...styles.strike, ...(i < strikes ? styles.used : styles.unused)}}
+          aria-label={i < strikes ? `Strike ${i + 1} used` : `Strike ${i + 1} remaining`}
         >
           {i < strikes ? '\u2715' : '\u25CB'}
-        </Text>
+        </span>
       ))}
-    </View>
+    </div>
   );
 }
 
-const styles = StyleSheet.create({
+const styles: Record<string, React.CSSProperties> = {
   container: {
     position: 'absolute',
     top: 16,
     left: 16,
+    display: 'flex',
     flexDirection: 'row',
     gap: 8,
     zIndex: 80,
   },
   strike: {
     fontSize: 24,
-    fontWeight: '900',
-    fontFamily: 'Bangers',
+    fontWeight: 900,
   },
   used: {
     color: '#FF1744',
-    textShadowColor: 'rgba(255, 23, 68, 0.6)',
-    textShadowOffset: {width: 0, height: 0},
-    textShadowRadius: 8,
   },
   unused: {
     color: '#555',
   },
-});
+};

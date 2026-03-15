@@ -1,0 +1,234 @@
+{
+  "ingredients": [
+    {
+      "id": "banana",
+      "name": "Banana",
+      "path": "/models/ingredients/banana.glb",
+      "scale": 1.5,
+      "category": "food",
+      "tasteMod": 4,
+      "textureMod": 2,
+      "blowPower": 1,
+      "tags": ["sweet", "smooth"]
+    },
+    {
+      "id": "burger",
+      "name": "Burger",
+      "path": "/models/ingredients/burger.glb",
+      "scale": 1.2,
+      "category": "food",
+      "tasteMod": 5,
+      "textureMod": 3,
+      "blowPower": 2,
+      "tags": ["savory", "meat", "fast-food"]
+    },
+    {
+      "id": "cake",
+      "name": "Cake",
+      "path": "/models/ingredients/cake.glb",
+      "scale": 1.0,
+      "category": "food",
+      "tasteMod": 5,
+      "textureMod": 1,
+      "blowPower": 1,
+      "tags": ["sweet", "comfort"]
+    },
+    {
+      "id": "fish",
+      "name": "Raw Fish",
+      "path": "/models/ingredients/fish.glb",
+      "scale": 1.8,
+      "category": "food",
+      "tasteMod": 3,
+      "textureMod": 4,
+      "blowPower": 2,
+      "tags": ["savory", "meat"]
+    },
+    {
+      "id": "pepper",
+      "name": "Hot Pepper",
+      "path": "/models/ingredients/pepper_red.glb",
+      "scale": 1.5,
+      "category": "food",
+      "tasteMod": 2,
+      "textureMod": 2,
+      "blowPower": 4,
+      "tags": ["spicy"]
+    },
+    {
+      "id": "pizza",
+      "name": "Pizza Slice",
+      "path": "/models/ingredients/pizza_slice.glb",
+      "scale": 1.5,
+      "category": "food",
+      "tasteMod": 4,
+      "textureMod": 3,
+      "blowPower": 2,
+      "tags": ["savory", "fast-food", "comfort"]
+    },
+    {
+      "id": "steak",
+      "name": "Raw Steak",
+      "path": "/models/ingredients/steak.glb",
+      "scale": 1.2,
+      "category": "food",
+      "tasteMod": 5,
+      "textureMod": 4,
+      "blowPower": 1,
+      "tags": ["savory", "meat", "fancy"]
+    },
+    {
+      "id": "bacon",
+      "name": "Bacon",
+      "path": "/models/ingredients/bacon.glb",
+      "scale": 2.0,
+      "category": "food",
+      "tasteMod": 5,
+      "textureMod": 3,
+      "blowPower": 2,
+      "tags": ["savory", "meat", "comfort"]
+    },
+    {
+      "id": "ketchup",
+      "name": "Ketchup",
+      "path": "/models/ingredients/bottle-ketchup.glb",
+      "scale": 1.5,
+      "category": "food",
+      "tasteMod": 3,
+      "textureMod": 1,
+      "blowPower": 3,
+      "tags": ["sweet", "smooth"]
+    },
+    {
+      "id": "bread",
+      "name": "Bread",
+      "path": "/models/ingredients/bread.glb",
+      "scale": 1.5,
+      "category": "food",
+      "tasteMod": 2,
+      "textureMod": 2,
+      "blowPower": 1,
+      "tags": ["savory", "comfort"]
+    },
+    {
+      "id": "apple",
+      "name": "Apple",
+      "path": "/models/ingredients/apple.glb",
+      "scale": 1.5,
+      "category": "food",
+      "tasteMod": 3,
+      "textureMod": 3,
+      "blowPower": 1,
+      "tags": ["sweet", "chunky"]
+    },
+    {
+      "id": "worm",
+      "name": "Giant Worm",
+      "path": "/models/ingredients/worm.glb",
+      "scale": 2.0,
+      "category": "weird",
+      "tasteMod": 0,
+      "textureMod": 5,
+      "blowPower": 3,
+      "tags": ["meat", "absurd", "chunky"]
+    },
+    {
+      "id": "arcade",
+      "name": "Mini Arcade",
+      "path": "/models/ingredients/arcade-machine.glb",
+      "scale": 0.2,
+      "category": "weird",
+      "tasteMod": 0,
+      "textureMod": 5,
+      "blowPower": 5,
+      "tags": ["absurd", "chunky"]
+    },
+    {
+      "id": "register",
+      "name": "Cash Register",
+      "path": "/models/ingredients/cash-register.glb",
+      "scale": 0.4,
+      "category": "weird",
+      "tasteMod": 0,
+      "textureMod": 5,
+      "blowPower": 5,
+      "tags": ["absurd", "chunky"]
+    },
+    {
+      "id": "vending",
+      "name": "Vending Machine",
+      "path": "/models/ingredients/vending-machine.glb",
+      "scale": 0.2,
+      "category": "weird",
+      "tasteMod": 2,
+      "textureMod": 5,
+      "blowPower": 4,
+      "tags": ["absurd", "sweet", "chunky"]
+    },
+    {
+      "id": "bottle",
+      "name": "Glass Bottle",
+      "path": "/models/ingredients/bottle-large.glb",
+      "scale": 1.0,
+      "category": "weird",
+      "tasteMod": 0,
+      "textureMod": 5,
+      "blowPower": 4,
+      "tags": ["absurd", "chunky"]
+    },
+    {
+      "id": "radio",
+      "name": "Old Radio",
+      "path": "/models/misc.glb",
+      "node": "Radio",
+      "scale": 1.0,
+      "category": "trash",
+      "tasteMod": 0,
+      "textureMod": 5,
+      "blowPower": 4,
+      "tags": ["absurd", "chunky"]
+    },
+    {
+      "id": "meds",
+      "name": "Mystery Pills",
+      "path": "/models/misc.glb",
+      "node": "Meds",
+      "scale": 1.5,
+      "category": "trash",
+      "tasteMod": -1,
+      "textureMod": 2,
+      "blowPower": 3,
+      "tags": ["absurd"]
+    },
+    {
+      "id": "tape",
+      "name": "Duct Tape",
+      "path": "/models/misc.glb",
+      "node": "Tape",
+      "scale": 1.5,
+      "category": "trash",
+      "tasteMod": 0,
+      "textureMod": 4,
+      "blowPower": 2,
+      "tags": ["absurd", "chunky"]
+    },
+    {
+      "id": "ps1",
+      "name": "Retro Console",
+      "path": "/models/misc.glb",
+      "node": "PS1",
+      "scale": 0.5,
+      "category": "trash",
+      "tasteMod": 0,
+      "textureMod": 5,
+      "blowPower": 5,
+      "tags": ["absurd", "chunky"]
+    }
+  ],
+  "tagDerivation": {
+    "fancyThreshold": 4,
+    "chunkyThreshold": 3,
+    "smoothThreshold": 1,
+    "savoryFoodThreshold": 3
+  }
+}
