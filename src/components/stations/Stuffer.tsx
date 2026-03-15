@@ -8,7 +8,7 @@ import {useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
 
 class SquigglyCurve extends THREE.Curve<THREE.Vector3> {
-  getPoint(t: number, target = new THREE.Vector3()) {
+  override getPoint(t: number, target = new THREE.Vector3()) {
     return target.set(
       Math.sin(t * 20) * 0.15,
       0.05 + Math.abs(Math.cos(t * 15)) * 0.05,
@@ -82,6 +82,7 @@ export function Stuffer() {
   }, []);
 
   const squigglyGeo = useMemo(
+    // @ts-expect-error Three.js Curve constructor is protected but subclass instantiation is valid
     () => new THREE.TubeGeometry(new SquigglyCurve(), 64, 0.04, 8, false),
     [],
   );

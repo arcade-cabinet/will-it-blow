@@ -143,12 +143,18 @@ export function BlowoutStation() {
     }
   });
 
+  const setAppPhase = useGameStore(state => state.setAppPhase);
+
   const handleRestart = () => {
     if (gamePhase === 'DONE') {
       if (finalScore && finalScore.totalScore < 50) {
-        // Permadeath or failure triggers full reset
-        window.location.reload();
-      } else if (currentRound < totalRounds) {
+        // Failure — go to results screen
+        setAppPhase('results');
+      } else if (currentRound >= totalRounds) {
+        // All rounds complete — go to results screen
+        setAppPhase('results');
+      } else {
+        // Next round
         const ctx = canvasRef.current.getContext('2d');
         if (ctx) drawCerealBox(ctx, true);
         setHasBlown(false);

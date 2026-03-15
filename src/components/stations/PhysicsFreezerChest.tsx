@@ -4,38 +4,7 @@ import {useDrag} from '@use-gesture/react';
 import {useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
 import {useGameStore} from '../../ecs/hooks';
-
-// An array of available GLB models to act as ingredients in the freezer.
-// We mix normal food with strange objects for the "Will It Blow?" aspect.
-const INGREDIENT_MODELS = [
-  // Normal Food (Playwright cache)
-  {path: '/models/ingredients/banana.glb', scale: 1.5, type: 'food'},
-  {path: '/models/ingredients/burger.glb', scale: 1.2, type: 'food'},
-  {path: '/models/ingredients/cake.glb', scale: 1.0, type: 'food'},
-  {path: '/models/ingredients/fish.glb', scale: 1.8, type: 'food'},
-  {path: '/models/ingredients/pepper_red.glb', scale: 1.5, type: 'food'},
-  {path: '/models/ingredients/pizza_slice.glb', scale: 1.5, type: 'food'},
-  {path: '/models/ingredients/steak.glb', scale: 1.2, type: 'food'},
-
-  // Normal Food (3DLowPoly extracts)
-  {path: '/models/ingredients/bacon.glb', scale: 2.0, type: 'food'},
-  {path: '/models/ingredients/bottle-ketchup.glb', scale: 1.5, type: 'food'},
-  {path: '/models/ingredients/bread.glb', scale: 1.5, type: 'food'},
-  {path: '/models/ingredients/apple.glb', scale: 1.5, type: 'food'},
-
-  // The "Weird" Stuff
-  {path: '/models/ingredients/worm.glb', scale: 2.0, type: 'weird'},
-  {path: '/models/ingredients/arcade-machine.glb', scale: 0.2, type: 'weird'}, // Miniaturized!
-  {path: '/models/ingredients/cash-register.glb', scale: 0.4, type: 'weird'},
-  {path: '/models/ingredients/vending-machine.glb', scale: 0.2, type: 'weird'},
-  {path: '/models/ingredients/bottle-large.glb', scale: 1.0, type: 'weird'},
-
-  // Trash & Horror (misc.glb nodes)
-  {path: '/models/misc.glb', node: 'Radio', scale: 1.0, type: 'trash'},
-  {path: '/models/misc.glb', node: 'Meds', scale: 1.5, type: 'trash'},
-  {path: '/models/misc.glb', node: 'Tape', scale: 1.5, type: 'trash'},
-  {path: '/models/misc.glb', node: 'PS1', scale: 0.5, type: 'trash'},
-];
+import {INGREDIENT_MODELS as INGREDIENT_DEFS} from '../../engine/Ingredients';
 
 export function PhysicsFreezerChest() {
   const {scene: fridgeScene} = useGLTF('/models/fridge.glb') as any;
@@ -57,14 +26,19 @@ export function PhysicsFreezerChest() {
   );
 
   // Pre-generate a list of ingredients to spawn inside the freezer bounds
+  // Uses the data-driven INGREDIENT_DEFS so each item has a proper string ID
+  // that maps to the scoring system in DemandScoring.ts
   const spawnedIngredients = useMemo(() => {
     const list = [];
     // Spawn 25 random items for a totally packed toy chest
     for (let i = 0; i < 25; i++) {
-      const def = INGREDIENT_MODELS[Math.floor(Math.random() * INGREDIENT_MODELS.length)];
+      const def = INGREDIENT_DEFS[Math.floor(Math.random() * INGREDIENT_DEFS.length)];
       list.push({
-        id: i,
-        ...def,
+        spawnIndex: i,
+        ingredientId: def.id, // string ID like 'banana', 'burger', etc.
+        path: def.path,
+        node: def.node,
+        scale: def.scale,
         // Random position inside the bounds of the freezer tub
         pos: [
           (Math.random() - 0.5) * 1.5, // X width
@@ -88,7 +62,12 @@ export function PhysicsFreezerChest() {
 
       {/* Physics "Toy Chest" Ingredients */}
       {spawnedIngredients.map(item => (
-        <FreezerIngredient key={item.id} def={item} miscNodes={misc.nodes} frostMat={frostMat} />
+        <FreezerIngredient
+          key={item.spawnIndex}
+          def={item}
+          miscNodes={misc.nodes}
+          frostMat={frostMat}
+        />
       ))}
 
       {/* Frost/Cold Air overlay plane just above the contents */}
@@ -119,7 +98,7 @@ function FreezerIngredient({def, miscNodes, frostMat: _frostMat}: any) {
       // Stagger positions slightly so they don't overlap exactly
       const count = selectedIngredientIds.length;
       ref.current.setTranslation({x: -1.5 + count * 0.2, y: 2.0, z: -2.5}, true);
-      addSelectedIngredientId(def.id);
+      addSelectedIngredientId(def.ingredientId); // Use string ID for scoring
     }
 
     // When released, if we were in the selection phase and we have 3, progress
@@ -167,6 +146,6 @@ function FreezerIngredient({def, miscNodes, frostMat: _frostMat}: any) {
 }
 
 // Preload all possible ingredients
-for (const m of INGREDIENT_MODELS) {
+for (const m of INGREDIENT_DEFS) {
   useGLTF.preload(m.path);
 }
