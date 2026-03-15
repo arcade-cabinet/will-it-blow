@@ -65,14 +65,14 @@ export function BasementRoom() {
 
       {/* Ceiling — thin box slab so the underside has proper normals and lighting */}
       <RigidBody type="fixed">
-        <mesh position={[0, 3.05, 0]}>
-          <boxGeometry args={[7, 0.1, 9]} />
+        <mesh position={[0, 5, 0]}>
+          <boxGeometry args={[20, 4, 20]} />
           <meshStandardMaterial
             map={ceilingColor}
             normalMap={ceilingNormal}
             roughnessMap={ceilingRoughness}
-            emissive="#1a1a1a"
-            emissiveIntensity={0.5}
+            emissive="#666666"
+            emissiveIntensity={1.0}
           />
         </mesh>
       </RigidBody>
