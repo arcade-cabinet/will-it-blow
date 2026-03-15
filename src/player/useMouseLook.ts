@@ -64,8 +64,9 @@ export function setPitch(v: number): void {
 export function useMouseLook(): void {
   const {camera, gl} = useThree();
   const yawRef = useRef(0);
-  /** Start nearly level (-0.05 rad ≈ 3°) for a natural FPS horizon view. */
-  const pitchRef = useRef(-0.05);
+  /** Start looking UP at the ceiling (intro begins prone on mattress).
+   *  IntroSequence sets this to -0.05 when the intro completes. */
+  const pitchRef = useRef(Math.PI / 2 - 0.1);
 
   useEffect(() => {
     const canvas = gl.domElement;
