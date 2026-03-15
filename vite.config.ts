@@ -4,10 +4,17 @@ import {defineConfig} from 'vite';
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  server: {port: 3000, open: true},
-  build: {outDir: 'dist', sourcemap: true},
-  assetsInclude: ['**/*.glb', '**/*.gltf', '**/*.wasm'],
+  server: {
+    port: 3000,
+    open: true,
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: true,
+    target: 'esnext',
+  },
+  assetsInclude: ['**/*.glb', '**/*.gltf'],
   optimizeDeps: {
-    exclude: ['@dimforge/rapier3d-compat'],
+    exclude: ['@react-three/rapier'],
   },
 });
