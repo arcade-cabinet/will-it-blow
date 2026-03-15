@@ -63,7 +63,6 @@ export function setPitch(v: number): void {
  */
 export function useMouseLook(): void {
   const {camera, gl} = useThree();
-  const introActive = useGameStore(s => s.introActive);
   const yawRef = useRef(0);
   /** Start nearly level (-0.05 rad ≈ 3°) for a natural FPS horizon view. */
   const pitchRef = useRef(-0.05);
@@ -91,8 +90,9 @@ export function useMouseLook(): void {
   }, [gl]);
 
   useFrame(() => {
-    // During intro, IntroSequence controls the camera directly — don't override
-    if (introActive) {
+    // During intro, IntroSequence controls the camera directly — don't override.
+    // Read directly from store (not React state) to avoid stale closure.
+    if (useGameStore.getState().introActive) {
       // Still consume pending values so they're applied when intro ends
       if (_pendingYaw !== null) { yawRef.current = _pendingYaw; _pendingYaw = null; }
       if (_pendingPitch !== null) { pitchRef.current = _pendingPitch; _pendingPitch = null; }
