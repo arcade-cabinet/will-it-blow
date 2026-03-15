@@ -87,7 +87,9 @@ async function initDb(): Promise<DbInstance> {
   const initSqlJs = (await import('sql.js')).default;
   const base = import.meta.env.BASE_URL; // '/' locally, '/will-it-blow/' on Pages
   const SQL = await initSqlJs({
-    locateFile: (file: string) => `${base}${file}`,
+    // sql.js requests sql-wasm-browser.wasm by default, but we override
+    // to use sql-wasm.wasm which is more reliably served (no LFS issues)
+    locateFile: () => `${base}sql-wasm.wasm`,
   });
   const sqlJsDb = new SQL.Database();
   sqlJsDb.run(MIGRATION_SQL);
