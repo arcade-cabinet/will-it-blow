@@ -1,62 +1,88 @@
-import {defineConfig, devices} from '@playwright/test';
+/**
+ * Playwright E2E Configuration for Will It Blow?
+ *
+ * Projects:
+ * - desktop: Desktop Chrome with GPU-accelerated WebGL (1280x720)
+ * - mobile: Mobile Chrome with touch (390x844, iPhone-like)
+ */
 
-// Extract viewport/touch/UA from device profiles without their browserName
-// (we force Chrome channel for WebGL support across all profiles)
-function chromeDevice(deviceName: string) {
-  const {browserName: _, defaultBrowserType: __, ...rest} = devices[deviceName] as any;
-  return {channel: 'chrome' as const, ...rest};
-}
+import type {PlaywrightTestConfig} from '@playwright/test';
 
-export default defineConfig({
+const isCI = !!process.env.CI;
+
+/** GPU-accelerated WebGL args for headless Chrome */
+const GPU_ARGS = [
+  '--no-sandbox',
+  '--use-angle=gl',
+  '--enable-webgl',
+  '--ignore-gpu-blocklist',
+  '--mute-audio',
+  '--disable-background-timer-throttling',
+  '--disable-backgrounding-occluded-windows',
+  '--disable-renderer-backgrounding',
+  '--window-position=9999,9999',
+];
+
+const config: PlaywrightTestConfig = {
   testDir: './e2e',
-  fullyParallel: false,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
-  workers: 1,
-  reporter: 'html',
-  timeout: 120_000,
+  fullyParallel: true,
+  forbidOnly: isCI,
+  retries: isCI ? 2 : 0,
+  workers: isCI ? 2 : undefined,
+  timeout: 60_000,
+
+  reporter: [['html', {open: isCI ? 'never' : 'on-failure'}], ['list']],
+
+  expect: {
+    timeout: 15_000,
+  },
 
   use: {
-    baseURL: 'http://localhost:8082',
-    screenshot: 'off',
-    trace: 'on-first-retry',
-    headless: false,
+    baseURL: process.env.BASE_URL || 'http://localhost:3000',
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
+    trace: isCI ? 'on-first-retry' : 'on',
+    viewport: {width: 1280, height: 720},
+    actionTimeout: 10_000,
+    navigationTimeout: 30_000,
   },
 
   projects: [
-    // Desktop — default
     {
-      name: 'chrome',
+      name: 'desktop',
       use: {
-        channel: 'chrome',
+        browserName: 'chromium',
+        headless: true,
         viewport: {width: 1280, height: 720},
+        launchOptions: {
+          slowMo: isCI ? 0 : 50,
+          args: GPU_ARGS,
+        },
       },
     },
-
-    // ── Mobile viewport profiles (touch-enabled, Chrome for WebGL) ──
-
-    {name: 'iphone-14', use: chromeDevice('iPhone 14')},
-    {name: 'iphone-se', use: chromeDevice('iPhone SE')},
-    {name: 'pixel-7', use: chromeDevice('Pixel 7')},
-    {name: 'ipad-mini', use: chromeDevice('iPad Mini')},
     {
-      name: 'galaxy-fold',
+      name: 'mobile',
       use: {
-        channel: 'chrome',
-        viewport: {width: 280, height: 653},
-        deviceScaleFactor: 3,
+        browserName: 'chromium',
+        headless: true,
+        viewport: {width: 390, height: 844},
         isMobile: true,
         hasTouch: true,
-        userAgent:
-          'Mozilla/5.0 (Linux; Android 13; SM-F926B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+        launchOptions: {
+          args: GPU_ARGS,
+        },
       },
     },
   ],
 
-  webServer: {
-    command: 'npx expo start --web --port 8082',
-    port: 8082,
-    timeout: 120_000,
-    reuseExistingServer: true,
-  },
-});
+  webServer: process.env.BASE_URL
+    ? undefined
+    : {
+        command: 'pnpm dev',
+        port: 3000,
+        reuseExistingServer: !isCI,
+        timeout: 30_000,
+      },
+};
+
+export default config;
