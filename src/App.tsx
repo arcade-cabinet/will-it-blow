@@ -11,6 +11,7 @@ import {Suspense} from 'react';
 import * as THREE from 'three';
 import {IntroSequence} from './components/camera/IntroSequence';
 import {PlayerHands} from './components/camera/PlayerHands';
+import {TieGesture} from './components/challenges/TieGesture';
 import {MrSausage3D} from './components/characters/MrSausage3D';
 import {SwipeFPSControls} from './components/controls/SwipeFPSControls';
 import {BasementRoom} from './components/environment/BasementRoom';
@@ -30,6 +31,8 @@ import {Sink} from './components/stations/Sink';
 import {Stove} from './components/stations/Stove';
 import {Stuffer} from './components/stations/Stuffer';
 import {TV} from './components/stations/TV';
+import {GameOverScreen} from './components/ui/GameOverScreen';
+import {TitleScreen} from './components/ui/TitleScreen';
 import {usePersistence} from './db/usePersistence';
 import {useGameStore} from './ecs/hooks';
 import {GameOrchestrator} from './engine/GameOrchestrator';
@@ -62,44 +65,6 @@ console.error = (...args: unknown[]) => {
   origError(...args);
 };
 // -----------------------------------------------------------------------
-
-/** Temporary title screen — plain HTML until UI components are polished. */
-function TempTitleScreen() {
-  const setAppPhase = useGameStore(s => s.setAppPhase);
-  return (
-    <div
-      style={{
-        width: '100vw',
-        height: '100vh',
-        background: '#0a0a0a',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <h1 style={{color: '#FF1744', fontSize: 48, fontWeight: 900, margin: 0}}>WILL IT BLOW?</h1>
-      <p style={{color: '#D2A24C', marginTop: 16, fontSize: 18}}>Fine Meats &amp; Sausages</p>
-      <button
-        type="button"
-        onClick={() => setAppPhase('playing')}
-        style={{
-          marginTop: 32,
-          padding: '16px 32px',
-          background: '#D2A24C',
-          border: '4px solid #8B4513',
-          borderRadius: 8,
-          fontSize: 24,
-          fontWeight: 900,
-          color: '#1a0a00',
-          cursor: 'pointer',
-        }}
-      >
-        START COOKING
-      </button>
-    </div>
-  );
-}
 
 /** 3D scene content: physics world, stations, props, camera, and controls. */
 function GameContent() {
@@ -157,13 +122,35 @@ function GameContent() {
   );
 }
 
+/** Wrapper that reads score state from ECS and passes props to GameOverScreen. */
+function GameOverScreenWrapper() {
+  const finalScore = useGameStore(s => s.finalScore);
+  const startNewGame = useGameStore(s => s.startNewGame);
+  const returnToMenu = useGameStore(s => s.returnToMenu);
+
+  const totalScore = finalScore?.totalScore ?? 0;
+  const rank = totalScore >= 92 ? 'S' : totalScore >= 75 ? 'A' : totalScore >= 50 ? 'B' : 'F';
+
+  return (
+    <GameOverScreen
+      rank={rank}
+      totalScore={totalScore}
+      breakdown={[{label: 'Final Score', score: totalScore}]}
+      demandBonus={0}
+      onPlayAgain={() => startNewGame()}
+      onMenu={() => returnToMenu()}
+    />
+  );
+}
+
 export function App() {
   const appPhase = useGameStore(state => state.appPhase);
+  const gamePhase = useGameStore(state => state.gamePhase);
   usePersistence();
 
   return (
     <div style={{width: '100vw', height: '100vh', background: '#000'}}>
-      {appPhase === 'title' && <TempTitleScreen />}
+      {appPhase === 'title' && <TitleScreen />}
 
       {appPhase === 'playing' && (
         <>
@@ -194,10 +181,17 @@ export function App() {
           {/* Invisible touch overlay for mobile FPS controls */}
           <SwipeFPSControls />
 
+          {/* Tie Gesture overlay — only shown during TIE_CASING phase */}
+          {gamePhase === 'TIE_CASING' && (
+            <TieGesture onComplete={() => useGameStore.getState().setGamePhase('BLOWOUT')} />
+          )}
+
           {/* GameOrchestrator — non-visual state machine, outside Canvas */}
           <GameOrchestrator />
         </>
       )}
+
+      {appPhase === 'results' && <GameOverScreenWrapper />}
     </div>
   );
 }

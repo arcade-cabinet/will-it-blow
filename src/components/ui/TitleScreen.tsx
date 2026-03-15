@@ -4,8 +4,8 @@ import {DIFFICULTY_TIERS} from '../../engine/DifficultyConfig';
 import {DifficultySelector} from './DifficultySelector';
 
 export function TitleScreen() {
-  const setAppPhase = useGameStore(s => s.setAppPhase);
   const setDifficulty = useGameStore(s => s.setDifficulty);
+  const startNewGame = useGameStore(s => s.startNewGame);
   const [showDifficulty, setShowDifficulty] = useState(false);
 
   const handleStart = () => {
@@ -18,7 +18,7 @@ export function TitleScreen() {
       tierId,
       tier.id === 'rare' || tier.id === 'medium-rare' ? 3 : tier.id === 'well-done' ? 10 : 5,
     );
-    setAppPhase('playing');
+    startNewGame(); // Sets appPhase='playing', posture='standing', introActive=false
   };
 
   if (showDifficulty) {
