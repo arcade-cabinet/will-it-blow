@@ -142,7 +142,7 @@ function SurrealMessage({
   onDead,
   isDismissing,
   surface,
-  fontSize = 0.3,
+  fontSize = 0.4,
   maxWidth = 5.0,
 }: {
   text: string;
@@ -154,6 +154,7 @@ function SurrealMessage({
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const materialRef = useRef<THREE.MeshStandardMaterial>(null);
+  const bgRef = useRef<THREE.MeshBasicMaterial>(null);
 
   const state = useRef({
     opacity: 0,
@@ -168,17 +169,26 @@ function SurrealMessage({
       s.opacity -= delta * 1.2;
       if (s.opacity <= 0) onDead();
     } else {
-      s.opacity = Math.min(0.85, s.opacity + delta * 1.5);
+      s.opacity = Math.min(0.95, s.opacity + delta * 1.5);
     }
 
     if (materialRef.current) {
       materialRef.current.color.setRGB(0.54 * pulse, 0.01 * pulse, 0.01 * pulse);
       materialRef.current.opacity = Math.max(0, s.opacity);
     }
+
+    if (bgRef.current) {
+      bgRef.current.opacity = Math.max(0, s.opacity * 0.5);
+    }
   });
 
   return (
     <group ref={groupRef} position={surface.position} rotation={surface.rotation}>
+      {/* Semi-transparent dark background plane for contrast */}
+      <mesh position={[0, 0, -0.01]}>
+        <planeGeometry args={[maxWidth + 0.4, fontSize * 4 + 0.3]} />
+        <meshBasicMaterial ref={bgRef} color="#000000" transparent opacity={0} depthWrite={false} />
+      </mesh>
       <Text
         fontSize={fontSize}
         maxWidth={maxWidth}
@@ -187,6 +197,9 @@ function SurrealMessage({
         anchorX="center"
         anchorY="middle"
         textAlign="center"
+        color="#FF1744"
+        outlineColor="#000000"
+        outlineWidth={0.02}
         characters="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?',.:%/ "
       >
         {text}
@@ -339,8 +352,8 @@ export function SurrealText() {
             text: demandContent,
             active: true,
             surface: CEILING_SURFACE,
-            fontSize: 0.18,
-            maxWidth: 4.0,
+            fontSize: 0.25,
+            maxWidth: 4.5,
           },
         ];
       });
@@ -373,7 +386,7 @@ export function SurrealText() {
             text: tauntContent,
             active: true,
             surface: TV_WALL_SURFACE,
-            fontSize: 0.15,
+            fontSize: 0.2,
             maxWidth: 2.5,
           },
         ];

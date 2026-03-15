@@ -15,6 +15,22 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: true,
     target: 'esnext',
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/three/')) return 'three';
+          if (
+            id.includes('@react-three/fiber') ||
+            id.includes('@react-three/drei') ||
+            id.includes('@react-three/postprocessing') ||
+            id.includes('@react-three/rapier') ||
+            id.includes('@dimforge/rapier3d-compat')
+          )
+            return 'r3f';
+          if (id.includes('node_modules/tone/')) return 'tone';
+        },
+      },
+    },
   },
   assetsInclude: ['**/*.glb', '**/*.gltf'],
   optimizeDeps: {
