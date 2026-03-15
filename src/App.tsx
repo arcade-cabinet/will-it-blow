@@ -207,7 +207,7 @@ export function App() {
             <color attach="background" args={['#000000']} />
             <fogExp2 attach="fog" args={['#1a1a1a', 0.04]} />
 
-            <ambientLight intensity={0.4} />
+            <ambientLight intensity={0.6} />
             <directionalLight
               position={[0, 2.5, 0]}
               intensity={1.0}
@@ -216,7 +216,10 @@ export function App() {
               shadow-mapSize-height={2048}
               shadow-bias={-0.001}
             />
+            {/* Main warm ceiling light */}
             <pointLight position={[0, 2.0, 0]} intensity={50} distance={10} color="#ffeedd" />
+            {/* Upward bounce light to illuminate ceiling — prevents black void */}
+            <pointLight position={[0, 0.5, 0]} intensity={30} distance={8} color="#ffeedd" />
 
             <Suspense fallback={null}>
               <GameContent />
