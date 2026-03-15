@@ -69,20 +69,20 @@ describe('GameOverScreen', () => {
     expect(source).toContain('#FFD700');
   });
 
-  it('uses silver color for A rank', () => {
+  it('uses green color for A rank', () => {
     const source = require('node:fs').readFileSync(
       require('node:path').resolve(__dirname, '../GameOverScreen.tsx'),
       'utf8',
     );
-    expect(source).toContain('#C0C0C0');
+    expect(source).toContain('text-green-400');
   });
 
-  it('uses bronze color for B rank', () => {
+  it('uses yellow color for B rank', () => {
     const source = require('node:fs').readFileSync(
       require('node:path').resolve(__dirname, '../GameOverScreen.tsx'),
       'utf8',
     );
-    expect(source).toContain('#CD7F32');
+    expect(source).toContain('text-yellow-400');
   });
 
   it('uses blood red color for F rank', () => {
