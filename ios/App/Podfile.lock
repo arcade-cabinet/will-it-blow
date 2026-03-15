@@ -1,0 +1,61 @@
+PODS:
+  - Capacitor (6.2.1):
+    - CapacitorCordova
+  - CapacitorCommunityKeepAwake (6.0.0):
+    - Capacitor
+  - CapacitorCommunitySqlite (6.0.2):
+    - Capacitor
+    - SQLCipher
+    - ZIPFoundation
+  - CapacitorCordova (6.2.1)
+  - CapacitorHaptics (6.0.3):
+    - Capacitor
+  - CapacitorScreenOrientation (6.0.4):
+    - Capacitor
+  - SQLCipher (4.10.0):
+    - SQLCipher/standard (= 4.10.0)
+  - SQLCipher/common (4.10.0)
+  - SQLCipher/standard (4.10.0):
+    - SQLCipher/common
+  - ZIPFoundation (0.9.20)
+
+DEPENDENCIES:
+  - "Capacitor (from `../../node_modules/.pnpm/@capacitor+ios@6.2.1_@capacitor+core@6.2.1/node_modules/@capacitor/ios`)"
+  - "CapacitorCommunityKeepAwake (from `../../node_modules/.pnpm/@capacitor-community+keep-awake@6.0.0_@capacitor+core@6.2.1/node_modules/@capacitor-community/keep-awake`)"
+  - "CapacitorCommunitySqlite (from `../../node_modules/.pnpm/@capacitor-community+sqlite@6.0.2_@capacitor+core@6.2.1/node_modules/@capacitor-community/sqlite`)"
+  - "CapacitorCordova (from `../../node_modules/.pnpm/@capacitor+ios@6.2.1_@capacitor+core@6.2.1/node_modules/@capacitor/ios`)"
+  - "CapacitorHaptics (from `../../node_modules/.pnpm/@capacitor+haptics@6.0.3_@capacitor+core@6.2.1/node_modules/@capacitor/haptics`)"
+  - "CapacitorScreenOrientation (from `../../node_modules/.pnpm/@capacitor+screen-orientation@6.0.4_@capacitor+core@6.2.1/node_modules/@capacitor/screen-orientation`)"
+
+SPEC REPOS:
+  trunk:
+    - SQLCipher
+    - ZIPFoundation
+
+EXTERNAL SOURCES:
+  Capacitor:
+    :path: "../../node_modules/.pnpm/@capacitor+ios@6.2.1_@capacitor+core@6.2.1/node_modules/@capacitor/ios"
+  CapacitorCommunityKeepAwake:
+    :path: "../../node_modules/.pnpm/@capacitor-community+keep-awake@6.0.0_@capacitor+core@6.2.1/node_modules/@capacitor-community/keep-awake"
+  CapacitorCommunitySqlite:
+    :path: "../../node_modules/.pnpm/@capacitor-community+sqlite@6.0.2_@capacitor+core@6.2.1/node_modules/@capacitor-community/sqlite"
+  CapacitorCordova:
+    :path: "../../node_modules/.pnpm/@capacitor+ios@6.2.1_@capacitor+core@6.2.1/node_modules/@capacitor/ios"
+  CapacitorHaptics:
+    :path: "../../node_modules/.pnpm/@capacitor+haptics@6.0.3_@capacitor+core@6.2.1/node_modules/@capacitor/haptics"
+  CapacitorScreenOrientation:
+    :path: "../../node_modules/.pnpm/@capacitor+screen-orientation@6.0.4_@capacitor+core@6.2.1/node_modules/@capacitor/screen-orientation"
+
+SPEC CHECKSUMS:
+  Capacitor: c95400d761e376be9da6be5a05f226c0e865cebf
+  CapacitorCommunityKeepAwake: 31119384836fb7d4c0f7323df974891d399b03e2
+  CapacitorCommunitySqlite: 0299d20f4b00c2e6aa485a1d8932656753937b9b
+  CapacitorCordova: 8d93e14982f440181be7304aa9559ca631d77fff
+  CapacitorHaptics: 40f83026feeee9cfe36e89e9c98a3baaaf20c450
+  CapacitorScreenOrientation: 9ac79362f7389af6fa70a76fdad84c4b1d8324e7
+  SQLCipher: eb79c64049cb002b4e9fcb30edb7979bf4706dfc
+  ZIPFoundation: dfd3d681c4053ff7e2f7350bc4e53b5dba3f5351
+
+PODFILE CHECKSUM: cbfd1262bcc82030791bfb01be628ab3e7537771
+
+COCOAPODS: 1.16.2
