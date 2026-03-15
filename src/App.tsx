@@ -204,8 +204,8 @@ export function App() {
             gl={{toneMappingExposure: 1.0}}
             style={{position: 'absolute', top: 0, left: 0, width: '100%', height: '100%'}}
           >
-            <color attach="background" args={['#000000']} />
-            <fogExp2 attach="fog" args={['#1a1a1a', 0.04]} />
+            <color attach="background" args={['#1a1a1a']} />
+            <fogExp2 attach="fog" args={['#2a2a2a', 0.015]} />
 
             <ambientLight intensity={0.6} />
             <directionalLight

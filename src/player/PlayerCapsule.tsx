@@ -45,6 +45,8 @@ export const PlayerCapsule = ({moveDirection = {x: 0, z: 0}}: PlayerCapsuleProps
     if (!body) return;
     const t = body.translation();
     setPlayerPosition(t.x, t.y, t.z);
+    // Also write to window for FPSCamera (original POC pattern)
+    (window as any).__playerPos = {x: t.x, y: t.y, z: t.z};
   });
 
   return (
