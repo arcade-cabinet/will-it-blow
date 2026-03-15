@@ -1,4 +1,4 @@
-import {test, expect} from '@playwright/test';
+import {expect, test} from '@playwright/test';
 
 test.describe('Game Flow', () => {
   test('title screen renders with butcher shop sign', async ({page}) => {
