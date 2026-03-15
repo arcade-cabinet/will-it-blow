@@ -41,10 +41,11 @@ export function PhysicsFreezerChest() {
         node: def.node,
         scale: def.scale,
         // Random position inside the bounds of the freezer tub
+        // Spawn higher (0.6-1.4) so items settle into the tub via gravity
         pos: [
-          (Math.random() - 0.5) * 1.5, // X width
-          Math.random() * 0.5 + 0.2, // Y height
-          (Math.random() - 0.5) * 1.0, // Z depth
+          (Math.random() - 0.5) * 1.2, // X width (narrower to stay inside)
+          Math.random() * 0.8 + 0.6, // Y height (above tub floor)
+          (Math.random() - 0.5) * 0.8, // Z depth (narrower to stay inside)
         ],
         rot: [Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI],
       });
@@ -70,6 +71,14 @@ export function PhysicsFreezerChest() {
           frostMat={frostMat}
         />
       ))}
+
+      {/* Invisible collision floor inside the freezer tub to prevent items falling through trimesh */}
+      <RigidBody type="fixed">
+        <mesh position={[0, 0.15, 0]} rotation={[-Math.PI / 2, 0, 0]} visible={false}>
+          <planeGeometry args={[1.8, 1.2]} />
+          <meshBasicMaterial transparent opacity={0} />
+        </mesh>
+      </RigidBody>
 
       {/* Frost/Cold Air overlay plane just above the contents */}
       <mesh position={[0, 1.2, 0]} rotation={[-Math.PI / 2, 0, 0]}>
