@@ -66,10 +66,14 @@ export function IntroSequence() {
     let eyelidOpenness = 0;
     let blurAmount = 0;
 
-    // During the entire intro, force camera to look up at the ceiling
-    // This overrides useMouseLook's pitchRef via the module-level setPitch
+    // During the entire intro, force camera to look UP at the ceiling.
+    // We set BOTH the pending pitch (for useMouseLook's ref) AND the camera
+    // rotation directly (to win regardless of useFrame execution order).
     if (t < 7.0) {
-      setPitch(Math.PI / 2 - 0.1);
+      const upPitch = Math.PI / 2 - 0.1;
+      setPitch(upPitch);
+      camera.rotation.order = 'YXZ';
+      camera.rotation.x = upPitch;
     }
 
     if (t < 2.0) {
