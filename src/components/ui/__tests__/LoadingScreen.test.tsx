@@ -1,30 +1,19 @@
-import {act, render} from '@testing-library/react';
+import {render} from '@testing-library/react';
 import {vi} from 'vitest';
-import {LoadingScreen} from '../LoadingScreen';
+import {LoadingScreen, LoadingScreenError} from '../LoadingScreen';
 
 describe('LoadingScreen', () => {
   it('renders without crashing', () => {
-    const {container} = render(<LoadingScreen progress={0} onReady={vi.fn()} />);
+    const {container} = render(<LoadingScreen />);
     expect(container.innerHTML).toBeTruthy();
   });
 
-  it('displays progress percentage', () => {
-    const {container} = render(<LoadingScreen progress={42} onReady={vi.fn()} />);
-    expect(container.textContent).toContain('42');
+  it('displays "PREPARING THE MEAT..." text', () => {
+    const {container} = render(<LoadingScreen />);
+    expect(container.textContent).toContain('PREPARING THE MEAT...');
   });
 
-  it('shows horror-themed narrative messages', () => {
-    const {container} = render(<LoadingScreen progress={20} onReady={vi.fn()} />);
-    const text = container.textContent!;
-    const hasNarrative =
-      text.includes('PREPARING THE KITCHEN') ||
-      text.includes('SHARPENING KNIVES') ||
-      text.includes('HEATING THE GRINDER') ||
-      text.includes('READY');
-    expect(hasNarrative).toBe(true);
-  });
-
-  it('has dark background', () => {
+  it('has dark background (#0a0a0a)', () => {
     const source = require('node:fs').readFileSync(
       require('node:path').resolve(__dirname, '../LoadingScreen.tsx'),
       'utf8',
@@ -32,7 +21,7 @@ describe('LoadingScreen', () => {
     expect(source).toContain('#0a0a0a');
   });
 
-  it('has blood-red progress fill', () => {
+  it('has blood-red color (#FF1744)', () => {
     const source = require('node:fs').readFileSync(
       require('node:path').resolve(__dirname, '../LoadingScreen.tsx'),
       'utf8',
@@ -40,51 +29,43 @@ describe('LoadingScreen', () => {
     expect(source).toContain('#FF1744');
   });
 
-  it('has role="progressbar"', () => {
+  it('renders sausage coil segments', () => {
+    const {container} = render(<LoadingScreen />);
+    // The coil is built from multiple div segments with border arcs
+    const allDivs = container.querySelectorAll('div');
+    // Should have many nested divs for the coil segments (8 segments + container + center nub + text + dots)
+    expect(allDivs.length).toBeGreaterThan(10);
+  });
+
+  it('includes spinning animation keyframes', () => {
     const source = require('node:fs').readFileSync(
       require('node:path').resolve(__dirname, '../LoadingScreen.tsx'),
       'utf8',
     );
-    expect(source).toContain('role="progressbar"');
+    expect(source).toContain('sausageCoilSpin');
   });
 
-  it('has aria-valuenow on progress', () => {
+  it('is a zero-props Suspense fallback component', () => {
     const source = require('node:fs').readFileSync(
       require('node:path').resolve(__dirname, '../LoadingScreen.tsx'),
       'utf8',
     );
-    expect(source).toContain('aria-valuenow=');
+    expect(source).toContain('export function LoadingScreen()');
+  });
+});
+
+describe('LoadingScreenError', () => {
+  it('renders error message and retry button', () => {
+    const onRetry = vi.fn();
+    const {container} = render(<LoadingScreenError message="Failed to load" onRetry={onRetry} />);
+    expect(container.textContent).toContain('Failed to load');
+    expect(container.textContent).toContain('RETRY');
   });
 
-  it('calls onReady after 500ms when progress reaches 100', () => {
-    vi.useFakeTimers();
-    const onReady = vi.fn();
-    render(<LoadingScreen progress={100} onReady={onReady} />);
-    expect(onReady).not.toHaveBeenCalled();
-    act(() => {
-      vi.advanceTimersByTime(500);
-    });
-    expect(onReady).toHaveBeenCalledTimes(1);
-    vi.useRealTimers();
-  });
-
-  it('does not call onReady when progress is below 100', () => {
-    vi.useFakeTimers();
-    const onReady = vi.fn();
-    render(<LoadingScreen progress={99} onReady={onReady} />);
-    act(() => {
-      vi.advanceTimersByTime(1000);
-    });
-    expect(onReady).not.toHaveBeenCalled();
-    vi.useRealTimers();
-  });
-
-  it('is a pure presentational component with props', () => {
-    const source = require('node:fs').readFileSync(
-      require('node:path').resolve(__dirname, '../LoadingScreen.tsx'),
-      'utf8',
-    );
-    expect(source).toContain('progress: number');
-    expect(source).toContain('onReady');
+  it('calls onRetry when button is clicked', () => {
+    const onRetry = vi.fn();
+    const {getByLabelText} = render(<LoadingScreenError message="Error" onRetry={onRetry} />);
+    getByLabelText('Retry loading assets').click();
+    expect(onRetry).toHaveBeenCalledTimes(1);
   });
 });
