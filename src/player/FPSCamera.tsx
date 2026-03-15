@@ -68,6 +68,7 @@ export const FPSCamera = () => {
       near={0.1}
       far={50}
       position={[0, POSTURE_HEIGHTS.prone, 0]}
+      rotation={[Math.PI / 2 - 0.1, 0, 0]}
     />
   );
 };
