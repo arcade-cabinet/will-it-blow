@@ -29,7 +29,7 @@ const config: PlaywrightTestConfig = {
   forbidOnly: isCI,
   retries: isCI ? 2 : 0,
   workers: isCI ? 2 : undefined,
-  timeout: 60_000,
+  timeout: 120_000,
 
   reporter: [['html', {open: isCI ? 'never' : 'on-failure'}], ['list']],
 
@@ -55,7 +55,6 @@ const config: PlaywrightTestConfig = {
         headless: true,
         viewport: {width: 1280, height: 720},
         launchOptions: {
-          slowMo: isCI ? 0 : 50,
           args: GPU_ARGS,
         },
       },

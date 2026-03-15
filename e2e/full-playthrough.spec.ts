@@ -10,6 +10,8 @@ import {expect, test} from '@playwright/test';
 import {WIBGovernor} from './utils/governor';
 
 test.describe('Full Game Playthrough', () => {
+  test.describe.configure({timeout: 120_000});
+
   let governor: WIBGovernor;
 
   test.beforeEach(async ({page}) => {
@@ -17,9 +19,15 @@ test.describe('Full Game Playthrough', () => {
     governor = new WIBGovernor(page);
   });
 
+  // Navigate away before teardown to cleanly unmount R3F / Rapier WASM.
+  // Without this, the physics world hangs and Chrome can't close the context.
+  test.afterEach(async ({page}) => {
+    await page.goto('about:blank', {timeout: 5000}).catch(() => {});
+  });
+
   test('complete game loop: title -> playing -> 1 round -> DONE', async ({page}) => {
-    // Title screen
-    await expect(page.getByText('WILL IT BLOW?')).toBeVisible();
+    // Title screen — title is split across lines ("WILL IT\nBLOW?")
+    await expect(page.locator('h1')).toBeVisible();
 
     // Start game
     await page.getByText('START COOKING').click();

@@ -1,25 +1,30 @@
 import {expect, test} from '@playwright/test';
 
 test.describe('Game Flow', () => {
+  // Navigate away before teardown to cleanly unmount R3F / Rapier WASM.
+  test.afterEach(async ({page}) => {
+    await page.goto('about:blank', {timeout: 5000}).catch(() => {});
+  });
+
   test('title screen renders with butcher shop sign', async ({page}) => {
     await page.goto('/');
     await expect(page.getByText('WILL IT')).toBeVisible();
     await expect(page.getByText('BLOW?')).toBeVisible();
     await expect(page.getByText('START COOKING')).toBeVisible();
-    await expect(page.getByText('Fine Meats & Sausages')).toBeVisible();
+    await expect(page.getByText('Fine Meats & Sausages', {exact: true})).toBeVisible();
   });
 
   test('clicking START COOKING shows difficulty selector', async ({page}) => {
     await page.goto('/');
     await page.getByText('START COOKING').click();
     await expect(page.getByText('CHOOSE YOUR DONENESS')).toBeVisible({timeout: 5000});
-    await expect(page.getByText('Medium')).toBeVisible({timeout: 5000});
+    await expect(page.getByText('Medium', {exact: true})).toBeVisible({timeout: 5000});
   });
 
   test('difficulty selector shows all five tiers', async ({page}) => {
     await page.goto('/');
     await page.getByText('START COOKING').click();
-    await expect(page.getByText('Rare')).toBeVisible({timeout: 5000});
+    await expect(page.getByText('Rare', {exact: true})).toBeVisible({timeout: 5000});
     await expect(page.getByText('Medium Rare')).toBeVisible({timeout: 5000});
     await expect(page.getByText('Medium', {exact: true})).toBeVisible({timeout: 5000});
     await expect(page.getByText('Medium Well')).toBeVisible({timeout: 5000});
