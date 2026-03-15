@@ -63,7 +63,7 @@ describe('gameStore (Koota ECS)', () => {
       expect(state.appPhase).toBe('playing');
       expect(state.gamePhase).toBe('SELECT_INGREDIENTS');
       expect(state.currentRound).toBe(1);
-      expect(state.introActive).toBe(false);
+      expect(state.introActive).toBe(true);
     });
   });
 
