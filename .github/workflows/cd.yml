@@ -1,48 +1,29 @@
-name: CD — Release Please + Deploy Web
+name: CD — Deploy to GitHub Pages
 
 on:
   push:
     branches: [main]
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
   pages: write
   id-token: write
 
-jobs:
-  release-please:
-    name: Release Please
-    runs-on: ubuntu-latest
-    outputs:
-      release_created: ${{ steps.release.outputs.release_created }}
-      tag_name: ${{ steps.release.outputs.tag_name }}
-      upload_url: ${{ steps.release.outputs.upload_url }}
-    steps:
-      - uses: googleapis/release-please-action@v4
-        id: release
-        with:
-          release-type: node
-          token: ${{ secrets.CI_GITHUB_TOKEN }}
+concurrency:
+  group: deploy-web
+  cancel-in-progress: true
 
-  # ─── GitHub Pages Deployment ───────────────────────────────
+jobs:
   deploy-web:
-    name: Deploy to GitHub Pages
+    name: Build & Deploy to GitHub Pages
     runs-on: ubuntu-latest
-    concurrency:
-      group: deploy-web
-      cancel-in-progress: true
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          lfs: true
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - uses: actions/setup-node@v4
         with:
@@ -51,14 +32,16 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Export static web build
-        run: npx expo export --platform web --output-dir dist
+      - name: Build for GitHub Pages
+        run: pnpm build
+        env:
+          GITHUB_PAGES: true
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v4
         with:
           path: dist
 
-      - name: Deploy to GitHub Pages
+      - uses: actions/deploy-pages@v4
         id: deployment
-        uses: actions/deploy-pages@v4

@@ -1,15 +1,16 @@
 /**
  * Tests for assetUrl.ts — verifies correct asset URL resolution for Vite builds.
  *
- * After the Expo → Vite migration, assetUrl is a simple passthrough (base path
- * is always root). These tests verify the contract is maintained.
+ * import.meta.env.BASE_URL is '/' in dev and '/will-it-blow/' on GitHub Pages.
+ * The test environment sets BASE_URL to '/' by default.
  */
 
 import {getAssetUrl, getWebBasePath} from '../assetUrl';
 
 describe('getWebBasePath', () => {
-  it('returns empty string (Vite always serves from root)', () => {
-    expect(getWebBasePath()).toBe('');
+  it('returns the Vite BASE_URL', () => {
+    // In test env, BASE_URL defaults to '/'
+    expect(getWebBasePath()).toBe('/');
   });
 });
 

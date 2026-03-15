@@ -1,6 +1,7 @@
-/** Simple asset path builder — on native, paths are resolved via require() at the component level. */
+/** Asset path builder — prefixes with Vite BASE_URL for GitHub Pages support. */
 function getAssetUrl(dir: string, file: string): string {
-  return `/${dir}/${file}`;
+  const base = import.meta.env.BASE_URL; // '/' locally, '/will-it-blow/' on Pages
+  return `${base}${dir}/${file}`;
 }
 
 export type IngredientCategory = 'food' | 'weird' | 'trash';

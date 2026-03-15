@@ -85,7 +85,10 @@ async function initDb(): Promise<DbInstance> {
 
   // Web / dev / test — use sql.js (WASM)
   const initSqlJs = (await import('sql.js')).default;
-  const SQL = await initSqlJs();
+  const base = import.meta.env.BASE_URL; // '/' locally, '/will-it-blow/' on Pages
+  const SQL = await initSqlJs({
+    locateFile: (file: string) => `${base}${file}`,
+  });
   const sqlJsDb = new SQL.Database();
   sqlJsDb.run(MIGRATION_SQL);
   const {drizzle} = await import('drizzle-orm/sql-js');

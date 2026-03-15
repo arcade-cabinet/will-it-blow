@@ -46,6 +46,23 @@ import {PlayerCapsule} from './player/PlayerCapsule';
 // The fixRapierWasm() Vite plugin rewrites the broken import.meta.url
 // so the WASM fetches from public/rapier_wasm3d_bg.wasm.
 
+// --- GitHub Pages base path support ---
+// On GitHub Pages the app lives at /will-it-blow/, so all public/ asset
+// fetches (GLB, textures, etc.) need that prefix. Three.js's DefaultLoadingManager
+// intercepts every loader request, letting us prepend BASE_URL once here instead
+// of modifying every useGLTF/useTexture call site.
+const BASE = import.meta.env.BASE_URL; // '/' locally, '/will-it-blow/' on Pages
+if (BASE !== '/') {
+  THREE.DefaultLoadingManager.setURLModifier((url: string) => {
+    // Only prefix root-relative paths (e.g. /models/foo.glb).
+    // Skip data URIs, blob URLs, full URLs, and already-prefixed paths.
+    if (url.startsWith('/') && !url.startsWith('//') && !url.startsWith(BASE)) {
+      return `${BASE}${url.slice(1)}`;
+    }
+    return url;
+  });
+}
+
 // --- Console Warning Overrides to keep dev env clean of upstream noise ---
 const origWarn = console.warn;
 console.warn = (...args: unknown[]) => {

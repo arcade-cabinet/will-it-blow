@@ -28,22 +28,31 @@ export type SoundId =
   | 'rankReveal'
   | 'ambient';
 
+/** Vite base path — '/' locally, '/will-it-blow/' on GitHub Pages. */
+const BASE = import.meta.env.BASE_URL;
+
+/** Prefix a root-relative path with the Vite base URL. */
+function withBase(path: string): string {
+  // path is e.g. '/audio/chop_1.ogg' — strip leading '/' and prepend BASE
+  return `${BASE}${path.startsWith('/') ? path.slice(1) : path}`;
+}
+
 /** Maps each SoundId to its OGG file path under /audio/ */
 const SOUND_MAP: Record<SoundId, string> = {
-  chop: '/audio/chop_1.ogg',
-  grind: '/audio/mix_dry_1.ogg',
-  squelch: '/audio/mix_wet_1.ogg',
-  sizzle: '/audio/sizzle_1.ogg',
-  pressure: '/audio/boiling_1.ogg',
-  burst: '/audio/pots_and_pans_1.ogg',
-  tie: '/audio/peel_1.ogg',
-  strike: '/audio/pots_and_pans_2.ogg',
-  success: '/audio/pour_1.ogg',
-  error: '/audio/pots_and_pans_3.ogg',
-  click: '/audio/peel_2.ogg',
-  phaseAdvance: '/audio/pour_2.ogg',
-  rankReveal: '/audio/verdict-unsettling.ogg',
-  ambient: '/audio/ambient-horror.ogg',
+  chop: withBase('/audio/chop_1.ogg'),
+  grind: withBase('/audio/mix_dry_1.ogg'),
+  squelch: withBase('/audio/mix_wet_1.ogg'),
+  sizzle: withBase('/audio/sizzle_1.ogg'),
+  pressure: withBase('/audio/boiling_1.ogg'),
+  burst: withBase('/audio/pots_and_pans_1.ogg'),
+  tie: withBase('/audio/peel_1.ogg'),
+  strike: withBase('/audio/pots_and_pans_2.ogg'),
+  success: withBase('/audio/pour_1.ogg'),
+  error: withBase('/audio/pots_and_pans_3.ogg'),
+  click: withBase('/audio/peel_2.ogg'),
+  phaseAdvance: withBase('/audio/pour_2.ogg'),
+  rankReveal: withBase('/audio/verdict-unsettling.ogg'),
+  ambient: withBase('/audio/ambient-horror.ogg'),
 };
 
 class AudioEngineImpl {

@@ -1,16 +1,27 @@
 /**
  * Asset URL resolution for Vite builds.
- * Vite serves public/ at root, so paths are simply /<path>.
- * This module is kept for backward compatibility with tests.
+ *
+ * On GitHub Pages the app is served from a subdirectory (/will-it-blow/),
+ * so all public/ asset paths must be prefixed with the Vite base URL.
+ * `import.meta.env.BASE_URL` is '/' in dev and '/will-it-blow/' on Pages.
  */
 
-/** No-op in Vite — base path is always root. */
+/** Return the Vite base path (e.g. '/' or '/will-it-blow/'). */
 export function getWebBasePath(): string {
-  return '';
+  return import.meta.env.BASE_URL;
 }
 
-/** Resolve a web asset URL under a subdirectory (e.g. 'models', 'textures') */
+/**
+ * Resolve a public asset URL under a subdirectory (e.g. 'models', 'textures').
+ * Handles the base path so assets work on both localhost and GitHub Pages.
+ *
+ * @example
+ *   getAssetUrl('models', 'kitchen.glb')  // '/will-it-blow/models/kitchen.glb'
+ *   getAssetUrl('audio', 'chop_1.ogg')    // '/will-it-blow/audio/chop_1.ogg'
+ *   getAssetUrl('textures')               // '/will-it-blow/textures/'
+ */
 export function getAssetUrl(subdir: string, filename?: string): string {
+  const base = import.meta.env.BASE_URL; // always ends with '/'
   const suffix = filename ? `${subdir}/${filename}` : `${subdir}/`;
-  return `/${suffix}`;
+  return `${base}${suffix}`;
 }
