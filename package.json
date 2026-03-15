@@ -1,6 +1,6 @@
 {
   "name": "will-it-blow",
-  "version": "2.0.0",
+  "version": "1.6.0",
   "private": true,
   "packageManager": "pnpm@10.20.0",
   "type": "module",
