@@ -8,6 +8,7 @@ import {useFrame, useThree} from '@react-three/fiber';
 import {useEffect, useMemo, useRef} from 'react';
 import * as THREE from 'three';
 import {useGameStore} from '../../ecs/hooks';
+import {asset} from '../../utils/assetPath';
 
 /**
  * Renders first-person hands that track the camera with lerp/slerp smoothing.
@@ -19,17 +20,17 @@ export function PlayerHands() {
   const posture = useGameStore(state => state.posture);
 
   // Load the exported GLB
-  const {scene: handsScene} = useGLTF('/models/hands.glb') as any;
+  const {scene: handsScene} = useGLTF(asset('/models/hands.glb')) as any;
 
   // Choose a random texture from the newly integrated HandsPack
   const randomSkin = useMemo(() => {
     const skins = [
-      '/textures/hands/SkinTones/1/base.png',
-      '/textures/hands/SkinTones/2/base.png',
-      '/textures/hands/SkinTones/3/base.png',
-      '/textures/hands/Gloves/1/base_2.png',
-      '/textures/hands/Werewolf/base.png',
-      '/textures/hands/Alien/base.png',
+      asset('/textures/hands/SkinTones/1/base.png'),
+      asset('/textures/hands/SkinTones/2/base.png'),
+      asset('/textures/hands/SkinTones/3/base.png'),
+      asset('/textures/hands/Gloves/1/base_2.png'),
+      asset('/textures/hands/Werewolf/base.png'),
+      asset('/textures/hands/Alien/base.png'),
     ];
     return skins[Math.floor(Math.random() * skins.length)];
   }, []);
@@ -102,4 +103,4 @@ export function PlayerHands() {
   );
 }
 
-useGLTF.preload('/models/hands.glb');
+useGLTF.preload(asset('/models/hands.glb'));

@@ -6,6 +6,7 @@ import {useEffect, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
 import {useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
+import {asset} from '../../utils/assetPath';
 
 class SquigglyCurve extends THREE.Curve<THREE.Vector3> {
   override getPoint(t: number, target = new THREE.Vector3()) {
@@ -37,9 +38,9 @@ export function Stuffer() {
   const [dragTarget, setDragTarget] = useState(new THREE.Vector3(0.5, 0.2, 0));
 
   const [metalMap, metalNormal, metalRough] = useTexture([
-    '/textures/concrete_color.jpg',
-    '/textures/concrete_normal.jpg',
-    '/textures/concrete_roughness.jpg',
+    asset('/textures/concrete_color.jpg'),
+    asset('/textures/concrete_normal.jpg'),
+    asset('/textures/concrete_roughness.jpg'),
   ]);
 
   const metalMat = useMemo(

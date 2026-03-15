@@ -6,6 +6,7 @@ import {useEffect, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
 import {useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
+import {asset} from '../../utils/assetPath';
 
 const MAX_PARTICLES = 300;
 
@@ -30,9 +31,9 @@ export function Grinder() {
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
   const [metalMap, metalNormal, metalRough] = useTexture([
-    '/textures/concrete_color.jpg',
-    '/textures/concrete_normal.jpg',
-    '/textures/concrete_roughness.jpg',
+    asset('/textures/concrete_color.jpg'),
+    asset('/textures/concrete_normal.jpg'),
+    asset('/textures/concrete_roughness.jpg'),
   ]);
 
   const metalMat = useMemo(

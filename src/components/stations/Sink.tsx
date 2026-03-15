@@ -4,18 +4,19 @@ import {RigidBody} from '@react-three/rapier';
 import {useEffect, useMemo, useRef} from 'react';
 import * as THREE from 'three';
 import {audioEngine} from '../../engine/AudioEngine';
+import {asset} from '../../utils/assetPath';
 
 export function Sink() {
   const [metalColor, metalNormal, metalRoughness] = useTexture([
-    '/textures/concrete_color.jpg',
-    '/textures/concrete_normal.jpg',
-    '/textures/concrete_roughness.jpg',
+    asset('/textures/concrete_color.jpg'),
+    asset('/textures/concrete_normal.jpg'),
+    asset('/textures/concrete_roughness.jpg'),
   ]);
 
   const [concreteColor, concreteNormal, concreteRoughness] = useTexture([
-    '/textures/concrete_color.jpg',
-    '/textures/concrete_normal.jpg',
-    '/textures/concrete_roughness.jpg',
+    asset('/textures/concrete_color.jpg'),
+    asset('/textures/concrete_normal.jpg'),
+    asset('/textures/concrete_roughness.jpg'),
   ]);
 
   const waterRef = useRef<THREE.Mesh>(null);

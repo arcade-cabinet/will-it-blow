@@ -8,7 +8,7 @@
 import {Canvas} from '@react-three/fiber';
 import {Physics} from '@react-three/rapier';
 import {Suspense, useCallback, useEffect, useState} from 'react';
-import * as THREE from 'three';
+import {PCFShadowMap} from 'three';
 import {IntroSequence} from './components/camera/IntroSequence';
 import {PlayerHands} from './components/camera/PlayerHands';
 import {TieGesture} from './components/challenges/TieGesture';
@@ -46,22 +46,8 @@ import {PlayerCapsule} from './player/PlayerCapsule';
 // The fixRapierWasm() Vite plugin rewrites the broken import.meta.url
 // so the WASM fetches from public/rapier_wasm3d_bg.wasm.
 
-// --- GitHub Pages base path support ---
-// On GitHub Pages the app lives at /will-it-blow/, so all public/ asset
-// fetches (GLB, textures, etc.) need that prefix. Three.js's DefaultLoadingManager
-// intercepts every loader request, letting us prepend BASE_URL once here instead
-// of modifying every useGLTF/useTexture call site.
-const BASE = import.meta.env.BASE_URL; // '/' locally, '/will-it-blow/' on Pages
-if (BASE !== '/') {
-  THREE.DefaultLoadingManager.setURLModifier((url: string) => {
-    // Only prefix root-relative paths (e.g. /models/foo.glb).
-    // Skip data URIs, blob URLs, full URLs, and already-prefixed paths.
-    if (url.startsWith('/') && !url.startsWith('//') && !url.startsWith(BASE)) {
-      return `${BASE}${url.slice(1)}`;
-    }
-    return url;
-  });
-}
+// Asset paths are prefixed at each call site via asset() from src/utils/assetPath.ts.
+// No global THREE.DefaultLoadingManager.setURLModifier needed.
 
 // --- Console Warning Overrides to keep dev env clean of upstream noise ---
 const origWarn = console.warn;
@@ -201,7 +187,7 @@ export function App() {
       {appPhase === 'playing' && (
         <Suspense fallback={<LoadingScreen />}>
           <Canvas
-            shadows={{type: THREE.PCFShadowMap}}
+            shadows={{type: PCFShadowMap}}
             gl={{toneMappingExposure: 1.0}}
             style={{width: '100%', height: '100%'}}
           >
