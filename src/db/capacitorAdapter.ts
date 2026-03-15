@@ -29,27 +29,24 @@ export async function createCapacitorDb(dbName: string) {
     prepare(sql: string) {
       // Drizzle's sql-js driver calls prepare().bind().step()/getAsObject()/free()
       // for SELECT queries. Capacitor SQLite doesn't expose a statement API,
-      // so we provide a minimal shim. Drizzle also falls back to run() for
-      // non-SELECT statements.
-      let _sql = sql;
-      let _boundParams: unknown[] | undefined;
+      // so we execute the query eagerly in bind() and iterate results via step().
+      let results: any[] = [];
       return {
         bind(params?: unknown[]) {
-          _boundParams = params;
+          const res = db.query(sql, params as any[]);
+          results = res.values || [];
         },
         step() {
-          // step() is called in a while-loop; returning false means "no more rows"
-          return false;
+          return results.length > 0;
         },
         getAsObject() {
-          return {};
+          return results.shift() || {};
         },
         get() {
-          return [];
+          return results.shift() || {};
         },
         free() {
-          _sql = '';
-          _boundParams = undefined;
+          results = [];
         },
       };
     },

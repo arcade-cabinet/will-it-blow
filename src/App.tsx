@@ -63,7 +63,6 @@ const origError = console.error;
 console.error = (...args: unknown[]) => {
   if (typeof args[0] === 'string') {
     if (args[0].includes('getSnapshot should be cached')) return;
-    if (args[0].includes('Maximum update depth exceeded')) return;
   }
   origError(...args);
 };
@@ -76,7 +75,10 @@ function GameContent() {
 
   // Initialize Tone.js audio on mount and start the horror drone
   useEffect(() => {
-    audioEngine.initialize().then(() => audioEngine.startDrone());
+    audioEngine
+      .initialize()
+      .then(() => audioEngine.startDrone())
+      .catch(err => console.warn('Audio init failed:', err));
     return () => {
       audioEngine.stopDrone();
     };

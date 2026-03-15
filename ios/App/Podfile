@@ -1,3 +1,6 @@
+# NOTE: The pnpm store paths below (node_modules/.pnpm/...) are auto-generated
+# by Capacitor's `cap sync` command. Do not edit them manually — they will be
+# regenerated whenever Capacitor dependencies are updated.
 require_relative '../../node_modules/.pnpm/@capacitor+ios@6.2.1_@capacitor+core@6.2.1/node_modules/@capacitor/ios/scripts/pods_helpers'
 
 platform :ios, '14.0'

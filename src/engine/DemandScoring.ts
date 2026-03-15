@@ -63,6 +63,8 @@ export function calculateDemandBonus(
     .map(id => getIngredientById(id))
     .filter(i => i !== undefined) as any[];
 
+  if (ingredients.length === 0) return {totalScore: 0, breakdown: 'No valid ingredients'};
+
   let score = 0;
   let breakdown = '';
 
@@ -101,7 +103,8 @@ export function calculateDemandBonus(
   }
 
   // 4. "Will It Blow?" Power (Bonus for exploding the casing)
-  const maxBlowPower = Math.max(...ingredients.map(i => i.blowPower));
+  const blowPowers = ingredients.map(i => i.blowPower);
+  const maxBlowPower = blowPowers.length === 0 ? 0 : Math.max(...blowPowers);
   score += maxBlowPower * 10;
   breakdown += `Explosive Power Bonus: +${maxBlowPower * 10}\n`;
 

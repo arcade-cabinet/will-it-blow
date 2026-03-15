@@ -92,8 +92,8 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Export static web build
-        run: npx expo export --platform web
+      - name: Build production bundle
+        run: pnpm build
 
   e2e:
     name: E2E Tests (Playwright)

@@ -15,14 +15,15 @@ This is a summary of key architecture patterns. For detailed conventions, see do
 ## Two-Layer Rendering
 
 ```
-Layer 2: React Native UI Overlays    <- Buttons, progress bars, dialogue, challenges
-Layer 1: React Three Fiber Canvas    <- Kitchen GLB, stations, lighting, Mr. Sausage
-Root:    SafeAreaView (React Native)  <- Container, background (#0a0a0a)
+Layer 2: HTML/CSS Overlays (Tailwind) <- Pre-game UI, gesture overlays, round transitions
+Layer 1: React Three Fiber Canvas     <- Kitchen GLB, stations, lighting, Mr. Sausage
+Root:    Vite + Capacitor app          <- Container, background (#000)
 ```
 
 - Layer 1 is the R3F `<Canvas>` — renders 3D kitchen, procedural station meshes, CRT TV
-- Layer 2 is React Native views with `pointerEvents="box-none"` floating above the 3D scene
-- Both layers subscribe independently to the Zustand store — no direct communication between them
+- Layer 2 is HTML overlays (Tailwind/DaisyUI) floating above the 3D scene for pre-game UI only
+- Both layers subscribe independently to Koota ECS state via `useGameStore` hooks — no direct communication between them
+- During gameplay: zero 2D overlays (diegetic SurrealText only)
 
 ## Challenge Component Pattern
 
@@ -33,9 +34,9 @@ All stations follow the same procedural pattern in the greenfield rebuild:
 Self-contained R3F components in `src/components/stations/` that own their own geometry, physics, and game logic:
 
 - **Station component** (R3F, in 3D Canvas) owns all logic: input handling, state updates, visual feedback
-- **Station** reads player input from R3F events (`onPointerDown`, `onPointerMove`) and writes to Zustand store
-- **UI overlays** (when implemented) will be read-only Zustand subscribers — display only
-- Data flow: R3F pointer events → station logic → Zustand → UI display
+- **Station** reads player input from R3F events (`onPointerDown`, `onPointerMove`) and writes to Koota ECS state
+- **UI overlays** (when implemented) will be read-only Koota subscribers — display only
+- Data flow: R3F pointer events → station logic → Koota ECS → UI display
 
 Files: `src/components/stations/*.tsx`
 

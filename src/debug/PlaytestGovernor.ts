@@ -29,6 +29,10 @@ const PHASES: GamePhase[] = [
 
 export function initDebugInterface() {
   if (import.meta.env.PROD) return;
+  if (typeof window === 'undefined') return;
+  // Security note: This debug interface is intentionally dev-only (gated above).
+  // This is a single-player game with local-only scores — "cheating" via the
+  // debug console is not a security concern.
 
   const debug = {
     getState: () => useGameStore.getState(),

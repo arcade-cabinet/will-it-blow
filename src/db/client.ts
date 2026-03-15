@@ -74,6 +74,9 @@ async function initDb(): Promise<DbInstance> {
 
   if (isNative) {
     const {createCapacitorDb} = await import('./capacitorAdapter');
+    // Encryption is set to 'no-encryption' in the adapter. This is intentional:
+    // this is a single-player game and the database only stores local high scores
+    // and gameplay stats — no sensitive or personal data requiring encryption.
     const sqliteDb = await createCapacitorDb('willitblow');
     await sqliteDb.exec(MIGRATION_SQL);
     const {drizzle} = await import('drizzle-orm/sql-js');
