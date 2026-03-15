@@ -9,6 +9,7 @@ import {useFrame} from '@react-three/fiber';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import type * as THREE from 'three';
 import {useGameStore} from '../../ecs/hooks';
+import {asset} from '../../utils/assetPath';
 
 /** Individual animated message that fades in, pulses, and slides out when dismissed. */
 function SurrealMessage({
@@ -67,7 +68,7 @@ function SurrealMessage({
         fontSize={0.35}
         maxWidth={3.5} // Forces text to wrap and stay within player FOV horizontally
         lineHeight={1.2}
-        font="/fonts/Nosifer-Regular.ttf"
+        font={asset('/fonts/Nosifer-Regular.ttf')}
         anchorX="center"
         anchorY="middle"
         textAlign="center"

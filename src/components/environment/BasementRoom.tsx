@@ -1,6 +1,7 @@
 import {useTexture} from '@react-three/drei';
 import {RigidBody} from '@react-three/rapier';
 import * as THREE from 'three';
+import {asset} from '../../utils/assetPath';
 
 export function BasementRoom() {
   const [
@@ -15,18 +16,18 @@ export function BasementRoom() {
     ceilingNormal,
     ceilingRoughness,
   ] = useTexture([
-    '/textures/tile_floor_color.jpg',
-    '/textures/tile_floor_normal.jpg',
-    '/textures/tile_floor_roughness.jpg',
+    asset('/textures/tile_floor_color.jpg'),
+    asset('/textures/tile_floor_normal.jpg'),
+    asset('/textures/tile_floor_roughness.jpg'),
 
-    '/textures/tile_wall_color.jpg',
-    '/textures/tile_wall_normal.jpg',
-    '/textures/tile_wall_roughness.jpg',
-    '/textures/tile_wall_ao.jpg',
+    asset('/textures/tile_wall_color.jpg'),
+    asset('/textures/tile_wall_normal.jpg'),
+    asset('/textures/tile_wall_roughness.jpg'),
+    asset('/textures/tile_wall_ao.jpg'),
 
-    '/textures/concrete_color.jpg',
-    '/textures/concrete_normal.jpg',
-    '/textures/concrete_roughness.jpg',
+    asset('/textures/concrete_color.jpg'),
+    asset('/textures/concrete_normal.jpg'),
+    asset('/textures/concrete_roughness.jpg'),
   ]);
 
   // Setup repeating for all textures

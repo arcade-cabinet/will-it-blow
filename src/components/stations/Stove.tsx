@@ -6,6 +6,7 @@ import {useEffect, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
 import {useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
+import {asset} from '../../utils/assetPath';
 
 const fboSize = 256;
 const fboOptions = {
@@ -123,8 +124,8 @@ export function Stove() {
     [],
   );
 
-  const oven = useGLTF('/models/kitchen_oven_large.glb') as any;
-  const pan = useGLTF('/models/frying_pan.glb') as any;
+  const oven = useGLTF(asset('/models/kitchen_oven_large.glb')) as any;
+  const pan = useGLTF(asset('/models/frying_pan.glb')) as any;
   const gamePhase = useGameStore(state => state.gamePhase);
   const setGamePhase = useGameStore(state => state.setGamePhase);
   const cookLevel = useGameStore(state => state.cookLevel);
@@ -326,4 +327,4 @@ export function Stove() {
   );
 }
 
-useGLTF.preload('/models/kitchen_oven_large.glb');
+useGLTF.preload(asset('/models/kitchen_oven_large.glb'));

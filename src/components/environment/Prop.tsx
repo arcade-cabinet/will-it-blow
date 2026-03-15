@@ -1,5 +1,6 @@
 import {Box, Cylinder, useGLTF} from '@react-three/drei';
 import {RigidBody} from '@react-three/rapier';
+import {asset} from '../../utils/assetPath';
 
 interface PropProps {
   name: string;
@@ -19,10 +20,10 @@ export function Prop({
   // Convert uniform scale to vector
   const s = typeof scale === 'number' ? ([scale, scale, scale] as [number, number, number]) : scale;
 
-  const chainsaw = useGLTF('/models/Chainsaw.glb') as any;
-  const cleaver = useGLTF('/models/cleaver.glb') as any;
-  const machete = useGLTF('/models/Machete.glb') as any;
-  const traps = useGLTF('/models/traps.glb') as any;
+  const chainsaw = useGLTF(asset('/models/Chainsaw.glb')) as any;
+  const cleaver = useGLTF(asset('/models/cleaver.glb')) as any;
+  const machete = useGLTF(asset('/models/Machete.glb')) as any;
+  const traps = useGLTF(asset('/models/traps.glb')) as any;
 
   return (
     <RigidBody type={type} position={position} rotation={rotation} colliders="cuboid">
@@ -68,7 +69,7 @@ export function Prop({
   );
 }
 
-useGLTF.preload('/models/Chainsaw.glb');
-useGLTF.preload('/models/cleaver.glb');
-useGLTF.preload('/models/Machete.glb');
-useGLTF.preload('/models/traps.glb');
+useGLTF.preload(asset('/models/Chainsaw.glb'));
+useGLTF.preload(asset('/models/cleaver.glb'));
+useGLTF.preload(asset('/models/Machete.glb'));
+useGLTF.preload(asset('/models/traps.glb'));

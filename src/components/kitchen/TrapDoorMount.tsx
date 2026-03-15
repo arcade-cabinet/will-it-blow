@@ -1,12 +1,13 @@
 import {useGLTF} from '@react-three/drei';
 import {RigidBody} from '@react-three/rapier';
+import {asset} from '../../utils/assetPath';
 
 interface TrapDoorMountProps {
   position: [number, number, number];
 }
 
 export function TrapDoorMount({position}: TrapDoorMountProps) {
-  const {nodes} = useGLTF('/models/traps.glb') as any;
+  const {nodes} = useGLTF(asset('/models/traps.glb')) as any;
 
   // Verify the node exists in the specific GLB we're using
   // If not, we fallback to a safe primitive or nothing
@@ -26,4 +27,4 @@ export function TrapDoorMount({position}: TrapDoorMountProps) {
   );
 }
 
-useGLTF.preload('/models/traps.glb');
+useGLTF.preload(asset('/models/traps.glb'));

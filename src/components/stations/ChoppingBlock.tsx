@@ -4,12 +4,13 @@ import {useDrag} from '@use-gesture/react';
 import {useState} from 'react';
 import {useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
+import {asset} from '../../utils/assetPath';
 
 export function ChoppingBlock() {
   const [colorMap, normalMap, roughnessMap] = useTexture([
-    '/textures/grime_base_color.jpg',
-    '/textures/grime_base_normal.jpg',
-    '/textures/grime_base_roughness.jpg',
+    asset('/textures/grime_base_color.jpg'),
+    asset('/textures/grime_base_normal.jpg'),
+    asset('/textures/grime_base_roughness.jpg'),
   ]);
 
   const gamePhase = useGameStore(state => state.gamePhase);

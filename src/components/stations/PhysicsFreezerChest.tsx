@@ -5,10 +5,11 @@ import {useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
 import {useGameStore} from '../../ecs/hooks';
 import {INGREDIENT_MODELS as INGREDIENT_DEFS} from '../../engine/Ingredients';
+import {asset} from '../../utils/assetPath';
 
 export function PhysicsFreezerChest() {
-  const {scene: fridgeScene} = useGLTF('/models/fridge.glb') as any;
-  const misc = useGLTF('/models/misc.glb') as any;
+  const {scene: fridgeScene} = useGLTF(asset('/models/fridge.glb')) as any;
+  const misc = useGLTF(asset('/models/misc.glb')) as any;
 
   // Create an ice/frost overlay material
   const frostMat = useMemo(
