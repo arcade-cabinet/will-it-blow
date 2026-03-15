@@ -553,7 +553,7 @@ const actions: GameActions = {
     const mrE = getSingleton(MrSausageTrait);
 
     if (appE) appE.set(AppTrait, {appPhase: 'playing'});
-    if (playerE) playerE.set(PlayerTrait, {introActive: false, posture: 'standing'});
+    if (playerE) playerE.set(PlayerTrait, {introActive: true, introPhase: 0, posture: 'prone'});
     if (phaseE) phaseE.set(PhaseTag, {phase: 'SELECT_INGREDIENTS'});
     if (sgE) {
       sgE.set(StationGameplayTrait, {

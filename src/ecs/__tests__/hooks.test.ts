@@ -120,14 +120,14 @@ describe('startNewGame action', () => {
     expect(getState().appPhase).toBe('playing');
   });
 
-  it('sets introActive to false', () => {
+  it('sets introActive to true (intro sequence plays on new game)', () => {
     getState().startNewGame();
-    expect(getState().introActive).toBe(false);
+    expect(getState().introActive).toBe(true);
   });
 
-  it('sets posture to standing', () => {
+  it('sets posture to prone (player starts lying on mattress)', () => {
     getState().startNewGame();
-    expect(getState().posture).toBe('standing');
+    expect(getState().posture).toBe('prone');
   });
 
   it('resets gamePhase to SELECT_INGREDIENTS', () => {

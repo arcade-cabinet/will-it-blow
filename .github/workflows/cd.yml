@@ -25,6 +25,9 @@ jobs:
         with:
           lfs: true
 
+      - name: Pull LFS files
+        run: git lfs pull
+
       - uses: pnpm/action-setup@v4
 
       - uses: actions/setup-node@v4

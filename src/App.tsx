@@ -41,6 +41,7 @@ import {audioEngine} from './engine/AudioEngine';
 import {GameOrchestrator} from './engine/GameOrchestrator';
 import {FPSCamera} from './player/FPSCamera';
 import {PlayerCapsule} from './player/PlayerCapsule';
+import {useInput} from './player/useInput';
 
 // Rapier WASM is loaded by <Physics> internally.
 // The fixRapierWasm() Vite plugin rewrites the broken import.meta.url
@@ -75,6 +76,10 @@ console.error = (...args: unknown[]) => {
 function GameContent() {
   const introActive = useGameStore(state => state.introActive);
   const mrSausageReaction = useGameStore(state => state.mrSausageReaction);
+  const {moveDirection} = useInput();
+
+  // Block movement during intro sequence
+  const effectiveMove = introActive ? {x: 0, z: 0} : moveDirection;
 
   // Initialize Tone.js audio on mount and start the horror drone
   useEffect(() => {
@@ -91,7 +96,7 @@ function GameContent() {
     <>
       <Physics gravity={[0, -9.81, 0]}>
         {/* Player physics body + FPS camera (inside Physics) */}
-        <PlayerCapsule />
+        <PlayerCapsule moveDirection={effectiveMove} />
         <FPSCamera />
 
         <BasementRoom />
@@ -181,7 +186,15 @@ export function App() {
   }, [nextRound]);
 
   return (
-    <div style={{width: '100vw', height: '100vh', background: '#000'}}>
+    <div
+      style={{
+        position: 'relative',
+        width: '100vw',
+        height: '100dvh',
+        background: '#000',
+        overflow: 'hidden',
+      }}
+    >
       {appPhase === 'title' && <TitleScreen />}
 
       {appPhase === 'playing' && (
@@ -189,7 +202,7 @@ export function App() {
           <Canvas
             shadows={{type: PCFShadowMap}}
             gl={{toneMappingExposure: 1.0}}
-            style={{width: '100%', height: '100%'}}
+            style={{position: 'absolute', top: 0, left: 0, width: '100%', height: '100%'}}
           >
             <color attach="background" args={['#000000']} />
             <fogExp2 attach="fog" args={['#2a2a2a', 0.015]} />
