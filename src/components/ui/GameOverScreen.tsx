@@ -2,13 +2,10 @@
  * @module GameOverScreen
  * Full-screen results overlay shown after the game ends.
  *
- * Props-driven: receives rank, totalScore, score breakdown, demand bonus,
- * and callback handlers. Displays rank badge with rank-specific colors,
- * per-challenge score breakdown, demand bonus details, and action buttons.
+ * Horror-themed verdict screen with dramatic rank reveal,
+ * Mr. Sausage's verdict text, score breakdown, and action buttons.
  *
- * Rank colors: S=Gold(#FFD700), A=Silver(#C0C0C0), B=Bronze(#CD7F32), F=Blood Red(#FF1744)
- *
- * Rewritten from react-native to web HTML/CSS with CSS transitions.
+ * Uses Tailwind CSS + DaisyUI components.
  */
 
 import {useEffect, useState} from 'react';
@@ -28,11 +25,34 @@ interface GameOverScreenProps {
   onMenu: () => void;
 }
 
-const RANK_COLORS: Record<string, string> = {
-  S: '#FFD700',
-  A: '#C0C0C0',
-  B: '#CD7F32',
-  F: '#FF1744',
+const RANK_STYLES: Record<string, {text: string; glow: string; shadow: string}> = {
+  S: {
+    text: 'text-[#FFD700]',
+    glow: 'drop-shadow-[0_0_30px_rgba(255,215,0,0.8)]',
+    shadow: 'shadow-[0_0_40px_rgba(255,215,0,0.4)]',
+  },
+  A: {
+    text: 'text-green-400',
+    glow: 'drop-shadow-[0_0_30px_rgba(74,222,128,0.8)]',
+    shadow: 'shadow-[0_0_40px_rgba(74,222,128,0.4)]',
+  },
+  B: {
+    text: 'text-yellow-400',
+    glow: 'drop-shadow-[0_0_30px_rgba(250,204,21,0.8)]',
+    shadow: 'shadow-[0_0_40px_rgba(250,204,21,0.4)]',
+  },
+  F: {
+    text: 'text-[#FF1744]',
+    glow: 'drop-shadow-[0_0_30px_rgba(255,23,68,0.8)]',
+    shadow: 'shadow-[0_0_40px_rgba(255,23,68,0.4)]',
+  },
+};
+
+const VERDICTS: Record<string, string> = {
+  S: "MASTERPIECE. Even I'm impressed.",
+  A: 'Not bad, meat puppet. Not bad at all.',
+  B: 'Mediocre. My grandmother makes better sausage.',
+  F: 'PATHETIC. You disgust me.',
 };
 
 export function GameOverScreen({
@@ -43,7 +63,8 @@ export function GameOverScreen({
   onPlayAgain,
   onMenu,
 }: GameOverScreenProps) {
-  const rankColor = RANK_COLORS[rank] ?? '#FF1744';
+  const rankStyle = RANK_STYLES[rank] ?? RANK_STYLES.F;
+  const verdict = VERDICTS[rank] ?? VERDICTS.F;
   const [visible, setVisible] = useState(false);
   const [rankScale, setRankScale] = useState(false);
 
@@ -55,78 +76,98 @@ export function GameOverScreen({
 
   return (
     <div
-      style={{
-        ...styles.overlay,
-        opacity: visible ? 1 : 0,
-        transition: 'opacity 600ms ease-out',
-      }}
+      className={`fixed inset-0 z-[100] bg-black/95 transition-opacity duration-700 ease-out ${
+        visible ? 'opacity-100' : 'opacity-0'
+      }`}
     >
-      <div style={styles.scrollView}>
-        <div style={styles.content}>
-          {/* Rank letter */}
+      <div className="w-full h-full overflow-auto">
+        <div className="flex flex-col items-center justify-center min-h-full px-6 py-10 max-w-md mx-auto">
+          {/* Rank letter with glow */}
           <div
-            style={{
-              ...styles.rankLetter,
-              color: rankColor,
-              textShadow: `0 0 30px ${rankColor}`,
-              transform: rankScale ? 'scale(1)' : 'scale(0.3)',
-              transition: 'transform 500ms cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-            }}
+            className={`text-8xl font-black font-[Bangers] mb-2 transition-transform duration-500 ${rankStyle.text} ${rankStyle.glow} ${
+              rankScale ? 'scale-100' : 'scale-[0.3]'
+            }`}
+            style={{transitionTimingFunction: 'cubic-bezier(0.175, 0.885, 0.32, 1.275)'}}
             title={`Rank ${rank}`}
           >
             {rank}
           </div>
 
-          {/* Total score */}
-          <h2 style={styles.verdictTitle}>TOTAL SCORE</h2>
-          <div style={styles.scoreCard}>
-            <span style={{...styles.scoreValue, color: rankColor}}>{Math.round(totalScore)}</span>
-          </div>
+          {/* Mr. Sausage verdict */}
+          <p className="text-lg font-[Bangers] text-[#FF1744]/90 tracking-wider text-center mb-6 italic max-w-xs">
+            "{verdict}"
+          </p>
 
-          {/* Per-challenge score breakdown */}
-          <div style={styles.challengeScores}>
-            {breakdown.map((item, i) => (
-              <div key={i} style={styles.challengeScoreRow}>
-                <span style={styles.challengeScoreLabel}>{item.label}</span>
-                <span style={styles.challengeScoreValue}>{Math.round(item.score)}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Demand bonus */}
-          {demandBonus !== 0 && (
-            <div style={styles.demandBonusContainer}>
-              <span style={styles.demandBonusLabel}>DEMAND BONUS</span>
-              <span
-                style={{
-                  ...styles.demandBonusValue,
-                  color: demandBonus > 0 ? '#4CAF50' : '#FF1744',
-                }}
+          {/* Score card */}
+          <div className={`card bg-base-300/90 border border-[#8B0000] w-full ${rankStyle.shadow}`}>
+            <div className="card-body items-center gap-4 p-6">
+              {/* Total score */}
+              <h2 className="text-2xl font-black font-[Bangers] text-gray-200 tracking-[3px]">
+                TOTAL SCORE
+              </h2>
+              <div
+                className={`text-5xl font-black font-[Bangers] tracking-wider ${rankStyle.text}`}
               >
-                {demandBonus > 0 ? '+' : ''}
-                {demandBonus}
-              </span>
-            </div>
-          )}
+                {Math.round(totalScore)}
+              </div>
 
-          {/* Buttons */}
-          <div style={styles.buttonContainer}>
+              {/* Divider */}
+              <div className="divider divider-error my-0 opacity-40" />
+
+              {/* Per-challenge breakdown */}
+              <div className="w-full flex flex-col gap-1.5">
+                {breakdown.map((item, i) => (
+                  <div key={i} className="flex justify-between px-2">
+                    <span className="text-sm font-[Bangers] text-gray-500 tracking-wide">
+                      {item.label}
+                    </span>
+                    <span className="text-sm font-black font-[Bangers] text-gray-200 tracking-wide">
+                      {Math.round(item.score)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Demand bonus */}
+              {demandBonus !== 0 && (
+                <>
+                  <div className="divider divider-error my-0 opacity-40" />
+                  <div className="flex justify-between w-full px-2 py-1 bg-base-100/50 rounded-lg">
+                    <span className="text-sm font-black font-[Bangers] text-[#D2A24C] tracking-[2px]">
+                      DEMAND BONUS
+                    </span>
+                    <span
+                      className={`text-lg font-black font-[Bangers] tracking-wider ${
+                        demandBonus > 0 ? 'text-green-500' : 'text-[#FF1744]'
+                      }`}
+                    >
+                      {demandBonus > 0 ? '+' : ''}
+                      {demandBonus}
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex flex-col gap-3 w-full mt-8">
             <button
               type="button"
-              style={styles.newGameButton}
+              className="btn btn-primary btn-lg bg-[#B71C1C] border-2 border-[#FF1744] text-white text-xl font-black font-[Bangers] tracking-wider shadow-[0_4px_12px_rgba(255,23,68,0.4)] hover:bg-[#D32F2F] hover:border-[#FF1744]"
               onClick={onPlayAgain}
               aria-label="Start new game"
             >
-              <span style={styles.buttonText}>PLAY AGAIN</span>
+              PLAY AGAIN
             </button>
 
             <button
               type="button"
-              style={styles.menuButton}
+              className="btn btn-ghost text-lg font-black font-[Bangers] text-gray-400 tracking-wider hover:text-gray-200"
               onClick={onMenu}
               aria-label="Return to main menu"
             >
-              <span style={styles.menuButtonText}>MENU</span>
+              MAIN MENU
             </button>
           </div>
         </div>
@@ -134,151 +175,3 @@ export function GameOverScreen({
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  overlay: {
-    position: 'absolute',
-    inset: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
-    zIndex: 100,
-  },
-  scrollView: {
-    width: '100%',
-    height: '100%',
-    overflow: 'auto',
-  },
-  content: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    padding: '40px 24px',
-    width: '100%',
-    maxWidth: 420,
-    margin: '0 auto',
-    minHeight: '100%',
-    justifyContent: 'center',
-  },
-  rankLetter: {
-    fontSize: 72,
-    fontWeight: 900,
-    fontFamily: 'Bangers',
-    marginBottom: 8,
-  },
-  verdictTitle: {
-    fontSize: 28,
-    fontWeight: 900,
-    fontFamily: 'Bangers',
-    color: '#E0E0E0',
-    letterSpacing: 2,
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  scoreCard: {
-    backgroundColor: 'rgba(20, 20, 20, 0.9)',
-    border: '1px solid #333',
-    borderRadius: 12,
-    padding: '16px 32px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  scoreValue: {
-    fontSize: 42,
-    fontWeight: 900,
-    fontFamily: 'Bangers',
-    letterSpacing: 2,
-  },
-  challengeScores: {
-    width: '100%',
-    marginBottom: 16,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 6,
-  },
-  challengeScoreRow: {
-    display: 'flex',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: '0 16px',
-  },
-  challengeScoreLabel: {
-    fontSize: 14,
-    fontFamily: 'Bangers',
-    color: '#666',
-    letterSpacing: 1,
-  },
-  challengeScoreValue: {
-    fontSize: 14,
-    fontWeight: 900,
-    fontFamily: 'Bangers',
-    color: '#E0E0E0',
-    letterSpacing: 1,
-  },
-  demandBonusContainer: {
-    display: 'flex',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    padding: '12px 16px',
-    marginBottom: 32,
-    backgroundColor: 'rgba(20, 20, 20, 0.9)',
-    border: '1px solid #333',
-    borderRadius: 8,
-    boxSizing: 'border-box',
-  },
-  demandBonusLabel: {
-    fontSize: 14,
-    fontWeight: 900,
-    fontFamily: 'Bangers',
-    color: '#D2A24C',
-    letterSpacing: 2,
-  },
-  demandBonusValue: {
-    fontSize: 18,
-    fontWeight: 900,
-    fontFamily: 'Bangers',
-    letterSpacing: 2,
-  },
-  buttonContainer: {
-    width: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 12,
-  },
-  newGameButton: {
-    backgroundColor: '#B71C1C',
-    border: '2px solid #FF1744',
-    borderRadius: 12,
-    padding: '16px 36px',
-    boxShadow: '0 4px 12px rgba(255, 23, 68, 0.4)',
-    cursor: 'pointer',
-    outline: 'none',
-  },
-  menuButton: {
-    backgroundColor: '#333',
-    border: '2px solid #555',
-    borderRadius: 12,
-    padding: '14px 36px',
-    cursor: 'pointer',
-    outline: 'none',
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 22,
-    fontWeight: 900,
-    fontFamily: 'Bangers',
-    textAlign: 'center',
-    letterSpacing: 1,
-    display: 'block',
-  },
-  menuButtonText: {
-    color: '#AAA',
-    fontSize: 18,
-    fontWeight: 900,
-    fontFamily: 'Bangers',
-    textAlign: 'center',
-    letterSpacing: 1,
-    display: 'block',
-  },
-};
