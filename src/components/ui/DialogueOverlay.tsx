@@ -6,12 +6,16 @@
  * goes through SurrealText on kitchen surfaces). Kept as a utility in case
  * it's needed for pre-game or debug contexts.
  *
+ * T2.D: Now wires DialogueEngine.applyEffects() into the game store via
+ * the dialogueRunner bridge when the dialogue completes with recorded effects.
+ *
  * Rewritten from react-native to web HTML/CSS.
  */
 
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {useGameStore} from '../../ecs/hooks';
 import {type DialogueChoice, DialogueEngine, type DialogueLine} from '../../engine/DialogueEngine';
+import {applyDialogueDeltas} from '../../engine/dialogueRunner';
 
 interface DialogueOverlayProps {
   lines: DialogueLine[];
@@ -30,6 +34,7 @@ export function DialogueOverlay({lines, onComplete}: DialogueOverlayProps) {
   const fullTextRef = useRef('');
 
   const setMrSausageReaction = useGameStore(state => state.setMrSausageReaction);
+  const recordFlairPoint = useGameStore(state => state.recordFlairPoint);
 
   const startTypewriter = useCallback(
     (line: DialogueLine) => {
@@ -82,6 +87,21 @@ export function DialogueOverlay({lines, onComplete}: DialogueOverlayProps) {
     engine.advance();
 
     if (engine.isComplete()) {
+      // T2.D: Apply dialogue effects to the game store before notifying
+      // the parent. This wires applyEffects() into the runner so choices
+      // actually produce gameplay consequences (time bonuses, penalties, etc.).
+      const deltas = engine.applyEffects();
+      const patch = applyDialogueDeltas(deltas);
+
+      // Record non-zero consequences as flair points so they surface
+      // on the verdict screen alongside station-sourced style points.
+      if (patch.timeBonusSec > 0) {
+        recordFlairPoint('Dialogue Hint', patch.timeBonusSec);
+      }
+      if (patch.strikeAdd > 0) {
+        recordFlairPoint('Angered Sausage', -patch.strikeAdd * 3);
+      }
+
       onComplete(engine.getEffects());
       return;
     }
@@ -92,7 +112,7 @@ export function DialogueOverlay({lines, onComplete}: DialogueOverlayProps) {
     if (line) {
       startTypewriter(line);
     }
-  }, [onComplete, startTypewriter]);
+  }, [onComplete, startTypewriter, recordFlairPoint]);
 
   const handleTap = useCallback(() => {
     if (isTyping) {
