@@ -43,11 +43,11 @@ const DEFAULT_BACKGROUND_COLOR = '#1a1a1a';
 const DEFAULT_FOG_COLOR = '#2a2a2a';
 const DEFAULT_FOG_DENSITY = 0.015;
 
-let r3fHooksInstalled = false;
-
 export function installR3FTestHooks(): void {
-  if (r3fHooksInstalled) return;
-  r3fHooksInstalled = true;
+  // Called at the top of every `defineMicroSpec` / browser test file.
+  // Vitest's afterEach is additive — multiple registrations from one
+  // file stack up and all run — but per-file duplication is cheap
+  // (cleanup is idempotent).
   afterEach(() => {
     cleanup();
     playerPosition.set(0, 0, 0);
@@ -306,6 +306,12 @@ export function countMeshes(handle: R3FHandle): number {
  * that exceed it are **actual rendered geometry**, not just the
  * scene background poking through.
  *
+ * Reads a centered 256x256 sub-region instead of the full buffer
+ * so the work is O(65k) pixels regardless of the viewport size.
+ * At 4K with ANGLE/Mesa on CI, reading the full buffer + iterating
+ * 8.3M pixels in JS was causing test timeouts; the sampled approach
+ * is O(1) with respect to viewport size.
+ *
  * The handle MUST have been created with
  * `preserveDrawingBuffer: true`, otherwise the buffer is cleared
  * before `readPixels` runs and you'll always get zero.
@@ -313,10 +319,15 @@ export function countMeshes(handle: R3FHandle): number {
 export function countLitPixels(handle: R3FHandle, threshold = 100): number {
   const gl = handle.canvas.getContext('webgl2') ?? handle.canvas.getContext('webgl');
   if (!gl) throw new Error('countLitPixels: no WebGL context on the canvas');
-  const w = gl.drawingBufferWidth;
-  const h = gl.drawingBufferHeight;
-  const pixels = new Uint8Array(w * h * 4);
-  gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+  const bw = gl.drawingBufferWidth;
+  const bh = gl.drawingBufferHeight;
+  // Read a centered 256x256 sub-region (or the full buffer if smaller).
+  const sampleW = Math.min(256, bw);
+  const sampleH = Math.min(256, bh);
+  const x = Math.max(0, Math.floor((bw - sampleW) / 2));
+  const y = Math.max(0, Math.floor((bh - sampleH) / 2));
+  const pixels = new Uint8Array(sampleW * sampleH * 4);
+  gl.readPixels(x, y, sampleW, sampleH, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
   let count = 0;
   for (let i = 0; i < pixels.length; i += 4) {
     if (pixels[i] + pixels[i + 1] + pixels[i + 2] > threshold) count += 1;
