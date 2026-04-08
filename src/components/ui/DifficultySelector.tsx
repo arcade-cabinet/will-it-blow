@@ -25,8 +25,13 @@ const brutalTiers = DIFFICULTY_TIERS.filter(t => t.permadeath);
 export function DifficultySelector({onSelect, onBack}: DifficultySelectorProps) {
   return (
     <div className="fixed inset-0 bg-[#0a0a0a] flex justify-center items-center px-6">
+      {/*
+        Same scale-wrapper pattern as TitleScreen — keeps the
+        selector proportional on ≥2K displays. See the comment in
+        TitleScreen.tsx for the rationale.
+      */}
       <section
-        className="bg-[#1a0a00] border-4 border-[#8B4513] p-6 w-full max-w-[420px]"
+        className="bg-[#1a0a00] border-4 border-[#8B4513] p-6 w-full max-w-[420px] scale-100 2xl:scale-125 [@media(min-width:2560px)]:scale-150 [@media(min-width:3200px)]:scale-[2]"
         aria-label="Difficulty selection"
       >
         <h2 className="font-[Bangers] text-[28px] text-[#FF1744] text-center tracking-[3px] drop-shadow-[0_0_12px_rgba(255,23,68,0.4)] m-0">

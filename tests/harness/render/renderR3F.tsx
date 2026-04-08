@@ -33,6 +33,16 @@ import {afterEach} from 'vitest';
 import {cleanup, render} from 'vitest-browser-react';
 import {playerPosition} from '../../../src/player/playerPosition';
 
+/**
+ * The real game uses a dark background + fog to match its horror
+ * basement aesthetic. Micro/meso tests that mount components in
+ * isolation should render against the same ambient conditions so
+ * the screenshots look like the game, not like a blueprint.
+ */
+const DEFAULT_BACKGROUND_COLOR = '#1a1a1a';
+const DEFAULT_FOG_COLOR = '#2a2a2a';
+const DEFAULT_FOG_DENSITY = 0.015;
+
 export function installR3FTestHooks(): void {
   afterEach(() => {
     cleanup();
@@ -43,13 +53,33 @@ export function installR3FTestHooks(): void {
 export interface RenderR3FOptions {
   physics?: boolean;
   gravity?: [number, number, number];
+  /**
+   * Canvas container width (px). Default: the **current browser
+   * viewport width** read from `window.innerWidth`. Micro specs
+   * that want a fixed size regardless of the viewport matrix can
+   * override this.
+   */
   width?: number;
+  /** Canvas container height (px). Default: `window.innerHeight`. */
   height?: number;
   cameraPosition?: [number, number, number];
   /** World-space point the camera should look at after mount. */
   cameraTarget?: [number, number, number];
   cameraFov?: number;
   ambientIntensity?: number;
+  /**
+   * Scene background colour (hex). Default `#1a1a1a` matching the
+   * real game. Pass `null` to leave `scene.background` unset (and
+   * get the renderer's default clear colour — usually white).
+   */
+  backgroundColor?: string | null;
+  /**
+   * Exponential fog density. Default `0.015` matching the real
+   * game. Pass `0` to disable fog entirely.
+   */
+  fogDensity?: number;
+  /** Fog colour (hex). Default `#2a2a2a`. */
+  fogColor?: string;
   /**
    * Default **false**. Only enable in tests that need
    * `gl.readPixels()` — `preserveDrawingBuffer: true` extends the
@@ -118,16 +148,22 @@ function StateProbe({
  * reading `handle.getState()` on the first tick.
  */
 export function renderR3F(children: React.ReactNode, options: RenderR3FOptions = {}): R3FHandle {
+  const viewportW = typeof window !== 'undefined' ? window.innerWidth || 512 : 512;
+  const viewportH = typeof window !== 'undefined' ? window.innerHeight || 384 : 384;
+
   const {
     physics = false,
     gravity = [0, -9.81, 0],
-    width = 512,
-    height = 384,
+    width = viewportW,
+    height = viewportH,
     cameraPosition = [0, 0, 5],
     cameraTarget,
     cameraFov = 60,
     ambientIntensity = 0.6,
     preserveDrawingBuffer = false,
+    backgroundColor = DEFAULT_BACKGROUND_COLOR,
+    fogDensity = DEFAULT_FOG_DENSITY,
+    fogColor = DEFAULT_FOG_COLOR,
     testId,
   } = options;
 
@@ -146,6 +182,8 @@ export function renderR3F(children: React.ReactNode, options: RenderR3FOptions =
         camera={{position: cameraPosition, fov: cameraFov}}
         gl={{preserveDrawingBuffer}}
       >
+        {backgroundColor !== null && <color attach="background" args={[backgroundColor]} />}
+        {fogDensity > 0 && <fogExp2 attach="fog" args={[fogColor, fogDensity]} />}
         <ambientLight intensity={ambientIntensity} />
         <Suspense fallback={null}>
           {physics ? <Physics gravity={gravity}>{children}</Physics> : children}
@@ -257,13 +295,18 @@ export function countMeshes(handle: R3FHandle): number {
 /**
  * Sample the WebGL drawing buffer and return the count of pixels
  * whose RGB sum exceeds `threshold`. Useful for "is the canvas
- * actually rendering anything?" assertions.
+ * actually rendering anything above the background?" assertions.
+ *
+ * The default threshold (100) is tuned for the harness's default
+ * `#1a1a1a` background — which has an RGB sum of 78 — so pixels
+ * that exceed it are **actual rendered geometry**, not just the
+ * scene background poking through.
  *
  * The handle MUST have been created with
  * `preserveDrawingBuffer: true`, otherwise the buffer is cleared
  * before `readPixels` runs and you'll always get zero.
  */
-export function countLitPixels(handle: R3FHandle, threshold = 30): number {
+export function countLitPixels(handle: R3FHandle, threshold = 100): number {
   const gl = handle.canvas.getContext('webgl2') ?? handle.canvas.getContext('webgl');
   if (!gl) throw new Error('countLitPixels: no WebGL context on the canvas');
   const w = gl.drawingBufferWidth;

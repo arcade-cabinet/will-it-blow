@@ -51,7 +51,14 @@ export interface MicroSpec {
   cameraTarget?: [number, number, number];
   /** Camera FOV; default 75. */
   cameraFov?: number;
-  /** Canvas size; default 640×480. */
+  /**
+   * Canvas size for the isolated component mount. Default
+   * **1024×768**, which is large enough for the screenshots to be
+   * readable and independent of the Vitest browser project
+   * viewport — the per-instance iframe sizes vary chaotically, so
+   * we pin the canvas size here instead of inheriting from
+   * `window.innerWidth`.
+   */
   width?: number;
   height?: number;
   /**
@@ -82,8 +89,15 @@ export interface MicroSpec {
 
 const defaultLights = () => (
   <>
-    <pointLight position={[0, 2, 0]} intensity={20} distance={10} />
+    {/*
+      Moderate wrap-around lighting so PBR materials show up in
+      isolation without blowing out bright ingredients. A hemi at
+      0.4 + a few pointLights at their in-game intensities.
+    */}
+    <hemisphereLight args={['#ffffff', '#222222', 0.4]} />
+    <pointLight position={[0, 2.5, 0]} intensity={25} distance={10} />
     <pointLight position={[2, 1, 2]} intensity={15} distance={8} />
+    <pointLight position={[-2, 1, -2]} intensity={15} distance={8} />
   </>
 );
 
@@ -97,8 +111,13 @@ export function defineMicroSpec(spec: MicroSpec): void {
     cameraPosition = [0, 1.6, 4],
     cameraTarget = [0, 1, 0],
     cameraFov = 75,
-    width = 640,
-    height = 480,
+    // Let the canvas inherit the iframe size from renderR3F (which
+    // reads `window.innerWidth` / `innerHeight`). This means
+    // micro screenshots adapt to whatever the Vitest browser
+    // iframe allocates per viewport — no more cropped-canvas
+    // artifacts on mobile-390.
+    width,
+    height,
     minMeshes = 1,
     minLitPixels = 500,
     settleTimeoutMs = 5_000,
@@ -137,10 +156,15 @@ export function defineMicroSpec(spec: MicroSpec): void {
       expect(countLitPixels(scene)).toBeGreaterThan(minLitPixels);
     }
 
+    // Page-scoped capture so the iframe boundary isn't clipping
+    // large canvases on narrow viewports. The canvas is the only
+    // visible content in the page (vitest-browser-react mounts a
+    // bare div around it) so page scope == canvas scope here, but
+    // without the cropping artifact.
     const path = await captureSnapshot({
       layer: 'micro',
       feature: name,
-      scope: 'canvas',
+      scope: 'page',
     });
     expect(path).toContain(`micro/${name}/`);
   });

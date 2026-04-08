@@ -29,7 +29,10 @@ function findButton(text: string): HTMLButtonElement | undefined {
   return Array.from(document.querySelectorAll('button')).find(b => b.textContent?.includes(text));
 }
 
-async function settle(ms = 500): Promise<void> {
+async function settle(ms = 1500): Promise<void> {
+  // Default wait is long enough for the title screen's
+  // `animate-[fadeInUp_1s_ease-out]` animation to complete fully
+  // before the screenshot is captured.
   await new Promise(r => setTimeout(r, ms));
 }
 

@@ -26,6 +26,7 @@
  * the real-browser capabilities while collapsing to a single test runner.
  */
 import path from 'node:path';
+import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import {defineConfig} from 'vitest/config';
 
@@ -58,7 +59,7 @@ const browserAlias = {
 };
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   resolve: {alias: browserAlias},
   // Pre-bundle the heavy deps that browser tests pull in transitively
   // through `<App />`. Without these in `include`, Vite re-optimizes
@@ -92,7 +93,12 @@ export default defineConfig({
 
       // ── browser (real Chromium, multi-viewport) ─────────────────────
       {
-        plugins: [react()],
+        // `@tailwindcss/vite` MUST live on the browser project's own
+        // plugins list — Vitest projects don't inherit from the
+        // root config, so an omission here leaves components styled
+        // with browser-default CSS (plain 16px h1, no backgrounds,
+        // no layouts) and every screenshot looks broken.
+        plugins: [react(), tailwindcss()],
         resolve: {alias: browserAlias},
         test: {
           name: 'browser',
