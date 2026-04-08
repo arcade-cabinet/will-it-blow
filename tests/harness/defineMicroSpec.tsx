@@ -80,6 +80,13 @@ export interface MicroSpec {
   /** How long to wait for assets to load. Default 5s. */
   settleTimeoutMs?: number;
   /**
+   * Vitest test timeout for the whole micro spec. Default is
+   * `settleTimeoutMs + 10s` of buffer, which covers GLB downloads,
+   * React commit, waitFor polling, and the screenshot capture.
+   * Override for heavyweight components that need more wall time.
+   */
+  testTimeoutMs?: number;
+  /**
    * Extra lights / helpers to mount alongside the component.
    * Useful for components that ship without their own lighting.
    * Default: a centered point light at `[0, 2, 0]` intensity 20.
@@ -121,51 +128,62 @@ export function defineMicroSpec(spec: MicroSpec): void {
     minMeshes = 1,
     minLitPixels = 500,
     settleTimeoutMs = 5_000,
+    testTimeoutMs,
     extraLights = defaultLights,
     setup,
   } = spec;
 
-  test(`${name}: renders to a non-blank canvas + screenshots cleanly`, async () => {
-    if (setup) await setup();
+  // Give the test enough wall time to cover: GLB downloads, React
+  // commit, `waitFor` polling up to settleTimeoutMs, screenshot
+  // capture, and any setup callback. Callers can override via
+  // `testTimeoutMs` when a component is especially heavy.
+  const resolvedTestTimeout = testTimeoutMs ?? settleTimeoutMs + 10_000;
 
-    const scene = await renderR3FAndSettle(
-      <Suspense fallback={null}>
-        {extraLights()}
-        {mountChildren()}
-      </Suspense>,
-      {
-        physics,
-        cameraPosition,
-        cameraTarget,
-        cameraFov,
-        width,
-        height,
-        preserveDrawingBuffer: true,
-      },
-    );
+  test(
+    `${name}: renders to a non-blank canvas + screenshots cleanly`,
+    async () => {
+      if (setup) await setup();
 
-    // Wait for assets/textures/GLBs to actually mount into the
-    // scene tree before asserting.
-    await waitForR3F(scene, () => countMeshes(scene) >= minMeshes, {
-      timeoutMs: settleTimeoutMs,
-      description: `${minMeshes}+ meshes for ${name}`,
-    });
+      const scene = await renderR3FAndSettle(
+        <Suspense fallback={null}>
+          {extraLights()}
+          {mountChildren()}
+        </Suspense>,
+        {
+          physics,
+          cameraPosition,
+          cameraTarget,
+          cameraFov,
+          width,
+          height,
+          preserveDrawingBuffer: true,
+        },
+      );
 
-    expect(countMeshes(scene)).toBeGreaterThanOrEqual(minMeshes);
-    if (minLitPixels > 0) {
-      expect(countLitPixels(scene)).toBeGreaterThan(minLitPixels);
-    }
+      // Wait for assets/textures/GLBs to actually mount into the
+      // scene tree before asserting.
+      await waitForR3F(scene, () => countMeshes(scene) >= minMeshes, {
+        timeoutMs: settleTimeoutMs,
+        description: `${minMeshes}+ meshes for ${name}`,
+      });
 
-    // Page-scoped capture so the iframe boundary isn't clipping
-    // large canvases on narrow viewports. The canvas is the only
-    // visible content in the page (vitest-browser-react mounts a
-    // bare div around it) so page scope == canvas scope here, but
-    // without the cropping artifact.
-    const path = await captureSnapshot({
-      layer: 'micro',
-      feature: name,
-      scope: 'page',
-    });
-    expect(path).toContain(`micro/${name}/`);
-  });
+      expect(countMeshes(scene)).toBeGreaterThanOrEqual(minMeshes);
+      if (minLitPixels > 0) {
+        expect(countLitPixels(scene)).toBeGreaterThan(minLitPixels);
+      }
+
+      // Page-scoped capture so the iframe boundary isn't clipping
+      // large canvases on narrow viewports. The canvas is the only
+      // visible content in the page (vitest-browser-react mounts a
+      // bare div around it) so page scope == canvas scope here, but
+      // without the cropping artifact.
+      const path = await captureSnapshot({
+        layer: 'micro',
+        feature: name,
+        scope: 'page',
+      });
+      expect(path).toContain(`micro/${name}/`);
+    },
+    resolvedTestTimeout,
+  );
 }
