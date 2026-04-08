@@ -19,7 +19,6 @@ export interface HandsConfig {
 
 export interface CameraConfig {
   hands: HandsConfig;
-  skins: string[];
 }
 
 export const cameraConfig: CameraConfig = data as unknown as CameraConfig;

@@ -9,13 +9,5 @@
     "smoothingFactor": 0.001,
     "modelScale": 0.06,
     "modelOffset": [0, -0.1, 0.2]
-  },
-  "skins": [
-    "/textures/hands/SkinTones/1/base.png",
-    "/textures/hands/SkinTones/2/base.png",
-    "/textures/hands/SkinTones/3/base.png",
-    "/textures/hands/Gloves/1/base_2.png",
-    "/textures/hands/Werewolf/base.png",
-    "/textures/hands/Alien/base.png"
-  ]
+  }
 }

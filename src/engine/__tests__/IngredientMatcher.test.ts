@@ -18,6 +18,20 @@ function makeIngredient(overrides: Partial<IngredientDef> = {}): IngredientDef {
     textureMod: 2,
     blowPower: 2,
     tags: [],
+    // New fields carried by `IngredientDef` since the Zoombinis-in-Hell
+    // composition pillar landed. IngredientMatcher tests don't exercise
+    // traits or composition — they test tag derivation — so we use the
+    // safest empty/neutral values that still satisfy the type.
+    traits: [],
+    composition: {
+      decomposition: 'chunks',
+      color: '#888888',
+      shine: 0,
+      density: 0.5,
+      moisture: 0.5,
+      fat: 0.5,
+      particleScale: 0.5,
+    },
     ...overrides,
   };
 }
