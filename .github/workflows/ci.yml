@@ -44,11 +44,18 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Install Playwright Browsers
+      - name: Install Playwright Chromium (used by Vitest browser provider)
         run: npx playwright install --with-deps chromium
 
-      - name: Browser-mode component tests (real Chromium)
-        run: xvfb-run --auto-servernum pnpm test:browser
-
-      - name: End-to-end tests (Playwright)
-        run: xvfb-run --auto-servernum pnpm test:e2e
+      - name: Browser tests — unit + harness
+        run: xvfb-run --auto-servernum pnpm test:browser:unit
+      - name: Browser tests — harness
+        run: xvfb-run --auto-servernum pnpm test:browser:harness
+      - name: Browser tests — micro layer (per-component isolation)
+        run: xvfb-run --auto-servernum pnpm test:browser:micro
+      - name: Browser tests — meso layer (phases + flows + verdict)
+        run: xvfb-run --auto-servernum pnpm test:browser:meso
+      - name: Browser tests — macro layer (Yuka GOAP playthroughs)
+        run: xvfb-run --auto-servernum pnpm test:browser:macro
+      - name: Browser tests — src colocated (TV smoke + perception)
+        run: xvfb-run --auto-servernum pnpm test:browser:src
