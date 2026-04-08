@@ -15,14 +15,16 @@ defineMicroSpec({
   cameraTarget: [-1.5, 0.3, 1.5],
   cameraFov: 65,
   minMeshes: 1,
-  // BlowoutStation mounts a heavy tree: instanced particles,
-  // a CanvasTexture via CerealBoxTarget, multiple PBR materials
-  // with physical shading, and a useFrame loop that touches
-  // every frame. On CI's xvfb + Mesa-backed ANGLE, initial GL
-  // upload of all those resources takes far longer than on local
-  // hardware GPUs. Give it plenty of wall time.
-  settleTimeoutMs: 20_000,
-  testTimeoutMs: 45_000,
+  // BlowoutStation mounts a heavy tree: a 1000-instance particle
+  // InstancedMesh, a CanvasTexture via CerealBoxTarget, multiple
+  // PBR materials with physical shading, a shadow-casting spotLight,
+  // and a useFrame loop that touches every frame. On CI's xvfb +
+  // Mesa-backed ANGLE at 4K, the shadow pre-pass over 1000 instances
+  // dominates frame time. 3 of 4 viewports complete in 30-45s on CI
+  // (vs <1s locally); uhd-3840 alone can push past that, so cap the
+  // test timeout generously.
+  settleTimeoutMs: 30_000,
+  testTimeoutMs: 90_000,
   // Skip the lit-pixel sanity check — the dark cereal box +
   // dimly-lit tube can dip below the threshold in headless GL,
   // and mesh count is already a strong signal here.
