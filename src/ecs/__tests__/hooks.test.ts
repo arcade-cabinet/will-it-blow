@@ -101,8 +101,8 @@ describe('useGameStore.setState()', () => {
   });
 
   it('updates mrSausageReaction', () => {
-    useGameStore.setState({mrSausageReaction: 'angry'});
-    expect(getState().mrSausageReaction).toBe('angry');
+    useGameStore.setState({mrSausageReaction: 'disgust'});
+    expect(getState().mrSausageReaction).toBe('disgust');
   });
 
   it('supports partial updates without clobbering other state', () => {
