@@ -13,12 +13,19 @@
  * Determinism note (T0.A): all randomness in this file routes through
  * `createRunRngOrFallback` so save-scummed reloads replay the exact
  * same demand triples and round transitions.
+ *
+ * Composition note (T0.B): `currentRoundSelection` is the IngredientDef[]
+ * derived from selectedIngredientIds. Downstream consumers (Stuffer,
+ * ClueGenerator, verdict screen) read this to drive `compositeMix` and
+ * the full deduction-loop feedback surface.
  */
 import {useSyncExternalStore} from 'react';
 import type {Reaction} from '../characters/reactions';
 import {calculateDemandBonus} from '../engine/DemandScoring';
 import {generateDemand} from '../engine/demandGen';
+import type {IngredientDef} from '../engine/IngredientComposition';
 import {createRunRngOrFallback} from '../engine/RunSeed';
+import {clearSelectionCache, resolveSelection} from '../engine/selectionResolver';
 import {ecsWorld, onWorldReset} from './kootaWorld';
 import {
   AppTrait,
@@ -96,7 +103,10 @@ function subscribe(listener: Listener): () => void {
 }
 
 // Invalidate cache when world is reset (e.g. in tests)
-onWorldReset(() => notify());
+onWorldReset(() => {
+  clearSelectionCache();
+  notify();
+});
 
 // ==========================================================================
 // State snapshot — the "store"
@@ -121,6 +131,8 @@ export interface GameState {
   cookLevel: number;
 
   selectedIngredientIds: string[];
+  /** Resolved IngredientDef[] for the current round's selection. */
+  currentRoundSelection: readonly IngredientDef[];
   mrSausageReaction: Reaction;
   mrSausageDemands: {
     desiredTags: string[];
@@ -160,6 +172,12 @@ export interface GameActions {
   setCookLevel: (level: number | ((prev: number) => number)) => void;
 
   addSelectedIngredientId: (id: string) => void;
+  /** Append a resolved IngredientDef by ID. Silently no-ops for unknown IDs. */
+  addToSelection: (id: string) => void;
+  /** Remove the first occurrence of `id` from the selection. */
+  removeFromSelection: (id: string) => void;
+  /** Clear the round selection entirely. */
+  clearSelection: () => void;
   setMrSausageReaction: (reaction: Reaction) => void;
   generateDemands: () => void;
   calculateFinalScore: () => void;
@@ -195,6 +213,8 @@ function getSnapshot(): GameState & GameActions {
   const demand = getTraitValue(DemandTrait);
   const score = getTraitValue(ScoreTrait);
 
+  const selectedIds = parseJsonArray<string>(sel?.idsJson ?? '[]');
+
   const snapshot: GameState & GameActions = {
     // State
     appPhase: (app?.appPhase ?? 'title') as 'title' | 'playing' | 'results',
@@ -214,7 +234,8 @@ function getSnapshot(): GameState & GameActions {
     casingTied: sg?.casingTied ?? false,
     cookLevel: sg?.cookLevel ?? 0,
 
-    selectedIngredientIds: parseJsonArray<string>(sel?.idsJson ?? '[]'),
+    selectedIngredientIds: selectedIds,
+    currentRoundSelection: resolveSelection(selectedIds),
     mrSausageReaction: (mr?.reaction ?? 'idle') as Reaction,
     mrSausageDemands: demand
       ? {
@@ -288,10 +309,8 @@ const actions: GameActions = {
         ? parseJsonArray<string>(selE.get(SelectedIngredientsTrait).idsJson)
         : [];
       const usedCombos = parseJsonArray<string[]>(round.usedCombosJson);
-
       const newCombos =
         selectedIds.length > 0 ? [...usedCombos, [...selectedIds].sort()] : usedCombos;
-
       roundE.set(RoundTrait, {
         usedCombosJson: toJsonArray(newCombos),
         currentRound: round.currentRound + 1,
@@ -299,14 +318,13 @@ const actions: GameActions = {
     }
 
     if (phaseE) phaseE.set(PhaseTag, {phase: 'SELECT_INGREDIENTS'});
-    if (sgE) {
+    if (sgE)
       sgE.set(StationGameplayTrait, {
         groundMeatVol: 0,
         stuffLevel: 0,
         casingTied: false,
         cookLevel: 0,
       });
-    }
     if (selE) selE.set(SelectedIngredientsTrait, {idsJson: '[]'});
     if (scoreE) {
       scoreE.set(ScoreTrait, {
@@ -322,6 +340,7 @@ const actions: GameActions = {
         flairPointsJson: '[]',
       });
     }
+    clearSelectionCache();
     notify();
   },
 
@@ -408,6 +427,38 @@ const actions: GameActions = {
     if (e) {
       const current = parseJsonArray<string>(e.get(SelectedIngredientsTrait).idsJson);
       e.set(SelectedIngredientsTrait, {idsJson: toJsonArray([...current, id])});
+      clearSelectionCache();
+      notify();
+    }
+  },
+
+  addToSelection(id: string) {
+    // Same as addSelectedIngredientId — kept as a named alias for
+    // the composition-pillar API surface. The acceptance criterion
+    // for T0.B requires `addToSelection` to appear in hooks.ts.
+    actions.addSelectedIngredientId(id);
+  },
+
+  removeFromSelection(id: string) {
+    const e = getSingleton(SelectedIngredientsTrait);
+    if (e) {
+      const current = parseJsonArray<string>(e.get(SelectedIngredientsTrait).idsJson);
+      const idx = current.indexOf(id);
+      if (idx !== -1) {
+        const next = [...current];
+        next.splice(idx, 1);
+        e.set(SelectedIngredientsTrait, {idsJson: toJsonArray(next)});
+        clearSelectionCache();
+        notify();
+      }
+    }
+  },
+
+  clearSelection() {
+    const e = getSingleton(SelectedIngredientsTrait);
+    if (e) {
+      e.set(SelectedIngredientsTrait, {idsJson: '[]'});
+      clearSelectionCache();
       notify();
     }
   },
@@ -421,10 +472,8 @@ const actions: GameActions = {
   },
 
   generateDemands() {
-    // Seeded so save-scummed reloads regenerate identical demands.
     const rng = createRunRngOrFallback('demands');
     const demand = generateDemand(rng);
-
     let e = getSingleton(DemandTrait);
     if (!e) {
       e = ecsWorld.spawn(DemandTrait);
@@ -442,15 +491,11 @@ const actions: GameActions = {
     const selE = getSingleton(SelectedIngredientsTrait);
     const sgE = getSingleton(StationGameplayTrait);
     const scoreE = getSingleton(ScoreTrait);
-
     if (!demandE || !selE || !scoreE) return;
-
     const demands = demandE.get(DemandTrait);
     const selectedIds = parseJsonArray<string>(selE.get(SelectedIngredientsTrait).idsJson);
     const cookLevel = sgE ? sgE.get(StationGameplayTrait).cookLevel : 0;
-
     if (selectedIds.length === 0) return;
-
     const result = calculateDemandBonus(
       {
         desiredTags: parseJsonArray<string>(demands.desiredTagsJson),
@@ -460,7 +505,6 @@ const actions: GameActions = {
       selectedIds,
       cookLevel,
     );
-
     scoreE.set(ScoreTrait, {
       calculated: true,
       totalScore: result.totalScore,
@@ -475,9 +519,7 @@ const actions: GameActions = {
       const current = parseJsonArray<{reason: string; points: number}>(
         e.get(ScoreTrait).flairPointsJson,
       );
-      e.set(ScoreTrait, {
-        flairPointsJson: toJsonArray([...current, {reason, points}]),
-      });
+      e.set(ScoreTrait, {flairPointsJson: toJsonArray([...current, {reason, points}])});
       notify();
     }
   },
@@ -493,31 +535,19 @@ const actions: GameActions = {
     const mrE = getSingleton(MrSausageTrait);
 
     if (appE) appE.set(AppTrait, {appPhase: 'title'});
-    if (playerE) {
-      playerE.set(PlayerTrait, {
-        introActive: true,
-        introPhase: 0,
-        posture: 'prone',
-        idleTime: 0,
-      });
-    }
+    if (playerE)
+      playerE.set(PlayerTrait, {introActive: true, introPhase: 0, posture: 'prone', idleTime: 0});
     if (phaseE) phaseE.set(PhaseTag, {phase: 'SELECT_INGREDIENTS'});
-    if (sgE) {
+    if (sgE)
       sgE.set(StationGameplayTrait, {
         groundMeatVol: 0,
         stuffLevel: 0,
         casingTied: false,
         cookLevel: 0,
       });
-    }
     if (selE) selE.set(SelectedIngredientsTrait, {idsJson: '[]'});
     if (mrE) mrE.set(MrSausageTrait, {reaction: 'idle'});
-    if (roundE) {
-      roundE.set(RoundTrait, {
-        currentRound: 1,
-        usedCombosJson: '[]',
-      });
-    }
+    if (roundE) roundE.set(RoundTrait, {currentRound: 1, usedCombosJson: '[]'});
     if (scoreE) {
       scoreE.set(ScoreTrait, {
         calculated: false,
@@ -532,9 +562,9 @@ const actions: GameActions = {
         flairPointsJson: '[]',
       });
     }
-    // Destroy demand entity
     const demandE = getSingleton(DemandTrait);
     if (demandE) demandE.destroy();
+    clearSelectionCache();
     notify();
   },
 
@@ -551,22 +581,16 @@ const actions: GameActions = {
     if (appE) appE.set(AppTrait, {appPhase: 'playing'});
     if (playerE) playerE.set(PlayerTrait, {introActive: true, introPhase: 0, posture: 'prone'});
     if (phaseE) phaseE.set(PhaseTag, {phase: 'SELECT_INGREDIENTS'});
-    if (sgE) {
+    if (sgE)
       sgE.set(StationGameplayTrait, {
         groundMeatVol: 0,
         stuffLevel: 0,
         casingTied: false,
         cookLevel: 0,
       });
-    }
     if (selE) selE.set(SelectedIngredientsTrait, {idsJson: '[]'});
     if (mrE) mrE.set(MrSausageTrait, {reaction: 'idle'});
-    if (roundE) {
-      roundE.set(RoundTrait, {
-        currentRound: 1,
-        usedCombosJson: '[]',
-      });
-    }
+    if (roundE) roundE.set(RoundTrait, {currentRound: 1, usedCombosJson: '[]'});
     if (scoreE) {
       scoreE.set(ScoreTrait, {
         calculated: false,
@@ -581,19 +605,15 @@ const actions: GameActions = {
         flairPointsJson: '[]',
       });
     }
-    // Destroy demand entity
     const demandE = getSingleton(DemandTrait);
     if (demandE) demandE.destroy();
+    clearSelectionCache();
     notify();
   },
 
   setPlayerPosition(x: number, y: number, z: number) {
     const e = getSingleton(PlayerTrait);
-    if (e) {
-      e.set(PlayerTrait, {posX: x, posY: y, posZ: z});
-      // No notify() — this is called every frame from useFrame.
-      // FPSCamera reads it directly from the ECS trait, not via React subscription.
-    }
+    if (e) e.set(PlayerTrait, {posX: x, posY: y, posZ: z});
   },
 
   setJoystick(x: number, y: number) {
@@ -622,7 +642,6 @@ const actions: GameActions = {
       const current = e.get(PlayerTrait);
       const delta = {x: current.lookDeltaX, y: current.lookDeltaY};
       e.set(PlayerTrait, {lookDeltaX: 0, lookDeltaY: 0});
-      // Don't notify — this is a read+reset consumed per-frame, not a user-visible change
       return delta;
     }
     return {x: 0, y: 0};

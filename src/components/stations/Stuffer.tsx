@@ -1,3 +1,15 @@
+/**
+ * @module Stuffer
+ * Sausage stuffing station — crank-to-fill mechanic with a translucent
+ * casing that tints based on the composite ingredient mix (T0.B).
+ *
+ * The composition pillar flows through here: `currentRoundSelection`
+ * (IDs resolved to IngredientDefs) enters `compositeMix()`, producing
+ * colour, transmission, and roughness values that drive the casing
+ * MeshPhysicalMaterial in real time. The player SEES the recipe
+ * through the translucent casing — this is the diagnostic surface
+ * that makes the deduction loop visible.
+ */
 import {Box, Cylinder, useTexture} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
 import {RigidBody} from '@react-three/rapier';
@@ -6,6 +18,7 @@ import {useEffect, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
 import {useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
+import {compositeMix} from '../../engine/IngredientComposition';
 import {asset} from '../../utils/assetPath';
 import {requestHandGesture} from '../camera/handGestureStore';
 
@@ -19,11 +32,29 @@ class SquigglyCurve extends THREE.Curve<THREE.Vector3> {
   }
 }
 
+/**
+ * Parse a `#rrggbb` hex colour to a THREE.Color for material interpolation.
+ * Shared with IngredientComposition's hex helpers but kept local to
+ * avoid reaching into unexported internals.
+ */
+function hexToColor(hex: string): THREE.Color {
+  return new THREE.Color(hex);
+}
+
+/**
+ * Interpolate between a default casing colour and the composite mix's
+ * dominant colour based on how opaque the filling makes the casing.
+ */
+function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * t;
+}
+
 export function Stuffer() {
   const gamePhase = useGameStore(state => state.gamePhase);
   const setGamePhase = useGameStore(state => state.setGamePhase);
   const stuffLevel = useGameStore(state => state.stuffLevel);
   const setStuffLevel = useGameStore(state => state.setStuffLevel);
+  const currentRoundSelection = useGameStore(state => state.currentRoundSelection);
 
   const crankRef = useRef<THREE.Group>(null);
   const rodRef = useRef<THREE.Mesh>(null);
@@ -57,19 +88,31 @@ export function Stuffer() {
     [metalMap, metalNormal, metalRough],
   );
 
-  const casingMat = useMemo(
-    () =>
-      new THREE.MeshPhysicalMaterial({
-        color: '#ffffee',
-        transmission: 0.8,
-        opacity: 1,
-        transparent: true,
-        roughness: 0.2,
-        thickness: 0.1,
-        side: THREE.DoubleSide,
-      }),
-    [],
-  );
+  // ─── Composition-driven casing material (T0.B) ─────────────────────
+  // Compute the composite mix from the current round's selected
+  // ingredients. When the selection is empty, `compositeMix` returns a
+  // sensible null-mix (grey, fully transparent) so the casing renders
+  // as an untinted shell.
+  const mix = useMemo(() => compositeMix(currentRoundSelection), [currentRoundSelection]);
+
+  const casingMat = useMemo(() => {
+    const mixColor = hexToColor(mix.color);
+    const baseColor = new THREE.Color('#ffffee');
+    // Blend toward the mix colour as density rises (filling becomes visible)
+    const blend = mix.density;
+    const blendedColor = baseColor.clone().lerp(mixColor, blend);
+
+    return new THREE.MeshPhysicalMaterial({
+      color: blendedColor,
+      transmission: lerp(0.95, 0.4, mix.density),
+      opacity: 1,
+      transparent: true,
+      roughness: lerp(0.1, 0.6, 1 - mix.shine),
+      thickness: 0.1,
+      clearcoat: mix.moisture * 0.5,
+      side: THREE.DoubleSide,
+    });
+  }, [mix]);
 
   const bunchedCasingGeo = useMemo(() => {
     const geo = new THREE.CylinderGeometry(0.06, 0.06, 0.25, 32, 32, true);

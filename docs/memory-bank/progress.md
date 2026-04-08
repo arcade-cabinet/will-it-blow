@@ -1,6 +1,25 @@
 # Progress — Will It Blow?
 
-**Last updated:** 2026-03-13
+**Last updated:** 2026-04-08
+
+## Lost Requirements Restoration (in progress, 2026-04-08)
+
+PRD: `docs/plans/2026-04-08-lost-requirements-restoration.md`
+Branch: `feat/deep-hierarchical-validation`
+
+| Task | Status | Notes |
+|------|--------|-------|
+| T0.A — Mulberry32 seeded RNG per save | done | 11 files migrated, Math.random gate clean, 599/599 tests green |
+| T0.B — Composition pillar end-to-end via Stuffer | pending | |
+| T0.C — Zoombinis-in-Hell deduction loop | pending | |
+| T0.D — Reactive SurrealText slide-down system | pending | |
+| T1.A — Will It Blow splatter climax | pending | |
+| T1.B — Presentation climax (trapdoor + plate) | pending | |
+| T1.C — Style points throughout stations | pending | |
+| T2.A — Jigsaw Billy TV upgrade | pending | |
+| T2.B — Slaughterhouse dressing (60 GLBs) | pending | |
+| T2.C — POC fidelity tuning | pending | |
+| T2.D — Dialogue applyEffects + verdict wiring | pending | |
 
 ## Completion Overview
 
@@ -15,7 +34,7 @@
 | UI/UX | 100% | Menu/loading/overlays, thin HUDs, challenge transitions, difficulty selector, round manager, hidden object overlay, GameOverScreen, LoadingScreen, HintDialogue |
 | State management | 100% | Zustand store with orchestrator→HUD bridge fields, multi-round state, AsyncStorage persistence |
 | Cross-platform | 70% | Web works well; native uses same Canvas (react-native-wgpu); dual-zone touch controls; VR/AR foundations; untested on devices |
-| Testing | 100% | 37 suites, 397 tests, 0 failures |
+| Testing | 100% | 50 suites, 599 tests, 0 failures |
 | Documentation | 95% | Frontmatter on docs, AGENTS.md hierarchy, memory bank, JSDoc cleaned up, TypeDoc |
 | CI/CD | 100% | Parallel jobs: lint, typecheck, test, build — all run on push to main and feat/** |
 | PRD tasks | 100% | 28/28 PRD tasks complete |
@@ -91,6 +110,7 @@
 
 | Date | Milestone |
 |------|-----------|
+| 2026-04-08 | T0.A — Mulberry32 seeded RNG per save: 11 files migrated, Math.random gate clean, 599/599 tests green |
 | 2026-03-04 | Dual-zone touch controls, Rapier KINEMATIC_FIXED fix, real-playthrough E2E |
 | 2026-03-03 | Phase 2 Sprints 1–3 complete: difficulty, horror dressing, enemy encounters, blowout, multi-round, hidden objects, cleanup |
 | 2026-03-13 | All 28 PRD tasks complete; 37 suites / 397 tests all passing; 0 lint errors; 0 TypeScript errors |
