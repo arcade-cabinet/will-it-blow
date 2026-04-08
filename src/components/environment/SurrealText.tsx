@@ -9,7 +9,9 @@
  * 3. **Mr. Sausage taunt** — on the left wall near the TV
  * 4. **Bridge messages** — driven by surrealTextBridge (clue announcements,
  *    verdict text, flair events, dialogue effects — anything that calls
- *    `enqueueSurrealMessage()` from anywhere in the codebase)
+ *    `enqueueSurrealMessage()` from anywhere in the codebase). These use
+ *    the full MOUNTED->SEEN->READING->DROPPING->REMOVED FSM with a
+ *    slide-down animation during the DROPPING phase.
  *
  * Text is blood-red (#FF1744) with a pulsing glow.
  *
@@ -18,7 +20,7 @@
  */
 import {Text} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
-import {useEffect, useMemo, useRef, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import type * as THREE from 'three';
 import type {GamePhase} from '../../ecs/hooks';
 import {useGameStore} from '../../ecs/hooks';
@@ -162,6 +164,15 @@ const PHASE_TAUNTS: Partial<Record<GamePhase, string[]>> = {
 };
 
 // ---------------------------------------------------------------------------
+// Bridge FSM constants
+// ---------------------------------------------------------------------------
+
+/** Drop speed in world-units per second during the DROPPING phase. */
+const BRIDGE_DROP_SPEED = 0.4;
+/** Seconds to dwell in MOUNTED before auto-promoting to SEEN. */
+const BRIDGE_MOUNT_DWELL = 0.3;
+
+// ---------------------------------------------------------------------------
 // SurrealMessage — animated 3D text on a surface
 // ---------------------------------------------------------------------------
 
@@ -273,12 +284,21 @@ interface MessageEntry {
  * Bridge message entry — carries the FSM dropOffset for the slide-down
  * animation. Regular phase/demand/taunt messages use the simpler
  * MessageEntry because they snap-replace rather than slide.
+ *
+ * FSM lifecycle: MOUNTED -> SEEN -> READING -> DROPPING -> REMOVED
+ *
+ * MOUNTED: fade in, wait for mount dwell (auto-advances since we
+ *          can't check camera direction cheaply in this module).
+ * SEEN:    fully visible, dwell for readDuration.
+ * READING: second dwell phase, then auto-drop.
+ * DROPPING: slide downward (Y offset via dropOffset) and fade out.
+ * REMOVED: pruned from the array.
  */
 interface BridgeMessageEntry extends MessageEntry {
   /** Accumulated drop offset for the DROPPING phase. */
   dropOffset: number;
   /** FSM state: MOUNTED -> SEEN -> READING -> DROPPING -> REMOVED. */
-  fsmState: 'MOUNTED' | 'SEEN' | 'READING' | 'DROPPING';
+  fsmState: 'MOUNTED' | 'SEEN' | 'READING' | 'DROPPING' | 'REMOVED';
   /** Accumulated time in current FSM state (seconds). */
   fsmElapsed: number;
   /** How long to dwell in READING before dropping (seconds). */
@@ -306,8 +326,6 @@ export function SurrealText() {
   const totalRounds = useGameStore(state => state.totalRounds);
 
   // Per-run seeded RNG for taunt picks. Same seed -> same line order.
-  // `useRunRng` returns a stable ref-cached closure, so listing it as
-  // a useMemo dep is harmless and satisfies the exhaustive-deps lint.
   const tauntRng = useRunRng('SurrealText.taunt');
 
   // -- Phase instruction messages (positioned near active station) ----------
@@ -429,9 +447,6 @@ export function SurrealText() {
 
   const [tauntMessages, setTauntMessages] = useState<MessageEntry[]>([]);
 
-  // Pick a deterministic taunt when the phase changes. The seeded RNG
-  // advances once per phase change so a save-scummed reload picks the
-  // same taunt sequence as the original run.
   const tauntContent = useMemo(() => {
     if (posture !== 'standing' || introActive) return '';
     const lines = PHASE_TAUNTS[gamePhase];
@@ -461,8 +476,14 @@ export function SurrealText() {
   }, [tauntContent]);
 
   // -- Bridge messages (layer 4 — from surrealTextBridge) ------------------
+  //
+  // Bridge messages use the full MOUNTED->SEEN->READING->DROPPING->REMOVED
+  // FSM. The state is stored in a ref (bridgeQueueRef) to avoid per-frame
+  // React re-renders. We only call setBridgeSnapshot when the render-visible
+  // set changes (add/remove), not on every FSM tick.
 
-  const [bridgeMessages, setBridgeMessages] = useState<BridgeMessageEntry[]>([]);
+  const [bridgeSnapshot, setBridgeSnapshot] = useState<BridgeMessageEntry[]>([]);
+  const bridgeQueueRef = useRef<BridgeMessageEntry[]>([]);
 
   useEffect(() => {
     const unsubscribe = onSurrealMessage((msg: SurrealMessageRequest) => {
@@ -477,23 +498,86 @@ export function SurrealText() {
         dropOffset: 0,
         fsmState: 'MOUNTED',
         fsmElapsed: 0,
-        readDuration: msg.readDurationMs / 1000, // convert to seconds
+        readDuration: msg.readDurationMs / 1000,
       };
-      setBridgeMessages(prev => [...prev, entry]);
+      bridgeQueueRef.current = [...bridgeQueueRef.current, entry];
+      setBridgeSnapshot([...bridgeQueueRef.current]);
     });
     return unsubscribe;
   }, []);
 
+  // Tick the bridge FSM every frame. Mutates entries in bridgeQueueRef;
+  // only triggers a React setState when entries are pruned (REMOVED).
+  useFrame((_state, delta) => {
+    const queue = bridgeQueueRef.current;
+    if (queue.length === 0) return;
+
+    let needsPrune = false;
+    for (const entry of queue) {
+      entry.fsmElapsed += delta;
+
+      switch (entry.fsmState) {
+        case 'MOUNTED':
+          // Auto-advance to SEEN after a brief mount dwell.
+          if (entry.fsmElapsed >= BRIDGE_MOUNT_DWELL) {
+            entry.fsmState = 'SEEN';
+            entry.fsmElapsed = 0;
+          }
+          break;
+
+        case 'SEEN':
+          // Dwell for readDuration, then advance to READING.
+          if (entry.fsmElapsed >= entry.readDuration) {
+            entry.fsmState = 'READING';
+            entry.fsmElapsed = 0;
+          }
+          break;
+
+        case 'READING':
+          // Second dwell (same duration), then begin dropping.
+          if (entry.fsmElapsed >= entry.readDuration) {
+            entry.fsmState = 'DROPPING';
+            entry.fsmElapsed = 0;
+          }
+          break;
+
+        case 'DROPPING':
+          // Slide down and fade out. The SurrealMessage component handles
+          // the fade via isDismissing; we accumulate the drop offset here.
+          entry.dropOffset += delta * BRIDGE_DROP_SPEED;
+          // After 2 seconds of dropping, mark for removal.
+          if (entry.fsmElapsed >= 2.0) {
+            entry.fsmState = 'REMOVED';
+            needsPrune = true;
+          }
+          break;
+
+        case 'REMOVED':
+          needsPrune = true;
+          break;
+      }
+    }
+
+    if (needsPrune) {
+      bridgeQueueRef.current = queue.filter(e => e.fsmState !== 'REMOVED');
+      setBridgeSnapshot([...bridgeQueueRef.current]);
+    }
+  });
+
   // -- Cleanup helpers -----------------------------------------------------
 
-  const removePhaseMessage = (id: number) =>
-    setPhaseMessages(prev => prev.filter(m => m.id !== id));
-  const removeDemandMessage = (id: number) =>
-    setDemandMessages(prev => prev.filter(m => m.id !== id));
-  const removeTauntMessage = (id: number) =>
-    setTauntMessages(prev => prev.filter(m => m.id !== id));
-  const removeBridgeMessage = (id: number) =>
-    setBridgeMessages(prev => prev.filter(m => m.id !== id));
+  const removePhaseMessage = useCallback(
+    (id: number) => setPhaseMessages(prev => prev.filter(m => m.id !== id)),
+    [],
+  );
+  const removeDemandMessage = useCallback(
+    (id: number) => setDemandMessages(prev => prev.filter(m => m.id !== id)),
+    [],
+  );
+  const removeTauntMessage = useCallback(
+    (id: number) => setTauntMessages(prev => prev.filter(m => m.id !== id)),
+    [],
+  );
 
   // -- Render ---------------------------------------------------------------
 
@@ -538,13 +622,15 @@ export function SurrealText() {
         />
       ))}
 
-      {/* Bridge messages — clues, verdicts, dialogue effects */}
-      {bridgeMessages.map(m => (
+      {/* Bridge messages — clues, verdicts, dialogue effects (FSM-driven) */}
+      {bridgeSnapshot.map(m => (
         <SurrealMessage
           key={m.id}
           text={m.text}
           isDismissing={m.fsmState === 'DROPPING'}
-          onDead={() => removeBridgeMessage(m.id)}
+          onDead={() => {
+            /* cleanup handled by useFrame pruning */
+          }}
           surface={m.surface}
           fontSize={m.fontSize}
           maxWidth={m.maxWidth}
