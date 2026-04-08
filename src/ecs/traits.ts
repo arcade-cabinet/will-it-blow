@@ -170,6 +170,32 @@ export const StationGameplayTrait = trait({
   cookLevel: 0 as number, // 0.0 to 1.0
 });
 
+// --- Zoombinis-in-Hell deduction state (T0.C) ---
+
+/**
+ * HungerState — the Zoombinis deduction loop state machine.
+ *
+ * Tracks Mr. Sausage's escalating displeasure: the disgust meter fills
+ * on each mismatched selection; the fridge depletes as rounds progress;
+ * the match history records the player's performance for the verdict
+ * screen. If `disgustMeter >= disgustThreshold`, the game is over.
+ * If `fridgeInventoryJson` is empty, the player wins.
+ */
+export const HungerState = trait({
+  /** JSON-encoded Clue | null — the active clue for this round. */
+  currentClueJson: 'null' as string,
+  /** 0-100 rising meter of Mr. Sausage's displeasure. */
+  disgustMeter: 0 as number,
+  /** Threshold at which disgust triggers game over (default 100). */
+  disgustThreshold: 100 as number,
+  /** JSON-encoded IngredientDef[] — ingredients still available in the fridge. */
+  fridgeInventoryJson: '[]' as string,
+  /** JSON-encoded MatchResult[] — history of match outcomes. */
+  matchHistoryJson: '[]' as string,
+  /** Current round index (1-indexed). */
+  roundIndex: 1 as number,
+});
+
 // --- JSON helpers ---
 
 /** Parse a JSON-encoded array field. Returns empty array on parse error. */
