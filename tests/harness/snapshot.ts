@@ -22,6 +22,12 @@
  * The output directory is under `test-results/browser/` specifically
  * so the existing `.gitignore`'d `test-results/` path covers the
  * screenshots automatically — no extra gitignore rules needed.
+ *
+ * The path is relative (`test-results/browser/...`) without any leading
+ * `../../` prefix. Vitest's Playwright provider resolves relative paths
+ * against the project root (the directory containing vitest.config.ts),
+ * so screenshots always land under `<project>/test-results/browser/`
+ * regardless of where the test file lives on disk.
  */
 import {page} from '@vitest/browser/context';
 
@@ -83,11 +89,9 @@ export async function captureSnapshot(options: CaptureOptions): Promise<string> 
   const viewport = getViewportName();
   const suffix = step ? `${viewport}_${step}` : viewport;
   const safeFeature = feature.replace(/[^a-z0-9._-]/gi, '-');
-  // Resolve against the project root (two dirs above tests/harness/) so
-  // screenshots always land under test-results/ regardless of the CWD
-  // Vitest's browser runner uses.
-  const projectRoot = new URL('../../', import.meta.url).pathname;
-  const path = `${projectRoot}test-results/browser/${layer}/${safeFeature}/${suffix}.png`;
+  // Relative path — Vitest's Playwright provider resolves this against
+  // the project root (where vitest.config.ts lives).
+  const path = `test-results/browser/${layer}/${safeFeature}/${suffix}.png`;
 
   if (scope === 'canvas') {
     const canvas = document.querySelector('canvas');
