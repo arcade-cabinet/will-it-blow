@@ -8,6 +8,9 @@
  * velocity, rotation) routes through a per-component seeded RNG. Save-
  * scummed reloads play the same particle scatter, which keeps any
  * future flair-scoring on grinder rhythm bisectable.
+ *
+ * Style points (T1.C): completing the grind phase awards flair based
+ * on how smoothly the player plunged (continuous vs stop-start).
  */
 import {Box, Cylinder, useTexture} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
@@ -32,7 +35,7 @@ export function Grinder() {
 
   const [plungerY, setPlungerY] = useState(1.2);
 
-  // Per-component seeded RNG. Same run-seed → same particle pattern.
+  // Per-component seeded RNG. Same run-seed -> same particle pattern.
   const rng = useRunRng('Grinder.particles');
 
   // Particle data
@@ -69,6 +72,11 @@ export function Grinder() {
   const setGamePhase = useGameStore(state => state.setGamePhase);
   const setGroundMeatVol = useGameStore(state => state.setGroundMeatVol);
   const groundMeatVol = useGameStore(state => state.groundMeatVol);
+  const recordFlairPoint = useGameStore(state => state.recordFlairPoint);
+
+  // Track plunge continuity for flair scoring.
+  const plungeStartTime = useRef<number | null>(null);
+  const plungePauses = useRef(0);
 
   // Chunk state: 0 = in bowl, 1 = on tray, 2 = in chute (ready to grind)
   const [chunks, setChunks] = useState([
@@ -130,10 +138,16 @@ export function Grinder() {
     if (chunksInChute === 0) return;
 
     // Right hand grips the plunger the entire time it's being dragged.
-    // `hold` clip clamps on its last frame, so we just ask once on press
-    // and revert on release.
-    if (first) requestHandGesture('grab_right');
-    if (last) requestHandGesture('idle');
+    if (first) {
+      requestHandGesture('grab_right');
+      if (plungeStartTime.current === null) {
+        plungeStartTime.current = Date.now();
+      }
+    }
+    if (last) {
+      requestHandGesture('idle');
+      plungePauses.current += 1;
+    }
 
     const newY = Math.max(0.5, Math.min(1.2, 1.2 - y * 0.01));
     const plungeDelta = plungerY - newY;
@@ -147,6 +161,12 @@ export function Grinder() {
         setGroundMeatVol(prev => {
           const next = Math.min(1.0, prev + plungeDelta * 0.5);
           if (next >= 1.0 && gamePhase === 'GRINDING') {
+            // Award flair based on plunge smoothness.
+            if (plungePauses.current <= 1) {
+              recordFlairPoint('Smooth Grind', 5);
+            } else {
+              recordFlairPoint('Grind Complete', 2);
+            }
             setGamePhase('MOVE_BOWL');
           }
           return next;
@@ -162,9 +182,7 @@ export function Grinder() {
           });
         }
 
-        // Spawn particles — every random draw routes through `rng`
-        // (the per-component seeded source) so reloads play the
-        // same scatter pattern.
+        // Spawn particles -- every random draw routes through `rng`
         const data = particlesData.current;
         for (let i = 0; i < 5; i++) {
           const p = data[particleSpawnIndex.current];

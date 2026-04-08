@@ -1,14 +1,18 @@
 /**
  * @module Stuffer
- * Sausage stuffing station — crank-to-fill mechanic with a translucent
+ * Sausage stuffing station -- crank-to-fill mechanic with a translucent
  * casing that tints based on the composite ingredient mix (T0.B).
  *
  * The composition pillar flows through here: `currentRoundSelection`
  * (IDs resolved to IngredientDefs) enters `compositeMix()`, producing
  * colour, transmission, and roughness values that drive the casing
  * MeshPhysicalMaterial in real time. The player SEES the recipe
- * through the translucent casing — this is the diagnostic surface
+ * through the translucent casing -- this is the diagnostic surface
  * that makes the deduction loop visible.
+ *
+ * Style points (T1.C): completing the stuffing in a single continuous
+ * crank awards "Smooth Stuff" flair. Interrupted cranking gets a
+ * lesser "Stuffing Complete" award.
  */
 import {Box, Cylinder, useTexture} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
@@ -34,8 +38,6 @@ class SquigglyCurve extends THREE.Curve<THREE.Vector3> {
 
 /**
  * Parse a `#rrggbb` hex colour to a THREE.Color for material interpolation.
- * Shared with IngredientComposition's hex helpers but kept local to
- * avoid reaching into unexported internals.
  */
 function hexToColor(hex: string): THREE.Color {
   return new THREE.Color(hex);
@@ -55,6 +57,7 @@ export function Stuffer() {
   const stuffLevel = useGameStore(state => state.stuffLevel);
   const setStuffLevel = useGameStore(state => state.setStuffLevel);
   const currentRoundSelection = useGameStore(state => state.currentRoundSelection);
+  const recordFlairPoint = useGameStore(state => state.recordFlairPoint);
 
   const crankRef = useRef<THREE.Group>(null);
   const rodRef = useRef<THREE.Mesh>(null);
@@ -68,6 +71,9 @@ export function Stuffer() {
 
   const [isDraggingCasing, setIsDraggingCasing] = useState(false);
   const [dragTarget, setDragTarget] = useState(new THREE.Vector3(0.5, 0.2, 0));
+
+  // Track crank continuity for flair scoring.
+  const crankPauses = useRef(0);
 
   const [metalMap, metalNormal, metalRough] = useTexture([
     asset('/textures/concrete_color.jpg'),
@@ -88,17 +94,12 @@ export function Stuffer() {
     [metalMap, metalNormal, metalRough],
   );
 
-  // ─── Composition-driven casing material (T0.B) ─────────────────────
-  // Compute the composite mix from the current round's selected
-  // ingredients. When the selection is empty, `compositeMix` returns a
-  // sensible null-mix (grey, fully transparent) so the casing renders
-  // as an untinted shell.
+  // --- Composition-driven casing material (T0.B) ---
   const mix = useMemo(() => compositeMix(currentRoundSelection), [currentRoundSelection]);
 
   const casingMat = useMemo(() => {
     const mixColor = hexToColor(mix.color);
     const baseColor = new THREE.Color('#ffffee');
-    // Blend toward the mix colour as density rises (filling becomes visible)
     const blend = mix.density;
     const blendedColor = baseColor.clone().lerp(mixColor, blend);
 
@@ -149,7 +150,10 @@ export function Stuffer() {
 
     // Left hand clamps onto the crank for the duration of the drag.
     if (first) requestHandGesture('grab_left');
-    if (last) requestHandGesture('idle');
+    if (last) {
+      requestHandGesture('idle');
+      crankPauses.current += 1;
+    }
 
     const newLevel = Math.max(0, Math.min(1.0, stuffLevel + my * 0.002));
     setStuffLevel(newLevel);
@@ -162,6 +166,12 @@ export function Stuffer() {
     }
 
     if (newLevel >= 1.0) {
+      // Award flair based on crank smoothness.
+      if (crankPauses.current <= 1) {
+        recordFlairPoint('Smooth Stuff', 5);
+      } else {
+        recordFlairPoint('Stuffing Complete', 2);
+      }
       setGamePhase('TIE_CASING');
     }
   });
@@ -169,8 +179,6 @@ export function Stuffer() {
   const bindCasing = useDrag(({active, movement: [mx, my], first, last}) => {
     if (gamePhase !== 'ATTACH_CASING') return;
 
-    // Right hand pinches the casing while the player drags it onto the
-    // nozzle — revert to idle the moment the drag lifts.
     if (first) requestHandGesture('grab_right');
     if (last) requestHandGesture('idle');
 
@@ -200,8 +208,6 @@ export function Stuffer() {
 
   const handleSausageClick = () => {
     if (gamePhase === 'MOVE_SAUSAGE') {
-      // A quick two-handed-feeling pickup — tap with the right hand to
-      // "lift" the stuffed tube off the nozzle.
       requestHandGesture('tap_right');
       setGamePhase('MOVE_PAN');
     }

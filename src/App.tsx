@@ -162,6 +162,7 @@ function GameContent() {
 /** Wrapper that reads score state from ECS and passes props to GameOverScreen. */
 function GameOverScreenWrapper() {
   const finalScore = useGameStore(s => s.finalScore);
+  const playerDecisions = useGameStore(s => s.playerDecisions);
   const startNewGame = useGameStore(s => s.startNewGame);
   const returnToMenu = useGameStore(s => s.returnToMenu);
 
@@ -174,6 +175,7 @@ function GameOverScreenWrapper() {
       totalScore={totalScore}
       breakdown={[{label: 'Final Score', score: totalScore}]}
       demandBonus={0}
+      flairPoints={playerDecisions.flairPoints}
       onPlayAgain={() => startNewGame()}
       onMenu={() => returnToMenu()}
     />
@@ -219,27 +221,13 @@ export function App() {
             shadows={{type: PCFShadowMap}}
             gl={{
               toneMappingExposure: 1.0,
-              // Dev-only: let E2E tests call gl.readPixels to verify the
-              // rendered scene isn't a black void. Has a small perf cost
-              // (an extra blit per frame) so it stays off in prod builds.
               preserveDrawingBuffer: import.meta.env.DEV,
             }}
             style={{position: 'absolute', top: 0, left: 0, width: '100%', height: '100%'}}
           >
-            {/*
-              SAW / operating-theatre basement. Background and fog are cold
-              blue-grey, not the warm earth tones of a cosy kitchen. Every
-              ambient value here is pushed toward "this place smells like
-              bleach and old blood".
-            */}
             <color attach="background" args={['#0a0b0f']} />
             <fogExp2 attach="fog" args={['#14161c', 0.018]} />
 
-            {/*
-              Ambient is very low — we want sharp fluorescent tube-cones
-              rather than a diffuse wash. The slight cyan tint `#c8d8d4`
-              pushes faces toward "morgue skin" instead of "kitchen warm".
-            */}
             <ambientLight intensity={0.35} color="#c8d8d4" />
             <directionalLight
               position={[0, 2.5, 0]}
@@ -250,12 +238,6 @@ export function App() {
               shadow-mapSize-height={2048}
               shadow-bias={-0.001}
             />
-            {/*
-              Main ceiling fluorescent tube — sickly institutional green-white
-              (6500K + slight green cast, the colour every hospital corridor
-              and morgue uses). `<FlickeringFluorescent>` drives the intensity
-              via `useFrame` so it strobes occasionally like a dying ballast.
-            */}
             <FlickeringFluorescent
               position={[0, 2.0, 0]}
               baseIntensity={45}
@@ -264,13 +246,6 @@ export function App() {
               flickerRate={0.9}
               flickerDepth={0.85}
             />
-            {/*
-              Second steadier tube, opposite end of the room, prevents total
-              black during the flicker drops. Slightly cooler `#c8e8dc` so
-              the two tubes read as different ballasts dying at different
-              rates — the small inconsistency sells the "no one maintains
-              this place" vibe.
-            */}
             <FlickeringFluorescent
               position={[0, 1.8, -2]}
               baseIntensity={28}
@@ -279,11 +254,6 @@ export function App() {
               flickerRate={0.15}
               flickerDepth={0.25}
             />
-            {/*
-              Low bounce fill so deep-floor shadow doesn't disappear into
-              the abyss. Neutral cool-grey, very dim — just enough to lift
-              the tile floor out of pure black.
-            */}
             <pointLight position={[0, 0.4, 0]} intensity={12} distance={6} color="#b8c8c4" />
 
             <Suspense fallback={null}>
@@ -294,12 +264,12 @@ export function App() {
           {/* Invisible touch overlay for mobile FPS controls */}
           <SwipeFPSControls />
 
-          {/* Tie Gesture overlay — only shown during TIE_CASING phase */}
+          {/* Tie Gesture overlay -- only shown during TIE_CASING phase */}
           {gamePhase === 'TIE_CASING' && (
             <TieGesture onComplete={() => useGameStore.getState().setGamePhase('BLOWOUT')} />
           )}
 
-          {/* Round transition overlay — shown between rounds */}
+          {/* Round transition overlay -- shown between rounds */}
           {showRoundTransition && (
             <RoundTransition
               roundNumber={currentRound + 1}
@@ -308,7 +278,7 @@ export function App() {
             />
           )}
 
-          {/* GameOrchestrator — non-visual state machine, outside Canvas */}
+          {/* GameOrchestrator -- non-visual state machine, outside Canvas */}
           <GameOrchestrator />
         </Suspense>
       )}

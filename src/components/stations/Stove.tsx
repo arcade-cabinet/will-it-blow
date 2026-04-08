@@ -8,6 +8,10 @@
  * driven by a per-component seeded RNG. Save-scummed reloads see the
  * same boil pattern, so the visual feedback the player learns from is
  * consistent across runs of the same seed.
+ *
+ * Style points (T1.C): completing the cook awards flair based on the
+ * final cook level. A perfect medium cook (0.5-0.7) earns "Perfect
+ * Sear"; overcooking or undercooking earns less.
  */
 import {Torus, useGLTF} from '@react-three/drei';
 import {useFrame, useThree} from '@react-three/fiber';
@@ -36,8 +40,11 @@ export function Stove() {
   const dialFL = useRef<THREE.Group>(null);
   const dialBR = useRef<THREE.Group>(null);
 
-  // Per-component seeded RNG for boil splats — replays identically per save.
+  // Per-component seeded RNG for boil splats -- replays identically per save.
   const rng = useRunRng('Stove.splats');
+
+  // Track whether we've already awarded the cook flair (once per phase).
+  const cookFlairAwarded = useRef(false);
 
   // FBO setup
   const rtPrev = useRef(new THREE.WebGLRenderTarget(fboSize, fboSize, fboOptions));
@@ -146,6 +153,14 @@ export function Stove() {
   const setGamePhase = useGameStore(state => state.setGamePhase);
   const cookLevel = useGameStore(state => state.cookLevel);
   const setCookLevel = useGameStore(state => state.setCookLevel);
+  const recordFlairPoint = useGameStore(state => state.recordFlairPoint);
+
+  // Reset flair flag when entering COOKING phase.
+  const prevPhaseRef = useRef(gamePhase);
+  if (gamePhase === 'COOKING' && prevPhaseRef.current !== 'COOKING') {
+    cookFlairAwarded.current = false;
+  }
+  prevPhaseRef.current = gamePhase;
 
   const [panPos, setPanPos] = useState(new THREE.Vector3(0.8, 0, 0)); // BR Burner
 
@@ -178,8 +193,6 @@ export function Stove() {
   };
 
   const bindDialFL = useDrag(({movement: [, my], first, last}) => {
-    // Thumb-and-forefinger pinch on the dial — same "hold" pose as a
-    // crank, different hand so it reads as a different interaction.
     if (first) requestHandGesture('grab_right');
     if (last) requestHandGesture('idle');
 
@@ -206,7 +219,17 @@ export function Stove() {
       if (maxHeat > 0) {
         const nextCook = Math.min(1.0, cookLevel + maxHeat * delta * 0.1); // Takes 10s at full heat
         setCookLevel(nextCook);
-        if (nextCook >= 1.0) {
+        if (nextCook >= 1.0 && !cookFlairAwarded.current) {
+          cookFlairAwarded.current = true;
+          // Award flair based on the heat level at completion.
+          // Perfect sear = moderate heat (0.4-0.7). Too high = charred, too low = raw.
+          if (maxHeat >= 0.4 && maxHeat <= 0.7) {
+            recordFlairPoint('Perfect Sear', 8);
+          } else if (maxHeat > 0.7) {
+            recordFlairPoint('Charred Finish', 3);
+          } else {
+            recordFlairPoint('Slow Cook', 2);
+          }
           setGamePhase('DONE');
         }
       }
@@ -214,9 +237,6 @@ export function Stove() {
       // FBO Grease logic
       let splatCount = 0;
       if (maxHeat > 0.1) {
-        // Add seeded boiling splats based on heat — `rng()` is the
-        // per-run deterministic source so save-scummed reloads see
-        // the same splat pattern.
         for (let i = 0; i < Math.floor(maxHeat * 5); i++) {
           splatDummy.position.set((rng() - 0.5) * 2, (rng() - 0.5) * 2, 0);
           splatDummy.scale.setScalar(0.05 + rng() * 0.1);
