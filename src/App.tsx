@@ -21,6 +21,7 @@ import {ScatterProps} from './components/environment/ScatterProps';
 import {SurrealText} from './components/environment/SurrealText';
 import {KitchenSetPieces} from './components/kitchen/KitchenSetPieces';
 import {LiquidPourer} from './components/kitchen/LiquidPourer';
+import {PresentationFlow} from './components/kitchen/PresentationFlow';
 import {ProceduralIngredientsList} from './components/kitchen/ProceduralIngredients';
 import {TrapDoorAnimation} from './components/kitchen/TrapDoorAnimation';
 import {Sausage} from './components/sausage/Sausage';
@@ -77,6 +78,7 @@ console.error = (...args: unknown[]) => {
 function GameContent() {
   const introActive = useGameStore(state => state.introActive);
   const mrSausageReaction = useGameStore(state => state.mrSausageReaction);
+  const gamePhase = useGameStore(state => state.gamePhase);
   const {moveDirection} = useInput();
 
   // Block movement during intro sequence
@@ -91,6 +93,14 @@ function GameContent() {
     return () => {
       audioEngine.stopDrone();
     };
+  }, []);
+
+  // Presentation flow callback — no-op inside GameContent since the
+  // round transition is managed by App. The PresentationFlow drives
+  // its own animation and enqueues surreal text; App handles nextRound.
+  const handlePresentationComplete = useCallback(() => {
+    // Intentionally empty — the round transition overlay in App handles
+    // the actual round advance. PresentationFlow is purely visual/audio.
   }, []);
 
   return (
@@ -135,6 +145,11 @@ function GameContent() {
 
         {/* Ceiling Trapdoor */}
         <TrapDoorAnimation position={[0, 3, 0]} />
+
+        {/* Presentation climax (T1.B): plate on rope descends during DONE phase */}
+        {gamePhase === 'DONE' && (
+          <PresentationFlow onComplete={handlePresentationComplete} position={[0, 0]} />
+        )}
       </Physics>
 
       <PlayerHands />
