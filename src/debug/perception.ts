@@ -163,15 +163,19 @@ export function readPerception(state: GameState): PerceptionSnapshot {
     playerPosition: Object.freeze({...state.playerPosition}),
     surrealText,
     finalScore: state.finalScore ? Object.freeze({...state.finalScore}) : null,
-    stations: Object.freeze({...STATION_BOUNDS}),
+    stations: Object.freeze(
+      Object.fromEntries(
+        Object.entries(STATION_BOUNDS).map(([k, v]) => [k, Object.freeze({...v})]),
+      ),
+    ) as Readonly<Record<StationName, StationBounds>>,
     activeStations: Object.freeze(activeStations),
   };
   return Object.freeze(snapshot);
 }
 
-/** Get the design bounds for a single station by name (frozen). */
-export function readStationBounds(name: StationName): StationBounds {
-  return STATION_BOUNDS[name];
+/** Get the design bounds for a single station by name (frozen copy). */
+export function readStationBounds(name: StationName): Readonly<StationBounds> {
+  return Object.freeze({...STATION_BOUNDS[name]});
 }
 
 /** Reset the internal tick counter — used by tests for determinism. */

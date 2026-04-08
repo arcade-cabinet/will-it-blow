@@ -101,7 +101,7 @@ const MISDIRECTION_TEMPLATES: {text: string; traits: IngredientTrait[]}[] = [
   {text: 'Chew on this for a while.', traits: ['fibrous', 'chunky', 'hard']},
   {text: 'What even IS that...', traits: ['absurd', 'unsettling', 'squishy']},
   {text: "Smoother than a con man's handshake.", traits: ['smooth', 'shiny', 'soft']},
-  {text: "Like licking a 9-volt battery...", traits: ['metallic', 'bitter', 'dry']},
+  {text: 'Like licking a 9-volt battery...', traits: ['metallic', 'bitter', 'dry']},
   {text: 'Something that was alive five minutes ago.', traits: ['alive', 'meat', 'squishy']},
   {text: 'Feed me the tears of the innocent.', traits: ['salty', 'wet', 'bland']},
   {text: 'I crave the VOID.', traits: ['cold', 'dull', 'dry', 'dead']},

@@ -28,7 +28,7 @@ import * as THREE from 'three';
 import {FIDELITY} from '../../config/fidelityConfig';
 import {useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
-import {INGREDIENTS, compositeMix} from '../../engine/IngredientComposition';
+import {compositeMix, INGREDIENTS} from '../../engine/IngredientComposition';
 import {useRunRng} from '../../engine/useRunRng';
 import {asset} from '../../utils/assetPath';
 import {requestHandGesture} from '../camera/handGestureStore';

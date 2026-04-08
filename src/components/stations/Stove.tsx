@@ -30,7 +30,7 @@ import * as THREE from 'three';
 import {FIDELITY} from '../../config/fidelityConfig';
 import {useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
-import {type CompositeMix, INGREDIENTS, compositeMix} from '../../engine/IngredientComposition';
+import {type CompositeMix, compositeMix, INGREDIENTS} from '../../engine/IngredientComposition';
 import {useRunRng} from '../../engine/useRunRng';
 import {asset} from '../../utils/assetPath';
 import {requestHandGesture} from '../camera/handGestureStore';

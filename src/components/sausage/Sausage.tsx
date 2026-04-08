@@ -20,7 +20,7 @@ import {useRapier} from '@react-three/rapier';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
 import {useGameStore} from '../../ecs/hooks';
-import {INGREDIENTS, compositeMix} from '../../engine/IngredientComposition';
+import {compositeMix, INGREDIENTS} from '../../engine/IngredientComposition';
 import {useRunRng} from '../../engine/useRunRng';
 import {createSausageGeometry, generateMeatTexture, SausageCurve} from './SausageGeometry';
 
@@ -81,7 +81,8 @@ export function Sausage({
   }, [selectedIds]);
 
   // Resolve final appearance values: explicit props win, then composition.
-  const links = linksProp ?? (mix.sources.length > 0 ? Math.max(2, Math.min(6, mix.sources.length + 2)) : 4);
+  const links =
+    linksProp ?? (mix.sources.length > 0 ? Math.max(2, Math.min(6, mix.sources.length + 2)) : 4);
   const thickness = thicknessProp ?? (mix.sources.length > 0 ? 0.4 + mix.density * 0.4 : 0.6);
   const fatRatio = fatRatioProp ?? (mix.sources.length > 0 ? mix.fat : 0.5);
   const greaseLevel = greaseLevelProp ?? (mix.sources.length > 0 ? mix.shine : 0.8);

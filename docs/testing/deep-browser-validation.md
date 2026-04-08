@@ -2,7 +2,7 @@
 
 The `tests/` directory hosts a four-tier validation suite that runs every
 component, every phase transition, and every full playthrough through a
-**real headed Chromium** browser. It replaces the previous Playwright `e2e/`
+**real headless Chromium** browser. It replaces the previous Playwright `e2e/`
 suite with `@vitest/browser` (which uses Playwright as its provider under
 the hood) so the entire stack lives behind a single test runner.
 

@@ -81,7 +81,13 @@ test('getCurrentSurrealText() returns the same string as the perception snapshot
 
 test('App mounts under @vitest/browser without crashing', async () => {
   const screen = render(<App />);
-  // Title screen renders the START COOKING button.
-  await new Promise(r => setTimeout(r, 200));
+  // Poll for the START COOKING button instead of a fixed timeout.
+  // The title screen may take a variable amount of time to render
+  // depending on CI load.
+  const deadline = performance.now() + 5_000;
+  while (performance.now() < deadline) {
+    if (screen.container.innerHTML.includes('START COOKING')) break;
+    await new Promise(r => setTimeout(r, 50));
+  }
   expect(screen.container.innerHTML).toContain('START COOKING');
 });

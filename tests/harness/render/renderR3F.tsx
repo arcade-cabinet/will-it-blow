@@ -43,7 +43,11 @@ const DEFAULT_BACKGROUND_COLOR = '#1a1a1a';
 const DEFAULT_FOG_COLOR = '#2a2a2a';
 const DEFAULT_FOG_DENSITY = 0.015;
 
+let r3fHooksInstalled = false;
+
 export function installR3FTestHooks(): void {
+  if (r3fHooksInstalled) return;
+  r3fHooksInstalled = true;
   afterEach(() => {
     cleanup();
     playerPosition.set(0, 0, 0);

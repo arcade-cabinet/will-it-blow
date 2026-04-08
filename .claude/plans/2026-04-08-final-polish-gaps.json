@@ -35,9 +35,7 @@
           "command": "pnpm test -- --run"
         }
       ],
-      "files": [
-        "src/components/environment/SurrealText.tsx"
-      ]
+      "files": ["src/components/environment/SurrealText.tsx"]
     },
     {
       "id": "P1-T2",
@@ -68,9 +66,7 @@
           "command": "pnpm test -- --run"
         }
       ],
-      "files": [
-        "src/components/environment/SurrealText.tsx"
-      ]
+      "files": ["src/components/environment/SurrealText.tsx"]
     },
     {
       "id": "P2-T1",
@@ -101,9 +97,7 @@
           "command": "pnpm test -- --run"
         }
       ],
-      "files": [
-        "src/components/stations/PhysicsFreezerChest.tsx"
-      ]
+      "files": ["src/components/stations/PhysicsFreezerChest.tsx"]
     },
     {
       "id": "P3-T1",
@@ -131,9 +125,7 @@
           "command": "pnpm test -- --run"
         }
       ],
-      "files": [
-        "src/components/stations/Stove.tsx"
-      ]
+      "files": ["src/components/stations/Stove.tsx"]
     },
     {
       "id": "P3-T2",
@@ -165,9 +157,7 @@
           "command": "pnpm test -- --run"
         }
       ],
-      "files": [
-        "src/components/stations/Grinder.tsx"
-      ]
+      "files": ["src/components/stations/Grinder.tsx"]
     },
     {
       "id": "P3-T3",
@@ -194,10 +184,7 @@
           "command": "pnpm test -- --run"
         }
       ],
-      "files": [
-        "src/App.tsx",
-        "src/components/sausage/Sausage.tsx"
-      ]
+      "files": ["src/App.tsx", "src/components/sausage/Sausage.tsx"]
     },
     {
       "id": "P4-T1",
@@ -224,9 +211,7 @@
           "command": "pnpm test -- --run"
         }
       ],
-      "files": [
-        "src/App.tsx"
-      ]
+      "files": ["src/App.tsx"]
     },
     {
       "id": "P5-T1",
@@ -254,9 +239,7 @@
           "command": "pnpm test -- --run"
         }
       ],
-      "files": [
-        "src/App.tsx"
-      ]
+      "files": ["src/App.tsx"]
     },
     {
       "id": "P6-T1",
@@ -284,9 +267,7 @@
           "command": "pnpm typecheck"
         }
       ],
-      "files": [
-        "src/engine/ClueGenerator.ts"
-      ]
+      "files": ["src/engine/ClueGenerator.ts"]
     },
     {
       "id": "P6-T2",
@@ -313,15 +294,24 @@
           "command": "pnpm test -- --run"
         }
       ],
-      "files": [
-        "src/config/ingredients.json"
-      ]
+      "files": ["src/config/ingredients.json"]
     },
     {
       "id": "P7-T1",
       "description": "Push branch + open PR to main with comprehensive summary",
       "priority": 7,
-      "dependencies": ["P1-T1", "P1-T2", "P2-T1", "P3-T1", "P3-T2", "P3-T3", "P4-T1", "P5-T1", "P6-T1", "P6-T2"],
+      "dependencies": [
+        "P1-T1",
+        "P1-T2",
+        "P2-T1",
+        "P3-T1",
+        "P3-T2",
+        "P3-T3",
+        "P4-T1",
+        "P5-T1",
+        "P6-T1",
+        "P6-T2"
+      ],
       "acceptance_criteria": [
         {
           "criteria": "Branch pushed to remote",

@@ -83,7 +83,11 @@ export async function captureSnapshot(options: CaptureOptions): Promise<string> 
   const viewport = getViewportName();
   const suffix = step ? `${viewport}_${step}` : viewport;
   const safeFeature = feature.replace(/[^a-z0-9._-]/gi, '-');
-  const path = `../../test-results/browser/${layer}/${safeFeature}/${suffix}.png`;
+  // Resolve against the project root (two dirs above tests/harness/) so
+  // screenshots always land under test-results/ regardless of the CWD
+  // Vitest's browser runner uses.
+  const projectRoot = new URL('../../', import.meta.url).pathname;
+  const path = `${projectRoot}test-results/browser/${layer}/${safeFeature}/${suffix}.png`;
 
   if (scope === 'canvas') {
     const canvas = document.querySelector('canvas');

@@ -2,7 +2,7 @@
 
 All real-browser tests for Will It Blow? live here. Powered by
 [`@vitest/browser`](https://vitest.dev/guide/browser/) + Playwright provider,
-so every spec runs in a real headed Chromium with GPU-accelerated WebGL — not
+so every spec runs in real headless Chromium with GPU-accelerated WebGL — not
 jsdom, not a mock.
 
 This directory **replaces** the previous `e2e/` Playwright suite and the

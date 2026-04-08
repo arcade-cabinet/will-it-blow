@@ -14,12 +14,11 @@
  * `pnpm test:browser`  → every browser-test file × every viewport
  * `pnpm test:all`      → both projects
  *
- * The browser project runs HEADED (`headless: false`) because Chromium
- * throttles requestAnimationFrame aggressively in headless mode, which
- * starves R3F's render loop and breaks `useFrame` in tests. CI wraps the
- * command in `xvfb-run` to provide a virtual display. The
- * `--disable-background-*` launch flags are belt-and-braces insurance
- * against any remaining throttling when the window is not frontmost.
+ * The browser project runs HEADLESS (`headless: true`). Modern Chromium's
+ * "new headless" shell (Playwright >=1.46) no longer throttles
+ * requestAnimationFrame as long as the `--disable-background-*` launch
+ * flags are set -- which we do. CI wraps the command in `xvfb-run` as a
+ * belt-and-braces fallback.
  *
  * This config **replaces** the previous `playwright.config.ts` — Vitest
  * browser mode uses Playwright's provider under the hood, so we keep all

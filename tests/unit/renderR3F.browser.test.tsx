@@ -62,10 +62,10 @@ test('back-to-back mounts do not exhaust Chromium WebGL contexts', async () => {
       </mesh>,
     );
     expect(scene.canvas.width).toBeGreaterThan(0);
-    // We DON'T call scene.unmount() — we're relying on the shared
-    // afterEach(cleanup) installed by installR3FTestHooks() to handle
-    // disposal between iterations. This is the exact pattern other
-    // micro tests will use.
+    // Explicitly unmount between loop iterations so we don't exhaust
+    // Chromium's 16-WebGL-context limit. The afterEach(cleanup)
+    // installed by installR3FTestHooks() handles the final cleanup
+    // after the test ends.
     scene.unmount();
   }
 });

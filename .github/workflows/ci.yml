@@ -47,7 +47,7 @@ jobs:
       - name: Install Playwright Chromium (used by Vitest browser provider)
         run: npx playwright install --with-deps chromium
 
-      - name: Browser tests — unit + harness
+      - name: Browser tests — unit
         run: xvfb-run --auto-servernum pnpm test:browser:unit
       - name: Browser tests — harness
         run: xvfb-run --auto-servernum pnpm test:browser:harness

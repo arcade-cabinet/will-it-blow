@@ -12,7 +12,7 @@
  * external assets — every screenshot is referenced via a relative
  * path so the report is portable to any zip / artifact upload.
  */
-import {existsSync, readdirSync, statSync, writeFileSync} from 'node:fs';
+import {existsSync, mkdirSync, readdirSync, statSync, writeFileSync} from 'node:fs';
 import {join, relative, sep} from 'node:path';
 
 const ROOT = join(process.cwd(), 'test-results', 'browser');
@@ -228,6 +228,8 @@ function renderHtml(entries: ScreenshotEntry[]): string {
 function main(): void {
   const entries = collectScreenshots();
   const html = renderHtml(entries);
+  // Ensure the output directory exists (it may not if no tests have run yet).
+  if (!existsSync(ROOT)) mkdirSync(ROOT, {recursive: true});
   writeFileSync(OUTPUT, html, 'utf8');
   console.log(`✔ wrote ${OUTPUT}`);
   console.log(`  ${entries.length} screenshot${entries.length === 1 ? '' : 's'}`);
