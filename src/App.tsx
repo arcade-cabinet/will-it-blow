@@ -7,7 +7,7 @@
  */
 import {Canvas} from '@react-three/fiber';
 import {Physics} from '@react-three/rapier';
-import {Suspense, useCallback, useEffect, useState} from 'react';
+import {Suspense, useCallback, useEffect, useRef, useState} from 'react';
 import {PCFShadowMap} from 'three';
 import {IntroSequence} from './components/camera/IntroSequence';
 import {PlayerHands} from './components/camera/PlayerHands';
@@ -15,6 +15,7 @@ import {TieGesture} from './components/challenges/TieGesture';
 import {MrSausage3D} from './components/characters/MrSausage3D';
 import {SwipeFPSControls} from './components/controls/SwipeFPSControls';
 import {BasementRoom} from './components/environment/BasementRoom';
+import {SlaughterhouseDressing} from './components/environment/dressing/SlaughterhouseDressing';
 import {FlickeringFluorescent} from './components/environment/FlickeringFluorescent';
 import {Prop} from './components/environment/Prop';
 import {ScatterProps} from './components/environment/ScatterProps';
@@ -74,6 +75,21 @@ console.error = (...args: unknown[]) => {
 };
 // -----------------------------------------------------------------------
 
+/**
+ * Module-level signal so PresentationFlow (inside Canvas/Physics) can
+ * notify App (outside Canvas) that the 12-second presentation sequence
+ * has completed. We use a simple callback ref rather than a Zustand
+ * store because this is a one-shot transient signal, not persisted state.
+ */
+let presentationCompleteCallback: (() => void) | null = null;
+
+function notifyPresentationComplete(): void {
+  if (presentationCompleteCallback) {
+    presentationCompleteCallback();
+    presentationCompleteCallback = null;
+  }
+}
+
 /** 3D scene content: physics world, stations, props, camera, and controls. */
 function GameContent() {
   const introActive = useGameStore(state => state.introActive);
@@ -95,12 +111,10 @@ function GameContent() {
     };
   }, []);
 
-  // Presentation flow callback — no-op inside GameContent since the
-  // round transition is managed by App. The PresentationFlow drives
-  // its own animation and enqueues surreal text; App handles nextRound.
+  // PresentationFlow calls this when the full 12-second sequence finishes.
+  // The signal crosses the Canvas boundary via the module-level callback.
   const handlePresentationComplete = useCallback(() => {
-    // Intentionally empty — the round transition overlay in App handles
-    // the actual round advance. PresentationFlow is purely visual/audio.
+    notifyPresentationComplete();
   }, []);
 
   return (
@@ -129,6 +143,7 @@ function GameContent() {
 
         {/* Horror Props */}
         <ScatterProps />
+        <SlaughterhouseDressing />
         <Prop name="Saw" position={[2.9, 1.8, -1.0]} rotation={[0, -Math.PI / 2, 0]} />
         <Prop name="Cleaver" position={[1.5, 0.45, 0]} rotation={[Math.PI / 2, 0.2, 0]} />
         <Prop name="PS1" position={[-2.8, 0.4, 1.0]} rotation={[0, Math.PI / 4, 0]} />
@@ -146,7 +161,9 @@ function GameContent() {
         {/* Ceiling Trapdoor */}
         <TrapDoorAnimation position={[0, 3, 0]} />
 
-        {/* Presentation climax (T1.B): plate on rope descends during DONE phase */}
+        {/* Presentation climax (T1.B): plate on rope descends during DONE phase.
+            The full 12-second presentation must complete BEFORE the round
+            transition overlay appears. */}
         {gamePhase === 'DONE' && (
           <PresentationFlow onComplete={handlePresentationComplete} position={[0, 0]} />
         )}
@@ -189,12 +206,25 @@ export function App() {
   const totalRounds = useGameStore(state => state.totalRounds);
   const nextRound = useGameStore(state => state.nextRound);
   const [showRoundTransition, setShowRoundTransition] = useState(false);
+
+  // Track whether we're waiting for the presentation to finish before
+  // showing the round transition. This prevents the race where the
+  // round transition would appear immediately on entering DONE, before
+  // the 12-second presentation sequence has played.
+  const waitingForPresentationRef = useRef(false);
+
   usePersistence();
 
-  // When DONE phase is reached with rounds remaining, show round transition
+  // When DONE phase is reached with rounds remaining, register a
+  // callback for PresentationFlow completion instead of immediately
+  // showing the round transition.
   useEffect(() => {
     if (gamePhase === 'DONE' && currentRound < totalRounds && appPhase === 'playing') {
-      setShowRoundTransition(true);
+      waitingForPresentationRef.current = true;
+      presentationCompleteCallback = () => {
+        waitingForPresentationRef.current = false;
+        setShowRoundTransition(true);
+      };
     }
   }, [gamePhase, currentRound, totalRounds, appPhase]);
 
@@ -269,7 +299,7 @@ export function App() {
             <TieGesture onComplete={() => useGameStore.getState().setGamePhase('BLOWOUT')} />
           )}
 
-          {/* Round transition overlay -- shown between rounds */}
+          {/* Round transition overlay -- shown AFTER presentation completes */}
           {showRoundTransition && (
             <RoundTransition
               roundNumber={currentRound + 1}
