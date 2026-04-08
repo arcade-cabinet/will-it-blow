@@ -88,16 +88,28 @@ Phases: SELECT_INGREDIENTS → CHOPPING → FILL_GRINDER → GRINDING → MOVE_B
 ## Commands
 
 ```bash
-pnpm dev          # Vite dev server
-pnpm build        # Production build
-pnpm test         # Vitest unit tests
-pnpm test:e2e     # Playwright E2E
-pnpm typecheck    # tsc --noEmit
-pnpm lint         # biome check
-pnpm format       # biome check --write
-pnpm cap:ios      # Capacitor iOS sync + open
-pnpm cap:android  # Capacitor Android sync + open
+pnpm dev                    # Vite dev server
+pnpm build                  # Production build
+pnpm test                   # Vitest unit tests (jsdom — fast)
+pnpm test:browser           # Vitest browser tests (real Chromium, all 4 viewports)
+pnpm test:browser:unit      # browser-mode unit chunk
+pnpm test:browser:micro     # per-component isolation chunk
+pnpm test:browser:meso      # phase + flow chunk
+pnpm test:browser:macro     # Yuka GOAP playthrough chunk
+pnpm test:browser:harness   # harness self-tests
+pnpm report:browser         # rebuild test-results/browser/report.html
+pnpm typecheck              # tsc --noEmit
+pnpm lint                   # biome check
+pnpm format                 # biome check --write
+pnpm cap:ios                # Capacitor iOS sync + open
+pnpm cap:android            # Capacitor Android sync + open
 ```
+
+> Browser tests use `@vitest/browser` with the Playwright provider.
+> See `docs/testing/deep-browser-validation.md` for the full
+> harness reference + Yuka GOAP governor architecture. The legacy
+> `pnpm test:e2e` Playwright command and `e2e/` directory have
+> been removed — Vitest browser mode replaces them.
 
 ## Critical Rules
 
