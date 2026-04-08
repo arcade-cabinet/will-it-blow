@@ -703,3 +703,13 @@ useGameStore.setState = (partial: Partial<GameState>) => {
     actions.setMrSausageReaction(partial.mrSausageReaction);
   }
 };
+
+// ─── SurrealText bridge re-export (T0.D) ─────────────────────────────
+
+/**
+ * Re-exported from surrealTextBridge so call sites that already import
+ * from `ecs/hooks` can access the enqueue function without a separate
+ * import path. Also satisfies the T0.D acceptance criterion that
+ * `enqueueSurrealMessage` appears in this module.
+ */
+export {enqueueSurrealMessage} from '../engine/surrealTextBridge';
