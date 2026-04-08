@@ -3,20 +3,18 @@
  * Diegetic in-world UI text -- renders instructions and state-driven messages
  * as 3D text meshes on kitchen surfaces NEAR the active station for each phase.
  *
- * Three text layers:
+ * Four text layers:
  * 1. **Phase instruction** — on the wall/floor near the current station
  * 2. **Demands** — always on the ceiling so the player can glance up any time
  * 3. **Mr. Sausage taunt** — on the left wall near the TV
+ * 4. **Bridge messages** — driven by surrealTextBridge (clue announcements,
+ *    verdict text, flair events, dialogue effects — anything that calls
+ *    `enqueueSurrealMessage()` from anywhere in the codebase)
  *
  * Text is blood-red (#FF1744) with a pulsing glow.
  *
- * Determinism note (T0.A): the taunt-line picker now draws from the
- * per-run seeded RNG. The same save replays the same Mr. Sausage
- * commentary, which keeps the read-it-once horror beats consistent.
- *
- * T0.D will replace this whole module with a reactive slide-down
- * state machine; until then, the line picker fix is the smallest
- * change that gets us under the no-platform-RNG gate.
+ * Determinism note (T0.A): the taunt-line picker draws from the per-run
+ * seeded RNG. The same save replays the same Mr. Sausage commentary.
  */
 import {Text} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
@@ -24,11 +22,13 @@ import {useEffect, useMemo, useRef, useState} from 'react';
 import type * as THREE from 'three';
 import type {GamePhase} from '../../ecs/hooks';
 import {useGameStore} from '../../ecs/hooks';
+import type {SurrealMessageRequest} from '../../engine/surrealTextBridge';
+import {onSurrealMessage} from '../../engine/surrealTextBridge';
 import {useRunRng} from '../../engine/useRunRng';
 import {asset} from '../../utils/assetPath';
 
 // ---------------------------------------------------------------------------
-// Phase → Surface mapping
+// Phase -> Surface mapping
 // ---------------------------------------------------------------------------
 
 interface SurfacePlacement {
@@ -116,6 +116,26 @@ const TV_WALL_SURFACE: SurfacePlacement = {
   rotation: [0, Math.PI / 2, 0],
 };
 
+/**
+ * Named surface map for bridge messages. The bridge sends a string key
+ * like 'wall-N', 'ceiling', etc.; we resolve it to a placement here.
+ * 'auto' defaults to the back wall (wall-N) offset slightly lower than
+ * phase text so both are readable simultaneously.
+ */
+const NAMED_SURFACES: Record<string, SurfacePlacement> = {
+  'wall-N': {position: [0, 1.0, -3.8], rotation: [0, 0, 0]},
+  'wall-S': {position: [0, 1.0, 3.8], rotation: [0, Math.PI, 0]},
+  'wall-E': {position: [2.9, 1.0, 0], rotation: [0, -Math.PI / 2, 0]},
+  'wall-W': {position: [-2.9, 1.0, 0], rotation: [0, Math.PI / 2, 0]},
+  ceiling: CEILING_SURFACE,
+  floor: {position: [0, 0.01, 0], rotation: [-Math.PI / 2, 0, 0]},
+  auto: {position: [0, 1.0, -3.8], rotation: [0, 0, 0]},
+};
+
+function resolveSurface(name: string): SurfacePlacement {
+  return NAMED_SURFACES[name] ?? NAMED_SURFACES.auto;
+}
+
 // ---------------------------------------------------------------------------
 // Mr. Sausage taunt lines per phase (short quips for the TV wall)
 // ---------------------------------------------------------------------------
@@ -153,6 +173,7 @@ function SurrealMessage({
   surface,
   fontSize = 0.4,
   maxWidth = 5.0,
+  dropOffset = 0,
 }: {
   text: string;
   onDead: () => void;
@@ -160,6 +181,8 @@ function SurrealMessage({
   surface: SurfacePlacement;
   fontSize?: number;
   maxWidth?: number;
+  /** Vertical offset for slide-down animation (bridge messages). */
+  dropOffset?: number;
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const materialRef = useRef<THREE.MeshStandardMaterial>(null);
@@ -189,10 +212,19 @@ function SurrealMessage({
     if (bgRef.current) {
       bgRef.current.opacity = Math.max(0, s.opacity * 0.5);
     }
+
+    // Apply slide-down offset to the group Y position.
+    if (groupRef.current && dropOffset !== 0) {
+      groupRef.current.position.y = surface.position[1] - dropOffset;
+    }
   });
 
   return (
-    <group ref={groupRef} position={surface.position} rotation={surface.rotation}>
+    <group
+      ref={groupRef}
+      position={[surface.position[0], surface.position[1] - dropOffset, surface.position[2]]}
+      rotation={surface.rotation}
+    >
       {/* Semi-transparent dark background plane for contrast */}
       <mesh position={[0, 0, -0.01]}>
         <planeGeometry args={[maxWidth + 0.4, fontSize * 4 + 0.3]} />
@@ -238,13 +270,30 @@ interface MessageEntry {
 }
 
 /**
+ * Bridge message entry — carries the FSM dropOffset for the slide-down
+ * animation. Regular phase/demand/taunt messages use the simpler
+ * MessageEntry because they snap-replace rather than slide.
+ */
+interface BridgeMessageEntry extends MessageEntry {
+  /** Accumulated drop offset for the DROPPING phase. */
+  dropOffset: number;
+  /** FSM state: MOUNTED -> SEEN -> READING -> DROPPING -> REMOVED. */
+  fsmState: 'MOUNTED' | 'SEEN' | 'READING' | 'DROPPING';
+  /** Accumulated time in current FSM state (seconds). */
+  fsmElapsed: number;
+  /** How long to dwell in READING before dropping (seconds). */
+  readDuration: number;
+}
+
+/**
  * Manages the queue of surreal 3D text messages displayed in the scene.
  * Derives message content from game phase, posture, demands, and score state.
  *
- * Three concurrent text layers:
+ * Four concurrent text layers:
  * 1. Phase instruction on the wall/floor near the active station
  * 2. Demands on the ceiling (persistent)
  * 3. Mr. Sausage taunt near the TV on the left wall
+ * 4. Bridge messages (from surrealTextBridge — clues, verdicts, effects)
  */
 export function SurrealText() {
   const introActive = useGameStore(state => state.introActive);
@@ -256,7 +305,7 @@ export function SurrealText() {
   const currentRound = useGameStore(state => state.currentRound);
   const totalRounds = useGameStore(state => state.totalRounds);
 
-  // Per-run seeded RNG for taunt picks. Same seed → same line order.
+  // Per-run seeded RNG for taunt picks. Same seed -> same line order.
   // `useRunRng` returns a stable ref-cached closure, so listing it as
   // a useMemo dep is harmless and satisfies the exhaustive-deps lint.
   const tauntRng = useRunRng('SurrealText.taunt');
@@ -411,6 +460,30 @@ export function SurrealText() {
     }
   }, [tauntContent]);
 
+  // -- Bridge messages (layer 4 — from surrealTextBridge) ------------------
+
+  const [bridgeMessages, setBridgeMessages] = useState<BridgeMessageEntry[]>([]);
+
+  useEffect(() => {
+    const unsubscribe = onSurrealMessage((msg: SurrealMessageRequest) => {
+      const surface = resolveSurface(msg.surface);
+      const entry: BridgeMessageEntry = {
+        id: nextId++,
+        text: msg.text,
+        active: true,
+        surface,
+        fontSize: 0.3,
+        maxWidth: 4.0,
+        dropOffset: 0,
+        fsmState: 'MOUNTED',
+        fsmElapsed: 0,
+        readDuration: msg.readDurationMs / 1000, // convert to seconds
+      };
+      setBridgeMessages(prev => [...prev, entry]);
+    });
+    return unsubscribe;
+  }, []);
+
   // -- Cleanup helpers -----------------------------------------------------
 
   const removePhaseMessage = (id: number) =>
@@ -419,6 +492,8 @@ export function SurrealText() {
     setDemandMessages(prev => prev.filter(m => m.id !== id));
   const removeTauntMessage = (id: number) =>
     setTauntMessages(prev => prev.filter(m => m.id !== id));
+  const removeBridgeMessage = (id: number) =>
+    setBridgeMessages(prev => prev.filter(m => m.id !== id));
 
   // -- Render ---------------------------------------------------------------
 
@@ -460,6 +535,20 @@ export function SurrealText() {
           surface={m.surface}
           fontSize={m.fontSize}
           maxWidth={m.maxWidth}
+        />
+      ))}
+
+      {/* Bridge messages — clues, verdicts, dialogue effects */}
+      {bridgeMessages.map(m => (
+        <SurrealMessage
+          key={m.id}
+          text={m.text}
+          isDismissing={m.fsmState === 'DROPPING'}
+          onDead={() => removeBridgeMessage(m.id)}
+          surface={m.surface}
+          fontSize={m.fontSize}
+          maxWidth={m.maxWidth}
+          dropOffset={m.dropOffset}
         />
       ))}
     </>
