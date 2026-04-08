@@ -60,6 +60,21 @@ const browserAlias = {
 export default defineConfig({
   plugins: [react()],
   resolve: {alias: browserAlias},
+  // Pre-bundle the heavy deps that browser tests pull in transitively
+  // through `<App />`. Without these in `include`, Vite re-optimizes
+  // them on the first test run, which fires a "Vite unexpectedly
+  // reloaded a test" warning and can flakily duplicate test runs.
+  optimizeDeps: {
+    include: [
+      '@use-gesture/react',
+      'tone',
+      'drizzle-orm',
+      'drizzle-orm/sqlite-core',
+      'drizzle-orm/sql-js',
+      'sql.js',
+      '@capacitor/core',
+    ],
+  },
   test: {
     projects: [
       // ── unit (jsdom) ────────────────────────────────────────────────
