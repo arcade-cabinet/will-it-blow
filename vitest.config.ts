@@ -102,6 +102,11 @@ export default defineConfig({
         test: {
           name: 'browser',
           globals: true,
+          // Import the app's `index.css` once per test file so
+          // Tailwind / DaisyUI / custom tokens are applied to every
+          // mounted component. Without this, screenshots come out
+          // unstyled (raw browser defaults on `<button>` etc).
+          setupFiles: ['./tests/harness/browser-setup.ts'],
           include: [
             'src/**/*.browser.test.{ts,tsx}',
             'tests/**/*.browser.test.{ts,tsx}',
