@@ -1,3 +1,14 @@
+/**
+ * @module Stove
+ * The grease-pool simulator station. Two burners with knobs, a draggable
+ * frying pan, and an FBO ripple sim that paints normal-mapped grease
+ * onto the pan as the player turns up the heat.
+ *
+ * Determinism note (T0.A): per-frame splat positions and scales are
+ * driven by a per-component seeded RNG. Save-scummed reloads see the
+ * same boil pattern, so the visual feedback the player learns from is
+ * consistent across runs of the same seed.
+ */
 import {Torus, useGLTF} from '@react-three/drei';
 import {useFrame, useThree} from '@react-three/fiber';
 import {RigidBody} from '@react-three/rapier';
@@ -6,6 +17,7 @@ import {useEffect, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
 import {useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
+import {useRunRng} from '../../engine/useRunRng';
 import {asset} from '../../utils/assetPath';
 import {requestHandGesture} from '../camera/handGestureStore';
 
@@ -23,6 +35,9 @@ export function Stove() {
   const [burnerLevels, setBurnerLevels] = useState([0, 0]); // FrontLeft, BackRight
   const dialFL = useRef<THREE.Group>(null);
   const dialBR = useRef<THREE.Group>(null);
+
+  // Per-component seeded RNG for boil splats — replays identically per save.
+  const rng = useRunRng('Stove.splats');
 
   // FBO setup
   const rtPrev = useRef(new THREE.WebGLRenderTarget(fboSize, fboSize, fboOptions));
@@ -199,10 +214,12 @@ export function Stove() {
       // FBO Grease logic
       let splatCount = 0;
       if (maxHeat > 0.1) {
-        // Add random boiling splats based on heat
+        // Add seeded boiling splats based on heat — `rng()` is the
+        // per-run deterministic source so save-scummed reloads see
+        // the same splat pattern.
         for (let i = 0; i < Math.floor(maxHeat * 5); i++) {
-          splatDummy.position.set((Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, 0);
-          splatDummy.scale.setScalar(0.05 + Math.random() * 0.1);
+          splatDummy.position.set((rng() - 0.5) * 2, (rng() - 0.5) * 2, 0);
+          splatDummy.scale.setScalar(0.05 + rng() * 0.1);
           splatDummy.updateMatrix();
           splatMesh.setMatrixAt(splatCount++, splatDummy.matrix);
         }

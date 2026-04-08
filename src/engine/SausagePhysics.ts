@@ -2,9 +2,16 @@
  * @module SausagePhysics
  * Pure scoring functions for sausage quality evaluation.
  * All functions are deterministic (no side effects, no store access).
+ *
+ * Determinism note (T0.A): `checkBurst` previously rolled the platform
+ * RNG directly. It now takes an optional `rng` parameter so the call
+ * site can thread the per-run seeded source. The default falls back to
+ * `createRunRngOrFallback` so any non-gameplay caller (dev tools,
+ * snapshot tests that don't care about determinism) keeps working.
  */
 import ingredientsConfig from '../config/ingredients.json';
 import scoringConfig from '../config/scoring.json';
+import {createRunRngOrFallback} from './RunSeed';
 
 interface IngredientStats {
   tasteMod: number;
@@ -29,14 +36,20 @@ export function calculateBlowRuffalos(holdDuration: number, ingredientIds: strin
   return Math.min(100, Math.max(0, basePressure + modifier));
 }
 
-/** Probabilistic burst check based on ingredient blow power. */
-export function checkBurst(ingredientIds: string[]): boolean {
+/**
+ * Probabilistic burst check based on ingredient blow power.
+ * Pass an explicit `rng` to make the result deterministic for the
+ * current run; the default uses the run-seeded fallback so tests and
+ * gameplay both replay identically given the same seed.
+ */
+export function checkBurst(ingredientIds: string[], rng?: () => number): boolean {
   const totalBlowPower = ingredientIds.reduce(
     (sum, id) => sum + getIngredientStats(id).blowPower,
     0,
   );
   const burstProbability = Math.min(0.9, totalBlowPower * 0.05);
-  return Math.random() < burstProbability;
+  const r = rng ?? createRunRngOrFallback('SausagePhysics.checkBurst');
+  return r() < burstProbability;
 }
 
 /** Calculate taste rating from ingredient taste/texture mods. */

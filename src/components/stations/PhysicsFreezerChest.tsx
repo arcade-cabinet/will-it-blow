@@ -1,3 +1,15 @@
+/**
+ * @module PhysicsFreezerChest
+ * The basement freezer / fridge — a physics "toy chest" full of
+ * draggable ingredients. The player reaches in and pulls items out
+ * during SELECT_INGREDIENTS to commit them to the round selection.
+ *
+ * Determinism note (T0.A): the random fridge contents (which
+ * ingredients spawn where, with what rotation) are now deterministic
+ * per-run. The same save-seed always lays out the same 25 items, so
+ * the player can build a memory of "the steak is in the back-left"
+ * across save-scummed reloads.
+ */
 import {useGLTF} from '@react-three/drei';
 import {RigidBody} from '@react-three/rapier';
 import {useDrag} from '@use-gesture/react';
@@ -5,6 +17,7 @@ import {useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
 import {useGameStore} from '../../ecs/hooks';
 import {INGREDIENT_MODELS as INGREDIENT_DEFS} from '../../engine/Ingredients';
+import {createRunRngOrFallback} from '../../engine/RunSeed';
 import {asset} from '../../utils/assetPath';
 
 export function PhysicsFreezerChest() {
@@ -26,28 +39,31 @@ export function PhysicsFreezerChest() {
     [],
   );
 
-  // Pre-generate a list of ingredients to spawn inside the freezer bounds
+  // Pre-generate a list of ingredients to spawn inside the freezer bounds.
   // Uses the data-driven INGREDIENT_DEFS so each item has a proper string ID
-  // that maps to the scoring system in DemandScoring.ts
+  // that maps to the scoring system in DemandScoring.ts. Positions and
+  // rotations route through the per-run seeded RNG so reloads see the
+  // same fridge layout (the player learns the spatial map of the fridge).
   const spawnedIngredients = useMemo(() => {
+    const rng = createRunRngOrFallback('freezer.layout');
     const list = [];
     // Spawn 25 random items for a totally packed toy chest
     for (let i = 0; i < 25; i++) {
-      const def = INGREDIENT_DEFS[Math.floor(Math.random() * INGREDIENT_DEFS.length)];
+      const def = INGREDIENT_DEFS[Math.floor(rng() * INGREDIENT_DEFS.length)];
       list.push({
         spawnIndex: i,
         ingredientId: def.id, // string ID like 'banana', 'burger', etc.
         path: def.path,
         node: def.node,
         scale: def.scale,
-        // Random position inside the bounds of the freezer tub
-        // Spawn higher (0.6-1.4) so items settle into the tub via gravity
+        // Position inside the bounds of the freezer tub.
+        // Spawn higher (0.6-1.4) so items settle into the tub via gravity.
         pos: [
-          (Math.random() - 0.5) * 1.2, // X width (narrower to stay inside)
-          Math.random() * 0.8 + 0.6, // Y height (above tub floor)
-          (Math.random() - 0.5) * 0.8, // Z depth (narrower to stay inside)
+          (rng() - 0.5) * 1.2, // X width (narrower to stay inside)
+          rng() * 0.8 + 0.6, // Y height (above tub floor)
+          (rng() - 0.5) * 0.8, // Z depth (narrower to stay inside)
         ],
-        rot: [Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI],
+        rot: [rng() * Math.PI, rng() * Math.PI, rng() * Math.PI],
       });
     }
     return list;

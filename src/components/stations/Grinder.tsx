@@ -1,3 +1,14 @@
+/**
+ * @module Grinder
+ * The chunks-to-paste workhorse. Player drops raw meat through the
+ * chute, mashes the plunger, and ground meat shoots out of the
+ * faceplate into the prep bowl.
+ *
+ * Determinism note (T0.A): per-frame particle jitter (spawn position,
+ * velocity, rotation) routes through a per-component seeded RNG. Save-
+ * scummed reloads play the same particle scatter, which keeps any
+ * future flair-scoring on grinder rhythm bisectable.
+ */
 import {Box, Cylinder, useTexture} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
 import {RigidBody} from '@react-three/rapier';
@@ -6,6 +17,7 @@ import {useEffect, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
 import {useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
+import {useRunRng} from '../../engine/useRunRng';
 import {asset} from '../../utils/assetPath';
 import {requestHandGesture} from '../camera/handGestureStore';
 
@@ -19,6 +31,9 @@ export function Grinder() {
   const particlesRef = useRef<THREE.InstancedMesh>(null);
 
   const [plungerY, setPlungerY] = useState(1.2);
+
+  // Per-component seeded RNG. Same run-seed → same particle pattern.
+  const rng = useRunRng('Grinder.particles');
 
   // Particle data
   const particlesData = useRef(
@@ -147,7 +162,9 @@ export function Grinder() {
           });
         }
 
-        // Spawn particles
+        // Spawn particles — every random draw routes through `rng`
+        // (the per-component seeded source) so reloads play the
+        // same scatter pattern.
         const data = particlesData.current;
         for (let i = 0; i < 5; i++) {
           const p = data[particleSpawnIndex.current];
@@ -155,16 +172,12 @@ export function Grinder() {
 
           if (p && !p.active) {
             p.active = true;
-            const angle = Math.random() * Math.PI * 2;
-            const r = Math.random() * 0.15;
+            const angle = rng() * Math.PI * 2;
+            const r = rng() * 0.15;
             // Spawn from faceplate holes
-            p.pos.set(0.6, 0 + (Math.random() - 0.5) * 0.2, r * Math.sin(angle));
-            p.vel.set(
-              2 + Math.random() * 2,
-              (Math.random() - 0.5) * 0.5,
-              (Math.random() - 0.5) * 0.5,
-            );
-            p.rot.set(Math.random(), Math.random(), Math.random());
+            p.pos.set(0.6, 0 + (rng() - 0.5) * 0.2, r * Math.sin(angle));
+            p.vel.set(2 + rng() * 2, (rng() - 0.5) * 0.5, (rng() - 0.5) * 0.5);
+            p.rot.set(rng(), rng(), rng());
           }
         }
       }

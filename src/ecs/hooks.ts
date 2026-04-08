@@ -9,10 +9,16 @@
  *
  * They use useSyncExternalStore to subscribe to Koota ECS entities
  * via the module-level singleton world.
+ *
+ * Determinism note (T0.A): all randomness in this file routes through
+ * `createRunRngOrFallback` so save-scummed reloads replay the exact
+ * same demand triples and round transitions.
  */
 import {useSyncExternalStore} from 'react';
 import type {Reaction} from '../characters/reactions';
 import {calculateDemandBonus} from '../engine/DemandScoring';
+import {generateDemand} from '../engine/demandGen';
+import {createRunRngOrFallback} from '../engine/RunSeed';
 import {ecsWorld, onWorldReset} from './kootaWorld';
 import {
   AppTrait,
@@ -415,28 +421,18 @@ const actions: GameActions = {
   },
 
   generateDemands() {
-    const possibleTags = [
-      'sweet',
-      'savory',
-      'meat',
-      'spicy',
-      'comfort',
-      'absurd',
-      'fast-food',
-      'chunky',
-      'smooth',
-    ];
-    const shuffled = [...possibleTags].sort(() => Math.random() - 0.5);
-    const cookPrefs = ['rare', 'medium', 'well-done', 'charred'] as const;
+    // Seeded so save-scummed reloads regenerate identical demands.
+    const rng = createRunRngOrFallback('demands');
+    const demand = generateDemand(rng);
 
     let e = getSingleton(DemandTrait);
     if (!e) {
       e = ecsWorld.spawn(DemandTrait);
     }
     e.set(DemandTrait, {
-      desiredTagsJson: toJsonArray([shuffled[0], shuffled[1]]),
-      hatedTagsJson: toJsonArray([shuffled[2]]),
-      cookPreference: cookPrefs[Math.floor(Math.random() * cookPrefs.length)],
+      desiredTagsJson: toJsonArray([...demand.desiredTags]),
+      hatedTagsJson: toJsonArray([...demand.hatedTags]),
+      cookPreference: demand.cookPreference,
     });
     notify();
   },

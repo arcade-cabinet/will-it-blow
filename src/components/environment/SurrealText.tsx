@@ -9,6 +9,14 @@
  * 3. **Mr. Sausage taunt** — on the left wall near the TV
  *
  * Text is blood-red (#FF1744) with a pulsing glow.
+ *
+ * Determinism note (T0.A): the taunt-line picker now draws from the
+ * per-run seeded RNG. The same save replays the same Mr. Sausage
+ * commentary, which keeps the read-it-once horror beats consistent.
+ *
+ * T0.D will replace this whole module with a reactive slide-down
+ * state machine; until then, the line picker fix is the smallest
+ * change that gets us under the no-platform-RNG gate.
  */
 import {Text} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
@@ -16,6 +24,7 @@ import {useEffect, useMemo, useRef, useState} from 'react';
 import type * as THREE from 'three';
 import type {GamePhase} from '../../ecs/hooks';
 import {useGameStore} from '../../ecs/hooks';
+import {useRunRng} from '../../engine/useRunRng';
 import {asset} from '../../utils/assetPath';
 
 // ---------------------------------------------------------------------------
@@ -247,6 +256,11 @@ export function SurrealText() {
   const currentRound = useGameStore(state => state.currentRound);
   const totalRounds = useGameStore(state => state.totalRounds);
 
+  // Per-run seeded RNG for taunt picks. Same seed → same line order.
+  // `useRunRng` returns a stable ref-cached closure, so listing it as
+  // a useMemo dep is harmless and satisfies the exhaustive-deps lint.
+  const tauntRng = useRunRng('SurrealText.taunt');
+
   // -- Phase instruction messages (positioned near active station) ----------
 
   const [phaseMessages, setPhaseMessages] = useState<MessageEntry[]>([]);
@@ -366,14 +380,15 @@ export function SurrealText() {
 
   const [tauntMessages, setTauntMessages] = useState<MessageEntry[]>([]);
 
-  // Pick a random taunt when the phase changes
+  // Pick a deterministic taunt when the phase changes. The seeded RNG
+  // advances once per phase change so a save-scummed reload picks the
+  // same taunt sequence as the original run.
   const tauntContent = useMemo(() => {
     if (posture !== 'standing' || introActive) return '';
     const lines = PHASE_TAUNTS[gamePhase];
     if (!lines || lines.length === 0) return '';
-    return lines[Math.floor(Math.random() * lines.length)];
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: re-pick on phase change
-  }, [gamePhase, posture, introActive]);
+    return lines[Math.floor(tauntRng() * lines.length)];
+  }, [gamePhase, posture, introActive, tauntRng]);
 
   useEffect(() => {
     if (tauntContent) {

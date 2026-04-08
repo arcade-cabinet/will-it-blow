@@ -1,16 +1,36 @@
+/**
+ * @module BlowoutStation
+ * The "Will It Blow?" climax (Tier 1 placeholder).
+ *
+ * The current implementation is the legacy slam-pad: pick up the
+ * tube, swipe down, watch particles fly. T1.A will replace this with
+ * the cereal-box splatter target + composite-tier scoring. The shape
+ * here is preserved so the rest of the round still terminates while
+ * Tier 1 work is in flight.
+ *
+ * Determinism note (T0.A): all random jitter (tube initial pressure,
+ * particle scatter, splatter rotations) routes through a per-component
+ * seeded RNG. Save-scummed reloads see the same blow pattern.
+ */
 import {useFrame, useThree} from '@react-three/fiber';
 import {useCallback, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
 import {useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
+import {useRunRng} from '../../engine/useRunRng';
 import {requestHandGesture} from '../camera/handGestureStore';
 
 const PARTICLE_COUNT = 80;
 const SPLATTER_COUNT = 12;
 
-/** Random float in [min, max). */
-function rand(min: number, max: number) {
-  return min + Math.random() * (max - min);
+/**
+ * Closure-bound RNG helper. We can't read the seeded `rng` at module
+ * level because the seed isn't established until the player starts a
+ * run; this factory binds a stable per-component RNG when the
+ * component mounts. Caller passes its `useRunRng()` result in.
+ */
+function makeRand(rng: () => number) {
+  return (min: number, max: number): number => min + rng() * (max - min);
 }
 
 export function BlowoutStation() {
@@ -19,6 +39,10 @@ export function BlowoutStation() {
   const recordFlairPoint = useGameStore(state => state.recordFlairPoint);
   const setMrSausageReaction = useGameStore(state => state.setMrSausageReaction);
 
+  // Per-component seeded RNG. Save-scummed reload → same blow pattern.
+  const rng = useRunRng('Blowout.particles');
+  const rand = useMemo(() => makeRand(rng), [rng]);
+
   // --- Interaction state (refs to avoid stale closures in useFrame) ---
   const [pickedUp, setPickedUp] = useState(false);
 
@@ -26,7 +50,9 @@ export function BlowoutStation() {
   const particlesRef = useRef<THREE.InstancedMesh>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
-  // Tube pressure — randomized per appearance (0.2 to 1.0)
+  // Tube pressure — randomized per appearance (0.2 to 1.0). Initial
+  // value uses the seeded `rand` so the first appearance is stable
+  // across reloads (the on-enter reset re-rolls from the same RNG).
   const tubePressure = useRef(rand(0.2, 1.0));
   // Wobble phase accumulator
   const wobblePhase = useRef(0);
@@ -49,8 +75,12 @@ export function BlowoutStation() {
     })),
   );
 
-  // Splatter stain positions (placed after particles land)
-  const [splatters, setSplatters] = useState<{pos: [number, number, number]; scale: number}[]>([]);
+  // Splatter stain positions (placed after particles land). Each
+  // entry carries its own pre-rolled rotation so re-renders don't
+  // shuffle the stains.
+  const [splatters, setSplatters] = useState<
+    {pos: [number, number, number]; scale: number; rot: number}[]
+  >([]);
 
   const {size} = useThree();
 
@@ -166,7 +196,7 @@ export function BlowoutStation() {
     }
 
     explosionTimer.current = 0;
-  }, [size.height, recordFlairPoint, setMrSausageReaction]);
+  }, [size.height, recordFlairPoint, setMrSausageReaction, rand]);
 
   const onPointerUp = useCallback(() => {
     if (!isDragging.current || hasExploded.current) return;
@@ -199,7 +229,7 @@ export function BlowoutStation() {
     // After explosion: simulate particles
     if (hasExploded.current && particlesRef.current) {
       explosionTimer.current += delta;
-      const newSplatters: {pos: [number, number, number]; scale: number}[] = [];
+      const newSplatters: {pos: [number, number, number]; scale: number; rot: number}[] = [];
 
       for (let i = 0; i < PARTICLE_COUNT; i++) {
         const p = particles.current[i];
@@ -221,6 +251,7 @@ export function BlowoutStation() {
           newSplatters.push({
             pos: [p.pos.x, 0.005, p.pos.z],
             scale: rand(0.08, 0.25),
+            rot: rand(0, Math.PI * 2),
           });
           dummy.position.set(0, -999, 0);
         } else {
@@ -337,7 +368,7 @@ export function BlowoutStation() {
       {splatters.map((s, i) => (
         <mesh
           key={`splat-${i}-${s.pos[0].toFixed(3)}`}
-          rotation={[-Math.PI / 2, 0, rand(0, Math.PI * 2)]}
+          rotation={[-Math.PI / 2, 0, s.rot]}
           position={s.pos}
         >
           <circleGeometry args={[s.scale, 8]} />

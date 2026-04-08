@@ -1,8 +1,20 @@
+/**
+ * @module Sausage
+ * Bone-chain physics sausage rendered as a skinned mesh with springy
+ * Rapier bodies hung off each bone. Drives extrusion at the stuffer,
+ * settling in the pan, and the cooking colour ramp.
+ *
+ * Determinism note (T0.A): the sideways jitter applied on extrusion
+ * is now a per-component seeded RNG (`useRunRng('Sausage.extrude')`)
+ * rather than the platform RNG. Save-scummed reloads see the same
+ * sausage dance for the same input sequence.
+ */
 import {useFrame} from '@react-three/fiber';
 import {useRapier} from '@react-three/rapier';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
 import {useGameStore} from '../../ecs/hooks';
+import {useRunRng} from '../../engine/useRunRng';
 import {createSausageGeometry, generateMeatTexture, SausageCurve} from './SausageGeometry';
 
 interface SausageProps {
@@ -35,6 +47,11 @@ export function Sausage({
   const gamePhase = useGameStore(state => state.gamePhase);
   const stuffLevel = useGameStore(state => state.stuffLevel);
   const cookLevel = useGameStore(state => state.cookLevel);
+
+  // Per-component seeded RNG. Used for the extrusion impulse jitter
+  // and (via `useMemo`) the meat-texture noise generator.
+  const rng = useRunRng('Sausage.extrude');
+  const textureRng = useRunRng('Sausage.texture');
 
   const numBones = links * 5;
   const pSeg = Math.max(200, links * 50);
@@ -73,7 +90,7 @@ export function Sausage({
   }, [links, thickness, numBones, pSeg]);
 
   const meatMat = useMemo(() => {
-    const tex = generateMeatTexture(meatColors[meatType], fatRatio);
+    const tex = generateMeatTexture(meatColors[meatType], fatRatio, textureRng);
     return new THREE.MeshPhysicalMaterial({
       map: tex.map,
       bumpMap: tex.bumpMap,
@@ -83,7 +100,7 @@ export function Sausage({
       clearcoat: greaseLevel,
       clearcoatRoughness: (1.0 - greaseLevel) * 0.3,
     });
-  }, [meatType, fatRatio, greaseLevel]);
+  }, [meatType, fatRatio, greaseLevel, textureRng]);
 
   // Create physical bodies manually since we need to spring-bind them to the bones
   const [bodies, setBodies] = useState<any[]>([]);
@@ -166,7 +183,7 @@ export function Sausage({
           bone.scale.setScalar(1);
           body.setTranslation({x: nozzleTipPos.x, y: nozzleTipPos.y, z: nozzleTipPos.z}, true);
           body.setLinvel({x: 0, y: 0, z: 0}, true);
-          body.applyImpulse({x: (Math.random() - 0.5) * 0.1, y: 0.3, z: 2.0}, true);
+          body.applyImpulse({x: (rng() - 0.5) * 0.1, y: 0.3, z: 2.0}, true);
         }
         if (!anchor.extruded) {
           body.setTranslation({x: 0, y: 100 + i * 0.5, z: 0}, true);

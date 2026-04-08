@@ -1,9 +1,21 @@
+/**
+ * @module Sink
+ * The basement scrub station — a chrome basin with a faucet that
+ * never quite stops dripping. Mostly atmospheric: the per-frame water
+ * jitter sells "yes there is actually water coming out of this thing"
+ * without ever requiring a real shader.
+ *
+ * Determinism note (T0.A): water-stream scale jitter is now driven by
+ * a per-component seeded RNG. Save-scummed reloads see the same
+ * jitter pattern, so visual recordings stay reproducible.
+ */
 import {Box, Cylinder, useTexture} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
 import {RigidBody} from '@react-three/rapier';
 import {useEffect, useMemo, useRef} from 'react';
 import * as THREE from 'three';
 import {audioEngine} from '../../engine/AudioEngine';
+import {useRunRng} from '../../engine/useRunRng';
 import {asset} from '../../utils/assetPath';
 
 export function Sink() {
@@ -22,6 +34,9 @@ export function Sink() {
   const waterRef = useRef<THREE.Mesh>(null);
   const faucetHandleLRef = useRef<THREE.Group>(null);
   const faucetHandleRRef = useRef<THREE.Group>(null);
+
+  // Per-component seeded jitter source — replays identically on save reload.
+  const rng = useRunRng('Sink.water');
 
   // Chrome material for the sink basin
   const chromeMat = useMemo(
@@ -62,8 +77,8 @@ export function Sink() {
     // Animate running water
     if (waterRef.current) {
       waterRef.current.position.y = 0.4 + Math.sin(state.clock.elapsedTime * 20) * 0.05;
-      waterRef.current.scale.x = 0.9 + Math.random() * 0.2;
-      waterRef.current.scale.z = 0.9 + Math.random() * 0.2;
+      waterRef.current.scale.x = 0.9 + rng() * 0.2;
+      waterRef.current.scale.z = 0.9 + rng() * 0.2;
     }
   });
 

@@ -1,0 +1,604 @@
+{
+  "batch_name": "lost-requirements-restoration",
+  "created": "2026-04-08",
+  "version": "2.88",
+  "project": "will-it-blow",
+  "branch": "feat/deep-hierarchical-validation",
+  "prd": "docs/plans/2026-04-08-lost-requirements-restoration.md",
+  "config": {
+    "stop_on_failure": false,
+    "auto_commit": true,
+    "no_push": true,
+    "teammates": [
+      "scene-architect",
+      "challenge-dev",
+      "store-warden",
+      "asset-pipeline",
+      "doc-keeper"
+    ],
+    "parallelism": "by_wave",
+    "max_concurrent_tasks": 4
+  },
+  "global_gates": [
+    "test_file_committed_before_implementation",
+    "module_jsdoc_explains_why",
+    "pnpm_typecheck_clean",
+    "pnpm_lint_clean",
+    "pnpm_test_green",
+    "no_2d_hud_added",
+    "named_exports_only",
+    "no_file_over_400_loc",
+    "conventional_commits"
+  ],
+  "waves": [
+    {
+      "wave": 1,
+      "tier": "T0",
+      "label": "Foundational substrate",
+      "execution": "sequential",
+      "task_ids": ["task-001", "task-002", "task-003", "task-004"]
+    },
+    {
+      "wave": 2,
+      "tier": "T1",
+      "label": "Core mechanics",
+      "execution": "parallel",
+      "task_ids": ["task-005", "task-006", "task-007"]
+    },
+    {
+      "wave": 3,
+      "tier": "T2",
+      "label": "Polish and atmosphere",
+      "execution": "parallel",
+      "task_ids": ["task-008", "task-009", "task-010", "task-011"]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task-001",
+      "code": "T0.A",
+      "wave": 1,
+      "priority": 0,
+      "description": "Seeded deterministic RNG (Mulberry32) and migrate all Math.random in gameplay code",
+      "agent": "store-warden",
+      "dependencies": [],
+      "files": [
+        "src/engine/RunSeed.ts",
+        "src/engine/__tests__/RunSeed.test.ts",
+        "src/ecs/actions.ts",
+        "src/ecs/hooks.ts",
+        "src/components/stations/PhysicsFreezerChest.tsx",
+        "src/components/stations/Grinder.tsx",
+        "src/components/stations/Stove.tsx",
+        "src/components/stations/Sink.tsx",
+        "src/components/stations/BlowoutStation.tsx",
+        "src/components/sausage/Sausage.tsx",
+        "src/components/sausage/SausageGeometry.ts",
+        "src/components/environment/SurrealText.tsx"
+      ],
+      "acceptance_criteria": [
+        {
+          "criteria": "src/engine/RunSeed.ts exports createSeededRng",
+          "verification": "code_contains",
+          "path": "src/engine/RunSeed.ts",
+          "pattern": "export function createSeededRng"
+        },
+        {
+          "criteria": "src/engine/RunSeed.ts exports getRunSeed and setRunSeed",
+          "verification": "code_contains",
+          "path": "src/engine/RunSeed.ts",
+          "pattern": "export function (getRunSeed|setRunSeed)"
+        },
+        {
+          "criteria": "Mulberry32 implementation present",
+          "verification": "code_contains",
+          "path": "src/engine/RunSeed.ts",
+          "pattern": "0x6D2B79F5"
+        },
+        {
+          "criteria": "Determinism unit test exists",
+          "verification": "file_exists",
+          "path": "src/engine/__tests__/RunSeed.test.ts"
+        },
+        {
+          "criteria": "Zero Math.random in gameplay subtrees",
+          "verification": "command",
+          "command": "! grep -rE 'Math\\.random' src/engine src/components/stations src/components/sausage src/ecs"
+        },
+        {
+          "criteria": "Typecheck passes",
+          "verification": "command",
+          "command": "pnpm typecheck"
+        },
+        {
+          "criteria": "Tests pass",
+          "verification": "command",
+          "command": "pnpm test"
+        }
+      ]
+    },
+    {
+      "id": "task-002",
+      "code": "T0.B",
+      "wave": 1,
+      "priority": 0,
+      "description": "Composition pillar end-to-end via Stuffer casing (selection -> compositeMix -> material)",
+      "agent": "challenge-dev",
+      "dependencies": ["task-001"],
+      "files": [
+        "src/ecs/hooks.ts",
+        "src/components/stations/Stuffer.tsx",
+        "src/components/stations/PhysicsFreezerChest.tsx",
+        "tests/micro/Stuffer.browser.test.tsx"
+      ],
+      "acceptance_criteria": [
+        {
+          "criteria": "useGameStore exposes currentRoundSelection state",
+          "verification": "code_contains",
+          "path": "src/ecs/hooks.ts",
+          "pattern": "currentRoundSelection"
+        },
+        {
+          "criteria": "addToSelection action exported",
+          "verification": "code_contains",
+          "path": "src/ecs/hooks.ts",
+          "pattern": "addToSelection"
+        },
+        {
+          "criteria": "Stuffer.tsx calls compositeMix",
+          "verification": "code_contains",
+          "path": "src/components/stations/Stuffer.tsx",
+          "pattern": "compositeMix\\("
+        },
+        {
+          "criteria": "Stuffer browser test exists",
+          "verification": "file_exists",
+          "path": "tests/micro/Stuffer.browser.test.tsx"
+        },
+        {
+          "criteria": "Typecheck passes",
+          "verification": "command",
+          "command": "pnpm typecheck"
+        },
+        {
+          "criteria": "Tests pass",
+          "verification": "command",
+          "command": "pnpm test"
+        }
+      ]
+    },
+    {
+      "id": "task-003",
+      "code": "T0.C",
+      "wave": 1,
+      "priority": 0,
+      "description": "Zoombinis-in-Hell deduction loop (ClueGenerator + HungerState + match logic)",
+      "agent": "challenge-dev",
+      "dependencies": ["task-001", "task-002"],
+      "files": [
+        "src/engine/ClueGenerator.ts",
+        "src/engine/__tests__/ClueGenerator.test.ts",
+        "src/ecs/traits.ts",
+        "src/ecs/hooks.ts",
+        "src/engine/RoundManager.ts"
+      ],
+      "acceptance_criteria": [
+        {
+          "criteria": "ClueGenerator exports generateClue",
+          "verification": "code_contains",
+          "path": "src/engine/ClueGenerator.ts",
+          "pattern": "export function generateClue"
+        },
+        {
+          "criteria": "ClueGenerator exports matchSelection",
+          "verification": "code_contains",
+          "path": "src/engine/ClueGenerator.ts",
+          "pattern": "export function matchSelection"
+        },
+        {
+          "criteria": "Clue type with literal/misdirection/shock-me variants",
+          "verification": "code_contains",
+          "path": "src/engine/ClueGenerator.ts",
+          "pattern": "literal|misdirection|shock-me"
+        },
+        {
+          "criteria": "HungerState trait defined",
+          "verification": "code_contains",
+          "path": "src/ecs/traits.ts",
+          "pattern": "HungerState|disgustMeter"
+        },
+        {
+          "criteria": "ClueGenerator unit test exists",
+          "verification": "file_exists",
+          "path": "src/engine/__tests__/ClueGenerator.test.ts"
+        },
+        {
+          "criteria": "Typecheck passes",
+          "verification": "command",
+          "command": "pnpm typecheck"
+        },
+        {
+          "criteria": "Tests pass",
+          "verification": "command",
+          "command": "pnpm test"
+        }
+      ]
+    },
+    {
+      "id": "task-004",
+      "code": "T0.D",
+      "wave": 1,
+      "priority": 0,
+      "description": "Reactive SurrealText slide-down system (camera-aware mount, dwell, drop)",
+      "agent": "scene-architect",
+      "dependencies": ["task-001", "task-003"],
+      "files": [
+        "src/components/environment/SurrealText.tsx",
+        "src/components/environment/surrealText/cameraSurface.ts",
+        "src/components/environment/surrealText/messageQueue.ts",
+        "src/ecs/hooks.ts",
+        "src/components/environment/__tests__/SurrealText.test.tsx",
+        "tests/micro/SurrealText.browser.test.tsx"
+      ],
+      "acceptance_criteria": [
+        {
+          "criteria": "State machine constants present",
+          "verification": "code_contains",
+          "path": "src/components/environment/surrealText/messageQueue.ts",
+          "pattern": "MOUNTED|SEEN|READING|DROPPING|REMOVED"
+        },
+        {
+          "criteria": "enqueueSurrealMessage action exported",
+          "verification": "code_contains",
+          "path": "src/ecs/hooks.ts",
+          "pattern": "enqueueSurrealMessage"
+        },
+        {
+          "criteria": "Camera-surface picker module exists",
+          "verification": "file_exists",
+          "path": "src/components/environment/surrealText/cameraSurface.ts"
+        },
+        {
+          "criteria": "Browser test exists",
+          "verification": "file_exists",
+          "path": "tests/micro/SurrealText.browser.test.tsx"
+        },
+        {
+          "criteria": "Typecheck passes",
+          "verification": "command",
+          "command": "pnpm typecheck"
+        },
+        {
+          "criteria": "Tests pass",
+          "verification": "command",
+          "command": "pnpm test"
+        }
+      ]
+    },
+    {
+      "id": "task-005",
+      "code": "T1.A",
+      "wave": 2,
+      "priority": 1,
+      "description": "Will It Blow splatter climax (cereal box CanvasTexture + composite tier scoring)",
+      "agent": "challenge-dev",
+      "dependencies": ["task-001", "task-002", "task-004"],
+      "files": [
+        "src/components/stations/BlowoutStation.tsx",
+        "src/components/stations/blowout/CerealBoxTarget.tsx",
+        "src/components/stations/blowout/CanvasTextureSplatter.ts",
+        "src/components/stations/blowout/compositeTier.ts",
+        "tests/micro/BlowoutStation.browser.test.tsx"
+      ],
+      "acceptance_criteria": [
+        {
+          "criteria": "CerealBoxTarget component exists",
+          "verification": "file_exists",
+          "path": "src/components/stations/blowout/CerealBoxTarget.tsx"
+        },
+        {
+          "criteria": "CanvasTextureSplatter module exists",
+          "verification": "file_exists",
+          "path": "src/components/stations/blowout/CanvasTextureSplatter.ts"
+        },
+        {
+          "criteria": "paintSplat function exported",
+          "verification": "code_contains",
+          "path": "src/components/stations/blowout/CanvasTextureSplatter.ts",
+          "pattern": "paintSplat"
+        },
+        {
+          "criteria": "Composite tier function exported",
+          "verification": "code_contains",
+          "path": "src/components/stations/blowout/compositeTier.ts",
+          "pattern": "getCompositeTier|export function"
+        },
+        {
+          "criteria": "BlowoutStation calls recordFlairPoint",
+          "verification": "code_contains",
+          "path": "src/components/stations/BlowoutStation.tsx",
+          "pattern": "recordFlairPoint"
+        },
+        {
+          "criteria": "Browser test exists",
+          "verification": "file_exists",
+          "path": "tests/micro/BlowoutStation.browser.test.tsx"
+        },
+        {
+          "criteria": "Typecheck passes",
+          "verification": "command",
+          "command": "pnpm typecheck"
+        },
+        {
+          "criteria": "Tests pass",
+          "verification": "command",
+          "command": "pnpm test"
+        }
+      ]
+    },
+    {
+      "id": "task-006",
+      "code": "T1.B",
+      "wave": 2,
+      "priority": 1,
+      "description": "Presentation climax: trapdoor opens at intro + round-end, plate descends on rope",
+      "agent": "scene-architect",
+      "dependencies": ["task-003", "task-004"],
+      "files": [
+        "src/components/kitchen/TrapDoorMount.tsx",
+        "src/components/kitchen/TrapDoorAnimation.tsx",
+        "src/components/kitchen/PlateOnRope.tsx",
+        "src/components/kitchen/PresentationFlow.tsx",
+        "src/ecs/hooks.ts",
+        "src/App.tsx"
+      ],
+      "acceptance_criteria": [
+        {
+          "criteria": "PlateOnRope component exists",
+          "verification": "file_exists",
+          "path": "src/components/kitchen/PlateOnRope.tsx"
+        },
+        {
+          "criteria": "PresentationFlow component exists",
+          "verification": "file_exists",
+          "path": "src/components/kitchen/PresentationFlow.tsx"
+        },
+        {
+          "criteria": "TubeGeometry rope present",
+          "verification": "code_contains",
+          "path": "src/components/kitchen/PlateOnRope.tsx",
+          "pattern": "TubeGeometry|tubeGeometry"
+        },
+        {
+          "criteria": "Presentation state machine has expected phases",
+          "verification": "code_contains",
+          "path": "src/components/kitchen/PresentationFlow.tsx",
+          "pattern": "PlateDescending|JudgmentPause|PlateAscending"
+        },
+        {
+          "criteria": "Typecheck passes",
+          "verification": "command",
+          "command": "pnpm typecheck"
+        },
+        {
+          "criteria": "Tests pass",
+          "verification": "command",
+          "command": "pnpm test"
+        }
+      ]
+    },
+    {
+      "id": "task-007",
+      "code": "T1.C",
+      "wave": 2,
+      "priority": 1,
+      "description": "Style points throughout (wire recordFlairPoint into all stations + verdict screen)",
+      "agent": "challenge-dev",
+      "dependencies": ["task-001", "task-004"],
+      "files": [
+        "src/components/stations/ChoppingBlock.tsx",
+        "src/components/stations/Grinder.tsx",
+        "src/components/stations/Stuffer.tsx",
+        "src/components/stations/Stove.tsx",
+        "src/components/stations/Sink.tsx",
+        "src/components/ui/GameOverScreen.tsx"
+      ],
+      "acceptance_criteria": [
+        {
+          "criteria": "ChoppingBlock calls recordFlairPoint",
+          "verification": "code_contains",
+          "path": "src/components/stations/ChoppingBlock.tsx",
+          "pattern": "recordFlairPoint"
+        },
+        {
+          "criteria": "Grinder calls recordFlairPoint",
+          "verification": "code_contains",
+          "path": "src/components/stations/Grinder.tsx",
+          "pattern": "recordFlairPoint"
+        },
+        {
+          "criteria": "Stuffer calls recordFlairPoint",
+          "verification": "code_contains",
+          "path": "src/components/stations/Stuffer.tsx",
+          "pattern": "recordFlairPoint"
+        },
+        {
+          "criteria": "Stove calls recordFlairPoint",
+          "verification": "code_contains",
+          "path": "src/components/stations/Stove.tsx",
+          "pattern": "recordFlairPoint"
+        },
+        {
+          "criteria": "Sink calls recordFlairPoint",
+          "verification": "code_contains",
+          "path": "src/components/stations/Sink.tsx",
+          "pattern": "recordFlairPoint"
+        },
+        {
+          "criteria": "GameOverScreen reads flairPoints",
+          "verification": "code_contains",
+          "path": "src/components/ui/GameOverScreen.tsx",
+          "pattern": "flairPoints"
+        },
+        {
+          "criteria": "Typecheck passes",
+          "verification": "command",
+          "command": "pnpm typecheck"
+        },
+        {
+          "criteria": "Tests pass",
+          "verification": "command",
+          "command": "pnpm test"
+        }
+      ]
+    },
+    {
+      "id": "task-008",
+      "code": "T2.A",
+      "wave": 3,
+      "priority": 2,
+      "description": "Jigsaw Billy TV upgrade (red phosphor, swivel servo, head tilt, static bursts)",
+      "agent": "scene-architect",
+      "dependencies": ["task-005", "task-006", "task-007"],
+      "files": ["src/components/stations/TV.tsx", "src/components/stations/TV.browser.test.tsx"],
+      "acceptance_criteria": [
+        {
+          "criteria": "Phosphor red",
+          "verification": "code_contains",
+          "path": "src/components/stations/TV.tsx",
+          "pattern": "#ff2200|0xff2200"
+        },
+        {
+          "criteria": "Swivel servo logic",
+          "verification": "code_contains",
+          "path": "src/components/stations/TV.tsx",
+          "pattern": "swivel|servo|lerp"
+        },
+        {
+          "criteria": "Typecheck passes",
+          "verification": "command",
+          "command": "pnpm typecheck"
+        },
+        {
+          "criteria": "Tests pass",
+          "verification": "command",
+          "command": "pnpm test"
+        }
+      ]
+    },
+    {
+      "id": "task-009",
+      "code": "T2.B",
+      "wave": 3,
+      "priority": 2,
+      "description": "SlaughterhouseDressing component (place 60 unused GLBs as set dressing)",
+      "agent": "asset-pipeline",
+      "dependencies": ["task-001"],
+      "files": [
+        "src/components/environment/dressing/WallTrophies.tsx",
+        "src/components/environment/dressing/CeilingHazards.tsx",
+        "src/components/environment/dressing/FloorDebris.tsx",
+        "src/components/environment/dressing/FarCornerCage.tsx",
+        "src/components/environment/dressing/BearTrapByMattress.tsx",
+        "src/components/environment/dressing/WallShelf.tsx",
+        "src/components/environment/dressing/SlaughterhouseDressing.tsx"
+      ],
+      "acceptance_criteria": [
+        {
+          "criteria": "WallTrophies exists",
+          "verification": "file_exists",
+          "path": "src/components/environment/dressing/WallTrophies.tsx"
+        },
+        {
+          "criteria": "CeilingHazards exists",
+          "verification": "file_exists",
+          "path": "src/components/environment/dressing/CeilingHazards.tsx"
+        },
+        {
+          "criteria": "FloorDebris exists",
+          "verification": "file_exists",
+          "path": "src/components/environment/dressing/FloorDebris.tsx"
+        },
+        {
+          "criteria": "FarCornerCage exists",
+          "verification": "file_exists",
+          "path": "src/components/environment/dressing/FarCornerCage.tsx"
+        },
+        {
+          "criteria": "BearTrapByMattress exists",
+          "verification": "file_exists",
+          "path": "src/components/environment/dressing/BearTrapByMattress.tsx"
+        },
+        {
+          "criteria": "SlaughterhouseDressing orchestrator exists",
+          "verification": "file_exists",
+          "path": "src/components/environment/dressing/SlaughterhouseDressing.tsx"
+        },
+        {
+          "criteria": "Typecheck passes",
+          "verification": "command",
+          "command": "pnpm typecheck"
+        },
+        {
+          "criteria": "Tests pass",
+          "verification": "command",
+          "command": "pnpm test"
+        }
+      ]
+    },
+    {
+      "id": "task-010",
+      "code": "T2.C",
+      "wave": 3,
+      "priority": 2,
+      "description": "POC fidelity tuning (grinder/stove/blowout particle counts, FBO sizes)",
+      "agent": "scene-architect",
+      "dependencies": ["task-009"],
+      "files": [
+        "src/components/stations/Grinder.tsx",
+        "src/components/stations/Stove.tsx",
+        "src/components/stations/BlowoutStation.tsx"
+      ],
+      "acceptance_criteria": [
+        {
+          "criteria": "Typecheck passes",
+          "verification": "command",
+          "command": "pnpm typecheck"
+        },
+        {
+          "criteria": "Tests pass",
+          "verification": "command",
+          "command": "pnpm test"
+        }
+      ]
+    },
+    {
+      "id": "task-011",
+      "code": "T2.D",
+      "wave": 3,
+      "priority": 2,
+      "description": "Audit findings: dialogue applyEffects() wired into runner",
+      "agent": "challenge-dev",
+      "dependencies": ["task-007"],
+      "files": ["src/engine/DialogueEngine.ts", "src/components/ui/GameOverScreen.tsx"],
+      "acceptance_criteria": [
+        {
+          "criteria": "applyEffects called from runner",
+          "verification": "code_contains",
+          "path": "src/engine/DialogueEngine.ts",
+          "pattern": "applyEffects\\("
+        },
+        {
+          "criteria": "Typecheck passes",
+          "verification": "command",
+          "command": "pnpm typecheck"
+        },
+        {
+          "criteria": "Tests pass",
+          "verification": "command",
+          "command": "pnpm test"
+        }
+      ]
+    }
+  ]
+}

@@ -1,4 +1,15 @@
+/**
+ * @module SausageGeometry
+ * Procedural mesh + skinning + meat texture generation for the
+ * bone-chain sausage model.
+ *
+ * Determinism note (T0.A): the meat-texture noise generator now takes
+ * an explicit RNG so callers can pass the per-run seeded source. The
+ * default still falls back to `createRunRngOrFallback` so non-gameplay
+ * callers (snapshot tests, dev tools) keep working.
+ */
 import * as THREE from 'three';
+import {createRunRngOrFallback} from '../../engine/RunSeed';
 
 export class SausageCurve extends THREE.Curve<THREE.Vector3> {
   type: string;
@@ -113,7 +124,14 @@ export function createSausageGeometry(
   return geo;
 }
 
-export function generateMeatTexture(colorHex: string, fatRatio: number) {
+/**
+ * Generate the procedural meat-speckle texture used by the sausage
+ * surface material. Pass a `rng` to make the noise pattern reproducible
+ * for the current run; the default uses the run-seeded fallback so
+ * save-scummed reloads see the same speckle pattern.
+ */
+export function generateMeatTexture(colorHex: string, fatRatio: number, rng?: () => number) {
+  const r = rng ?? createRunRngOrFallback('SausageGeometry.meatTexture');
   const canvas = document.createElement('canvas');
   canvas.width = 1024;
   canvas.height = 1024;
@@ -126,15 +144,9 @@ export function generateMeatTexture(colorHex: string, fatRatio: number) {
   const drawSpecks = (c: number, sr: {min: number; max: number}, cols: string[], a: number) => {
     ctx.globalAlpha = a;
     for (let i = 0; i < c; i++) {
-      ctx.fillStyle = cols[Math.floor(Math.random() * cols.length)];
+      ctx.fillStyle = cols[Math.floor(r() * cols.length)];
       ctx.beginPath();
-      ctx.arc(
-        Math.random() * 1024,
-        Math.random() * 1024,
-        Math.random() * sr.max + sr.min,
-        0,
-        Math.PI * 2,
-      );
+      ctx.arc(r() * 1024, r() * 1024, r() * sr.max + sr.min, 0, Math.PI * 2);
       ctx.fill();
     }
   };

@@ -5,9 +5,15 @@
  *
  * These replace the Zustand store actions. They read/write singleton
  * entities with traits rather than calling set() on a Zustand store.
+ *
+ * Determinism note (T0.A): all randomness here routes through
+ * `createRunRngOrFallback` so save-scummed reloads regenerate identical
+ * demand triples.
  */
 import {createActions} from 'koota';
 import {calculateDemandBonus} from '../engine/DemandScoring';
+import {generateDemand} from '../engine/demandGen';
+import {createRunRngOrFallback} from '../engine/RunSeed';
 import {
   AppTrait,
   BlowoutTrait,
@@ -277,28 +283,18 @@ export const gameActions = createActions(world => ({
   },
 
   generateDemands() {
-    const possibleTags = [
-      'sweet',
-      'savory',
-      'meat',
-      'spicy',
-      'comfort',
-      'absurd',
-      'fast-food',
-      'chunky',
-      'smooth',
-    ];
-    const shuffled = [...possibleTags].sort(() => Math.random() - 0.5);
-    const cookPrefs = ['rare', 'medium', 'well-done', 'charred'] as const;
+    // Seeded so save-scummed reloads regenerate identical demands.
+    const rng = createRunRngOrFallback('demands');
+    const demand = generateDemand(rng);
 
     let e = findSingleton(world, DemandTrait);
     if (!e) {
       e = world.spawn(DemandTrait);
     }
     e.set(DemandTrait, {
-      desiredTagsJson: toJsonArray([shuffled[0], shuffled[1]]),
-      hatedTagsJson: toJsonArray([shuffled[2]]),
-      cookPreference: cookPrefs[Math.floor(Math.random() * cookPrefs.length)],
+      desiredTagsJson: toJsonArray([...demand.desiredTags]),
+      hatedTagsJson: toJsonArray([...demand.hatedTags]),
+      cookPreference: demand.cookPreference,
     });
   },
 
