@@ -14,6 +14,10 @@
  *
  * Fidelity tuning (T2.C): particle count and spawn-per-frame now read
  * from the centralized FIDELITY config for mobile-first performance.
+ *
+ * Composition integration: particle and ground meat ball colours are
+ * now driven by the composite mix colour, so the player sees the
+ * expected meat tint change based on their ingredient selection.
  */
 import {Box, Cylinder, useTexture} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
@@ -24,6 +28,7 @@ import * as THREE from 'three';
 import {FIDELITY} from '../../config/fidelityConfig';
 import {useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
+import {INGREDIENTS, compositeMix} from '../../engine/IngredientComposition';
 import {useRunRng} from '../../engine/useRunRng';
 import {asset} from '../../utils/assetPath';
 import {requestHandGesture} from '../camera/handGestureStore';
@@ -78,6 +83,16 @@ export function Grinder() {
   const setGroundMeatVol = useGameStore(state => state.setGroundMeatVol);
   const groundMeatVol = useGameStore(state => state.groundMeatVol);
   const recordFlairPoint = useGameStore(state => state.recordFlairPoint);
+  const selectedIds = useGameStore(state => state.selectedIngredientIds);
+
+  // Derive the composite mix colour for particles and ground meat ball.
+  const mixColor = useMemo(() => {
+    const defs = selectedIds
+      .map(id => INGREDIENTS.find(ing => ing.id === id))
+      .filter((d): d is (typeof INGREDIENTS)[number] => d != null);
+    const mix = compositeMix(defs);
+    return mix.sources.length > 0 ? mix.color : '#822424';
+  }, [selectedIds]);
 
   // Track plunge continuity for flair scoring.
   const plungeStartTime = useRef<number | null>(null);
@@ -303,11 +318,11 @@ export function Grinder() {
         >
           <cylinderGeometry args={[0.3, 0.2, 0.2, 32]} />
           <meshStandardMaterial color="#ffffff" roughness={0.1} />
-          {/* Ground Meat inside the bowl */}
+          {/* Ground Meat inside the bowl — colour from composite mix */}
           {groundMeatVol > 0 && bowlState === 'UNDER' && (
             <mesh position={[0, 0.05 + groundMeatVol * 0.05, 0]}>
               <sphereGeometry args={[0.28, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
-              <meshStandardMaterial color="#822424" roughness={0.8} />
+              <meshStandardMaterial color={mixColor} roughness={0.8} />
             </mesh>
           )}
         </mesh>
@@ -342,7 +357,7 @@ export function Grinder() {
         {groundMeatVol > 0 && bowlState !== 'UNDER' && (
           <mesh position={[0, 0.05, 0]}>
             <boxGeometry args={[0.7, 0.05 * groundMeatVol, 0.5]} />
-            <meshStandardMaterial color="#822424" roughness={0.8} />
+            <meshStandardMaterial color={mixColor} roughness={0.8} />
           </mesh>
         )}
       </Box>
@@ -379,10 +394,10 @@ export function Grinder() {
         </Cylinder>
       </group>
 
-      {/* Meat Particles */}
+      {/* Meat Particles — tinted by composite mix colour */}
       <instancedMesh ref={particlesRef} args={[undefined, undefined, MAX_PARTICLES]}>
         <cylinderGeometry args={[0.05, 0.05, 0.2, 6]} />
-        <meshStandardMaterial color="#822424" roughness={0.8} />
+        <meshStandardMaterial color={mixColor} roughness={0.8} />
       </instancedMesh>
     </group>
   );
