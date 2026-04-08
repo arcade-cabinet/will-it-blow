@@ -121,7 +121,8 @@
         "once-alive",
         "dead",
         "natural",
-        "unsettling"
+        "unsettling",
+        "liquid-form"
       ],
       "composition": {
         "decomposition": "chunks",
@@ -188,7 +189,8 @@
         "processed",
         "cooked",
         "wholesome",
-        "never-alive"
+        "never-alive",
+        "spicy"
       ],
       "composition": {
         "decomposition": "chunks",
@@ -258,7 +260,8 @@
         "cooked",
         "dead",
         "once-alive",
-        "wholesome"
+        "wholesome",
+        "spicy"
       ],
       "composition": {
         "decomposition": "chunks",
@@ -324,7 +327,8 @@
         "processed",
         "cooked",
         "never-alive",
-        "wholesome"
+        "wholesome",
+        "bitter"
       ],
       "composition": {
         "decomposition": "powder",
@@ -360,7 +364,8 @@
         "natural",
         "plant",
         "once-alive",
-        "wholesome"
+        "wholesome",
+        "alive"
       ],
       "composition": {
         "decomposition": "chunks",
@@ -395,7 +400,8 @@
         "natural",
         "meat",
         "unsettling",
-        "cursed"
+        "cursed",
+        "bitter"
       ],
       "composition": {
         "decomposition": "paste",
@@ -557,7 +563,8 @@
         "processed",
         "never-alive",
         "absurd",
-        "cursed"
+        "cursed",
+        "bitter"
       ],
       "composition": {
         "decomposition": "shards",
