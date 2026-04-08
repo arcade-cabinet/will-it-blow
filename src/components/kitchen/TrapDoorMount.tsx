@@ -7,7 +7,7 @@ interface TrapDoorMountProps {
 }
 
 export function TrapDoorMount({position}: TrapDoorMountProps) {
-  const {nodes} = useGLTF(asset('/models/traps.glb')) as any;
+  const {nodes} = useGLTF(asset('/models/horror_traps.glb')) as any;
 
   // Verify the node exists in the specific GLB we're using
   // If not, we fallback to a safe primitive or nothing
@@ -27,4 +27,4 @@ export function TrapDoorMount({position}: TrapDoorMountProps) {
   );
 }
 
-useGLTF.preload(asset('/models/traps.glb'));
+useGLTF.preload(asset('/models/horror_traps.glb'));

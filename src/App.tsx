@@ -7,7 +7,7 @@
  */
 import {Canvas} from '@react-three/fiber';
 import {Physics} from '@react-three/rapier';
-import {Suspense, useCallback, useEffect, useState} from 'react';
+import {Suspense, useCallback, useEffect, useRef, useState} from 'react';
 import {PCFShadowMap} from 'three';
 import {IntroSequence} from './components/camera/IntroSequence';
 import {PlayerHands} from './components/camera/PlayerHands';
@@ -15,11 +15,14 @@ import {TieGesture} from './components/challenges/TieGesture';
 import {MrSausage3D} from './components/characters/MrSausage3D';
 import {SwipeFPSControls} from './components/controls/SwipeFPSControls';
 import {BasementRoom} from './components/environment/BasementRoom';
+import {SlaughterhouseDressing} from './components/environment/dressing/SlaughterhouseDressing';
+import {FlickeringFluorescent} from './components/environment/FlickeringFluorescent';
 import {Prop} from './components/environment/Prop';
 import {ScatterProps} from './components/environment/ScatterProps';
 import {SurrealText} from './components/environment/SurrealText';
 import {KitchenSetPieces} from './components/kitchen/KitchenSetPieces';
 import {LiquidPourer} from './components/kitchen/LiquidPourer';
+import {PresentationFlow} from './components/kitchen/PresentationFlow';
 import {ProceduralIngredientsList} from './components/kitchen/ProceduralIngredients';
 import {TrapDoorAnimation} from './components/kitchen/TrapDoorAnimation';
 import {Sausage} from './components/sausage/Sausage';
@@ -72,10 +75,26 @@ console.error = (...args: unknown[]) => {
 };
 // -----------------------------------------------------------------------
 
+/**
+ * Module-level signal so PresentationFlow (inside Canvas/Physics) can
+ * notify App (outside Canvas) that the 12-second presentation sequence
+ * has completed. We use a simple callback ref rather than a Zustand
+ * store because this is a one-shot transient signal, not persisted state.
+ */
+let presentationCompleteCallback: (() => void) | null = null;
+
+function notifyPresentationComplete(): void {
+  if (presentationCompleteCallback) {
+    presentationCompleteCallback();
+    presentationCompleteCallback = null;
+  }
+}
+
 /** 3D scene content: physics world, stations, props, camera, and controls. */
 function GameContent() {
   const introActive = useGameStore(state => state.introActive);
   const mrSausageReaction = useGameStore(state => state.mrSausageReaction);
+  const gamePhase = useGameStore(state => state.gamePhase);
   const {moveDirection} = useInput();
 
   // Block movement during intro sequence
@@ -90,6 +109,12 @@ function GameContent() {
     return () => {
       audioEngine.stopDrone();
     };
+  }, []);
+
+  // PresentationFlow calls this when the full 12-second sequence finishes.
+  // The signal crosses the Canvas boundary via the module-level callback.
+  const handlePresentationComplete = useCallback(() => {
+    notifyPresentationComplete();
   }, []);
 
   return (
@@ -118,6 +143,7 @@ function GameContent() {
 
         {/* Horror Props */}
         <ScatterProps />
+        <SlaughterhouseDressing />
         <Prop name="Saw" position={[2.9, 1.8, -1.0]} rotation={[0, -Math.PI / 2, 0]} />
         <Prop name="Cleaver" position={[1.5, 0.45, 0]} rotation={[Math.PI / 2, 0.2, 0]} />
         <Prop name="PS1" position={[-2.8, 0.4, 1.0]} rotation={[0, Math.PI / 4, 0]} />
@@ -134,6 +160,13 @@ function GameContent() {
 
         {/* Ceiling Trapdoor */}
         <TrapDoorAnimation position={[0, 3, 0]} />
+
+        {/* Presentation climax (T1.B): plate on rope descends during DONE phase.
+            The full 12-second presentation must complete BEFORE the round
+            transition overlay appears. */}
+        {gamePhase === 'DONE' && (
+          <PresentationFlow onComplete={handlePresentationComplete} position={[0, 0]} />
+        )}
       </Physics>
 
       <PlayerHands />
@@ -146,6 +179,7 @@ function GameContent() {
 /** Wrapper that reads score state from ECS and passes props to GameOverScreen. */
 function GameOverScreenWrapper() {
   const finalScore = useGameStore(s => s.finalScore);
+  const playerDecisions = useGameStore(s => s.playerDecisions);
   const startNewGame = useGameStore(s => s.startNewGame);
   const returnToMenu = useGameStore(s => s.returnToMenu);
 
@@ -158,6 +192,7 @@ function GameOverScreenWrapper() {
       totalScore={totalScore}
       breakdown={[{label: 'Final Score', score: totalScore}]}
       demandBonus={0}
+      flairPoints={playerDecisions.flairPoints}
       onPlayAgain={() => startNewGame()}
       onMenu={() => returnToMenu()}
     />
@@ -171,12 +206,25 @@ export function App() {
   const totalRounds = useGameStore(state => state.totalRounds);
   const nextRound = useGameStore(state => state.nextRound);
   const [showRoundTransition, setShowRoundTransition] = useState(false);
+
+  // Track whether we're waiting for the presentation to finish before
+  // showing the round transition. This prevents the race where the
+  // round transition would appear immediately on entering DONE, before
+  // the 12-second presentation sequence has played.
+  const waitingForPresentationRef = useRef(false);
+
   usePersistence();
 
-  // When DONE phase is reached with rounds remaining, show round transition
+  // When DONE phase is reached with rounds remaining, register a
+  // callback for PresentationFlow completion instead of immediately
+  // showing the round transition.
   useEffect(() => {
     if (gamePhase === 'DONE' && currentRound < totalRounds && appPhase === 'playing') {
-      setShowRoundTransition(true);
+      waitingForPresentationRef.current = true;
+      presentationCompleteCallback = () => {
+        waitingForPresentationRef.current = false;
+        setShowRoundTransition(true);
+      };
     }
   }, [gamePhase, currentRound, totalRounds, appPhase]);
 
@@ -203,29 +251,40 @@ export function App() {
             shadows={{type: PCFShadowMap}}
             gl={{
               toneMappingExposure: 1.0,
-              // Dev-only: let E2E tests call gl.readPixels to verify the
-              // rendered scene isn't a black void. Has a small perf cost
-              // (an extra blit per frame) so it stays off in prod builds.
               preserveDrawingBuffer: import.meta.env.DEV,
             }}
             style={{position: 'absolute', top: 0, left: 0, width: '100%', height: '100%'}}
           >
-            <color attach="background" args={['#1a1a1a']} />
-            <fogExp2 attach="fog" args={['#2a2a2a', 0.015]} />
+            <color attach="background" args={['#0a0b0f']} />
+            <fogExp2 attach="fog" args={['#14161c', 0.018]} />
 
-            <ambientLight intensity={0.6} />
+            <ambientLight intensity={0.35} color="#c8d8d4" />
             <directionalLight
               position={[0, 2.5, 0]}
-              intensity={1.0}
+              intensity={0.7}
+              color="#d8f8e8"
               castShadow
               shadow-mapSize-width={2048}
               shadow-mapSize-height={2048}
               shadow-bias={-0.001}
             />
-            {/* Main warm ceiling light */}
-            <pointLight position={[0, 2.0, 0]} intensity={50} distance={10} color="#ffeedd" />
-            {/* Upward bounce light to illuminate ceiling — prevents black void */}
-            <pointLight position={[0, 0.5, 0]} intensity={30} distance={8} color="#ffeedd" />
+            <FlickeringFluorescent
+              position={[0, 2.0, 0]}
+              baseIntensity={45}
+              distance={10}
+              color="#d8f8e8"
+              flickerRate={0.9}
+              flickerDepth={0.85}
+            />
+            <FlickeringFluorescent
+              position={[0, 1.8, -2]}
+              baseIntensity={28}
+              distance={7}
+              color="#c8e8dc"
+              flickerRate={0.15}
+              flickerDepth={0.25}
+            />
+            <pointLight position={[0, 0.4, 0]} intensity={12} distance={6} color="#b8c8c4" />
 
             <Suspense fallback={null}>
               <GameContent />
@@ -235,12 +294,12 @@ export function App() {
           {/* Invisible touch overlay for mobile FPS controls */}
           <SwipeFPSControls />
 
-          {/* Tie Gesture overlay — only shown during TIE_CASING phase */}
+          {/* Tie Gesture overlay -- only shown during TIE_CASING phase */}
           {gamePhase === 'TIE_CASING' && (
             <TieGesture onComplete={() => useGameStore.getState().setGamePhase('BLOWOUT')} />
           )}
 
-          {/* Round transition overlay — shown between rounds */}
+          {/* Round transition overlay -- shown AFTER presentation completes */}
           {showRoundTransition && (
             <RoundTransition
               roundNumber={currentRound + 1}
@@ -249,7 +308,7 @@ export function App() {
             />
           )}
 
-          {/* GameOrchestrator — non-visual state machine, outside Canvas */}
+          {/* GameOrchestrator -- non-visual state machine, outside Canvas */}
           <GameOrchestrator />
         </Suspense>
       )}

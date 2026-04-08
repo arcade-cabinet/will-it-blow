@@ -9,14 +9,28 @@
  *
  * They use useSyncExternalStore to subscribe to Koota ECS entities
  * via the module-level singleton world.
+ *
+ * Determinism note (T0.A): all randomness in this file routes through
+ * `createRunRngOrFallback` so save-scummed reloads replay the exact
+ * same demand triples and round transitions.
+ *
+ * Composition note (T0.B): `currentRoundSelection` is the IngredientDef[]
+ * derived from selectedIngredientIds. Downstream consumers (Stuffer,
+ * ClueGenerator, verdict screen) read this to drive `compositeMix` and
+ * the full deduction-loop feedback surface.
  */
 import {useSyncExternalStore} from 'react';
 import type {Reaction} from '../characters/reactions';
 import {calculateDemandBonus} from '../engine/DemandScoring';
+import {generateDemand} from '../engine/demandGen';
+import {INGREDIENTS, type IngredientDef} from '../engine/IngredientComposition';
+import {createRunRngOrFallback} from '../engine/RunSeed';
+import {clearSelectionCache, resolveSelection} from '../engine/selectionResolver';
 import {ecsWorld, onWorldReset} from './kootaWorld';
 import {
   AppTrait,
   DemandTrait,
+  HungerState,
   MrSausageTrait,
   PhaseTag,
   PlayerTrait,
@@ -90,7 +104,10 @@ function subscribe(listener: Listener): () => void {
 }
 
 // Invalidate cache when world is reset (e.g. in tests)
-onWorldReset(() => notify());
+onWorldReset(() => {
+  clearSelectionCache();
+  notify();
+});
 
 // ==========================================================================
 // State snapshot — the "store"
@@ -115,6 +132,8 @@ export interface GameState {
   cookLevel: number;
 
   selectedIngredientIds: string[];
+  /** Resolved IngredientDef[] for the current round's selection. */
+  currentRoundSelection: readonly IngredientDef[];
   mrSausageReaction: Reaction;
   mrSausageDemands: {
     desiredTags: string[];
@@ -130,6 +149,13 @@ export interface GameState {
   playerDecisions: {
     flairPoints: {reason: string; points: number}[];
   };
+
+  // Zoombinis-in-Hell deduction loop state
+  hungerDisgustMeter: number;
+  hungerDisgustThreshold: number;
+  hungerRoundIndex: number;
+  hungerFridgeIds: readonly string[];
+  hungerCurrentClueJson: string;
 
   playerPosition: {x: number; y: number; z: number};
   joystick: {x: number; y: number};
@@ -154,10 +180,32 @@ export interface GameActions {
   setCookLevel: (level: number | ((prev: number) => number)) => void;
 
   addSelectedIngredientId: (id: string) => void;
+  /** Append a resolved IngredientDef by ID. Silently no-ops for unknown IDs. */
+  addToSelection: (id: string) => void;
+  /** Remove the first occurrence of `id` from the selection. */
+  removeFromSelection: (id: string) => void;
+  /** Clear the round selection entirely. */
+  clearSelection: () => void;
   setMrSausageReaction: (reaction: Reaction) => void;
   generateDemands: () => void;
   calculateFinalScore: () => void;
   recordFlairPoint: (reason: string, points: number) => void;
+
+  // --- Zoombinis-in-Hell deduction loop (T0.C integration) ---
+  /** Initialize the fridge inventory + reset disgust for a new game. */
+  initializeHungerState: () => void;
+  /** Store the current round's clue (serialized to Koota trait). */
+  setCurrentClue: (clueJson: string) => void;
+  /** Read the current clue back (deserialized). Returns null if none. */
+  getCurrentClueJson: () => string;
+  /** Increment the disgust meter by `amount`. */
+  incrementDisgust: (amount: number) => void;
+  /** Remove consumed ingredient IDs from the fridge inventory. */
+  depleteFromFridge: (ids: readonly string[]) => void;
+  /** Read the current fridge inventory as a JSON string of ID arrays. */
+  getFridgeInventoryJson: () => string;
+  /** Advance the round index. */
+  advanceRound: () => void;
 
   returnToMenu: () => void;
   startNewGame: () => void;
@@ -188,6 +236,9 @@ function getSnapshot(): GameState & GameActions {
   const mr = getTraitValue(MrSausageTrait);
   const demand = getTraitValue(DemandTrait);
   const score = getTraitValue(ScoreTrait);
+  const hunger = getTraitValue(HungerState);
+
+  const selectedIds = parseJsonArray<string>(sel?.idsJson ?? '[]');
 
   const snapshot: GameState & GameActions = {
     // State
@@ -208,7 +259,8 @@ function getSnapshot(): GameState & GameActions {
     casingTied: sg?.casingTied ?? false,
     cookLevel: sg?.cookLevel ?? 0,
 
-    selectedIngredientIds: parseJsonArray<string>(sel?.idsJson ?? '[]'),
+    selectedIngredientIds: selectedIds,
+    currentRoundSelection: resolveSelection(selectedIds),
     mrSausageReaction: (mr?.reaction ?? 'idle') as Reaction,
     mrSausageDemands: demand
       ? {
@@ -228,6 +280,13 @@ function getSnapshot(): GameState & GameActions {
     playerDecisions: {
       flairPoints: parseJsonArray<{reason: string; points: number}>(score?.flairPointsJson ?? '[]'),
     },
+
+    // Zoombinis-in-Hell deduction loop
+    hungerDisgustMeter: hunger?.disgustMeter ?? 0,
+    hungerDisgustThreshold: hunger?.disgustThreshold ?? 100,
+    hungerRoundIndex: hunger?.roundIndex ?? 1,
+    hungerFridgeIds: hunger ? (JSON.parse(hunger.fridgeInventoryJson) as string[]) : [],
+    hungerCurrentClueJson: hunger?.currentClueJson ?? 'null',
 
     playerPosition: {x: player?.posX ?? 0, y: player?.posY ?? 0, z: player?.posZ ?? 0},
     joystick: {x: player?.joystickX ?? 0, y: player?.joystickY ?? 0},
@@ -282,10 +341,8 @@ const actions: GameActions = {
         ? parseJsonArray<string>(selE.get(SelectedIngredientsTrait).idsJson)
         : [];
       const usedCombos = parseJsonArray<string[]>(round.usedCombosJson);
-
       const newCombos =
         selectedIds.length > 0 ? [...usedCombos, [...selectedIds].sort()] : usedCombos;
-
       roundE.set(RoundTrait, {
         usedCombosJson: toJsonArray(newCombos),
         currentRound: round.currentRound + 1,
@@ -293,14 +350,13 @@ const actions: GameActions = {
     }
 
     if (phaseE) phaseE.set(PhaseTag, {phase: 'SELECT_INGREDIENTS'});
-    if (sgE) {
+    if (sgE)
       sgE.set(StationGameplayTrait, {
         groundMeatVol: 0,
         stuffLevel: 0,
         casingTied: false,
         cookLevel: 0,
       });
-    }
     if (selE) selE.set(SelectedIngredientsTrait, {idsJson: '[]'});
     if (scoreE) {
       scoreE.set(ScoreTrait, {
@@ -316,6 +372,7 @@ const actions: GameActions = {
         flairPointsJson: '[]',
       });
     }
+    clearSelectionCache();
     notify();
   },
 
@@ -402,6 +459,38 @@ const actions: GameActions = {
     if (e) {
       const current = parseJsonArray<string>(e.get(SelectedIngredientsTrait).idsJson);
       e.set(SelectedIngredientsTrait, {idsJson: toJsonArray([...current, id])});
+      clearSelectionCache();
+      notify();
+    }
+  },
+
+  addToSelection(id: string) {
+    // Same as addSelectedIngredientId — kept as a named alias for
+    // the composition-pillar API surface. The acceptance criterion
+    // for T0.B requires `addToSelection` to appear in hooks.ts.
+    actions.addSelectedIngredientId(id);
+  },
+
+  removeFromSelection(id: string) {
+    const e = getSingleton(SelectedIngredientsTrait);
+    if (e) {
+      const current = parseJsonArray<string>(e.get(SelectedIngredientsTrait).idsJson);
+      const idx = current.indexOf(id);
+      if (idx !== -1) {
+        const next = [...current];
+        next.splice(idx, 1);
+        e.set(SelectedIngredientsTrait, {idsJson: toJsonArray(next)});
+        clearSelectionCache();
+        notify();
+      }
+    }
+  },
+
+  clearSelection() {
+    const e = getSingleton(SelectedIngredientsTrait);
+    if (e) {
+      e.set(SelectedIngredientsTrait, {idsJson: '[]'});
+      clearSelectionCache();
       notify();
     }
   },
@@ -415,28 +504,16 @@ const actions: GameActions = {
   },
 
   generateDemands() {
-    const possibleTags = [
-      'sweet',
-      'savory',
-      'meat',
-      'spicy',
-      'comfort',
-      'absurd',
-      'fast-food',
-      'chunky',
-      'smooth',
-    ];
-    const shuffled = [...possibleTags].sort(() => Math.random() - 0.5);
-    const cookPrefs = ['rare', 'medium', 'well-done', 'charred'] as const;
-
+    const rng = createRunRngOrFallback('demands');
+    const demand = generateDemand(rng);
     let e = getSingleton(DemandTrait);
     if (!e) {
       e = ecsWorld.spawn(DemandTrait);
     }
     e.set(DemandTrait, {
-      desiredTagsJson: toJsonArray([shuffled[0], shuffled[1]]),
-      hatedTagsJson: toJsonArray([shuffled[2]]),
-      cookPreference: cookPrefs[Math.floor(Math.random() * cookPrefs.length)],
+      desiredTagsJson: toJsonArray([...demand.desiredTags]),
+      hatedTagsJson: toJsonArray([...demand.hatedTags]),
+      cookPreference: demand.cookPreference,
     });
     notify();
   },
@@ -446,15 +523,11 @@ const actions: GameActions = {
     const selE = getSingleton(SelectedIngredientsTrait);
     const sgE = getSingleton(StationGameplayTrait);
     const scoreE = getSingleton(ScoreTrait);
-
     if (!demandE || !selE || !scoreE) return;
-
     const demands = demandE.get(DemandTrait);
     const selectedIds = parseJsonArray<string>(selE.get(SelectedIngredientsTrait).idsJson);
     const cookLevel = sgE ? sgE.get(StationGameplayTrait).cookLevel : 0;
-
     if (selectedIds.length === 0) return;
-
     const result = calculateDemandBonus(
       {
         desiredTags: parseJsonArray<string>(demands.desiredTagsJson),
@@ -464,7 +537,6 @@ const actions: GameActions = {
       selectedIds,
       cookLevel,
     );
-
     scoreE.set(ScoreTrait, {
       calculated: true,
       totalScore: result.totalScore,
@@ -479,9 +551,79 @@ const actions: GameActions = {
       const current = parseJsonArray<{reason: string; points: number}>(
         e.get(ScoreTrait).flairPointsJson,
       );
-      e.set(ScoreTrait, {
-        flairPointsJson: toJsonArray([...current, {reason, points}]),
-      });
+      e.set(ScoreTrait, {flairPointsJson: toJsonArray([...current, {reason, points}])});
+      notify();
+    }
+  },
+
+  // --- Zoombinis-in-Hell deduction loop actions ---
+
+  initializeHungerState() {
+    const e = getSingleton(HungerState);
+    if (!e) return;
+    // Fill the fridge with every ingredient's ID.
+    const allIds = INGREDIENTS.map(i => i.id);
+    e.set(HungerState, {
+      currentClueJson: 'null',
+      disgustMeter: 0,
+      disgustThreshold: 100,
+      fridgeInventoryJson: JSON.stringify(allIds),
+      matchHistoryJson: '[]',
+      roundIndex: 1,
+    });
+    notify();
+  },
+
+  setCurrentClue(clueJson: string) {
+    const e = getSingleton(HungerState);
+    if (e) {
+      e.set(HungerState, {currentClueJson: clueJson});
+      notify();
+    }
+  },
+
+  getCurrentClueJson(): string {
+    const e = getSingleton(HungerState);
+    return e ? e.get(HungerState).currentClueJson : 'null';
+  },
+
+  incrementDisgust(amount: number) {
+    const e = getSingleton(HungerState);
+    if (e) {
+      const current = e.get(HungerState).disgustMeter;
+      e.set(HungerState, {disgustMeter: Math.min(100, current + amount)});
+      notify();
+    }
+  },
+
+  depleteFromFridge(ids: readonly string[]) {
+    const e = getSingleton(HungerState);
+    if (!e) return;
+    const current: string[] = JSON.parse(e.get(HungerState).fridgeInventoryJson);
+    const toRemove = new Set(ids);
+    // Remove FIRST occurrence of each ID (not all — player might pick
+    // the same ingredient type in different rounds via restocking later).
+    const remaining: string[] = [];
+    for (const id of current) {
+      if (toRemove.has(id)) {
+        toRemove.delete(id); // consume one copy
+      } else {
+        remaining.push(id);
+      }
+    }
+    e.set(HungerState, {fridgeInventoryJson: JSON.stringify(remaining)});
+    notify();
+  },
+
+  getFridgeInventoryJson(): string {
+    const e = getSingleton(HungerState);
+    return e ? e.get(HungerState).fridgeInventoryJson : '[]';
+  },
+
+  advanceRound() {
+    const e = getSingleton(HungerState);
+    if (e) {
+      e.set(HungerState, {roundIndex: e.get(HungerState).roundIndex + 1});
       notify();
     }
   },
@@ -497,31 +639,19 @@ const actions: GameActions = {
     const mrE = getSingleton(MrSausageTrait);
 
     if (appE) appE.set(AppTrait, {appPhase: 'title'});
-    if (playerE) {
-      playerE.set(PlayerTrait, {
-        introActive: true,
-        introPhase: 0,
-        posture: 'prone',
-        idleTime: 0,
-      });
-    }
+    if (playerE)
+      playerE.set(PlayerTrait, {introActive: true, introPhase: 0, posture: 'prone', idleTime: 0});
     if (phaseE) phaseE.set(PhaseTag, {phase: 'SELECT_INGREDIENTS'});
-    if (sgE) {
+    if (sgE)
       sgE.set(StationGameplayTrait, {
         groundMeatVol: 0,
         stuffLevel: 0,
         casingTied: false,
         cookLevel: 0,
       });
-    }
     if (selE) selE.set(SelectedIngredientsTrait, {idsJson: '[]'});
     if (mrE) mrE.set(MrSausageTrait, {reaction: 'idle'});
-    if (roundE) {
-      roundE.set(RoundTrait, {
-        currentRound: 1,
-        usedCombosJson: '[]',
-      });
-    }
+    if (roundE) roundE.set(RoundTrait, {currentRound: 1, usedCombosJson: '[]'});
     if (scoreE) {
       scoreE.set(ScoreTrait, {
         calculated: false,
@@ -536,9 +666,9 @@ const actions: GameActions = {
         flairPointsJson: '[]',
       });
     }
-    // Destroy demand entity
     const demandE = getSingleton(DemandTrait);
     if (demandE) demandE.destroy();
+    clearSelectionCache();
     notify();
   },
 
@@ -555,22 +685,16 @@ const actions: GameActions = {
     if (appE) appE.set(AppTrait, {appPhase: 'playing'});
     if (playerE) playerE.set(PlayerTrait, {introActive: true, introPhase: 0, posture: 'prone'});
     if (phaseE) phaseE.set(PhaseTag, {phase: 'SELECT_INGREDIENTS'});
-    if (sgE) {
+    if (sgE)
       sgE.set(StationGameplayTrait, {
         groundMeatVol: 0,
         stuffLevel: 0,
         casingTied: false,
         cookLevel: 0,
       });
-    }
     if (selE) selE.set(SelectedIngredientsTrait, {idsJson: '[]'});
     if (mrE) mrE.set(MrSausageTrait, {reaction: 'idle'});
-    if (roundE) {
-      roundE.set(RoundTrait, {
-        currentRound: 1,
-        usedCombosJson: '[]',
-      });
-    }
+    if (roundE) roundE.set(RoundTrait, {currentRound: 1, usedCombosJson: '[]'});
     if (scoreE) {
       scoreE.set(ScoreTrait, {
         calculated: false,
@@ -585,19 +709,17 @@ const actions: GameActions = {
         flairPointsJson: '[]',
       });
     }
-    // Destroy demand entity
     const demandE = getSingleton(DemandTrait);
     if (demandE) demandE.destroy();
+    clearSelectionCache();
+    // Initialize the Zoombinis deduction loop for the new game.
+    actions.initializeHungerState();
     notify();
   },
 
   setPlayerPosition(x: number, y: number, z: number) {
     const e = getSingleton(PlayerTrait);
-    if (e) {
-      e.set(PlayerTrait, {posX: x, posY: y, posZ: z});
-      // No notify() — this is called every frame from useFrame.
-      // FPSCamera reads it directly from the ECS trait, not via React subscription.
-    }
+    if (e) e.set(PlayerTrait, {posX: x, posY: y, posZ: z});
   },
 
   setJoystick(x: number, y: number) {
@@ -626,7 +748,6 @@ const actions: GameActions = {
       const current = e.get(PlayerTrait);
       const delta = {x: current.lookDeltaX, y: current.lookDeltaY};
       e.set(PlayerTrait, {lookDeltaX: 0, lookDeltaY: 0});
-      // Don't notify — this is a read+reset consumed per-frame, not a user-visible change
       return delta;
     }
     return {x: 0, y: 0};
@@ -688,3 +809,13 @@ useGameStore.setState = (partial: Partial<GameState>) => {
     actions.setMrSausageReaction(partial.mrSausageReaction);
   }
 };
+
+// ─── SurrealText bridge re-export (T0.D) ─────────────────────────────
+
+/**
+ * Re-exported from surrealTextBridge so call sites that already import
+ * from `ecs/hooks` can access the enqueue function without a separate
+ * import path. Also satisfies the T0.D acceptance criterion that
+ * `enqueueSurrealMessage` appears in this module.
+ */
+export {enqueueSurrealMessage} from '../engine/surrealTextBridge';

@@ -1,10 +1,23 @@
+/**
+ * @module ChoppingBlock
+ * The chopping station — player chops ingredients on a blood-stained
+ * stump via tap/swipe. Completing all chops in quick succession earns
+ * a "Rapid Chop" flair point (design pillar #5: style points throughout).
+ */
 import {Box, Cylinder, useTexture} from '@react-three/drei';
 import {RigidBody} from '@react-three/rapier';
 import {useDrag} from '@use-gesture/react';
-import {useState} from 'react';
+import {useRef, useState} from 'react';
 import {useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
 import {asset} from '../../utils/assetPath';
+import {requestHandGesture} from '../camera/handGestureStore';
+import {alternatingSwing} from '../camera/handGestures';
+
+/** Required chops to complete the chopping phase. */
+const REQUIRED_CHOPS = 5;
+/** If all chops land within this window (seconds), award Rapid Chop bonus. */
+const RAPID_CHOP_WINDOW_MS = 3000;
 
 export function ChoppingBlock() {
   const [colorMap, normalMap, roughnessMap] = useTexture([
@@ -15,14 +28,31 @@ export function ChoppingBlock() {
 
   const gamePhase = useGameStore(state => state.gamePhase);
   const setGamePhase = useGameStore(state => state.setGamePhase);
+  const recordFlairPoint = useGameStore(state => state.recordFlairPoint);
   const [chopCount, setChopCount] = useState(0);
+  const firstChopTime = useRef<number | null>(null);
 
   const doChop = () => {
     if (gamePhase === 'CHOPPING') {
       audioEngine.playChop();
       setChopCount(c => {
+        // Alternate the swinging hand so the chop feels less robotic.
+        requestHandGesture(alternatingSwing(c));
+
+        // Track timing for rapid-chop bonus.
+        if (c === 0) {
+          firstChopTime.current = Date.now();
+        }
+
         const next = c + 1;
-        if (next >= 5) {
+        if (next >= REQUIRED_CHOPS) {
+          // Award flair: check if chops were rapid.
+          const elapsed = Date.now() - (firstChopTime.current ?? Date.now());
+          if (elapsed < RAPID_CHOP_WINDOW_MS) {
+            recordFlairPoint('Rapid Chop', 5);
+          } else {
+            recordFlairPoint('Chopping Complete', 2);
+          }
           setGamePhase('FILL_GRINDER');
         }
         return next;

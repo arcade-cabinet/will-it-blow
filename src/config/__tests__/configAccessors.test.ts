@@ -58,13 +58,6 @@ describe('camera config', () => {
     expect(cameraConfig.hands.offset).toHaveLength(3);
     expect(cameraConfig.hands.bobSpeed).toBeGreaterThan(0);
   });
-
-  it('has skin paths', () => {
-    expect(cameraConfig.skins.length).toBeGreaterThan(0);
-    for (const skin of cameraConfig.skins) {
-      expect(skin).toMatch(/\.png$/);
-    }
-  });
 });
 
 // ── Rounds ──

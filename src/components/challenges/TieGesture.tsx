@@ -8,6 +8,7 @@
 
 import {useCallback, useEffect, useState} from 'react';
 import {useGameStore} from '../../ecs/hooks';
+import {requestHandGesture} from '../camera/handGestureStore';
 
 export function TieGesture({onComplete}: {onComplete: () => void}) {
   const setCasingTied = useGameStore(s => s.setCasingTied);
@@ -19,6 +20,8 @@ export function TieGesture({onComplete}: {onComplete: () => void}) {
 
   const handleLeftTie = useCallback(() => {
     if (leftTied || leftAnimating) return;
+    // Left tie = left hand pinch-tap.
+    requestHandGesture('tap_left');
     setLeftAnimating(true);
     setTimeout(() => {
       setLeftTied(true);
@@ -28,6 +31,8 @@ export function TieGesture({onComplete}: {onComplete: () => void}) {
 
   const handleRightTie = useCallback(() => {
     if (rightTied || rightAnimating) return;
+    // Right tie = right hand pinch-tap.
+    requestHandGesture('tap_right');
     setRightAnimating(true);
     setTimeout(() => {
       setRightTied(true);

@@ -32,43 +32,53 @@ export function TitleScreen() {
 
   return (
     <div className="fixed inset-0 bg-[#0a0a0a] flex flex-col items-center justify-center px-6 z-50 animate-[fadeInUp_1s_ease-out]">
-      {/* Butcher shop sign */}
-      <div className="flex flex-col items-center mb-12 animate-[swing_6s_ease-in-out_infinite] origin-top">
-        {/* Hanging chains */}
-        <div className="flex flex-row justify-between w-[200px] -mb-0.5">
-          <div className="w-[3px] h-6 bg-[#555] rounded-sm" />
-          <div className="w-[3px] h-6 bg-[#555] rounded-sm" />
-        </div>
+      {/*
+        Scale wrapper keeps the title screen proportional on very
+        large displays. The sign + button + tagline are all sized
+        in pixel-exact Tailwind tokens, so without this wrapper the
+        whole thing renders as a tiny island in the centre of a 4K
+        viewport. The scale steps are conservative — 1× at 1080p,
+        125% at 2xl breakpoints, 150% at 2560px, 200% at 3840px+.
+      */}
+      <div className="flex flex-col items-center scale-100 2xl:scale-125 [@media(min-width:2560px)]:scale-150 [@media(min-width:3200px)]:scale-[2]">
+        {/* Butcher shop sign */}
+        <div className="flex flex-col items-center mb-12 animate-[swing_6s_ease-in-out_infinite] origin-top">
+          {/* Hanging chains */}
+          <div className="flex flex-row justify-between w-[200px] -mb-0.5">
+            <div className="w-[3px] h-6 bg-[#555] rounded-sm" />
+            <div className="w-[3px] h-6 bg-[#555] rounded-sm" />
+          </div>
 
-        <div className="bg-[#1a0a00] border-4 border-[#8B4513] p-1 shadow-[0_8px_16px_rgba(0,0,0,0.8)]">
-          {/* Outer border */}
-          <div className="border-2 border-[#D2A24C] py-5 px-8 flex flex-col items-center">
-            <span className="text-sm text-[#D2A24C] tracking-[4px] mb-1">Est. 1974</span>
-            <h1 className="text-5xl font-black text-[#FF1744] text-center leading-[52px] tracking-wider m-0 whitespace-pre-line drop-shadow-[0_0_16px_rgba(255,23,68,0.4)]">
-              {'WILL IT\nBLOW?'}
-            </h1>
-            <div className="w-[120px] h-0.5 bg-[#D2A24C] my-3" />
-            <span className="text-base text-[#D2A24C] tracking-[3px]">
-              Fine Meats &amp; Sausages
-            </span>
+          <div className="bg-[#1a0a00] border-4 border-[#8B4513] p-1 shadow-[0_8px_16px_rgba(0,0,0,0.8)]">
+            {/* Outer border */}
+            <div className="border-2 border-[#D2A24C] py-5 px-8 flex flex-col items-center">
+              <span className="text-sm text-[#D2A24C] tracking-[4px] mb-1">Est. 1974</span>
+              <h1 className="text-5xl font-black text-[#FF1744] text-center leading-[52px] tracking-wider m-0 whitespace-pre-line drop-shadow-[0_0_16px_rgba(255,23,68,0.4)]">
+                {'WILL IT\nBLOW?'}
+              </h1>
+              <div className="w-[120px] h-0.5 bg-[#D2A24C] my-3" />
+              <span className="text-base text-[#D2A24C] tracking-[3px]">
+                Fine Meats &amp; Sausages
+              </span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="flex flex-col items-center gap-3">
-        <button
-          type="button"
-          onClick={handleStart}
-          className="btn btn-lg bg-[#D2A24C] border-4 border-[#8B4513] text-[#1a0a00] text-2xl font-black tracking-wider hover:bg-[#c4943e] active:opacity-70"
-        >
-          START COOKING
-        </button>
-      </div>
+        <div className="flex flex-col items-center gap-3">
+          <button
+            type="button"
+            onClick={handleStart}
+            className="btn btn-lg bg-[#D2A24C] border-4 border-[#8B4513] text-[#1a0a00] text-2xl font-black tracking-wider hover:bg-[#c4943e] active:opacity-70"
+          >
+            START COOKING
+          </button>
+        </div>
 
-      {/* Footer */}
-      <p className="text-xs text-[#3a3a3a] tracking-[3px] mt-12 text-center">
-        Mr. Sausage's Fine Meats &amp; Sausages
-      </p>
+        {/* Footer */}
+        <p className="text-xs text-[#3a3a3a] tracking-[3px] mt-12 text-center">
+          Mr. Sausage's Fine Meats &amp; Sausages
+        </p>
+      </div>
     </div>
   );
 }

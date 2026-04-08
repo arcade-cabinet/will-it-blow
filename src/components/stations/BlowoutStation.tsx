@@ -1,15 +1,49 @@
+/**
+ * @module BlowoutStation
+ * The "Will It Blow?" climax (design pillar #3).
+ *
+ * The player picks up the stuffing tube, aims at a cereal box with a
+ * surreal drawing, and slams down. The tube's contents spray onto the
+ * box face as a persistent composite-colour splatter via CanvasTexture.
+ * Mr. Sausage scores the result based on the composite tier — a
+ * function of the ingredient mix's density, fat, and moisture.
+ *
+ * This is the first HARD-COMMIT moment: before blowing, the player
+ * can still fix mistakes; after, the splatter is permanent and scoring
+ * is locked in.
+ *
+ * Determinism note (T0.A): all random jitter (tube initial pressure,
+ * particle scatter, splatter positions) routes through a per-component
+ * seeded RNG. Save-scummed reloads see the same blow pattern.
+ *
+ * Fidelity tuning (T2.C): particle and splatter counts now read from
+ * the centralized FIDELITY config for mobile-first performance.
+ */
 import {useFrame, useThree} from '@react-three/fiber';
 import {useCallback, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
+import {FIDELITY} from '../../config/fidelityConfig';
 import {useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
+import {compositeMix} from '../../engine/IngredientComposition';
+import {useRunRng} from '../../engine/useRunRng';
+import {requestHandGesture} from '../camera/handGestureStore';
+import type {createSplatterCanvas} from './blowout/CanvasTextureSplatter';
+import {CerealBoxTarget} from './blowout/CerealBoxTarget';
+import {getCompositeTier} from './blowout/compositeTier';
 
-const PARTICLE_COUNT = 80;
-const SPLATTER_COUNT = 12;
+/** T2.C: particle and splatter counts from centralized fidelity config. */
+const PARTICLE_COUNT = FIDELITY.blowoutParticleCount;
+const SPLATTER_COUNT = FIDELITY.blowoutSplatterCount;
 
-/** Random float in [min, max). */
-function rand(min: number, max: number) {
-  return min + Math.random() * (max - min);
+/**
+ * Closure-bound RNG helper. We can't read the seeded `rng` at module
+ * level because the seed isn't established until the player starts a
+ * run; this factory binds a stable per-component RNG when the
+ * component mounts. Caller passes its `useRunRng()` result in.
+ */
+function makeRand(rng: () => number) {
+  return (min: number, max: number): number => min + rng() * (max - min);
 }
 
 export function BlowoutStation() {
@@ -17,6 +51,17 @@ export function BlowoutStation() {
   const setGamePhase = useGameStore(state => state.setGamePhase);
   const recordFlairPoint = useGameStore(state => state.recordFlairPoint);
   const setMrSausageReaction = useGameStore(state => state.setMrSausageReaction);
+  const currentRoundSelection = useGameStore(state => state.currentRoundSelection);
+
+  // Per-component seeded RNG. Save-scummed reload -> same blow pattern.
+  const rng = useRunRng('Blowout.particles');
+  const rand = useMemo(() => makeRand(rng), [rng]);
+
+  // --- Cereal box splatter API ---
+  const splatterRef = useRef<ReturnType<typeof createSplatterCanvas> | null>(null);
+  const onCerealBoxReady = useCallback((api: ReturnType<typeof createSplatterCanvas>) => {
+    splatterRef.current = api;
+  }, []);
 
   // --- Interaction state (refs to avoid stale closures in useFrame) ---
   const [pickedUp, setPickedUp] = useState(false);
@@ -25,7 +70,9 @@ export function BlowoutStation() {
   const particlesRef = useRef<THREE.InstancedMesh>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
-  // Tube pressure — randomized per appearance (0.2 to 1.0)
+  // Tube pressure -- randomized per appearance (0.2 to 1.0). Initial
+  // value uses the seeded `rand` so the first appearance is stable
+  // across reloads (the on-enter reset re-rolls from the same RNG).
   const tubePressure = useRef(rand(0.2, 1.0));
   // Wobble phase accumulator
   const wobblePhase = useRef(0);
@@ -48,8 +95,12 @@ export function BlowoutStation() {
     })),
   );
 
-  // Splatter stain positions (placed after particles land)
-  const [splatters, setSplatters] = useState<{pos: [number, number, number]; scale: number}[]>([]);
+  // Splatter stain positions (placed after particles land). Each
+  // entry carries its own pre-rolled rotation so re-renders don't
+  // shuffle the stains.
+  const [splatters, setSplatters] = useState<
+    {pos: [number, number, number]; scale: number; rot: number}[]
+  >([]);
 
   const {size} = useThree();
 
@@ -63,6 +114,7 @@ export function BlowoutStation() {
     slamVelocity.current = 0;
     setPickedUp(false);
     setSplatters([]);
+    splatterRef.current?.clear();
     for (const p of particles.current) {
       p.active = false;
     }
@@ -77,6 +129,7 @@ export function BlowoutStation() {
       if (!pickedUp) {
         setPickedUp(true);
         audioEngine.playSound('click');
+        requestHandGesture('grab_left');
         return;
       }
       isDragging.current = true;
@@ -100,66 +153,56 @@ export function BlowoutStation() {
     if (hasExploded.current) return;
     hasExploded.current = true;
 
-    // Normalize slam velocity (pixels/event → 0..1 factor)
+    // ─── Composite tier scoring (T1.A) ────────────────────────────
+    // Build the composite mix from selected ingredients and score it.
+    const mix = compositeMix(currentRoundSelection);
+    const tierResult = getCompositeTier(mix);
+
+    // Normalize slam velocity and blend with composite potential.
     const normalizedVelocity = Math.min(
       1.0,
       Math.max(0, slamVelocity.current) / (size.height * 0.06),
     );
-    const pressure = tubePressure.current;
-    const power = normalizedVelocity * 0.6 + pressure * 0.4;
+    const power = normalizedVelocity * 0.4 + tierResult.power * 0.6;
 
-    // Determine result tier
-    let tier: 'massive' | 'clean' | 'weak' | 'dud';
-    let points: number;
-    let reason: string;
-    let reaction: 'excitement' | 'nod' | 'disgust' | 'laugh';
-
-    if (power > 0.8) {
-      tier = 'massive';
-      points = 15;
-      reason = 'Massive Explosion';
-      reaction = 'excitement';
-    } else if (power > 0.5) {
-      tier = 'clean';
-      points = 10;
-      reason = 'Clean Burst';
-      reaction = 'nod';
-    } else if (power > 0.15) {
-      tier = 'weak';
-      points = 3;
-      reason = 'Weak Pop';
-      reaction = 'disgust';
-    } else {
-      tier = 'dud';
-      points = 0;
-      reason = 'Dud';
-      reaction = 'laugh';
+    // Record flair points from the composite tier.
+    if (tierResult.points > 0) {
+      recordFlairPoint(tierResult.label, tierResult.points);
     }
-
-    if (points > 0) recordFlairPoint(reason, points);
-    setMrSausageReaction(reaction);
+    setMrSausageReaction(tierResult.reaction);
     audioEngine.playSound('burst');
 
-    // Spawn particles proportional to power
-    const count = tier === 'dud' ? 3 : Math.floor(power * PARTICLE_COUNT);
-    const speed = tier === 'dud' ? 1 : 3 + power * 8;
+    // Paint the cereal box with the composite colour splatter.
+    if (splatterRef.current) {
+      splatterRef.current.paintBurst(mix.color, power, rng);
+    }
+
+    // Match the hand gesture to the result.
+    if (tierResult.tier === 'massive' || tierResult.tier === 'clean') {
+      requestHandGesture('thumbs_up');
+    } else {
+      requestHandGesture('flip_off');
+    }
+
+    // Spawn particles proportional to power.
+    const count = tierResult.tier === 'dud' ? 3 : Math.floor(power * PARTICLE_COUNT);
+    const speed = tierResult.tier === 'dud' ? 1 : 3 + power * 8;
     for (let i = 0; i < count; i++) {
       const p = particles.current[i];
       p.active = true;
       p.life = 1.0;
-      // Origin: tube impact point (roughly center-bottom of station area)
       p.pos.set(rand(-0.1, 0.1), 0.05, rand(-0.1, 0.1));
       p.vel.set(rand(-1, 1) * speed * 0.5, rand(0.5, 1.5) * speed, rand(-1, 1) * speed * 0.5);
     }
 
     explosionTimer.current = 0;
-  }, [size.height, recordFlairPoint, setMrSausageReaction]);
+  }, [size.height, recordFlairPoint, setMrSausageReaction, rand, currentRoundSelection, rng]);
 
   const onPointerUp = useCallback(() => {
     if (!isDragging.current || hasExploded.current) return;
     isDragging.current = false;
-    // Only trigger if they actually swiped downward
     if (slamVelocity.current > 2) {
+      requestHandGesture('swing_left');
       triggerExplosion();
     }
   }, [triggerExplosion]);
@@ -174,7 +217,6 @@ export function BlowoutStation() {
       const intensity = tubePressure.current * 0.06;
       tubeRef.current.rotation.z = Math.sin(wobblePhase.current * 3.7) * intensity;
       tubeRef.current.rotation.x = Math.cos(wobblePhase.current * 2.3) * intensity * 0.7;
-      // Pulsing scale to simulate internal pressure
       const pulse = 1 + Math.sin(wobblePhase.current * 5) * tubePressure.current * 0.04;
       tubeRef.current.scale.set(pulse, 1, pulse);
     }
@@ -182,7 +224,7 @@ export function BlowoutStation() {
     // After explosion: simulate particles
     if (hasExploded.current && particlesRef.current) {
       explosionTimer.current += delta;
-      const newSplatters: {pos: [number, number, number]; scale: number}[] = [];
+      const newSplatters: {pos: [number, number, number]; scale: number; rot: number}[] = [];
 
       for (let i = 0; i < PARTICLE_COUNT; i++) {
         const p = particles.current[i];
@@ -198,12 +240,13 @@ export function BlowoutStation() {
         p.pos.addScaledVector(p.vel, delta);
         p.life -= delta * 0.8;
 
-        // Ground collision — spawn splatter
+        // Ground collision -- spawn splatter
         if (p.pos.y <= 0) {
           p.active = false;
           newSplatters.push({
             pos: [p.pos.x, 0.005, p.pos.z],
             scale: rand(0.08, 0.25),
+            rot: rand(0, Math.PI * 2),
           });
           dummy.position.set(0, -999, 0);
         } else {
@@ -233,7 +276,10 @@ export function BlowoutStation() {
 
   return (
     <group position={[-1.5, 0, 1.5]}>
-      {/* Concrete slam target — a dark patch on the floor */}
+      {/* Cereal box target (T1.A) -- receives the composite-colour splatter */}
+      <CerealBoxTarget position={[0, 0.6, -0.5]} onReady={onCerealBoxReady} />
+
+      {/* Concrete slam target -- a dark patch on the floor */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.001, 0]} receiveShadow>
         <circleGeometry args={[0.6, 32]} />
         <meshStandardMaterial color="#3a3a3a" roughness={1} metalness={0} />
@@ -249,7 +295,7 @@ export function BlowoutStation() {
         />
       </mesh>
 
-      {/* The plastic tube — semi-transparent, pulsing with pressure */}
+      {/* The plastic tube -- semi-transparent, pulsing with pressure */}
       {!hasExploded.current && (
         <mesh
           ref={tubeRef}
@@ -281,7 +327,7 @@ export function BlowoutStation() {
               opacity={0.7 + tubePressure.current * 0.3}
             />
           </mesh>
-          {/* End caps — sealed with filling bulging out */}
+          {/* End caps -- sealed with filling bulging out */}
           <mesh position={[0, 0.25, 0]}>
             <sphereGeometry args={[0.06, 12, 12, 0, Math.PI * 2, 0, Math.PI / 2]} />
             <meshPhysicalMaterial
@@ -310,7 +356,7 @@ export function BlowoutStation() {
         </mesh>
       )}
 
-      {/* Filling particles — grotesque meat chunks flying */}
+      {/* Filling particles -- grotesque meat chunks flying */}
       <instancedMesh ref={particlesRef} args={[undefined, undefined, PARTICLE_COUNT]}>
         <sphereGeometry args={[1, 6, 6]} />
         <meshStandardMaterial color="#6b1a1a" roughness={0.9} />
@@ -320,7 +366,7 @@ export function BlowoutStation() {
       {splatters.map((s, i) => (
         <mesh
           key={`splat-${i}-${s.pos[0].toFixed(3)}`}
-          rotation={[-Math.PI / 2, 0, rand(0, Math.PI * 2)]}
+          rotation={[-Math.PI / 2, 0, s.rot]}
           position={s.pos}
         >
           <circleGeometry args={[s.scale, 8]} />

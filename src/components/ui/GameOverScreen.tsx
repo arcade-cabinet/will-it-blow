@@ -3,12 +3,18 @@
  * Full-screen results overlay shown after the game ends.
  *
  * Horror-themed verdict screen with dramatic rank reveal,
- * Mr. Sausage's verdict text, score breakdown, and action buttons.
+ * Mr. Sausage's verdict text, score breakdown, flair points tally
+ * (T1.C: style points throughout), and action buttons.
  *
  * Uses Tailwind CSS + DaisyUI components.
  */
 
 import {useEffect, useState} from 'react';
+
+interface FlairEntry {
+  reason: string;
+  points: number;
+}
 
 interface GameOverScreenProps {
   /** Rank badge letter: S, A, B, or F */
@@ -19,6 +25,8 @@ interface GameOverScreenProps {
   breakdown: {label: string; score: number}[];
   /** Demand bonus points */
   demandBonus: number;
+  /** Accumulated flair points from all stations (T1.C). */
+  flairPoints?: FlairEntry[];
   /** Called when PLAY AGAIN button is pressed */
   onPlayAgain: () => void;
   /** Called when MENU button is pressed */
@@ -60,6 +68,7 @@ export function GameOverScreen({
   totalScore,
   breakdown,
   demandBonus,
+  flairPoints = [],
   onPlayAgain,
   onMenu,
 }: GameOverScreenProps) {
@@ -67,6 +76,8 @@ export function GameOverScreen({
   const verdict = VERDICTS[rank] ?? VERDICTS.F;
   const [visible, setVisible] = useState(false);
   const [rankScale, setRankScale] = useState(false);
+
+  const totalFlair = flairPoints.reduce((sum, fp) => sum + fp.points, 0);
 
   useEffect(() => {
     requestAnimationFrame(() => setVisible(true));
@@ -144,6 +155,36 @@ export function GameOverScreen({
                       {demandBonus > 0 ? '+' : ''}
                       {demandBonus}
                     </span>
+                  </div>
+                </>
+              )}
+
+              {/* Flair points (T1.C: style points throughout) */}
+              {flairPoints.length > 0 && (
+                <>
+                  <div className="divider divider-error my-0 opacity-40" />
+                  <h3 className="text-sm font-black font-[Bangers] text-[#D2A24C] tracking-[2px]">
+                    STYLE POINTS
+                  </h3>
+                  <div className="w-full flex flex-col gap-1">
+                    {flairPoints.map((fp, i) => (
+                      <div key={i} className="flex justify-between px-2">
+                        <span className="text-xs font-[Bangers] text-gray-500 tracking-wide">
+                          {fp.reason}
+                        </span>
+                        <span className="text-xs font-black font-[Bangers] text-green-400 tracking-wide">
+                          +{fp.points}
+                        </span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between px-2 pt-1 border-t border-gray-700">
+                      <span className="text-sm font-black font-[Bangers] text-gray-300 tracking-wide">
+                        Total Flair
+                      </span>
+                      <span className="text-sm font-black font-[Bangers] text-green-400 tracking-wide">
+                        +{totalFlair}
+                      </span>
+                    </div>
                   </div>
                 </>
               )}

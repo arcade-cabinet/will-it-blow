@@ -46,23 +46,23 @@
       { "url": "/audio/pots_and_pans_3.ogg", "volume": -8 },
       { "url": "/audio/pots_and_pans_5.ogg", "volume": -8 }
     ],
-    "panClang": [{ "url": "/audio/sfx/pan-clang.ogg", "volume": -5 }],
+    "panClang": [{ "url": "/audio/sfx_pan_clang.ogg", "volume": -5 }],
     "verdictUnsettling": [{ "url": "/audio/verdict-unsettling.ogg", "volume": -10 }],
     "ambientHorror": [{ "url": "/audio/ambient-horror.ogg", "volume": -25, "loop": true }]
   },
   "music": {
-    "bossHorror": { "url": "/audio/music/track_boss_horror.ogg", "volume": -20, "loop": true },
-    "dark": { "url": "/audio/music/track_dark.ogg", "volume": -20, "loop": true },
-    "deathMetal": { "url": "/audio/music/track_death_metal.ogg", "volume": -18, "loop": true },
-    "exploration": { "url": "/audio/music/track_exploration.ogg", "volume": -22, "loop": true },
-    "kickHarder": { "url": "/audio/music/track_kick_harder.ogg", "volume": -18, "loop": true },
-    "revenge": { "url": "/audio/music/track_revenge.ogg", "volume": -20, "loop": true },
+    "bossHorror": { "url": "/audio/track_boss_horror.ogg", "volume": -20, "loop": true },
+    "dark": { "url": "/audio/track_dark.ogg", "volume": -20, "loop": true },
+    "deathMetal": { "url": "/audio/track_death_metal.ogg", "volume": -18, "loop": true },
+    "exploration": { "url": "/audio/track_exploration.ogg", "volume": -22, "loop": true },
+    "kickHarder": { "url": "/audio/track_kick_harder.ogg", "volume": -18, "loop": true },
+    "revenge": { "url": "/audio/track_revenge.ogg", "volume": -20, "loop": true },
     "unsettlingVictory": {
-      "url": "/audio/music/track_unsettling_victory.ogg",
+      "url": "/audio/track_unsettling_victory.ogg",
       "volume": -20,
       "loop": true
     },
-    "violence": { "url": "/audio/music/track_violence.ogg", "volume": -18, "loop": true }
+    "violence": { "url": "/audio/track_violence.ogg", "volume": -18, "loop": true }
   },
   "phaseMusic": {
     "SELECT_INGREDIENTS": "exploration",

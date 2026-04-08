@@ -11,6 +11,8 @@
 import type {GamePhase, GameState} from '../ecs/hooks';
 import {useGameStore} from '../ecs/hooks';
 import {getCurrentPitch, getCurrentYaw, setPitch, setYaw} from '../player/useMouseLook';
+import type {PerceptionSnapshot, StationBounds, StationName} from './perception';
+import {readPerception, readStationBounds} from './perception';
 
 const PHASES: GamePhase[] = [
   'SELECT_INGREDIENTS',
@@ -58,6 +60,15 @@ export interface PlaytestDebugInterface {
   setCameraYaw: (radians: number) => void;
   setCameraPitch: (radians: number) => void;
   readonly PHASES: readonly GamePhase[];
+  /**
+   * Read-only perception snapshot — frozen object, safe to share with
+   * the Yuka GOAP planner. **Never** mutates game state.
+   */
+  getPerception: () => PerceptionSnapshot;
+  /** Bounds for a single station, useful for click-target math. */
+  getStationBounds: (name: StationName) => StationBounds;
+  /** Just the surreal text the player would see right now. */
+  getCurrentSurrealText: () => string;
 }
 
 export function initDebugInterface() {
@@ -114,6 +125,11 @@ export function initDebugInterface() {
     // needs to aim the FPS camera without entering pointer-lock mode).
     setCameraYaw: (radians: number) => setYaw(radians),
     setCameraPitch: (radians: number) => setPitch(radians),
+
+    // ── Read-only perception bridge ─────────────────────────────────
+    getPerception: () => readPerception(useGameStore.getState()),
+    getStationBounds: (name: StationName) => readStationBounds(name),
+    getCurrentSurrealText: () => readPerception(useGameStore.getState()).surrealText,
 
     PHASES,
   };

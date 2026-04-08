@@ -1,3 +1,19 @@
+/**
+ * @module Stuffer
+ * Sausage stuffing station -- crank-to-fill mechanic with a translucent
+ * casing that tints based on the composite ingredient mix (T0.B).
+ *
+ * The composition pillar flows through here: `currentRoundSelection`
+ * (IDs resolved to IngredientDefs) enters `compositeMix()`, producing
+ * colour, transmission, and roughness values that drive the casing
+ * MeshPhysicalMaterial in real time. The player SEES the recipe
+ * through the translucent casing -- this is the diagnostic surface
+ * that makes the deduction loop visible.
+ *
+ * Style points (T1.C): completing the stuffing in a single continuous
+ * crank awards "Smooth Stuff" flair. Interrupted cranking gets a
+ * lesser "Stuffing Complete" award.
+ */
 import {Box, Cylinder, useTexture} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
 import {RigidBody} from '@react-three/rapier';
@@ -6,7 +22,9 @@ import {useEffect, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
 import {useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
+import {compositeMix} from '../../engine/IngredientComposition';
 import {asset} from '../../utils/assetPath';
+import {requestHandGesture} from '../camera/handGestureStore';
 
 class SquigglyCurve extends THREE.Curve<THREE.Vector3> {
   override getPoint(t: number, target = new THREE.Vector3()) {
@@ -18,11 +36,28 @@ class SquigglyCurve extends THREE.Curve<THREE.Vector3> {
   }
 }
 
+/**
+ * Parse a `#rrggbb` hex colour to a THREE.Color for material interpolation.
+ */
+function hexToColor(hex: string): THREE.Color {
+  return new THREE.Color(hex);
+}
+
+/**
+ * Interpolate between a default casing colour and the composite mix's
+ * dominant colour based on how opaque the filling makes the casing.
+ */
+function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * t;
+}
+
 export function Stuffer() {
   const gamePhase = useGameStore(state => state.gamePhase);
   const setGamePhase = useGameStore(state => state.setGamePhase);
   const stuffLevel = useGameStore(state => state.stuffLevel);
   const setStuffLevel = useGameStore(state => state.setStuffLevel);
+  const currentRoundSelection = useGameStore(state => state.currentRoundSelection);
+  const recordFlairPoint = useGameStore(state => state.recordFlairPoint);
 
   const crankRef = useRef<THREE.Group>(null);
   const rodRef = useRef<THREE.Mesh>(null);
@@ -36,6 +71,9 @@ export function Stuffer() {
 
   const [isDraggingCasing, setIsDraggingCasing] = useState(false);
   const [dragTarget, setDragTarget] = useState(new THREE.Vector3(0.5, 0.2, 0));
+
+  // Track crank continuity for flair scoring.
+  const crankPauses = useRef(0);
 
   const [metalMap, metalNormal, metalRough] = useTexture([
     asset('/textures/concrete_color.jpg'),
@@ -56,19 +94,26 @@ export function Stuffer() {
     [metalMap, metalNormal, metalRough],
   );
 
-  const casingMat = useMemo(
-    () =>
-      new THREE.MeshPhysicalMaterial({
-        color: '#ffffee',
-        transmission: 0.8,
-        opacity: 1,
-        transparent: true,
-        roughness: 0.2,
-        thickness: 0.1,
-        side: THREE.DoubleSide,
-      }),
-    [],
-  );
+  // --- Composition-driven casing material (T0.B) ---
+  const mix = useMemo(() => compositeMix(currentRoundSelection), [currentRoundSelection]);
+
+  const casingMat = useMemo(() => {
+    const mixColor = hexToColor(mix.color);
+    const baseColor = new THREE.Color('#ffffee');
+    const blend = mix.density;
+    const blendedColor = baseColor.clone().lerp(mixColor, blend);
+
+    return new THREE.MeshPhysicalMaterial({
+      color: blendedColor,
+      transmission: lerp(0.95, 0.4, mix.density),
+      opacity: 1,
+      transparent: true,
+      roughness: lerp(0.1, 0.6, 1 - mix.shine),
+      thickness: 0.1,
+      clearcoat: mix.moisture * 0.5,
+      side: THREE.DoubleSide,
+    });
+  }, [mix]);
 
   const bunchedCasingGeo = useMemo(() => {
     const geo = new THREE.CylinderGeometry(0.06, 0.06, 0.25, 32, 32, true);
@@ -100,8 +145,15 @@ export function Stuffer() {
     };
   }, [gamePhase]);
 
-  const bindCrank = useDrag(({movement: [, my]}) => {
+  const bindCrank = useDrag(({movement: [, my], first, last}) => {
     if (gamePhase !== 'STUFFING') return;
+
+    // Left hand clamps onto the crank for the duration of the drag.
+    if (first) requestHandGesture('grab_left');
+    if (last) {
+      requestHandGesture('idle');
+      crankPauses.current += 1;
+    }
 
     const newLevel = Math.max(0, Math.min(1.0, stuffLevel + my * 0.002));
     setStuffLevel(newLevel);
@@ -114,12 +166,21 @@ export function Stuffer() {
     }
 
     if (newLevel >= 1.0) {
+      // Award flair based on crank smoothness.
+      if (crankPauses.current <= 1) {
+        recordFlairPoint('Smooth Stuff', 5);
+      } else {
+        recordFlairPoint('Stuffing Complete', 2);
+      }
       setGamePhase('TIE_CASING');
     }
   });
 
-  const bindCasing = useDrag(({active, movement: [mx, my]}) => {
+  const bindCasing = useDrag(({active, movement: [mx, my], first, last}) => {
     if (gamePhase !== 'ATTACH_CASING') return;
+
+    if (first) requestHandGesture('grab_right');
+    if (last) requestHandGesture('idle');
 
     setIsDraggingCasing(active);
 
@@ -147,6 +208,7 @@ export function Stuffer() {
 
   const handleSausageClick = () => {
     if (gamePhase === 'MOVE_SAUSAGE') {
+      requestHandGesture('tap_right');
       setGamePhase('MOVE_PAN');
     }
   };

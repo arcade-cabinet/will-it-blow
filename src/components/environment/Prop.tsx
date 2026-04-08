@@ -20,10 +20,10 @@ export function Prop({
   // Convert uniform scale to vector
   const s = typeof scale === 'number' ? ([scale, scale, scale] as [number, number, number]) : scale;
 
-  const chainsaw = useGLTF(asset('/models/Chainsaw.glb')) as any;
+  const chainsaw = useGLTF(asset('/models/horror_chainsaw.glb')) as any;
   const cleaver = useGLTF(asset('/models/cleaver.glb')) as any;
-  const machete = useGLTF(asset('/models/Machete.glb')) as any;
-  const traps = useGLTF(asset('/models/traps.glb')) as any;
+  const machete = useGLTF(asset('/models/horror_machete.glb')) as any;
+  const traps = useGLTF(asset('/models/horror_traps.glb')) as any;
 
   return (
     <RigidBody type={type} position={position} rotation={rotation} colliders="cuboid">
@@ -69,7 +69,7 @@ export function Prop({
   );
 }
 
-useGLTF.preload(asset('/models/Chainsaw.glb'));
+useGLTF.preload(asset('/models/horror_chainsaw.glb'));
 useGLTF.preload(asset('/models/cleaver.glb'));
-useGLTF.preload(asset('/models/Machete.glb'));
-useGLTF.preload(asset('/models/traps.glb'));
+useGLTF.preload(asset('/models/horror_machete.glb'));
+useGLTF.preload(asset('/models/horror_traps.glb'));

@@ -1,3 +1,12 @@
+/**
+ * @module TrapDoorAnimation
+ * Ceiling trapdoor that opens at key moments:
+ *  1. Intro -- when the player first wakes up in the basement
+ *  2. Round end -- DONE phase triggers the presentation climax
+ *     (design pillar #4) where the plate on rope descends
+ *
+ * The trapdoor hinges on one edge and swings open via lerp in useFrame.
+ */
 import {useFrame} from '@react-three/fiber';
 import {useRef} from 'react';
 import type * as THREE from 'three';
@@ -11,12 +20,14 @@ interface TrapDoorAnimationProps {
 export function TrapDoorAnimation({position = [0, 3, 0]}: TrapDoorAnimationProps) {
   const hingeGroupRef = useRef<THREE.Group>(null);
 
-  const currentRound = useGameStore(state => state.currentRound);
-  const totalRounds = useGameStore(state => state.totalRounds);
   const gamePhase = useGameStore(state => state.gamePhase);
+  const introActive = useGameStore(state => state.introActive);
 
-  // Trapdoor opens when the player has completed the required number of rounds
-  const isOpen = currentRound > totalRounds && gamePhase === 'DONE';
+  // Open conditions:
+  // 1. Intro is active (player dropped through)
+  // 2. DONE phase reached (round-end presentation or final exit)
+  const isOpen = introActive || gamePhase === 'DONE';
+
   const HINGE_OPEN_ANGLE = Math.PI * 0.5;
 
   useFrame((_, delta) => {

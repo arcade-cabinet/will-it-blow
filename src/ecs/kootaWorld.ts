@@ -9,6 +9,7 @@
 import {createWorld} from 'koota';
 import {
   AppTrait,
+  HungerState,
   MrSausageTrait,
   PhaseTag,
   PlayerTrait,
@@ -46,6 +47,9 @@ function bootstrapSingletons() {
   }
   if (ecsWorld.query(MrSausageTrait).length === 0) {
     ecsWorld.spawn(MrSausageTrait);
+  }
+  if (ecsWorld.query(HungerState).length === 0) {
+    ecsWorld.spawn(HungerState);
   }
 }
 

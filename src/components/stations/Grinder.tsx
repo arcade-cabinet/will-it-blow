@@ -1,14 +1,40 @@
+/**
+ * @module Grinder
+ * The chunks-to-paste workhorse. Player drops raw meat through the
+ * chute, mashes the plunger, and ground meat shoots out of the
+ * faceplate into the prep bowl.
+ *
+ * Determinism note (T0.A): per-frame particle jitter (spawn position,
+ * velocity, rotation) routes through a per-component seeded RNG. Save-
+ * scummed reloads play the same particle scatter, which keeps any
+ * future flair-scoring on grinder rhythm bisectable.
+ *
+ * Style points (T1.C): completing the grind phase awards flair based
+ * on how smoothly the player plunged (continuous vs stop-start).
+ *
+ * Fidelity tuning (T2.C): particle count and spawn-per-frame now read
+ * from the centralized FIDELITY config for mobile-first performance.
+ *
+ * Composition integration: particle and ground meat ball colours are
+ * now driven by the composite mix colour, so the player sees the
+ * expected meat tint change based on their ingredient selection.
+ */
 import {Box, Cylinder, useTexture} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
 import {RigidBody} from '@react-three/rapier';
 import {useDrag} from '@use-gesture/react';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
+import {FIDELITY} from '../../config/fidelityConfig';
 import {useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
+import {compositeMix, INGREDIENTS} from '../../engine/IngredientComposition';
+import {useRunRng} from '../../engine/useRunRng';
 import {asset} from '../../utils/assetPath';
+import {requestHandGesture} from '../camera/handGestureStore';
 
-const MAX_PARTICLES = 300;
+/** T2.C: particle count from centralized fidelity config (was hardcoded 300). */
+const MAX_PARTICLES = FIDELITY.grinderMaxParticles;
 
 export function Grinder() {
   const [isGrinderOn, setIsGrinderOn] = useState(false);
@@ -18,6 +44,9 @@ export function Grinder() {
   const particlesRef = useRef<THREE.InstancedMesh>(null);
 
   const [plungerY, setPlungerY] = useState(1.2);
+
+  // Per-component seeded RNG. Same run-seed -> same particle pattern.
+  const rng = useRunRng('Grinder.particles');
 
   // Particle data
   const particlesData = useRef(
@@ -53,15 +82,38 @@ export function Grinder() {
   const setGamePhase = useGameStore(state => state.setGamePhase);
   const setGroundMeatVol = useGameStore(state => state.setGroundMeatVol);
   const groundMeatVol = useGameStore(state => state.groundMeatVol);
+  const recordFlairPoint = useGameStore(state => state.recordFlairPoint);
+  const selectedIds = useGameStore(state => state.selectedIngredientIds);
 
-  // Chunk state: 0 = in bowl, 1 = on tray, 2 = in chute (ready to grind)
-  const [chunks, setChunks] = useState([
-    {id: 1, state: 0, pos: [-0.6, 0.4, 0]},
-    {id: 2, state: 0, pos: [-0.8, 0.4, 0.2]},
-    {id: 3, state: 0, pos: [-0.5, 0.5, 0.3]},
-    {id: 4, state: 0, pos: [-0.7, 0.6, -0.2]},
-    {id: 5, state: 0, pos: [-0.4, 0.4, -0.3]},
-  ]);
+  // Derive the composite mix colour for particles and ground meat ball.
+  const mixColor = useMemo(() => {
+    const defs = selectedIds
+      .map(id => INGREDIENTS.find(ing => ing.id === id))
+      .filter((d): d is (typeof INGREDIENTS)[number] => d != null);
+    const mix = compositeMix(defs);
+    return mix.sources.length > 0 ? mix.color : '#822424';
+  }, [selectedIds]);
+
+  // Track plunge continuity for flair scoring.
+  const plungeStartTime = useRef<number | null>(null);
+  const plungePauses = useRef(0);
+
+  // Chunk state: 0 = in bowl, 1 = on tray, 2 = in chute (ready to grind).
+  // POC had 20 chunks; count is driven by FIDELITY.grinderMeatChunks.
+  // Positions are generated in a rough cluster around the bowl origin
+  // using the seeded RNG so the pile looks organic but is deterministic.
+  const [chunks, setChunks] = useState(() => {
+    const count = FIDELITY.grinderMeatChunks;
+    return Array.from({length: count}, (_, i) => ({
+      id: i + 1,
+      state: 0,
+      pos: [
+        -0.6 + (((i * 7) % 11) - 5) * 0.06,
+        0.4 + ((i * 3) % 5) * 0.05,
+        (((i * 13) % 9) - 4) * 0.08,
+      ] as [number, number, number],
+    }));
+  });
 
   const [bowlPos, setBowlPos] = useState<[number, number, number]>([-0.6, 0.1, 0]);
   const [bowlState, setBowlState] = useState<'SIDE' | 'UNDER'>('SIDE');
@@ -77,6 +129,9 @@ export function Grinder() {
   const handleChunkClick = (chunkId: number) => {
     if (gamePhase !== 'FILL_GRINDER' && gamePhase !== 'GRINDING') return;
 
+    // Left-hand punch to flick the chunk up onto the tray / into the chute.
+    requestHandGesture('tap_left');
+
     setChunks(prev =>
       prev.map(c => {
         if (c.id === chunkId) {
@@ -89,6 +144,8 @@ export function Grinder() {
   };
 
   const toggleGrinder = () => {
+    // Small right-hand jab at the toggle switch.
+    requestHandGesture('tap_right');
     const nextState = !isGrinderOn;
     setIsGrinderOn(nextState);
     if (nextState && gamePhase === 'FILL_GRINDER' && bowlState === 'UNDER') {
@@ -98,7 +155,7 @@ export function Grinder() {
 
   const particleSpawnIndex = useRef(0);
 
-  const bindPlunger = useDrag(({offset: [, y]}) => {
+  const bindPlunger = useDrag(({offset: [, y], first, last}) => {
     if (gamePhase !== 'GRINDING') return;
     if (bowlState !== 'UNDER') return;
 
@@ -107,6 +164,18 @@ export function Grinder() {
 
     // Only allow plunging if there is meat in the chute
     if (chunksInChute === 0) return;
+
+    // Right hand grips the plunger the entire time it's being dragged.
+    if (first) {
+      requestHandGesture('grab_right');
+      if (plungeStartTime.current === null) {
+        plungeStartTime.current = Date.now();
+      }
+    }
+    if (last) {
+      requestHandGesture('idle');
+      plungePauses.current += 1;
+    }
 
     const newY = Math.max(0.5, Math.min(1.2, 1.2 - y * 0.01));
     const plungeDelta = plungerY - newY;
@@ -120,6 +189,12 @@ export function Grinder() {
         setGroundMeatVol(prev => {
           const next = Math.min(1.0, prev + plungeDelta * 0.5);
           if (next >= 1.0 && gamePhase === 'GRINDING') {
+            // Award flair based on plunge smoothness.
+            if (plungePauses.current <= 1) {
+              recordFlairPoint('Smooth Grind', 5);
+            } else {
+              recordFlairPoint('Grind Complete', 2);
+            }
             setGamePhase('MOVE_BOWL');
           }
           return next;
@@ -135,24 +210,21 @@ export function Grinder() {
           });
         }
 
-        // Spawn particles
+        // Spawn particles -- every random draw routes through `rng`.
+        // T2.C: spawn count reads from FIDELITY config (was hardcoded 5).
         const data = particlesData.current;
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < FIDELITY.grinderSpawnPerFrame; i++) {
           const p = data[particleSpawnIndex.current];
           particleSpawnIndex.current = (particleSpawnIndex.current + 1) % MAX_PARTICLES;
 
           if (p && !p.active) {
             p.active = true;
-            const angle = Math.random() * Math.PI * 2;
-            const r = Math.random() * 0.15;
+            const angle = rng() * Math.PI * 2;
+            const r = rng() * 0.15;
             // Spawn from faceplate holes
-            p.pos.set(0.6, 0 + (Math.random() - 0.5) * 0.2, r * Math.sin(angle));
-            p.vel.set(
-              2 + Math.random() * 2,
-              (Math.random() - 0.5) * 0.5,
-              (Math.random() - 0.5) * 0.5,
-            );
-            p.rot.set(Math.random(), Math.random(), Math.random());
+            p.pos.set(0.6, 0 + (rng() - 0.5) * 0.2, r * Math.sin(angle));
+            p.vel.set(2 + rng() * 2, (rng() - 0.5) * 0.5, (rng() - 0.5) * 0.5);
+            p.rot.set(rng(), rng(), rng());
           }
         }
       }
@@ -246,11 +318,11 @@ export function Grinder() {
         >
           <cylinderGeometry args={[0.3, 0.2, 0.2, 32]} />
           <meshStandardMaterial color="#ffffff" roughness={0.1} />
-          {/* Ground Meat inside the bowl */}
+          {/* Ground Meat inside the bowl — colour from composite mix */}
           {groundMeatVol > 0 && bowlState === 'UNDER' && (
             <mesh position={[0, 0.05 + groundMeatVol * 0.05, 0]}>
               <sphereGeometry args={[0.28, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
-              <meshStandardMaterial color="#822424" roughness={0.8} />
+              <meshStandardMaterial color={mixColor} roughness={0.8} />
             </mesh>
           )}
         </mesh>
@@ -285,7 +357,7 @@ export function Grinder() {
         {groundMeatVol > 0 && bowlState !== 'UNDER' && (
           <mesh position={[0, 0.05, 0]}>
             <boxGeometry args={[0.7, 0.05 * groundMeatVol, 0.5]} />
-            <meshStandardMaterial color="#822424" roughness={0.8} />
+            <meshStandardMaterial color={mixColor} roughness={0.8} />
           </mesh>
         )}
       </Box>
@@ -322,10 +394,10 @@ export function Grinder() {
         </Cylinder>
       </group>
 
-      {/* Meat Particles */}
+      {/* Meat Particles — tinted by composite mix colour */}
       <instancedMesh ref={particlesRef} args={[undefined, undefined, MAX_PARTICLES]}>
         <cylinderGeometry args={[0.05, 0.05, 0.2, 6]} />
-        <meshStandardMaterial color="#822424" roughness={0.8} />
+        <meshStandardMaterial color={mixColor} roughness={0.8} />
       </instancedMesh>
     </group>
   );

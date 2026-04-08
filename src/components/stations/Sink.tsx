@@ -1,9 +1,26 @@
+/**
+ * @module Sink
+ * The basement scrub station -- a chrome basin with a faucet that
+ * never quite stops dripping. Mostly atmospheric: the per-frame water
+ * jitter sells "yes there is actually water coming out of this thing"
+ * without ever requiring a real shader.
+ *
+ * Determinism note (T0.A): water-stream scale jitter is now driven by
+ * a per-component seeded RNG. Save-scummed reloads see the same
+ * jitter pattern, so visual recordings stay reproducible.
+ *
+ * Style points (T1.C): tapping the faucet handle awards a one-time
+ * "Hygiene Bonus" flair point. Mr. Sausage notices if you wash your
+ * hands -- it's a small touch that accumulates toward the verdict.
+ */
 import {Box, Cylinder, useTexture} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
 import {RigidBody} from '@react-three/rapier';
 import {useEffect, useMemo, useRef} from 'react';
 import * as THREE from 'three';
+import {useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
+import {useRunRng} from '../../engine/useRunRng';
 import {asset} from '../../utils/assetPath';
 
 export function Sink() {
@@ -22,6 +39,21 @@ export function Sink() {
   const waterRef = useRef<THREE.Mesh>(null);
   const faucetHandleLRef = useRef<THREE.Group>(null);
   const faucetHandleRRef = useRef<THREE.Group>(null);
+
+  // Per-component seeded jitter source -- replays identically on save reload.
+  const rng = useRunRng('Sink.water');
+
+  // One-time flair tracking.
+  const recordFlairPoint = useGameStore(state => state.recordFlairPoint);
+  const hygieneAwarded = useRef(false);
+
+  const handleFaucetTap = () => {
+    if (!hygieneAwarded.current) {
+      hygieneAwarded.current = true;
+      recordFlairPoint('Hygiene Bonus', 2);
+      audioEngine.playSound('click');
+    }
+  };
 
   // Chrome material for the sink basin
   const chromeMat = useMemo(
@@ -62,8 +94,8 @@ export function Sink() {
     // Animate running water
     if (waterRef.current) {
       waterRef.current.position.y = 0.4 + Math.sin(state.clock.elapsedTime * 20) * 0.05;
-      waterRef.current.scale.x = 0.9 + Math.random() * 0.2;
-      waterRef.current.scale.z = 0.9 + Math.random() * 0.2;
+      waterRef.current.scale.x = 0.9 + rng() * 0.2;
+      waterRef.current.scale.z = 0.9 + rng() * 0.2;
     }
   });
 
@@ -157,13 +189,13 @@ export function Sink() {
         <meshStandardMaterial color="#dddddd" metalness={0.9} roughness={0.1} />
       </mesh>
 
-      {/* Faucet Handles */}
-      <group ref={faucetHandleLRef} position={[-0.2, 0.15, -0.4]}>
+      {/* Faucet Handles -- tappable for Hygiene Bonus flair */}
+      <group ref={faucetHandleLRef} position={[-0.2, 0.15, -0.4]} onClick={handleFaucetTap}>
         <Cylinder args={[0.03, 0.03, 0.05, 16]} material={chromeMat} />
         <Box args={[0.1, 0.02, 0.02]} position={[0, 0.05, 0]} material={chromeMat} />
       </group>
 
-      <group ref={faucetHandleRRef} position={[0.2, 0.15, -0.4]}>
+      <group ref={faucetHandleRRef} position={[0.2, 0.15, -0.4]} onClick={handleFaucetTap}>
         <Cylinder args={[0.03, 0.03, 0.05, 16]} material={chromeMat} />
         <Box args={[0.1, 0.02, 0.02]} position={[0, 0.05, 0]} material={chromeMat} />
       </group>

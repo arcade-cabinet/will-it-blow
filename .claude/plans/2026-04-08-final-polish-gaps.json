@@ -1,0 +1,330 @@
+{
+  "batch_name": "Final Polish Gaps — Will It Blow?",
+  "created": "2026-04-08",
+  "config": {
+    "stop_on_failure": false,
+    "auto_commit": true,
+    "branch": "feat/deep-hierarchical-validation",
+    "verify_command": "pnpm typecheck && pnpm test -- --run",
+    "commit_style": "conventional"
+  },
+  "tasks": [
+    {
+      "id": "P1-T1",
+      "description": "Wire SurrealText bridge subscriber — onSurrealMessage() into SurrealText.tsx",
+      "priority": 1,
+      "dependencies": [],
+      "acceptance_criteria": [
+        {
+          "criteria": "SurrealText.tsx imports and subscribes to onSurrealMessage from surrealTextBridge",
+          "verification": "command",
+          "command": "grep -n 'onSurrealMessage' src/components/environment/SurrealText.tsx"
+        },
+        {
+          "criteria": "Bridge messages render as blood-red 3D text on named surface",
+          "verification": "code_review"
+        },
+        {
+          "criteria": "No TypeScript errors",
+          "verification": "command",
+          "command": "pnpm typecheck"
+        },
+        {
+          "criteria": "All tests pass",
+          "verification": "command",
+          "command": "pnpm test -- --run"
+        }
+      ],
+      "files": ["src/components/environment/SurrealText.tsx"]
+    },
+    {
+      "id": "P1-T2",
+      "description": "SurrealText slide-down animation for bridge messages using messageQueue FSM",
+      "priority": 1,
+      "dependencies": ["P1-T1"],
+      "acceptance_criteria": [
+        {
+          "criteria": "Bridge messages use MOUNTED->SEEN->READING->DROPPING->REMOVED FSM",
+          "verification": "code_review"
+        },
+        {
+          "criteria": "Messages slide downward (Y offset from dropOffset) and fade out",
+          "verification": "code_review"
+        },
+        {
+          "criteria": "Existing phase/demand/taunt message layers unchanged",
+          "verification": "code_review"
+        },
+        {
+          "criteria": "No TypeScript errors",
+          "verification": "command",
+          "command": "pnpm typecheck"
+        },
+        {
+          "criteria": "All tests pass",
+          "verification": "command",
+          "command": "pnpm test -- --run"
+        }
+      ],
+      "files": ["src/components/environment/SurrealText.tsx"]
+    },
+    {
+      "id": "P2-T1",
+      "description": "Variable ingredient count in PhysicsFreezerChest — respect ingredientCountHint",
+      "priority": 2,
+      "dependencies": [],
+      "acceptance_criteria": [
+        {
+          "criteria": "Reads clue's ingredientCountHint from store",
+          "verification": "code_review"
+        },
+        {
+          "criteria": "Transition to CHOPPING respects hint count (not hardcoded 3)",
+          "verification": "code_review"
+        },
+        {
+          "criteria": "Shock-me clues (hint=0) allow any count with a done-tap on fridge door",
+          "verification": "code_review"
+        },
+        {
+          "criteria": "No TypeScript errors",
+          "verification": "command",
+          "command": "pnpm typecheck"
+        },
+        {
+          "criteria": "All tests pass",
+          "verification": "command",
+          "command": "pnpm test -- --run"
+        }
+      ],
+      "files": ["src/components/stations/PhysicsFreezerChest.tsx"]
+    },
+    {
+      "id": "P3-T1",
+      "description": "Stove grease pool reads compositeMix for colour and sizzle intensity",
+      "priority": 3,
+      "dependencies": [],
+      "acceptance_criteria": [
+        {
+          "criteria": "Stove.tsx imports and calls compositeMix",
+          "verification": "command",
+          "command": "grep -n 'compositeMix' src/components/stations/Stove.tsx"
+        },
+        {
+          "criteria": "Grease pool base colour derived from mix.color",
+          "verification": "code_review"
+        },
+        {
+          "criteria": "No TypeScript errors",
+          "verification": "command",
+          "command": "pnpm typecheck"
+        },
+        {
+          "criteria": "All tests pass",
+          "verification": "command",
+          "command": "pnpm test -- --run"
+        }
+      ],
+      "files": ["src/components/stations/Stove.tsx"]
+    },
+    {
+      "id": "P3-T2",
+      "description": "Grinder particles tinted by mix.color from composition",
+      "priority": 3,
+      "dependencies": [],
+      "acceptance_criteria": [
+        {
+          "criteria": "Grinder.tsx imports and calls compositeMix",
+          "verification": "command",
+          "command": "grep -n 'compositeMix' src/components/stations/Grinder.tsx"
+        },
+        {
+          "criteria": "Particle material color driven by mix.color",
+          "verification": "code_review"
+        },
+        {
+          "criteria": "Ground meat ball in bowl also tinted",
+          "verification": "code_review"
+        },
+        {
+          "criteria": "No TypeScript errors",
+          "verification": "command",
+          "command": "pnpm typecheck"
+        },
+        {
+          "criteria": "All tests pass",
+          "verification": "command",
+          "command": "pnpm test -- --run"
+        }
+      ],
+      "files": ["src/components/stations/Grinder.tsx"]
+    },
+    {
+      "id": "P3-T3",
+      "description": "Sausage.tsx reads composition for links/thickness/color/fatRatio",
+      "priority": 3,
+      "dependencies": [],
+      "acceptance_criteria": [
+        {
+          "criteria": "Sausage appearance varies based on current round selection",
+          "verification": "code_review"
+        },
+        {
+          "criteria": "No hardcoded defaults when selection exists",
+          "verification": "code_review"
+        },
+        {
+          "criteria": "No TypeScript errors",
+          "verification": "command",
+          "command": "pnpm typecheck"
+        },
+        {
+          "criteria": "All tests pass",
+          "verification": "command",
+          "command": "pnpm test -- --run"
+        }
+      ],
+      "files": ["src/App.tsx", "src/components/sausage/Sausage.tsx"]
+    },
+    {
+      "id": "P4-T1",
+      "description": "Fix PresentationFlow / RoundTransition timing race — presentation completes first",
+      "priority": 4,
+      "dependencies": [],
+      "acceptance_criteria": [
+        {
+          "criteria": "RoundTransition does not appear until PresentationFlow calls onComplete",
+          "verification": "code_review"
+        },
+        {
+          "criteria": "Full 12-second presentation sequence plays before round advance",
+          "verification": "code_review"
+        },
+        {
+          "criteria": "No TypeScript errors",
+          "verification": "command",
+          "command": "pnpm typecheck"
+        },
+        {
+          "criteria": "All tests pass",
+          "verification": "command",
+          "command": "pnpm test -- --run"
+        }
+      ],
+      "files": ["src/App.tsx"]
+    },
+    {
+      "id": "P5-T1",
+      "description": "Mount SlaughterhouseDressing in App.tsx scene tree",
+      "priority": 5,
+      "dependencies": [],
+      "acceptance_criteria": [
+        {
+          "criteria": "SlaughterhouseDressing imported and rendered in App.tsx",
+          "verification": "command",
+          "command": "grep -n 'SlaughterhouseDressing' src/App.tsx"
+        },
+        {
+          "criteria": "Horror set dressing (chainsaw, bear trap, cage, pipes, debris, shelf) in scene",
+          "verification": "code_review"
+        },
+        {
+          "criteria": "No TypeScript errors",
+          "verification": "command",
+          "command": "pnpm typecheck"
+        },
+        {
+          "criteria": "All tests pass",
+          "verification": "command",
+          "command": "pnpm test -- --run"
+        }
+      ],
+      "files": ["src/App.tsx"]
+    },
+    {
+      "id": "P6-T1",
+      "description": "Add 12+ misdirection clue templates for replayability",
+      "priority": 6,
+      "dependencies": [],
+      "acceptance_criteria": [
+        {
+          "criteria": "MISDIRECTION_TEMPLATES array has >= 20 entries",
+          "verification": "command",
+          "command": "grep -c 'text:' src/engine/ClueGenerator.ts"
+        },
+        {
+          "criteria": "All template traits are in VALID_TRAITS set",
+          "verification": "code_review"
+        },
+        {
+          "criteria": "Existing ClueGenerator tests still green",
+          "verification": "command",
+          "command": "pnpm test -- --run src/engine/__tests__/ClueGenerator.test.ts"
+        },
+        {
+          "criteria": "No TypeScript errors",
+          "verification": "command",
+          "command": "pnpm typecheck"
+        }
+      ],
+      "files": ["src/engine/ClueGenerator.ts"]
+    },
+    {
+      "id": "P6-T2",
+      "description": "Audit ingredient trait diversity — ensure varied puzzles",
+      "priority": 6,
+      "dependencies": [],
+      "acceptance_criteria": [
+        {
+          "criteria": "At least 15 traits have >=2 ingredients carrying them",
+          "verification": "manual_review"
+        },
+        {
+          "criteria": "No ingredient has fewer than 3 traits",
+          "verification": "manual_review"
+        },
+        {
+          "criteria": "No TypeScript errors",
+          "verification": "command",
+          "command": "pnpm typecheck"
+        },
+        {
+          "criteria": "All tests pass",
+          "verification": "command",
+          "command": "pnpm test -- --run"
+        }
+      ],
+      "files": ["src/config/ingredients.json"]
+    },
+    {
+      "id": "P7-T1",
+      "description": "Push branch + open PR to main with comprehensive summary",
+      "priority": 7,
+      "dependencies": [
+        "P1-T1",
+        "P1-T2",
+        "P2-T1",
+        "P3-T1",
+        "P3-T2",
+        "P3-T3",
+        "P4-T1",
+        "P5-T1",
+        "P6-T1",
+        "P6-T2"
+      ],
+      "acceptance_criteria": [
+        {
+          "criteria": "Branch pushed to remote",
+          "verification": "command",
+          "command": "git log --oneline origin/feat/deep-hierarchical-validation -1"
+        },
+        {
+          "criteria": "PR exists on GitHub targeting main",
+          "verification": "command",
+          "command": "gh pr view --json state"
+        }
+      ],
+      "files": []
+    }
+  ]
+}

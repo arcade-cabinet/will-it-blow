@@ -1,14 +1,43 @@
+/**
+ * @module Stove
+ * The grease-pool simulator station. Two burners with knobs, a draggable
+ * frying pan, and an FBO ripple sim that paints normal-mapped grease
+ * onto the pan as the player turns up the heat.
+ *
+ * Determinism note (T0.A): per-frame splat positions and scales are
+ * driven by a per-component seeded RNG. Save-scummed reloads see the
+ * same boil pattern, so the visual feedback the player learns from is
+ * consistent across runs of the same seed.
+ *
+ * Style points (T1.C): completing the cook awards flair based on the
+ * final cook level. A perfect medium cook (0.5-0.7) earns "Perfect
+ * Sear"; overcooking or undercooking earns less.
+ *
+ * Fidelity tuning (T2.C): FBO size and splat instance count now read
+ * from the centralized FIDELITY config for mobile-first performance.
+ *
+ * Composition integration: the grease pool base colour and sizzle
+ * intensity are now driven by the composite mix of the player's
+ * ingredient selection, so different ingredient combos produce
+ * visibly different frying behaviour.
+ */
 import {Torus, useGLTF} from '@react-three/drei';
 import {useFrame, useThree} from '@react-three/fiber';
 import {RigidBody} from '@react-three/rapier';
 import {useDrag} from '@use-gesture/react';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
+import {FIDELITY} from '../../config/fidelityConfig';
 import {useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
+import {type CompositeMix, compositeMix, INGREDIENTS} from '../../engine/IngredientComposition';
+import {useRunRng} from '../../engine/useRunRng';
 import {asset} from '../../utils/assetPath';
+import {requestHandGesture} from '../camera/handGestureStore';
 
-const fboSize = 256;
+/** T2.C: FBO size from centralized fidelity config (was hardcoded 256). */
+const fboSize = FIDELITY.stoveFboSize;
+
 const fboOptions = {
   format: THREE.RGBAFormat,
   type: THREE.HalfFloatType,
@@ -17,11 +46,31 @@ const fboOptions = {
   depthBuffer: false,
 };
 
+/** Resolve selectedIngredientIds into a CompositeMix. */
+function useCompositeMix(): CompositeMix {
+  const selectedIds = useGameStore(state => state.selectedIngredientIds);
+  return useMemo(() => {
+    const defs = selectedIds
+      .map(id => INGREDIENTS.find(ing => ing.id === id))
+      .filter((d): d is (typeof INGREDIENTS)[number] => d != null);
+    return compositeMix(defs);
+  }, [selectedIds]);
+}
+
 export function Stove() {
   const {gl} = useThree();
   const [burnerLevels, setBurnerLevels] = useState([0, 0]); // FrontLeft, BackRight
   const dialFL = useRef<THREE.Group>(null);
   const dialBR = useRef<THREE.Group>(null);
+
+  // Per-component seeded RNG for boil splats -- replays identically per save.
+  const rng = useRunRng('Stove.splats');
+
+  // Track whether we've already awarded the cook flair (once per phase).
+  const cookFlairAwarded = useRef(false);
+
+  // Composition-driven colour and sizzle intensity.
+  const mix = useCompositeMix();
 
   // FBO setup
   const rtPrev = useRef(new THREE.WebGLRenderTarget(fboSize, fboSize, fboOptions));
@@ -72,9 +121,11 @@ export function Stove() {
   const splatScene = useMemo(() => new THREE.Scene(), []);
   const splatCamera = useMemo(() => new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1), []);
   const splatMesh = useMemo(() => {
+    /** T2.C: splat instance count from fidelity config (was hardcoded 100). */
+    const count = FIDELITY.stoveSplatInstances;
     if (typeof document === 'undefined') {
       const mat = new THREE.MeshBasicMaterial({transparent: true, opacity: 0});
-      return new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), mat, 100);
+      return new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), mat, count);
     }
     const sCtx = document.createElement('canvas').getContext('2d');
     if (sCtx) {
@@ -93,7 +144,7 @@ export function Stove() {
       depthWrite: false,
       depthTest: false,
     });
-    return new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), mat, 100);
+    return new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), mat, count);
   }, []);
 
   useEffect(() => {
@@ -105,10 +156,20 @@ export function Stove() {
 
   const splatDummy = useMemo(() => new THREE.Object3D(), []);
 
+  // Grease pool base colour derived from the composite mix colour.
+  // Falls back to a generic amber grease if no selection.
+  const greaseBaseColor = useMemo(() => {
+    if (mix.sources.length === 0) return new THREE.Color(0xcca600);
+    // Darken the mix colour toward amber/brown for a greasy look.
+    const c = new THREE.Color(mix.color);
+    c.lerp(new THREE.Color(0x8a5a00), 0.4);
+    return c;
+  }, [mix]);
+
   const greasePoolMat = useMemo(
     () =>
       new THREE.MeshPhysicalMaterial({
-        color: 0xcca600,
+        color: greaseBaseColor,
         transparent: true,
         opacity: 0.8,
         roughness: 0.05,
@@ -117,11 +178,11 @@ export function Stove() {
         ior: 1.4,
         depthWrite: false,
         displacementMap: rtCurr.current.texture,
-        displacementScale: 0.2,
+        displacementScale: FIDELITY.stoveDisplacementScale,
         normalMap: rtNormal.current.texture,
         normalScale: new THREE.Vector2(1, 1),
       }),
-    [],
+    [greaseBaseColor],
   );
 
   const oven = useGLTF(asset('/models/kitchen_oven_large.glb')) as any;
@@ -130,11 +191,24 @@ export function Stove() {
   const setGamePhase = useGameStore(state => state.setGamePhase);
   const cookLevel = useGameStore(state => state.cookLevel);
   const setCookLevel = useGameStore(state => state.setCookLevel);
+  const recordFlairPoint = useGameStore(state => state.recordFlairPoint);
+
+  // Reset flair flag when entering COOKING phase.
+  const prevPhaseRef = useRef(gamePhase);
+  if (gamePhase === 'COOKING' && prevPhaseRef.current !== 'COOKING') {
+    cookFlairAwarded.current = false;
+  }
+  prevPhaseRef.current = gamePhase;
 
   const [panPos, setPanPos] = useState(new THREE.Vector3(0.8, 0, 0)); // BR Burner
 
-  const bindPan = useDrag(({active, movement: [x, y]}) => {
+  const bindPan = useDrag(({active, movement: [x, y], first, last}) => {
     if (gamePhase !== 'MOVE_PAN') return;
+
+    // Right hand grips the pan handle the whole time it's being dragged.
+    if (first) requestHandGesture('grab_right');
+    if (last) requestHandGesture('idle');
+
     if (active) {
       setPanPos(new THREE.Vector3(0.8 + x * 0.01, 0, y * 0.01));
     } else {
@@ -150,20 +224,33 @@ export function Stove() {
     }
   });
 
+  // Sizzle intensity scales with the composite mix's moisture + fat.
+  // Wetter, fattier mixes sizzle louder and more violently.
+  const sizzleMultiplier = useMemo(() => {
+    if (mix.sources.length === 0) return 1.0;
+    return 0.6 + mix.moisture * 0.6 + mix.fat * 0.4;
+  }, [mix]);
+
   const updateSizzle = (l1: number, l2: number) => {
     if (gamePhase === 'COOKING') {
-      audioEngine.setSizzleLevel(Math.max(l1, l2));
+      audioEngine.setSizzleLevel(Math.max(l1, l2) * sizzleMultiplier);
     }
   };
 
-  const bindDialFL = useDrag(({movement: [, my]}) => {
+  const bindDialFL = useDrag(({movement: [, my], first, last}) => {
+    if (first) requestHandGesture('grab_right');
+    if (last) requestHandGesture('idle');
+
     const level = Math.max(0, Math.min(1.0, burnerLevels[0] - my * 0.005));
     setBurnerLevels([level, burnerLevels[1]]);
     if (dialFL.current) dialFL.current.rotation.x = level * Math.PI * 0.8;
     updateSizzle(level, burnerLevels[1]);
   });
 
-  const bindDialBR = useDrag(({movement: [, my]}) => {
+  const bindDialBR = useDrag(({movement: [, my], first, last}) => {
+    if (first) requestHandGesture('grab_right');
+    if (last) requestHandGesture('idle');
+
     const level = Math.max(0, Math.min(1.0, burnerLevels[1] - my * 0.005));
     setBurnerLevels([burnerLevels[0], level]);
     if (dialBR.current) dialBR.current.rotation.x = level * Math.PI * 0.8;
@@ -177,7 +264,17 @@ export function Stove() {
       if (maxHeat > 0) {
         const nextCook = Math.min(1.0, cookLevel + maxHeat * delta * 0.1); // Takes 10s at full heat
         setCookLevel(nextCook);
-        if (nextCook >= 1.0) {
+        if (nextCook >= 1.0 && !cookFlairAwarded.current) {
+          cookFlairAwarded.current = true;
+          // Award flair based on the heat level at completion.
+          // Perfect sear = moderate heat (0.4-0.7). Too high = charred, too low = raw.
+          if (maxHeat >= 0.4 && maxHeat <= 0.7) {
+            recordFlairPoint('Perfect Sear', 8);
+          } else if (maxHeat > 0.7) {
+            recordFlairPoint('Charred Finish', 3);
+          } else {
+            recordFlairPoint('Slow Cook', 2);
+          }
           setGamePhase('DONE');
         }
       }
@@ -185,10 +282,9 @@ export function Stove() {
       // FBO Grease logic
       let splatCount = 0;
       if (maxHeat > 0.1) {
-        // Add random boiling splats based on heat
         for (let i = 0; i < Math.floor(maxHeat * 5); i++) {
-          splatDummy.position.set((Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, 0);
-          splatDummy.scale.setScalar(0.05 + Math.random() * 0.1);
+          splatDummy.position.set((rng() - 0.5) * 2, (rng() - 0.5) * 2, 0);
+          splatDummy.scale.setScalar(0.05 + rng() * 0.1);
           splatDummy.updateMatrix();
           splatMesh.setMatrixAt(splatCount++, splatDummy.matrix);
         }
@@ -230,12 +326,9 @@ export function Stove() {
       greasePoolMat.displacementMap = rtCurr.current.texture;
       greasePoolMat.normalMap = rtNormal.current.texture;
 
-      // Change color based on cookLevel
-      greasePoolMat.color.lerpColors(
-        new THREE.Color(0xcca600),
-        new THREE.Color(0x8a5a00),
-        cookLevel,
-      );
+      // Change color based on cookLevel — darken from the mix-derived base
+      // toward a deep brown char.
+      greasePoolMat.color.lerpColors(greaseBaseColor, new THREE.Color(0x3a2200), cookLevel);
     }
   });
 
