@@ -3,6 +3,7 @@ import {useCallback, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
 import {useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
+import {requestHandGesture} from '../camera/handGestureStore';
 
 const PARTICLE_COUNT = 80;
 const SPLATTER_COUNT = 12;
@@ -77,6 +78,8 @@ export function BlowoutStation() {
       if (!pickedUp) {
         setPickedUp(true);
         audioEngine.playSound('click');
+        // First tap grabs the tube — both hands cradle it from here on.
+        requestHandGesture('grab_left');
         return;
       }
       isDragging.current = true;
@@ -140,6 +143,16 @@ export function BlowoutStation() {
     setMrSausageReaction(reaction);
     audioEngine.playSound('burst');
 
+    // Match the hand gesture to the result — massive/clean gets a thumbs
+    // up, weak/dud gets the flip-off. These are `hold` clips so they
+    // clamp on the final frame during the 2s results display, then the
+    // next phase transition will reset back to idle.
+    if (tier === 'massive' || tier === 'clean') {
+      requestHandGesture('thumbs_up');
+    } else {
+      requestHandGesture('flip_off');
+    }
+
     // Spawn particles proportional to power
     const count = tier === 'dud' ? 3 : Math.floor(power * PARTICLE_COUNT);
     const speed = tier === 'dud' ? 1 : 3 + power * 8;
@@ -160,6 +173,10 @@ export function BlowoutStation() {
     isDragging.current = false;
     // Only trigger if they actually swiped downward
     if (slamVelocity.current > 2) {
+      // Fire the overhand slam animation FIRST so the hand reads as
+      // driving the explosion; the result gesture (thumbs_up / flip_off)
+      // overrides this inside `triggerExplosion`.
+      requestHandGesture('swing_left');
       triggerExplosion();
     }
   }, [triggerExplosion]);

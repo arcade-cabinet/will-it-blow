@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import {useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
 import {asset} from '../../utils/assetPath';
+import {requestHandGesture} from '../camera/handGestureStore';
 
 const fboSize = 256;
 const fboOptions = {
@@ -133,8 +134,13 @@ export function Stove() {
 
   const [panPos, setPanPos] = useState(new THREE.Vector3(0.8, 0, 0)); // BR Burner
 
-  const bindPan = useDrag(({active, movement: [x, y]}) => {
+  const bindPan = useDrag(({active, movement: [x, y], first, last}) => {
     if (gamePhase !== 'MOVE_PAN') return;
+
+    // Right hand grips the pan handle the whole time it's being dragged.
+    if (first) requestHandGesture('grab_right');
+    if (last) requestHandGesture('idle');
+
     if (active) {
       setPanPos(new THREE.Vector3(0.8 + x * 0.01, 0, y * 0.01));
     } else {
@@ -156,14 +162,22 @@ export function Stove() {
     }
   };
 
-  const bindDialFL = useDrag(({movement: [, my]}) => {
+  const bindDialFL = useDrag(({movement: [, my], first, last}) => {
+    // Thumb-and-forefinger pinch on the dial — same "hold" pose as a
+    // crank, different hand so it reads as a different interaction.
+    if (first) requestHandGesture('grab_right');
+    if (last) requestHandGesture('idle');
+
     const level = Math.max(0, Math.min(1.0, burnerLevels[0] - my * 0.005));
     setBurnerLevels([level, burnerLevels[1]]);
     if (dialFL.current) dialFL.current.rotation.x = level * Math.PI * 0.8;
     updateSizzle(level, burnerLevels[1]);
   });
 
-  const bindDialBR = useDrag(({movement: [, my]}) => {
+  const bindDialBR = useDrag(({movement: [, my], first, last}) => {
+    if (first) requestHandGesture('grab_right');
+    if (last) requestHandGesture('idle');
+
     const level = Math.max(0, Math.min(1.0, burnerLevels[1] - my * 0.005));
     setBurnerLevels([burnerLevels[0], level]);
     if (dialBR.current) dialBR.current.rotation.x = level * Math.PI * 0.8;

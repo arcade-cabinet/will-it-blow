@@ -5,6 +5,8 @@ import {useState} from 'react';
 import {useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
 import {asset} from '../../utils/assetPath';
+import {requestHandGesture} from '../camera/handGestureStore';
+import {alternatingSwing} from '../camera/handGestures';
 
 export function ChoppingBlock() {
   const [colorMap, normalMap, roughnessMap] = useTexture([
@@ -21,6 +23,9 @@ export function ChoppingBlock() {
     if (gamePhase === 'CHOPPING') {
       audioEngine.playChop();
       setChopCount(c => {
+        // Alternate the swinging hand so the chop feels less robotic.
+        // `c` is the pre-increment count — c=0 → swing_left, c=1 → swing_right, ...
+        requestHandGesture(alternatingSwing(c));
         const next = c + 1;
         if (next >= 5) {
           setGamePhase('FILL_GRINDER');

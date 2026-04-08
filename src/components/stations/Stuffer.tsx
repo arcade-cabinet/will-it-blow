@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import {useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
 import {asset} from '../../utils/assetPath';
+import {requestHandGesture} from '../camera/handGestureStore';
 
 class SquigglyCurve extends THREE.Curve<THREE.Vector3> {
   override getPoint(t: number, target = new THREE.Vector3()) {
@@ -100,8 +101,12 @@ export function Stuffer() {
     };
   }, [gamePhase]);
 
-  const bindCrank = useDrag(({movement: [, my]}) => {
+  const bindCrank = useDrag(({movement: [, my], first, last}) => {
     if (gamePhase !== 'STUFFING') return;
+
+    // Left hand clamps onto the crank for the duration of the drag.
+    if (first) requestHandGesture('grab_left');
+    if (last) requestHandGesture('idle');
 
     const newLevel = Math.max(0, Math.min(1.0, stuffLevel + my * 0.002));
     setStuffLevel(newLevel);
@@ -118,8 +123,13 @@ export function Stuffer() {
     }
   });
 
-  const bindCasing = useDrag(({active, movement: [mx, my]}) => {
+  const bindCasing = useDrag(({active, movement: [mx, my], first, last}) => {
     if (gamePhase !== 'ATTACH_CASING') return;
+
+    // Right hand pinches the casing while the player drags it onto the
+    // nozzle — revert to idle the moment the drag lifts.
+    if (first) requestHandGesture('grab_right');
+    if (last) requestHandGesture('idle');
 
     setIsDraggingCasing(active);
 
@@ -147,6 +157,9 @@ export function Stuffer() {
 
   const handleSausageClick = () => {
     if (gamePhase === 'MOVE_SAUSAGE') {
+      // A quick two-handed-feeling pickup — tap with the right hand to
+      // "lift" the stuffed tube off the nozzle.
+      requestHandGesture('tap_right');
       setGamePhase('MOVE_PAN');
     }
   };

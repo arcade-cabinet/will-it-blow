@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import {useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
 import {asset} from '../../utils/assetPath';
+import {requestHandGesture} from '../camera/handGestureStore';
 
 const MAX_PARTICLES = 300;
 
@@ -77,6 +78,9 @@ export function Grinder() {
   const handleChunkClick = (chunkId: number) => {
     if (gamePhase !== 'FILL_GRINDER' && gamePhase !== 'GRINDING') return;
 
+    // Left-hand punch to flick the chunk up onto the tray / into the chute.
+    requestHandGesture('tap_left');
+
     setChunks(prev =>
       prev.map(c => {
         if (c.id === chunkId) {
@@ -89,6 +93,8 @@ export function Grinder() {
   };
 
   const toggleGrinder = () => {
+    // Small right-hand jab at the toggle switch.
+    requestHandGesture('tap_right');
     const nextState = !isGrinderOn;
     setIsGrinderOn(nextState);
     if (nextState && gamePhase === 'FILL_GRINDER' && bowlState === 'UNDER') {
@@ -98,7 +104,7 @@ export function Grinder() {
 
   const particleSpawnIndex = useRef(0);
 
-  const bindPlunger = useDrag(({offset: [, y]}) => {
+  const bindPlunger = useDrag(({offset: [, y], first, last}) => {
     if (gamePhase !== 'GRINDING') return;
     if (bowlState !== 'UNDER') return;
 
@@ -107,6 +113,12 @@ export function Grinder() {
 
     // Only allow plunging if there is meat in the chute
     if (chunksInChute === 0) return;
+
+    // Right hand grips the plunger the entire time it's being dragged.
+    // `hold` clip clamps on its last frame, so we just ask once on press
+    // and revert on release.
+    if (first) requestHandGesture('grab_right');
+    if (last) requestHandGesture('idle');
 
     const newY = Math.max(0.5, Math.min(1.2, 1.2 - y * 0.01));
     const plungeDelta = plungerY - newY;
