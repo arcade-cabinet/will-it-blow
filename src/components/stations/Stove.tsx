@@ -15,6 +15,11 @@
  *
  * Fidelity tuning (T2.C): FBO size and splat instance count now read
  * from the centralized FIDELITY config for mobile-first performance.
+ *
+ * Composition integration: the grease pool base colour and sizzle
+ * intensity are now driven by the composite mix of the player's
+ * ingredient selection, so different ingredient combos produce
+ * visibly different frying behaviour.
  */
 import {Torus, useGLTF} from '@react-three/drei';
 import {useFrame, useThree} from '@react-three/fiber';
@@ -25,6 +30,7 @@ import * as THREE from 'three';
 import {FIDELITY} from '../../config/fidelityConfig';
 import {useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
+import {type CompositeMix, INGREDIENTS, compositeMix} from '../../engine/IngredientComposition';
 import {useRunRng} from '../../engine/useRunRng';
 import {asset} from '../../utils/assetPath';
 import {requestHandGesture} from '../camera/handGestureStore';
@@ -40,6 +46,17 @@ const fboOptions = {
   depthBuffer: false,
 };
 
+/** Resolve selectedIngredientIds into a CompositeMix. */
+function useCompositeMix(): CompositeMix {
+  const selectedIds = useGameStore(state => state.selectedIngredientIds);
+  return useMemo(() => {
+    const defs = selectedIds
+      .map(id => INGREDIENTS.find(ing => ing.id === id))
+      .filter((d): d is (typeof INGREDIENTS)[number] => d != null);
+    return compositeMix(defs);
+  }, [selectedIds]);
+}
+
 export function Stove() {
   const {gl} = useThree();
   const [burnerLevels, setBurnerLevels] = useState([0, 0]); // FrontLeft, BackRight
@@ -51,6 +68,9 @@ export function Stove() {
 
   // Track whether we've already awarded the cook flair (once per phase).
   const cookFlairAwarded = useRef(false);
+
+  // Composition-driven colour and sizzle intensity.
+  const mix = useCompositeMix();
 
   // FBO setup
   const rtPrev = useRef(new THREE.WebGLRenderTarget(fboSize, fboSize, fboOptions));
@@ -136,10 +156,20 @@ export function Stove() {
 
   const splatDummy = useMemo(() => new THREE.Object3D(), []);
 
+  // Grease pool base colour derived from the composite mix colour.
+  // Falls back to a generic amber grease if no selection.
+  const greaseBaseColor = useMemo(() => {
+    if (mix.sources.length === 0) return new THREE.Color(0xcca600);
+    // Darken the mix colour toward amber/brown for a greasy look.
+    const c = new THREE.Color(mix.color);
+    c.lerp(new THREE.Color(0x8a5a00), 0.4);
+    return c;
+  }, [mix]);
+
   const greasePoolMat = useMemo(
     () =>
       new THREE.MeshPhysicalMaterial({
-        color: 0xcca600,
+        color: greaseBaseColor,
         transparent: true,
         opacity: 0.8,
         roughness: 0.05,
@@ -152,7 +182,7 @@ export function Stove() {
         normalMap: rtNormal.current.texture,
         normalScale: new THREE.Vector2(1, 1),
       }),
-    [],
+    [greaseBaseColor],
   );
 
   const oven = useGLTF(asset('/models/kitchen_oven_large.glb')) as any;
@@ -194,9 +224,16 @@ export function Stove() {
     }
   });
 
+  // Sizzle intensity scales with the composite mix's moisture + fat.
+  // Wetter, fattier mixes sizzle louder and more violently.
+  const sizzleMultiplier = useMemo(() => {
+    if (mix.sources.length === 0) return 1.0;
+    return 0.6 + mix.moisture * 0.6 + mix.fat * 0.4;
+  }, [mix]);
+
   const updateSizzle = (l1: number, l2: number) => {
     if (gamePhase === 'COOKING') {
-      audioEngine.setSizzleLevel(Math.max(l1, l2));
+      audioEngine.setSizzleLevel(Math.max(l1, l2) * sizzleMultiplier);
     }
   };
 
@@ -289,12 +326,9 @@ export function Stove() {
       greasePoolMat.displacementMap = rtCurr.current.texture;
       greasePoolMat.normalMap = rtNormal.current.texture;
 
-      // Change color based on cookLevel
-      greasePoolMat.color.lerpColors(
-        new THREE.Color(0xcca600),
-        new THREE.Color(0x8a5a00),
-        cookLevel,
-      );
+      // Change color based on cookLevel — darken from the mix-derived base
+      // toward a deep brown char.
+      greasePoolMat.color.lerpColors(greaseBaseColor, new THREE.Color(0x3a2200), cookLevel);
     }
   });
 
