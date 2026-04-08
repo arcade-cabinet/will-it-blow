@@ -15,6 +15,7 @@ import {TieGesture} from './components/challenges/TieGesture';
 import {MrSausage3D} from './components/characters/MrSausage3D';
 import {SwipeFPSControls} from './components/controls/SwipeFPSControls';
 import {BasementRoom} from './components/environment/BasementRoom';
+import {FlickeringFluorescent} from './components/environment/FlickeringFluorescent';
 import {Prop} from './components/environment/Prop';
 import {ScatterProps} from './components/environment/ScatterProps';
 import {SurrealText} from './components/environment/SurrealText';
@@ -210,22 +211,65 @@ export function App() {
             }}
             style={{position: 'absolute', top: 0, left: 0, width: '100%', height: '100%'}}
           >
-            <color attach="background" args={['#1a1a1a']} />
-            <fogExp2 attach="fog" args={['#2a2a2a', 0.015]} />
+            {/*
+              SAW / operating-theatre basement. Background and fog are cold
+              blue-grey, not the warm earth tones of a cosy kitchen. Every
+              ambient value here is pushed toward "this place smells like
+              bleach and old blood".
+            */}
+            <color attach="background" args={['#0a0b0f']} />
+            <fogExp2 attach="fog" args={['#14161c', 0.018]} />
 
-            <ambientLight intensity={0.6} />
+            {/*
+              Ambient is very low — we want sharp fluorescent tube-cones
+              rather than a diffuse wash. The slight cyan tint `#c8d8d4`
+              pushes faces toward "morgue skin" instead of "kitchen warm".
+            */}
+            <ambientLight intensity={0.35} color="#c8d8d4" />
             <directionalLight
               position={[0, 2.5, 0]}
-              intensity={1.0}
+              intensity={0.7}
+              color="#d8f8e8"
               castShadow
               shadow-mapSize-width={2048}
               shadow-mapSize-height={2048}
               shadow-bias={-0.001}
             />
-            {/* Main warm ceiling light */}
-            <pointLight position={[0, 2.0, 0]} intensity={50} distance={10} color="#ffeedd" />
-            {/* Upward bounce light to illuminate ceiling — prevents black void */}
-            <pointLight position={[0, 0.5, 0]} intensity={30} distance={8} color="#ffeedd" />
+            {/*
+              Main ceiling fluorescent tube — sickly institutional green-white
+              (6500K + slight green cast, the colour every hospital corridor
+              and morgue uses). `<FlickeringFluorescent>` drives the intensity
+              via `useFrame` so it strobes occasionally like a dying ballast.
+            */}
+            <FlickeringFluorescent
+              position={[0, 2.0, 0]}
+              baseIntensity={45}
+              distance={10}
+              color="#d8f8e8"
+              flickerRate={0.9}
+              flickerDepth={0.85}
+            />
+            {/*
+              Second steadier tube, opposite end of the room, prevents total
+              black during the flicker drops. Slightly cooler `#c8e8dc` so
+              the two tubes read as different ballasts dying at different
+              rates — the small inconsistency sells the "no one maintains
+              this place" vibe.
+            */}
+            <FlickeringFluorescent
+              position={[0, 1.8, -2]}
+              baseIntensity={28}
+              distance={7}
+              color="#c8e8dc"
+              flickerRate={0.15}
+              flickerDepth={0.25}
+            />
+            {/*
+              Low bounce fill so deep-floor shadow doesn't disappear into
+              the abyss. Neutral cool-grey, very dim — just enough to lift
+              the tile floor out of pure black.
+            */}
+            <pointLight position={[0, 0.4, 0]} intensity={12} distance={6} color="#b8c8c4" />
 
             <Suspense fallback={null}>
               <GameContent />
