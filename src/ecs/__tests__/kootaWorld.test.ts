@@ -25,10 +25,10 @@ describe('Koota world', () => {
     );
     const data = entity.get(StationTrait);
     expect(data).toBeDefined();
-    expect(data.name).toBe('stove');
-    expect(data.active).toBe(true);
-    expect(data.posX).toBe(2);
-    expect(data.posZ).toBe(1);
+    expect(data!.name).toBe('stove');
+    expect(data!.active).toBe(true);
+    expect(data!.posX).toBe(2);
+    expect(data!.posZ).toBe(1);
   });
 
   it('can spawn entities with multiple traits', () => {
@@ -36,14 +36,14 @@ describe('Koota world', () => {
       StationTrait({name: 'blowout', active: false, posX: 0, posY: 0, posZ: 0}),
       PhaseTag({phase: 'BLOWOUT'}),
     );
-    expect(entity.get(StationTrait).name).toBe('blowout');
-    expect(entity.get(PhaseTag).phase).toBe('BLOWOUT');
+    expect(entity.get(StationTrait)!.name).toBe('blowout');
+    expect(entity.get(PhaseTag)!.phase).toBe('BLOWOUT');
   });
 
   it('can update trait data via set', () => {
     const entity = ecsWorld.spawn(SausageTrait);
     entity.set(SausageTrait, {groundLevel: 0.75});
-    expect(entity.get(SausageTrait).groundLevel).toBe(0.75);
+    expect(entity.get(SausageTrait)!.groundLevel).toBe(0.75);
   });
 
   it('resetWorld clears all entities', () => {

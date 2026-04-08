@@ -32,6 +32,8 @@ const fragmentShader = /* glsl */ `
   uniform float uFlickerIntensity;
   uniform float uStaticIntensity;
   uniform float uReactionIntensity;
+  /** 0 = fully opaque phosphor (old behaviour), 1 = lightly tinted overlay. */
+  uniform float uOverlayMode;
 
   /* --- Pseudo-random hash --- */
   float rand(vec2 co) {
@@ -149,11 +151,24 @@ const fragmentShader = /* glsl */ `
     color *= 2.8 + reaction * 1.2;
 
     /* --- Out-of-bounds masking (barrel distortion overflow) --- */
+    float oob = 0.0;
     if (uvCoord.x < 0.0 || uvCoord.x > 1.0 || uvCoord.y < 0.0 || uvCoord.y > 1.0) {
       color = vec3(0.0);
+      oob = 1.0;
     }
 
-    gl_FragColor = vec4(color, 1.0);
+    /* --- Overlay mode: keep the effects as an additive glaze on top of
+        whatever is rendered behind the plane (e.g. Mr. Sausage in the TV).
+        In overlay mode the plane stays transparent where the scene is dim
+        and fades to fully opaque at the black barrel overflow margins.    */
+    if (uOverlayMode > 0.5) {
+      float luminance = clamp(max(color.r, max(color.g, color.b)), 0.0, 2.0);
+      float alpha = mix(0.35, 1.0, clamp(luminance * 0.3, 0.0, 1.0));
+      alpha = mix(alpha, 1.0, oob);
+      gl_FragColor = vec4(color, alpha);
+    } else {
+      gl_FragColor = vec4(color, 1.0);
+    }
   }
 `;
 
@@ -162,10 +177,15 @@ const fragmentShader = /* glsl */ `
 /* ------------------------------------------------------------------ */
 
 export interface CrtUniforms {
+  // Three's `ShaderMaterial#uniforms` requires an index signature on the
+  // uniforms object. We keep the named fields for intellisense but also
+  // allow the catch-all so the interface satisfies Three's type.
+  [uniform: string]: THREE.IUniform<number>;
   uTime: THREE.IUniform<number>;
   uFlickerIntensity: THREE.IUniform<number>;
   uStaticIntensity: THREE.IUniform<number>;
   uReactionIntensity: THREE.IUniform<number>;
+  uOverlayMode: THREE.IUniform<number>;
 }
 
 export function createCrtUniforms(): CrtUniforms {
@@ -174,6 +194,7 @@ export function createCrtUniforms(): CrtUniforms {
     uFlickerIntensity: {value: 1.0},
     uStaticIntensity: {value: 0.06},
     uReactionIntensity: {value: 0.0},
+    uOverlayMode: {value: 0},
   };
 }
 
@@ -181,15 +202,24 @@ export function createCrtUniforms(): CrtUniforms {
 /*  Factory — creates a ready-to-use ShaderMaterial                    */
 /* ------------------------------------------------------------------ */
 
-export function createCrtMaterial(name: string): THREE.ShaderMaterial {
+export interface CrtMaterialOptions {
+  /** Render as a see-through overlay instead of an opaque phosphor. */
+  overlay?: boolean;
+}
+
+export function createCrtMaterial(
+  name: string,
+  options: CrtMaterialOptions = {},
+): THREE.ShaderMaterial {
   const uniforms = createCrtUniforms();
+  if (options.overlay) uniforms.uOverlayMode.value = 1;
   const mat = new THREE.ShaderMaterial({
     name,
     vertexShader,
     fragmentShader,
     uniforms,
-    transparent: false,
-    depthWrite: true,
+    transparent: !!options.overlay,
+    depthWrite: !options.overlay,
     side: THREE.FrontSide,
   });
   return mat;

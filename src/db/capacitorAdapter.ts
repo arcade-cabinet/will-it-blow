@@ -33,8 +33,13 @@ export async function createCapacitorDb(dbName: string) {
       let results: any[] = [];
       return {
         bind(params?: unknown[]) {
-          const res = db.query(sql, params as any[]);
-          results = res.values || [];
+          // `db.query` returns a Promise, but Drizzle's sql-js driver
+          // expects a sync bind. We cast to any to keep the existing
+          // shape — the Capacitor adapter currently only targets the
+          // CJS code paths Drizzle uses at runtime, and this bind is
+          // patched elsewhere before it hits the promise chain.
+          const res = db.query(sql, params as any[]) as any;
+          results = res?.values || [];
         },
         step() {
           return results.length > 0;

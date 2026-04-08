@@ -14,9 +14,8 @@
  */
 
 import {useFrame, useThree} from '@react-three/fiber';
-import {useCallback, useEffect, useRef} from 'react';
+import {useEffect, useRef} from 'react';
 import playerConfig from '../config/player.json';
-import {useGameStore} from '../ecs/hooks';
 
 /** Mouse sensitivity in radians per pixel. Exported for unit testing (Spec §23). */
 export const MOUSE_SENSITIVITY = playerConfig.mouseSensitivity;
@@ -38,6 +37,21 @@ export function clampPitch(pitch: number): number {
 let _pendingYaw: number | null = null;
 /** Module-level pitch override. null = not overridden. */
 let _pendingPitch: number | null = null;
+
+/** Latest yaw applied to the camera, exposed for debug/E2E queries. */
+let _currentYaw = 0;
+/** Latest pitch applied to the camera, exposed for debug/E2E queries. */
+let _currentPitch = -0.05;
+
+/** Current camera yaw in radians. Updated every frame. */
+export function getCurrentYaw(): number {
+  return _currentYaw;
+}
+
+/** Current camera pitch in radians. Updated every frame. */
+export function getCurrentPitch(): number {
+  return _currentPitch;
+}
 
 /**
  * Set camera yaw in radians from outside the hook (e.g. debug bridge).
@@ -64,27 +78,20 @@ export function setPitch(v: number): void {
 export function useMouseLook(): void {
   const {camera, gl} = useThree();
   const yawRef = useRef(0);
-  /** Start looking UP at the ceiling (intro begins prone on mattress).
-   *  IntroSequence sets this to -0.05 when the intro completes. */
-  const pitchRef = useRef(Math.PI / 2 - 0.1);
-  /** Tracks whether intro was active on the previous frame so we can
-   *  force-apply any pending pitch/yaw on the exact frame it ends. */
-  const wasIntroRef = useRef(true);
-
-  const onMouseMove = useCallback(
-    (e: MouseEvent) => {
-      if (document.pointerLockElement !== gl.domElement) return;
-      yawRef.current -= e.movementX * MOUSE_SENSITIVITY;
-      pitchRef.current = clampPitch(pitchRef.current - e.movementY * MOUSE_SENSITIVITY);
-    },
-    [gl],
-  );
+  /** Start nearly level (-0.05 rad ≈ 3°) for a natural FPS horizon view. */
+  const pitchRef = useRef(-0.05);
 
   useEffect(() => {
     const canvas = gl.domElement;
 
     const onClick = () => {
       canvas.requestPointerLock();
+    };
+
+    const onMouseMove = (e: MouseEvent) => {
+      if (document.pointerLockElement !== canvas) return;
+      yawRef.current -= e.movementX * MOUSE_SENSITIVITY;
+      pitchRef.current = clampPitch(pitchRef.current - e.movementY * MOUSE_SENSITIVITY);
     };
 
     canvas.addEventListener('click', onClick);
@@ -94,40 +101,9 @@ export function useMouseLook(): void {
       canvas.removeEventListener('click', onClick);
       document.removeEventListener('mousemove', onMouseMove);
     };
-  }, [gl, onMouseMove]);
+  }, [gl]);
 
   useFrame(() => {
-    // During intro, IntroSequence controls the camera directly — don't override.
-    // Read directly from store (not React state) to avoid stale closure.
-    const introActive = useGameStore.getState().introActive;
-
-    if (introActive) {
-      wasIntroRef.current = true;
-      // Still consume pending values so they're applied when intro ends
-      if (_pendingYaw !== null) {
-        yawRef.current = _pendingYaw;
-        _pendingYaw = null;
-      }
-      if (_pendingPitch !== null) {
-        pitchRef.current = _pendingPitch;
-        _pendingPitch = null;
-      }
-      return;
-    }
-
-    // Intro just ended — force apply any pending values immediately
-    if (wasIntroRef.current) {
-      wasIntroRef.current = false;
-      if (_pendingPitch !== null) {
-        pitchRef.current = _pendingPitch;
-        _pendingPitch = null;
-      }
-      if (_pendingYaw !== null) {
-        yawRef.current = _pendingYaw;
-        _pendingYaw = null;
-      }
-    }
-
     // Apply any pending override written by the debug bridge.
     if (_pendingYaw !== null) {
       yawRef.current = _pendingYaw;
@@ -140,5 +116,8 @@ export function useMouseLook(): void {
     camera.rotation.order = 'YXZ';
     camera.rotation.y = yawRef.current;
     camera.rotation.x = pitchRef.current;
+    // Mirror current values to module-level getters for the debug bridge.
+    _currentYaw = yawRef.current;
+    _currentPitch = pitchRef.current;
   });
 }

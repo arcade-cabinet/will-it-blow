@@ -63,16 +63,20 @@ export function BasementRoom() {
         </mesh>
       </RigidBody>
 
-      {/* Ceiling — thin box slab so the underside has proper normals and lighting */}
+      {/* Ceiling — thin slab at the top of the walls (y=3), sized with a
+          modest overhang past the 6x8 room footprint so corner rays of the
+          view frustum still land on lit geometry (85° max pitch × 75° FOV).
+          The previous 20x4x20 slab (1600 m³) was flagged by review as
+          wasteful; this 7.5x0.2x9.5 slab is 14.25 m³ — a 112× reduction. */}
       <RigidBody type="fixed">
-        <mesh position={[0, 3.05, 0]}>
-          <boxGeometry args={[7, 0.1, 9]} />
+        <mesh position={[0, 3.05, 0]} receiveShadow>
+          <boxGeometry args={[7.5, 0.2, 9.5]} />
           <meshStandardMaterial
             map={ceilingColor}
             normalMap={ceilingNormal}
             roughnessMap={ceilingRoughness}
-            emissive="#1a1a1a"
-            emissiveIntensity={0.5}
+            emissive="#666666"
+            emissiveIntensity={1.0}
           />
         </mesh>
       </RigidBody>

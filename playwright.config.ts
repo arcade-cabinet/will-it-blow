@@ -6,7 +6,7 @@
  * - mobile: Mobile Chrome with touch (390x844, iPhone-like)
  */
 
-import type {PlaywrightTestConfig} from '@playwright/test';
+import {defineConfig} from '@playwright/test';
 
 const isCI = !!process.env.CI;
 
@@ -19,7 +19,7 @@ const GPU_ARGS = [
   '--mute-audio',
 ];
 
-const config: PlaywrightTestConfig = {
+export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
   forbidOnly: isCI,
@@ -28,6 +28,18 @@ const config: PlaywrightTestConfig = {
   timeout: 120_000,
 
   reporter: [['html', {open: isCI ? 'never' : 'on-failure'}], ['list']],
+
+  // Drop the `{platform}` suffix from snapshot names so a single baseline
+  // (generated on whichever OS the author happens to be on) is reused on
+  // every CI runner. GPU font rasterisation still differs between macOS
+  // and Linux, so the visual regression tests set a generous
+  // `maxDiffPixels` / `threshold`.
+  //
+  // Must be anchored under `{snapshotDir}` — the default template is
+  // `{snapshotDir}/{testFileDir}/{testFileName}-snapshots/{arg}{-projectName}{-snapshotSuffix}{ext}`
+  // and omitting it resolves to an absolute `/...` path at the FS root.
+  snapshotPathTemplate:
+    '{snapshotDir}/{testFileDir}/{testFileName}-snapshots/{arg}-{projectName}{ext}',
 
   expect: {
     timeout: 15_000,
@@ -78,6 +90,4 @@ const config: PlaywrightTestConfig = {
         reuseExistingServer: !isCI,
         timeout: 30_000,
       },
-};
-
-export default config;
+});

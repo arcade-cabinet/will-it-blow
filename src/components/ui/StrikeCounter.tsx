@@ -22,6 +22,7 @@ export function StrikeCounter({strikes, maxStrikes = 3}: StrikeCounterProps) {
       {Array.from({length: maxStrikes}, (_, i) => (
         <span
           key={i}
+          role="img"
           style={{...styles.strike, ...(i < strikes ? styles.used : styles.unused)}}
           aria-label={i < strikes ? `Strike ${i + 1} used` : `Strike ${i + 1} remaining`}
         >

@@ -201,11 +201,17 @@ export function App() {
         <Suspense fallback={<LoadingScreen />}>
           <Canvas
             shadows={{type: PCFShadowMap}}
-            gl={{toneMappingExposure: 1.0}}
+            gl={{
+              toneMappingExposure: 1.0,
+              // Dev-only: let E2E tests call gl.readPixels to verify the
+              // rendered scene isn't a black void. Has a small perf cost
+              // (an extra blit per frame) so it stays off in prod builds.
+              preserveDrawingBuffer: import.meta.env.DEV,
+            }}
             style={{position: 'absolute', top: 0, left: 0, width: '100%', height: '100%'}}
           >
-            <color attach="background" args={['#000000']} />
-            <fogExp2 attach="fog" args={['#1a1a1a', 0.04]} />
+            <color attach="background" args={['#1a1a1a']} />
+            <fogExp2 attach="fog" args={['#2a2a2a', 0.015]} />
 
             <ambientLight intensity={0.6} />
             <directionalLight

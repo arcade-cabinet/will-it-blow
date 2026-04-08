@@ -8,8 +8,9 @@
  *
  * In production builds, `initDebugInterface()` is a no-op.
  */
-import type {GamePhase} from '../ecs/hooks';
+import type {GamePhase, GameState} from '../ecs/hooks';
 import {useGameStore} from '../ecs/hooks';
+import {getCurrentPitch, getCurrentYaw, setPitch, setYaw} from '../player/useMouseLook';
 
 const PHASES: GamePhase[] = [
   'SELECT_INGREDIENTS',
@@ -27,6 +28,38 @@ const PHASES: GamePhase[] = [
   'DONE',
 ];
 
+/** Ordered list of game phases exposed for E2E tests that iterate the full flow. */
+export const ALL_GAME_PHASES: readonly GamePhase[] = PHASES;
+
+/**
+ * Shape of `window.__WIB_DEBUG__`. Kept as a single interface so tests can
+ * import it and augment `Window` without duplicating field lists.
+ */
+export interface PlaytestDebugInterface {
+  getState: () => GameState;
+  actions: {
+    selectIngredient: (id: string) => void;
+    doChop: () => void;
+    advancePhase: () => void;
+    fillGrinder: () => void;
+    fillStuffer: () => void;
+    tieCasing: () => void;
+    setCookLevel: (level: number) => void;
+    triggerBlowout: () => void;
+    startNewGame: () => void;
+    returnToMenu: () => void;
+  };
+  getGamePhase: () => GamePhase;
+  getAppPhase: () => GameState['appPhase'];
+  getRound: () => number;
+  getScore: () => GameState['finalScore'];
+  getCameraPitch: () => number;
+  getCameraYaw: () => number;
+  setCameraYaw: (radians: number) => void;
+  setCameraPitch: (radians: number) => void;
+  readonly PHASES: readonly GamePhase[];
+}
+
 export function initDebugInterface() {
   if (import.meta.env.PROD) return;
   if (typeof window === 'undefined') return;
@@ -34,7 +67,7 @@ export function initDebugInterface() {
   // This is a single-player game with local-only scores — "cheating" via the
   // debug console is not a security concern.
 
-  const debug = {
+  const debug: PlaytestDebugInterface = {
     getState: () => useGameStore.getState(),
 
     // Actions that simulate player interactions
@@ -73,7 +106,17 @@ export function initDebugInterface() {
     getAppPhase: () => useGameStore.getState().appPhase,
     getRound: () => useGameStore.getState().currentRound,
     getScore: () => useGameStore.getState().finalScore,
+
+    // Camera queries (drive the "camera pitch is level" check in E2E)
+    getCameraPitch: () => getCurrentPitch(),
+    getCameraYaw: () => getCurrentYaw(),
+    // Camera mutators (used by the Mr. Sausage TV playtest + any spec that
+    // needs to aim the FPS camera without entering pointer-lock mode).
+    setCameraYaw: (radians: number) => setYaw(radians),
+    setCameraPitch: (radians: number) => setPitch(radians),
+
+    PHASES,
   };
 
-  (window as any).__WIB_DEBUG__ = debug;
+  window.__WIB_DEBUG__ = debug;
 }
