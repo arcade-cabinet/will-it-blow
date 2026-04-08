@@ -2,9 +2,9 @@ import {BlowoutStation} from '../../src/components/stations/BlowoutStation';
 import {useGameStore} from '../../src/ecs/hooks';
 import {defineMicroSpec} from '../harness/defineMicroSpec';
 
-// BlowoutStation only renders its sausage tube when `gamePhase === 'BLOWOUT'`.
-// Root group is at world (-1.5, 0, 1.5). Pull the camera back so the
-// whole tube is in frame instead of filling it.
+// BlowoutStation only renders its sausage tube + cereal box target when
+// `gamePhase === 'BLOWOUT'`. Root group is at world (-1.5, 0, 1.5).
+// Pull the camera back so the whole tube + box are in frame.
 defineMicroSpec({
   name: 'BlowoutStation',
   setup: () => {
