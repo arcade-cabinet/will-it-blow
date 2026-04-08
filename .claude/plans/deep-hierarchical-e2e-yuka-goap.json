@@ -1,0 +1,557 @@
+{
+  "batch_name": "deep-hierarchical-e2e-yuka-goap",
+  "created": "2026-04-08",
+  "version": "2.88",
+  "project": "will-it-blow",
+  "branch": "feat/deep-hierarchical-e2e-yuka-goap",
+  "config": {
+    "stop_on_failure": false,
+    "auto_commit": true,
+    "teammates": [
+      "scene-architect",
+      "challenge-dev",
+      "store-warden",
+      "asset-pipeline",
+      "doc-keeper"
+    ],
+    "parallelism": "by_wave",
+    "max_concurrent_tasks": 6
+  },
+  "viewports": [
+    { "name": "desktop-1280", "width": 1280, "height": 720, "mobile": false },
+    { "name": "mobile-390", "width": 390, "height": 844, "mobile": true, "touch": true },
+    { "name": "tablet-768", "width": 768, "height": 1024, "mobile": true, "touch": true },
+    { "name": "uhd-3840", "width": 3840, "height": 2160, "mobile": false, "devicePixelRatio": 1 }
+  ],
+  "hierarchy": {
+    "macro": "full scene playthroughs",
+    "meso": "phase + station integration",
+    "micro": "component isolation"
+  },
+  "tasks": [
+    {
+      "id": "task-001",
+      "priority": 1,
+      "wave": 1,
+      "description": "Add Yuka dependency and set up GOAP types",
+      "agent": "scene-architect",
+      "dependencies": [],
+      "files": ["package.json", "pnpm-lock.yaml", "tsconfig.json"],
+      "acceptance_criteria": [
+        { "criteria": "pnpm add yuka succeeds", "verification": "command", "command": "pnpm list yuka" },
+        { "criteria": "import { GoapPlanner } from 'yuka' typechecks", "verification": "command", "command": "pnpm typecheck" },
+        { "criteria": "yuka version >= 0.7.8", "verification": "code_contains", "pattern": "\"yuka\":" }
+      ]
+    },
+    {
+      "id": "task-002",
+      "priority": 1,
+      "wave": 1,
+      "description": "Create e2e/harness/ isolation harness directory",
+      "agent": "scene-architect",
+      "dependencies": ["task-001"],
+      "files": ["e2e/harness/README.md", "e2e/harness/perception/", "e2e/harness/actuation/", "e2e/harness/goap/", "e2e/harness/viewports/"],
+      "acceptance_criteria": [
+        { "criteria": "e2e/harness/README.md exists", "verification": "file_exists" },
+        { "criteria": "perception/ subdir exists", "verification": "file_exists", "path": "e2e/harness/perception" },
+        { "criteria": "actuation/ subdir exists", "verification": "file_exists", "path": "e2e/harness/actuation" },
+        { "criteria": "goap/ subdir exists", "verification": "file_exists", "path": "e2e/harness/goap" },
+        { "criteria": "viewports/ subdir exists", "verification": "file_exists", "path": "e2e/harness/viewports" }
+      ]
+    },
+    {
+      "id": "task-003",
+      "priority": 1,
+      "wave": 1,
+      "description": "Extend window.__WIB_DEBUG__ with read-only perception API",
+      "agent": "store-warden",
+      "dependencies": ["task-002"],
+      "files": ["src/debug/wibDebug.ts", "src/debug/__tests__/wibDebug.test.ts", "src/main.tsx"],
+      "acceptance_criteria": [
+        { "criteria": "installWibDebug exported", "verification": "code_contains", "pattern": "export function installWibDebug" },
+        { "criteria": "PerceptionSnapshot type exported", "verification": "code_contains", "pattern": "export (type|interface) PerceptionSnapshot" },
+        { "criteria": "Read-only via Object.freeze", "verification": "code_contains", "pattern": "Object.freeze" },
+        { "criteria": "Only installs in dev or ?e2e=1", "verification": "code_contains", "pattern": "import.meta.env.DEV" },
+        { "criteria": "Unit test passes", "verification": "command", "command": "pnpm vitest run src/debug/__tests__/wibDebug.test.ts" }
+      ]
+    },
+    {
+      "id": "task-004",
+      "priority": 1,
+      "wave": 1,
+      "description": "Configure Playwright viewport matrix (desktop, mobile, tablet, 4K)",
+      "agent": "scene-architect",
+      "dependencies": [],
+      "files": ["playwright.config.ts"],
+      "acceptance_criteria": [
+        { "criteria": "desktop-1280 project declared", "verification": "code_contains", "pattern": "desktop-1280" },
+        { "criteria": "mobile-390 project declared", "verification": "code_contains", "pattern": "mobile-390" },
+        { "criteria": "tablet-768 project declared", "verification": "code_contains", "pattern": "tablet-768" },
+        { "criteria": "uhd-3840 project declared", "verification": "code_contains", "pattern": "uhd-3840" },
+        { "criteria": "All projects use headless: false", "verification": "manual_review" },
+        { "criteria": "pnpm test:e2e --list shows 4x test count", "verification": "command", "command": "pnpm test:e2e --list | head -20" }
+      ]
+    },
+    {
+      "id": "task-005",
+      "priority": 1,
+      "wave": 1,
+      "description": "Create screenshot capture helper with deterministic naming",
+      "agent": "scene-architect",
+      "dependencies": ["task-004"],
+      "files": ["e2e/utils/snapshot.ts", "e2e/utils/__tests__/snapshot.test.ts"],
+      "acceptance_criteria": [
+        { "criteria": "captureSnapshot function exported", "verification": "code_contains", "pattern": "export .*captureSnapshot" },
+        { "criteria": "Waits 2 RAF before capture", "verification": "code_contains", "pattern": "requestAnimationFrame" },
+        { "criteria": "Saves under e2e-screenshots/{level}/{feature}/{viewport}.png", "verification": "code_contains", "pattern": "e2e-screenshots" }
+      ]
+    },
+    {
+      "id": "task-006",
+      "priority": 2,
+      "wave": 2,
+      "description": "Micro test harness page — playwright/micro.html + micro.tsx",
+      "agent": "scene-architect",
+      "dependencies": ["task-002", "task-005"],
+      "files": ["playwright/micro.html", "playwright/micro.tsx", "vite.config.ts"],
+      "acceptance_criteria": [
+        { "criteria": "micro.html exists", "verification": "file_exists" },
+        { "criteria": "micro.tsx mounts components by query param", "verification": "code_contains", "pattern": "searchParams.get\\('component'\\)" },
+        { "criteria": "Supports 13+ component names", "verification": "manual_review" },
+        { "criteria": "vite.config.ts declares micro entry", "verification": "code_contains", "pattern": "micro" }
+      ]
+    },
+    {
+      "id": "task-007",
+      "priority": 2,
+      "wave": 2,
+      "description": "Micro E2E — BasementRoom render + screenshot",
+      "agent": "scene-architect",
+      "dependencies": ["task-006"],
+      "files": ["e2e/micro/BasementRoom.spec.ts"],
+      "acceptance_criteria": [
+        { "criteria": "Test passes across 4 viewports", "verification": "command", "command": "pnpm test:e2e e2e/micro/BasementRoom.spec.ts" },
+        { "criteria": "Screenshot saved per viewport", "verification": "file_exists", "path": "e2e-screenshots/micro/BasementRoom" },
+        { "criteria": "Canvas not blank (pixel > 1000)", "verification": "manual_review" }
+      ]
+    },
+    {
+      "id": "task-008",
+      "priority": 2,
+      "wave": 2,
+      "description": "Micro E2E — Kitchen render + screenshot",
+      "agent": "scene-architect",
+      "dependencies": ["task-006"],
+      "files": ["e2e/micro/Kitchen.spec.ts"],
+      "acceptance_criteria": [
+        { "criteria": "Test passes across 4 viewports", "verification": "command", "command": "pnpm test:e2e e2e/micro/Kitchen.spec.ts" },
+        { "criteria": "Screenshot saved per viewport", "verification": "file_exists", "path": "e2e-screenshots/micro/Kitchen" }
+      ]
+    },
+    {
+      "id": "task-009",
+      "priority": 2,
+      "wave": 2,
+      "description": "Micro E2E — 8 stations (Grinder, Stuffer, Stove, Sink, ChoppingBlock, ChestFreezer, BlowoutStation, TV)",
+      "agent": "scene-architect",
+      "dependencies": ["task-006"],
+      "files": [
+        "e2e/micro/stations/Grinder.spec.ts",
+        "e2e/micro/stations/Stuffer.spec.ts",
+        "e2e/micro/stations/Stove.spec.ts",
+        "e2e/micro/stations/Sink.spec.ts",
+        "e2e/micro/stations/ChoppingBlock.spec.ts",
+        "e2e/micro/stations/ChestFreezer.spec.ts",
+        "e2e/micro/stations/BlowoutStation.spec.ts",
+        "e2e/micro/stations/TV.spec.ts"
+      ],
+      "acceptance_criteria": [
+        { "criteria": "All 8 spec files exist", "verification": "file_exists" },
+        { "criteria": "32 screenshots generated (8 × 4 viewports)", "verification": "manual_review" },
+        { "criteria": "All tests pass", "verification": "command", "command": "pnpm test:e2e e2e/micro/stations/" }
+      ]
+    },
+    {
+      "id": "task-010",
+      "priority": 2,
+      "wave": 2,
+      "description": "Micro E2E — Sausage physics settling",
+      "agent": "challenge-dev",
+      "dependencies": ["task-006"],
+      "files": ["e2e/micro/Sausage.spec.ts"],
+      "acceptance_criteria": [
+        { "criteria": "Sausage bone chain settles", "verification": "manual_review" },
+        { "criteria": "Post-settle screenshot captured", "verification": "file_exists", "path": "e2e-screenshots/micro/Sausage" },
+        { "criteria": "4 viewports pass", "verification": "command", "command": "pnpm test:e2e e2e/micro/Sausage.spec.ts" }
+      ]
+    },
+    {
+      "id": "task-011",
+      "priority": 2,
+      "wave": 2,
+      "description": "Micro E2E — SurrealText diegetic rendering",
+      "agent": "scene-architect",
+      "dependencies": ["task-006"],
+      "files": ["e2e/micro/SurrealText.spec.ts"],
+      "acceptance_criteria": [
+        { "criteria": "Text visible on wall", "verification": "manual_review" },
+        { "criteria": "Drip animation present", "verification": "manual_review" },
+        { "criteria": "4 viewports pass", "verification": "command", "command": "pnpm test:e2e e2e/micro/SurrealText.spec.ts" }
+      ]
+    },
+    {
+      "id": "task-012",
+      "priority": 2,
+      "wave": 2,
+      "description": "Micro E2E — FPSCamera + PlayerCapsule isolation",
+      "agent": "scene-architect",
+      "dependencies": ["task-006"],
+      "files": ["e2e/micro/FPSCamera.spec.ts"],
+      "acceptance_criteria": [
+        { "criteria": "Camera mounts at eye height", "verification": "manual_review" },
+        { "criteria": "Mouse move updates yaw/pitch", "verification": "manual_review" },
+        { "criteria": "4 viewports pass", "verification": "command", "command": "pnpm test:e2e e2e/micro/FPSCamera.spec.ts" }
+      ]
+    },
+    {
+      "id": "task-013",
+      "priority": 2,
+      "wave": 2,
+      "description": "Micro E2E — Koota ECS init snapshot",
+      "agent": "store-warden",
+      "dependencies": ["task-003"],
+      "files": ["e2e/micro/KootaWorld.spec.ts"],
+      "acceptance_criteria": [
+        { "criteria": "getKootaSnapshot returns 16 traits", "verification": "manual_review" },
+        { "criteria": "All traits match schema", "verification": "manual_review" },
+        { "criteria": "4 viewports pass", "verification": "command", "command": "pnpm test:e2e e2e/micro/KootaWorld.spec.ts" }
+      ]
+    },
+    {
+      "id": "task-014",
+      "priority": 3,
+      "wave": 3,
+      "description": "Meso E2E — TitleScreen → DifficultySelector flow",
+      "agent": "challenge-dev",
+      "dependencies": ["task-005"],
+      "files": ["e2e/meso/title-flow.spec.ts"],
+      "acceptance_criteria": [
+        { "criteria": "Title renders", "verification": "manual_review" },
+        { "criteria": "START COOKING clickable", "verification": "manual_review" },
+        { "criteria": "All 3 difficulties selectable", "verification": "manual_review" },
+        { "criteria": "Screenshots at each step", "verification": "file_exists", "path": "e2e-screenshots/meso/title-flow" },
+        { "criteria": "4 viewports pass", "verification": "command", "command": "pnpm test:e2e e2e/meso/title-flow.spec.ts" }
+      ]
+    },
+    {
+      "id": "task-015",
+      "priority": 3,
+      "wave": 3,
+      "description": "Meso E2E — Intro blink/wake-up sequence",
+      "agent": "challenge-dev",
+      "dependencies": ["task-005"],
+      "files": ["e2e/meso/intro.spec.ts"],
+      "acceptance_criteria": [
+        { "criteria": "Intro completes within 10s", "verification": "manual_review" },
+        { "criteria": "Eyelid screenshots captured", "verification": "file_exists", "path": "e2e-screenshots/meso/intro" },
+        { "criteria": "4 viewports pass", "verification": "command", "command": "pnpm test:e2e e2e/meso/intro.spec.ts" }
+      ]
+    },
+    {
+      "id": "task-016",
+      "priority": 3,
+      "wave": 3,
+      "description": "Meso E2E — 13 GamePhases in isolation",
+      "agent": "challenge-dev",
+      "dependencies": ["task-003", "task-005"],
+      "files": [
+        "e2e/meso/phases/select-ingredients.spec.ts",
+        "e2e/meso/phases/chopping.spec.ts",
+        "e2e/meso/phases/fill-grinder.spec.ts",
+        "e2e/meso/phases/grinding.spec.ts",
+        "e2e/meso/phases/move-bowl.spec.ts",
+        "e2e/meso/phases/attach-casing.spec.ts",
+        "e2e/meso/phases/stuffing.spec.ts",
+        "e2e/meso/phases/tie-casing.spec.ts",
+        "e2e/meso/phases/blowout.spec.ts",
+        "e2e/meso/phases/move-sausage.spec.ts",
+        "e2e/meso/phases/move-pan.spec.ts",
+        "e2e/meso/phases/cooking.spec.ts",
+        "e2e/meso/phases/done.spec.ts"
+      ],
+      "acceptance_criteria": [
+        { "criteria": "All 13 spec files exist", "verification": "file_exists" },
+        { "criteria": "52 screenshots generated (13 × 4 viewports)", "verification": "manual_review" },
+        { "criteria": "SurrealText matches expected phase instruction", "verification": "manual_review" }
+      ]
+    },
+    {
+      "id": "task-017",
+      "priority": 3,
+      "wave": 3,
+      "description": "Meso E2E — 8 station interactions with real input",
+      "agent": "challenge-dev",
+      "dependencies": ["task-005"],
+      "files": [
+        "e2e/meso/stations/Grinder-interaction.spec.ts",
+        "e2e/meso/stations/Stuffer-interaction.spec.ts",
+        "e2e/meso/stations/Stove-interaction.spec.ts",
+        "e2e/meso/stations/Sink-interaction.spec.ts",
+        "e2e/meso/stations/ChoppingBlock-interaction.spec.ts",
+        "e2e/meso/stations/ChestFreezer-interaction.spec.ts",
+        "e2e/meso/stations/BlowoutStation-interaction.spec.ts",
+        "e2e/meso/stations/TV-interaction.spec.ts"
+      ],
+      "acceptance_criteria": [
+        { "criteria": "All 8 spec files exist", "verification": "file_exists" },
+        { "criteria": "Real mouse/drag events used (no debug jumps)", "verification": "manual_review" },
+        { "criteria": "Interaction advances meter > 0", "verification": "manual_review" }
+      ]
+    },
+    {
+      "id": "task-018",
+      "priority": 3,
+      "wave": 3,
+      "description": "Meso E2E — Verdict screen per difficulty",
+      "agent": "challenge-dev",
+      "dependencies": ["task-005"],
+      "files": ["e2e/meso/verdict.spec.ts"],
+      "acceptance_criteria": [
+        { "criteria": "3 difficulty verdicts rendered", "verification": "manual_review" },
+        { "criteria": "Screenshots captured", "verification": "file_exists", "path": "e2e-screenshots/meso/verdict" },
+        { "criteria": "4 viewports pass", "verification": "command", "command": "pnpm test:e2e e2e/meso/verdict.spec.ts" }
+      ]
+    },
+    {
+      "id": "task-019",
+      "priority": 4,
+      "wave": 4,
+      "description": "Implement WIBPerception — read game state via window bridge",
+      "agent": "store-warden",
+      "dependencies": ["task-003"],
+      "files": ["e2e/harness/perception/WIBPerception.ts", "e2e/harness/perception/__tests__/WIBPerception.test.ts"],
+      "acceptance_criteria": [
+        { "criteria": "observe(page) returns PerceptionSnapshot", "verification": "code_contains", "pattern": "observe.*page.*PerceptionSnapshot" },
+        { "criteria": "No game state mutation", "verification": "manual_review" },
+        { "criteria": "Unit test passes", "verification": "command", "command": "pnpm vitest run e2e/harness/perception" }
+      ]
+    },
+    {
+      "id": "task-020",
+      "priority": 4,
+      "wave": 4,
+      "description": "Implement WIBActionSet — Yuka GoapAction for all 13 phases",
+      "agent": "challenge-dev",
+      "dependencies": ["task-001"],
+      "files": ["e2e/harness/goap/WIBActionSet.ts", "e2e/harness/goap/__tests__/WIBActionSet.test.ts"],
+      "acceptance_criteria": [
+        { "criteria": "13 GoapAction subclasses defined", "verification": "manual_review" },
+        { "criteria": "Each has preconditions, effects, cost", "verification": "manual_review" },
+        { "criteria": "Unit test asserts plan forms", "verification": "command", "command": "pnpm vitest run e2e/harness/goap/__tests__/WIBActionSet.test.ts" }
+      ]
+    },
+    {
+      "id": "task-021",
+      "priority": 4,
+      "wave": 4,
+      "description": "Implement WIBGoals — phase victory conditions",
+      "agent": "challenge-dev",
+      "dependencies": ["task-001"],
+      "files": ["e2e/harness/goap/WIBGoals.ts"],
+      "acceptance_criteria": [
+        { "criteria": "CompleteRoundGoal, MaximizeScoreGoal, AvoidStrikeGoal defined", "verification": "code_contains", "pattern": "CompleteRoundGoal" },
+        { "criteria": "Goals compose as CompositeGoal", "verification": "code_contains", "pattern": "CompositeGoal" },
+        { "criteria": "Evaluator selects goal based on perception", "verification": "manual_review" }
+      ]
+    },
+    {
+      "id": "task-022",
+      "priority": 4,
+      "wave": 4,
+      "description": "Implement WIBPlanner — Yuka GoapPlanner wrapper",
+      "agent": "challenge-dev",
+      "dependencies": ["task-019", "task-020", "task-021"],
+      "files": ["e2e/harness/goap/WIBPlanner.ts", "e2e/harness/goap/__tests__/WIBPlanner.test.ts"],
+      "acceptance_criteria": [
+        { "criteria": "plan(perception, goal) returns GoapAction[]", "verification": "code_contains", "pattern": "plan.*perception.*goal" },
+        { "criteria": "Uses Yuka GoapPlanner", "verification": "code_contains", "pattern": "GoapPlanner" },
+        { "criteria": "Unit test asserts plan length per starting phase", "verification": "command", "command": "pnpm vitest run e2e/harness/goap/__tests__/WIBPlanner.test.ts" }
+      ]
+    },
+    {
+      "id": "task-023",
+      "priority": 4,
+      "wave": 4,
+      "description": "Implement WIBActuator — real Playwright mouse/keyboard events",
+      "agent": "scene-architect",
+      "dependencies": ["task-004"],
+      "files": ["e2e/harness/actuation/WIBActuator.ts", "e2e/harness/actuation/__tests__/WIBActuator.test.ts"],
+      "acceptance_criteria": [
+        { "criteria": "click, drag, pointerLockMove, keyPress methods", "verification": "manual_review" },
+        { "criteria": "Dispatches via page.mouse / page.keyboard", "verification": "code_contains", "pattern": "page\\.mouse" },
+        { "criteria": "No synthetic event dispatching", "verification": "manual_review" },
+        { "criteria": "Unit test verifies real event path", "verification": "command", "command": "pnpm vitest run e2e/harness/actuation" }
+      ]
+    },
+    {
+      "id": "task-024",
+      "priority": 4,
+      "wave": 4,
+      "description": "Implement GoapGovernor — perceive → plan → act loop",
+      "agent": "challenge-dev",
+      "dependencies": ["task-022", "task-023"],
+      "files": ["e2e/harness/goap/GoapGovernor.ts", "e2e/harness/goap/__tests__/GoapGovernor.test.ts"],
+      "acceptance_criteria": [
+        { "criteria": "playFullRound(difficulty) exists", "verification": "code_contains", "pattern": "playFullRound" },
+        { "criteria": "Action log written to e2e-screenshots/goap/{run-id}/actions.log", "verification": "manual_review" },
+        { "criteria": "10-minute timeout per playthrough", "verification": "code_contains", "pattern": "10.*60.*1000|600_000|600000" }
+      ]
+    },
+    {
+      "id": "task-025",
+      "priority": 5,
+      "wave": 5,
+      "description": "Macro E2E — synthetic playthrough regression (existing WIBGovernor)",
+      "agent": "challenge-dev",
+      "dependencies": ["task-003"],
+      "files": ["e2e/macro/synthetic-playthrough.spec.ts"],
+      "acceptance_criteria": [
+        { "criteria": "Uses WIBGovernor", "verification": "code_contains", "pattern": "WIBGovernor" },
+        { "criteria": "Completes in all 4 viewports", "verification": "command", "command": "pnpm test:e2e e2e/macro/synthetic-playthrough.spec.ts" },
+        { "criteria": "Asserts DONE phase reached", "verification": "code_contains", "pattern": "DONE" }
+      ]
+    },
+    {
+      "id": "task-026",
+      "priority": 5,
+      "wave": 5,
+      "description": "Macro E2E — Yuka GOAP Easy full playthrough",
+      "agent": "challenge-dev",
+      "dependencies": ["task-024"],
+      "files": ["e2e/macro/goap-playthrough-easy.spec.ts"],
+      "acceptance_criteria": [
+        { "criteria": "GoapGovernor completes Easy round with real clicks", "verification": "code_contains", "pattern": "GoapGovernor" },
+        { "criteria": "DONE phase reached", "verification": "manual_review" },
+        { "criteria": "Phase-strip screenshots captured", "verification": "file_exists", "path": "e2e-screenshots/macro/goap-easy" },
+        { "criteria": "4 viewports pass", "verification": "command", "command": "pnpm test:e2e e2e/macro/goap-playthrough-easy.spec.ts" }
+      ]
+    },
+    {
+      "id": "task-027",
+      "priority": 5,
+      "wave": 5,
+      "description": "Macro E2E — Yuka GOAP Medium full playthrough",
+      "agent": "challenge-dev",
+      "dependencies": ["task-024"],
+      "files": ["e2e/macro/goap-playthrough-medium.spec.ts"],
+      "acceptance_criteria": [
+        { "criteria": "GoapGovernor completes Medium round", "verification": "manual_review" },
+        { "criteria": "Phase-strip screenshots captured", "verification": "file_exists", "path": "e2e-screenshots/macro/goap-medium" },
+        { "criteria": "4 viewports pass", "verification": "command", "command": "pnpm test:e2e e2e/macro/goap-playthrough-medium.spec.ts" }
+      ]
+    },
+    {
+      "id": "task-028",
+      "priority": 5,
+      "wave": 5,
+      "description": "Macro E2E — Yuka GOAP Hard full playthrough",
+      "agent": "challenge-dev",
+      "dependencies": ["task-024"],
+      "files": ["e2e/macro/goap-playthrough-hard.spec.ts"],
+      "acceptance_criteria": [
+        { "criteria": "GoapGovernor completes Hard round", "verification": "manual_review" },
+        { "criteria": "Phase-strip screenshots captured", "verification": "file_exists", "path": "e2e-screenshots/macro/goap-hard" },
+        { "criteria": "4 viewports pass", "verification": "command", "command": "pnpm test:e2e e2e/macro/goap-playthrough-hard.spec.ts" }
+      ]
+    },
+    {
+      "id": "task-029",
+      "priority": 5,
+      "wave": 5,
+      "description": "Macro E2E — viewport matrix enforcement",
+      "agent": "scene-architect",
+      "dependencies": ["task-004"],
+      "files": ["playwright.config.ts"],
+      "acceptance_criteria": [
+        { "criteria": "All macro specs tagged with all 4 projects", "verification": "command", "command": "pnpm test:e2e:macro --list" }
+      ]
+    },
+    {
+      "id": "task-030",
+      "priority": 5,
+      "wave": 5,
+      "description": "Macro E2E — adversarial Yuka playthrough (deliberate failures)",
+      "agent": "challenge-dev",
+      "dependencies": ["task-024"],
+      "files": ["e2e/macro/goap-adversarial.spec.ts"],
+      "acceptance_criteria": [
+        { "criteria": "Yuka deliberately under-performs", "verification": "manual_review" },
+        { "criteria": "Strikes accumulate as expected", "verification": "manual_review" },
+        { "criteria": "Verdict reflects poor performance", "verification": "manual_review" },
+        { "criteria": "4 viewports pass", "verification": "command", "command": "pnpm test:e2e e2e/macro/goap-adversarial.spec.ts" }
+      ]
+    },
+    {
+      "id": "task-031",
+      "priority": 6,
+      "wave": 6,
+      "description": "Screenshot diff report generator",
+      "agent": "doc-keeper",
+      "dependencies": ["task-007", "task-008", "task-009", "task-010", "task-011", "task-012", "task-013", "task-014", "task-015", "task-016", "task-017", "task-018", "task-025", "task-026", "task-027", "task-028", "task-030"],
+      "files": ["scripts/generate-e2e-report.ts", "scripts/__tests__/generate-e2e-report.test.ts"],
+      "acceptance_criteria": [
+        { "criteria": "pnpm report:e2e produces report.html", "verification": "command", "command": "pnpm report:e2e" },
+        { "criteria": "HTML groups by level/feature/viewport", "verification": "manual_review" },
+        { "criteria": "GOAP action logs embedded", "verification": "manual_review" }
+      ]
+    },
+    {
+      "id": "task-032",
+      "priority": 6,
+      "wave": 6,
+      "description": "Add test:e2e:{micro,meso,macro,goap,all,viewport} scripts",
+      "agent": "doc-keeper",
+      "dependencies": ["task-031"],
+      "files": ["package.json"],
+      "acceptance_criteria": [
+        { "criteria": "test:e2e:micro script added", "verification": "code_contains", "pattern": "\"test:e2e:micro\"" },
+        { "criteria": "test:e2e:meso script added", "verification": "code_contains", "pattern": "\"test:e2e:meso\"" },
+        { "criteria": "test:e2e:macro script added", "verification": "code_contains", "pattern": "\"test:e2e:macro\"" },
+        { "criteria": "test:e2e:goap script added", "verification": "code_contains", "pattern": "\"test:e2e:goap\"" },
+        { "criteria": "test:e2e:all script added", "verification": "code_contains", "pattern": "\"test:e2e:all\"" },
+        { "criteria": "report:e2e script added", "verification": "code_contains", "pattern": "\"report:e2e\"" },
+        { "criteria": "pnpm test:e2e:micro runs", "verification": "command", "command": "pnpm test:e2e:micro --list" }
+      ]
+    },
+    {
+      "id": "task-033",
+      "priority": 6,
+      "wave": 6,
+      "description": "Documentation — docs/testing/deep-e2e.md",
+      "agent": "doc-keeper",
+      "dependencies": ["task-032"],
+      "files": ["docs/testing/deep-e2e.md"],
+      "acceptance_criteria": [
+        { "criteria": "File exists", "verification": "file_exists" },
+        { "criteria": "Documents macro/meso/micro hierarchy", "verification": "code_contains", "pattern": "macro.*meso.*micro" },
+        { "criteria": "Documents Yuka GOAP architecture", "verification": "code_contains", "pattern": "Yuka" },
+        { "criteria": "Documents viewport matrix", "verification": "code_contains", "pattern": "viewport" },
+        { "criteria": "ASCII diagram of perceive → plan → act loop", "verification": "manual_review" }
+      ]
+    },
+    {
+      "id": "task-034",
+      "priority": 6,
+      "wave": 6,
+      "description": "AGENTS.md — new Deep E2E Testing section",
+      "agent": "doc-keeper",
+      "dependencies": ["task-033"],
+      "files": ["AGENTS.md"],
+      "acceptance_criteria": [
+        { "criteria": "Deep E2E Testing section added", "verification": "code_contains", "pattern": "Deep E2E Testing" },
+        { "criteria": "Links to docs/testing/deep-e2e.md", "verification": "code_contains", "pattern": "docs/testing/deep-e2e.md" },
+        { "criteria": "Lists new pnpm scripts", "verification": "code_contains", "pattern": "test:e2e:micro" }
+      ]
+    }
+  ]
+}
