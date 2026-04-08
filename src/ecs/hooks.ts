@@ -23,13 +23,14 @@ import {useSyncExternalStore} from 'react';
 import type {Reaction} from '../characters/reactions';
 import {calculateDemandBonus} from '../engine/DemandScoring';
 import {generateDemand} from '../engine/demandGen';
-import type {IngredientDef} from '../engine/IngredientComposition';
+import {INGREDIENTS, type IngredientDef} from '../engine/IngredientComposition';
 import {createRunRngOrFallback} from '../engine/RunSeed';
 import {clearSelectionCache, resolveSelection} from '../engine/selectionResolver';
 import {ecsWorld, onWorldReset} from './kootaWorld';
 import {
   AppTrait,
   DemandTrait,
+  HungerState,
   MrSausageTrait,
   PhaseTag,
   PlayerTrait,
@@ -149,6 +150,13 @@ export interface GameState {
     flairPoints: {reason: string; points: number}[];
   };
 
+  // Zoombinis-in-Hell deduction loop state
+  hungerDisgustMeter: number;
+  hungerDisgustThreshold: number;
+  hungerRoundIndex: number;
+  hungerFridgeIds: readonly string[];
+  hungerCurrentClueJson: string;
+
   playerPosition: {x: number; y: number; z: number};
   joystick: {x: number; y: number};
   lookDelta: {x: number; y: number};
@@ -183,6 +191,22 @@ export interface GameActions {
   calculateFinalScore: () => void;
   recordFlairPoint: (reason: string, points: number) => void;
 
+  // --- Zoombinis-in-Hell deduction loop (T0.C integration) ---
+  /** Initialize the fridge inventory + reset disgust for a new game. */
+  initializeHungerState: () => void;
+  /** Store the current round's clue (serialized to Koota trait). */
+  setCurrentClue: (clueJson: string) => void;
+  /** Read the current clue back (deserialized). Returns null if none. */
+  getCurrentClueJson: () => string;
+  /** Increment the disgust meter by `amount`. */
+  incrementDisgust: (amount: number) => void;
+  /** Remove consumed ingredient IDs from the fridge inventory. */
+  depleteFromFridge: (ids: readonly string[]) => void;
+  /** Read the current fridge inventory as a JSON string of ID arrays. */
+  getFridgeInventoryJson: () => string;
+  /** Advance the round index. */
+  advanceRound: () => void;
+
   returnToMenu: () => void;
   startNewGame: () => void;
 
@@ -212,6 +236,7 @@ function getSnapshot(): GameState & GameActions {
   const mr = getTraitValue(MrSausageTrait);
   const demand = getTraitValue(DemandTrait);
   const score = getTraitValue(ScoreTrait);
+  const hunger = getTraitValue(HungerState);
 
   const selectedIds = parseJsonArray<string>(sel?.idsJson ?? '[]');
 
@@ -255,6 +280,13 @@ function getSnapshot(): GameState & GameActions {
     playerDecisions: {
       flairPoints: parseJsonArray<{reason: string; points: number}>(score?.flairPointsJson ?? '[]'),
     },
+
+    // Zoombinis-in-Hell deduction loop
+    hungerDisgustMeter: hunger?.disgustMeter ?? 0,
+    hungerDisgustThreshold: hunger?.disgustThreshold ?? 100,
+    hungerRoundIndex: hunger?.roundIndex ?? 1,
+    hungerFridgeIds: hunger ? (JSON.parse(hunger.fridgeInventoryJson) as string[]) : [],
+    hungerCurrentClueJson: hunger?.currentClueJson ?? 'null',
 
     playerPosition: {x: player?.posX ?? 0, y: player?.posY ?? 0, z: player?.posZ ?? 0},
     joystick: {x: player?.joystickX ?? 0, y: player?.joystickY ?? 0},
@@ -524,6 +556,78 @@ const actions: GameActions = {
     }
   },
 
+  // --- Zoombinis-in-Hell deduction loop actions ---
+
+  initializeHungerState() {
+    const e = getSingleton(HungerState);
+    if (!e) return;
+    // Fill the fridge with every ingredient's ID.
+    const allIds = INGREDIENTS.map(i => i.id);
+    e.set(HungerState, {
+      currentClueJson: 'null',
+      disgustMeter: 0,
+      disgustThreshold: 100,
+      fridgeInventoryJson: JSON.stringify(allIds),
+      matchHistoryJson: '[]',
+      roundIndex: 1,
+    });
+    notify();
+  },
+
+  setCurrentClue(clueJson: string) {
+    const e = getSingleton(HungerState);
+    if (e) {
+      e.set(HungerState, {currentClueJson: clueJson});
+      notify();
+    }
+  },
+
+  getCurrentClueJson(): string {
+    const e = getSingleton(HungerState);
+    return e ? e.get(HungerState).currentClueJson : 'null';
+  },
+
+  incrementDisgust(amount: number) {
+    const e = getSingleton(HungerState);
+    if (e) {
+      const current = e.get(HungerState).disgustMeter;
+      e.set(HungerState, {disgustMeter: Math.min(100, current + amount)});
+      notify();
+    }
+  },
+
+  depleteFromFridge(ids: readonly string[]) {
+    const e = getSingleton(HungerState);
+    if (!e) return;
+    const current: string[] = JSON.parse(e.get(HungerState).fridgeInventoryJson);
+    const toRemove = new Set(ids);
+    // Remove FIRST occurrence of each ID (not all — player might pick
+    // the same ingredient type in different rounds via restocking later).
+    const remaining: string[] = [];
+    for (const id of current) {
+      if (toRemove.has(id)) {
+        toRemove.delete(id); // consume one copy
+      } else {
+        remaining.push(id);
+      }
+    }
+    e.set(HungerState, {fridgeInventoryJson: JSON.stringify(remaining)});
+    notify();
+  },
+
+  getFridgeInventoryJson(): string {
+    const e = getSingleton(HungerState);
+    return e ? e.get(HungerState).fridgeInventoryJson : '[]';
+  },
+
+  advanceRound() {
+    const e = getSingleton(HungerState);
+    if (e) {
+      e.set(HungerState, {roundIndex: e.get(HungerState).roundIndex + 1});
+      notify();
+    }
+  },
+
   returnToMenu() {
     const appE = getSingleton(AppTrait);
     const playerE = getSingleton(PlayerTrait);
@@ -608,6 +712,8 @@ const actions: GameActions = {
     const demandE = getSingleton(DemandTrait);
     if (demandE) demandE.destroy();
     clearSelectionCache();
+    // Initialize the Zoombinis deduction loop for the new game.
+    actions.initializeHungerState();
     notify();
   },
 
