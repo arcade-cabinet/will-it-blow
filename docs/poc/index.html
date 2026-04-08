@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ordinary Sausage: The Game</title>
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden; background-color: #050505; font-family: 'Courier New', Courier, monospace; user-select: none; cursor: crosshair; }
+        #canvas-container { width: 100vw; height: 100vh; }
+        #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #ff0000; font-size: 1.5rem; font-weight: bold; pointer-events: none; text-shadow: 0 0 10px #ff0000; transition: opacity 0.5s; z-index: 10; text-transform: uppercase; }
+        #ui-layer { position: absolute; bottom: 40px; width: 100%; text-align: center; pointer-events: none; z-index: 5; }
+        #instructions { display: inline-block; background: rgba(10, 0, 0, 0.85); color: #ff3333; padding: 15px 25px; font-size: 1.4rem; border: 2px solid #550000; text-shadow: 0 0 5px #ff0000; text-transform: uppercase; font-weight: bold; box-shadow: 0 0 20px rgba(255, 0, 0, 0.5); }
+        #progress-bar { display: inline-block; width: 400px; height: 12px; background: #220000; border: 1px solid #550000; margin-top: 15px; overflow: hidden; }
+        #progress-fill { height: 100%; background: #aa0000; width: 0%; transition: width 0.2s; box-shadow: 0 0 10px #ff0000; }
+        #crosshair { position: absolute; top: 50%; left: 50%; width: 6px; height: 6px; background: rgba(255,255,255,0.5); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; z-index: 6; }
+    </style>
+    <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.2/lib/anime.min.js"></script> 
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="crosshair"></div>
+    <div id="loading">I WANT TO PLAY A GAME...</div>
+    <div id="ui-layer">
+        <div id="instructions">Loading...</div><br>
+        <div id="progress-bar"><div id="progress-fill"></div></div>
+    </div>
+    <div id="canvas-container"></div>
+
+    <script type="module">
+        import RAPIER from 'https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.19.3/+esm';
+        import * as THREE from 'three';
+
+        await RAPIER.init();
+
+        // --- GLOBAL SETUP ---
+        const container = document.getElementById('canvas-container');
+        const instructionUI = document.getElementById('instructions');
+        const progressFill = document.getElementById('progress-fill');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a0a0a);
+        scene.fog = new THREE.FogExp2(0x0a0a0a, 0.025); 
+        
+        const gravity = { x: 0.0, y: -20.0, z: 0.0 };
+        const world = new RAPIER.World(gravity);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 0.8; 
+        container.appendChild(renderer.domElement);
+
+        // --- FPS PLAYER SETUP ---
+        const playerGroup = new THREE.Group();
+        playerGroup.position.set(0, 0, 10);
+        scene.add(playerGroup);
+
+        const yawObj = new THREE.Group();
+        playerGroup.add(yawObj);
+        
+        const pitchObj = new THREE.Group();
+        pitchObj.position.y = 5.5; // Head height
+        yawObj.add(pitchObj);
+
+        const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
+        pitchObj.add(camera);
+
+        // --- PROCEDURAL BODY ---
+        const skinMat = new THREE.MeshStandardMaterial({color: 0xddbba5, roughness: 0.7});
+        const handGeo = new THREE.BoxGeometry(0.25, 0.25, 0.6);
+        
+        // Hands (Attached to camera to follow view)
+        const leftHand = new THREE.Mesh(handGeo, skinMat);
+        leftHand.position.set(-0.6, -0.5, -0.8);
+        pitchObj.add(leftHand);
+        
+        const rightHand = new THREE.Mesh(handGeo, skinMat);
+        rightHand.position.set(0.6, -0.5, -0.8);
+        pitchObj.add(rightHand);
+
+        // Feet (Attached to floor of player)
+        const footGeo = new THREE.BoxGeometry(0.4, 0.3, 0.9);
+        const leftFoot = new THREE.Mesh(footGeo, skinMat);
+        leftFoot.position.set(-0.4, 0.15, 0);
+        playerGroup.add(leftFoot);
+        
+        const rightFoot = new THREE.Mesh(footGeo, skinMat);
+        rightFoot.position.set(0.4, 0.15, 0);
+        playerGroup.add(rightFoot);
+
+        // Chain tethering the foot to the wall
+        const chainGroup = new THREE.Group();
+        scene.add(chainGroup);
+        const chainLinks = [];
+        const linkGeo = new THREE.TorusGeometry(0.12, 0.04, 8, 16);
+        const linkMat = new THREE.MeshStandardMaterial({color: 0x333333, metalness: 0.9, roughness: 0.5});
+        for(let i=0; i<25; i++) {
+            const link = new THREE.Mesh(linkGeo, linkMat);
+            chainGroup.add(link); chainLinks.push(link);
+        }
+        const wallAnchor = new THREE.Vector3(0, 0.5, 18);
+        const anchorRing = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.08, 8, 16), linkMat);
+        anchorRing.position.copy(wallAnchor);
+        scene.add(anchorRing);
+        const chainMaxDist = 17; // Maximum walking distance from wall
+
+        // --- FLUORESCENT OVERHEAD LIGHTING ---
+        const ceilMat = new THREE.MeshStandardMaterial({color: 0x111111, roughness: 0.9});
+        const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), ceilMat);
+        ceiling.rotation.x = Math.PI/2; ceiling.position.y = 12; scene.add(ceiling);
+
+        for(let z=-1; z<=1; z++) {
+            const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 10).rotateZ(Math.PI/2), new THREE.MeshBasicMaterial({color: 0xffffff}));
+            tube.position.set(0, 11.5, z * 8);
+            scene.add(tube);
+            const pLight = new THREE.PointLight(0xddeeff, 50, 30);
+            pLight.position.set(0, 11, z * 8);
+            scene.add(pLight);
+            if(z === 0) window.flickerLight = pLight; // Middle light flickers
+        }
+
+        const redLight = new THREE.PointLight(0xff0000, 50, 30);
+        redLight.position.set(-10, 10, -5); scene.add(redLight);
+
+        // --- GRIMY MATERIALS & FLOOR ---
+        const rustyMetalMat = new THREE.MeshStandardMaterial({ color: 0x332222, roughness: 0.9, metalness: 0.6 });
+        const darkMetalMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8, metalness: 0.7 });
+        const dirtyPlasticMat = new THREE.MeshStandardMaterial({ color: 0x888877, roughness: 0.6 });
+        const bloodyTableMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.4, metalness: 0.2 }); 
+        
+        const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), new THREE.MeshStandardMaterial({color: 0x222222, roughness: 0.8}));
+        floorMesh.rotation.x = -Math.PI/2; floorMesh.receiveShadow = true; scene.add(floorMesh);
+
+        // --- KITCHEN ARCHITECTURE ---
+        const counterHeight = 4;
+        const cabGeo = new THREE.BoxGeometry(40, counterHeight, 12);
+        const cabinets = new THREE.Mesh(cabGeo, rustyMetalMat); cabinets.position.set(0, counterHeight/2, 0); cabinets.receiveShadow = true; scene.add(cabinets);
+        const counterGeo = new THREE.BoxGeometry(41, 0.4, 13);
+        const countertop = new THREE.Mesh(counterGeo, bloodyTableMat); countertop.position.set(0, counterHeight + 0.2, 0); countertop.receiveShadow = true; scene.add(countertop);
+        
+        const groundBody = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0, counterHeight + 0.4, 0));
+        world.createCollider(RAPIER.ColliderDesc.cuboid(20, 0.1, 6), groundBody);
+
+        const tileCanvas = document.createElement('canvas'); tileCanvas.width = 256; tileCanvas.height = 256; const tCtx = tileCanvas.getContext('2d');
+        tCtx.fillStyle = '#444'; tCtx.fillRect(0,0,256,256); tCtx.strokeStyle = '#111'; tCtx.lineWidth = 4; tCtx.strokeRect(0,0,256,256);
+        tCtx.fillStyle = 'rgba(100, 0, 0, 0.6)'; for(let i=0; i<10; i++) { tCtx.beginPath(); tCtx.arc(Math.random()*256, Math.random()*256, Math.random()*20+5, 0, Math.PI*2); tCtx.fill(); }
+        const tileTex = new THREE.CanvasTexture(tileCanvas); tileTex.wrapS = tileTex.wrapT = THREE.RepeatWrapping; tileTex.repeat.set(20, 5);
+        const backsplash = new THREE.Mesh(new THREE.PlaneGeometry(40, 10), new THREE.MeshStandardMaterial({ map: tileTex, roughness: 0.7 }));
+        backsplash.position.set(0, counterHeight + 5, -6); backsplash.receiveShadow = true; scene.add(backsplash);
+
+        // --- MR. SAUSAGE CRT TV ---
+        const tvCanvas = document.createElement('canvas'); tvCanvas.width = 512; tvCanvas.height = 512; const tvCtx = tvCanvas.getContext('2d');
+        const tvTex = new THREE.CanvasTexture(tvCanvas);
+        let tvText = "LET'S SAUSAGE";
+        
+        function updateTVScreen(time) {
+            const r = Math.random() * 40; tvCtx.fillStyle = `rgb(${r}, ${r+30}, ${r})`; tvCtx.fillRect(0,0,512,512);
+            tvCtx.fillStyle = 'rgba(0,0,0,0.4)'; for(let i=0; i<512; i+=8) tvCtx.fillRect(0, (i + (time*100)) % 512, 512, 4);
+            tvCtx.fillStyle = '#fce4d6'; tvCtx.beginPath(); tvCtx.arc(256, 200, 110, 0, Math.PI*2); tvCtx.fill();
+            tvCtx.beginPath(); tvCtx.arc(215, 300, 40, 0, Math.PI*2); tvCtx.arc(297, 300, 40, 0, Math.PI*2); tvCtx.fill();
+            tvCtx.fillStyle = '#2a1a0c'; tvCtx.beginPath(); tvCtx.ellipse(256, 240, 90, 35, 0, 0, Math.PI, true); tvCtx.fill();
+            tvCtx.fillStyle = '#050505'; tvCtx.fillRect(150, 130, 90, 60); tvCtx.fillRect(270, 130, 90, 60); tvCtx.fillRect(240, 150, 30, 10);
+            tvCtx.fillStyle = (Math.random() > 0.9) ? '#ffffff' : '#ff0000'; tvCtx.font = 'bold 46px Courier New'; tvCtx.textAlign = 'center';
+            tvCtx.shadowColor = '#000'; tvCtx.shadowBlur = 10; tvCtx.fillText(tvText, 256 + (Math.random()-0.5)*3, 440 + (Math.random()-0.5)*3);
+            tvCtx.shadowBlur = 0; tvTex.needsUpdate = true;
+        }
+
+        const tvGroup = new THREE.Group(); const tvBox = new THREE.Mesh(new THREE.BoxGeometry(8, 7, 1.5), rustyMetalMat);
+        const tvScreen = new THREE.Mesh(new THREE.PlaneGeometry(7.2, 6.2), new THREE.MeshBasicMaterial({map: tvTex})); tvScreen.position.set(0, 0, 0.76);
+        tvGroup.add(tvBox, tvScreen); tvGroup.position.set(0, counterHeight + 9, -5); scene.add(tvGroup);
+        const tvLight = new THREE.PointLight(0x33ff33, 30, 20); tvLight.position.set(0, counterHeight + 9, -3); scene.add(tvLight);
+
+        // --- PROCEDURAL MEAT TEXTURE ---
+        function generateMeatTexture(colorHex, fatRatio) {
+            const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 512; const ctx = canvas.getContext('2d');
+            ctx.fillStyle = colorHex; ctx.fillRect(0, 0, 512, 512);
+            const drawSpecks = (c, sr, cols, a) => { ctx.globalAlpha = a; for(let i=0; i<c; i++){ ctx.fillStyle = cols[Math.floor(Math.random()*cols.length)]; ctx.beginPath(); ctx.arc(Math.random()*512, Math.random()*512, Math.random()*sr.max+sr.min, 0, Math.PI*2); ctx.fill(); } };
+            drawSpecks(1000, {min:1, max:4}, ['#5a1b1b', '#3b0b0b', '#781c1c'], 0.8); 
+            drawSpecks(Math.floor(3000 * fatRatio), {min:1, max:3}, ['#dcc2c2', '#dcebeb', '#c8aaaa'], 0.7);
+            ctx.globalAlpha = 1.0; ctx.filter = 'blur(1px)'; ctx.drawImage(canvas, 0, 0); ctx.filter = 'none';
+            const tex = new THREE.CanvasTexture(canvas); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; const bumpTex = new THREE.CanvasTexture(canvas); bumpTex.wrapS = bumpTex.wrapT = THREE.RepeatWrapping; return { map: tex, bumpMap: bumpTex };
+        }
+        const meatMat = new THREE.MeshPhysicalMaterial({ color: 0xffaaaa, roughness: 0.4, clearcoat: 0.9, clearcoatRoughness: 0.1 });
+
+        // --- 1. GRINDING STATION (Left: X = -10) ---
+        const gX = -10; const cY = counterHeight + 0.4; const grinderGroup = new THREE.Group(); scene.add(grinderGroup);
+        const gMotor = new THREE.Mesh(new THREE.BoxGeometry(4, 4.5, 5), rustyMetalMat); gMotor.position.set(gX, cY + 2.25, -2); gMotor.castShadow=true; grinderGroup.add(gMotor);
+        const gExtruder = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.0, 4, 32).rotateX(Math.PI/2), rustyMetalMat); gExtruder.position.set(gX, cY + 2.5, 0); gExtruder.castShadow=true; grinderGroup.add(gExtruder);
+        const gChute = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 0.8, 2.5, 32), rustyMetalMat); gChute.position.set(gX, cY + 4.5, 0.5); gChute.castShadow=true; grinderGroup.add(gChute);
+        const gTray = new THREE.Mesh(new THREE.BoxGeometry(5, 0.3, 4), rustyMetalMat); gTray.position.set(gX, cY + 5.6, 0.5); gTray.castShadow=true; grinderGroup.add(gTray);
+        const gFaceplate = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 1.05, 0.2, 32).rotateX(Math.PI/2), darkMetalMat); gFaceplate.position.set(gX, cY + 2.5, 2.0); grinderGroup.add(gFaceplate);
+        
+        const gSwitchHitbox = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.5, 16).rotateZ(Math.PI/2), rustyMetalMat); gSwitchHitbox.position.set(gX+2.1, cY + 3, -2); grinderGroup.add(gSwitchHitbox);
+        const gSwitchNotch = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.0, 0.1), darkMetalMat); gSwitchNotch.position.set(gX+2.35, cY + 3, -2); grinderGroup.add(gSwitchNotch);
+
+        const plungerGroup = new THREE.Group(); plungerGroup.position.set(gX+3, cY + 5.6, 0.5); 
+        const pShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 3), dirtyPlasticMat); pShaft.position.y = 1.5; plungerGroup.add(pShaft);
+        const pGuard = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 0.2), dirtyPlasticMat); pGuard.position.y = 3; plungerGroup.add(pGuard);
+        const pHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 1.5), dirtyPlasticMat); pHandle.position.y = 3.8; plungerGroup.add(pHandle);
+        const plungerHitbox = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 5), new THREE.MeshBasicMaterial({visible: false})); plungerHitbox.position.y = 2.5; plungerGroup.add(plungerHitbox); grinderGroup.add(plungerGroup);
+
+        const bowlGeo = new THREE.LatheGeometry([new THREE.Vector2(0.01, 0), new THREE.Vector2(3, 0), new THREE.Vector2(3.5, 1.5), new THREE.Vector2(3.3, 1.6), new THREE.Vector2(2.8, 0.2), new THREE.Vector2(0.01, 0.2)], 32); 
+        const mainBowl = new THREE.Mesh(bowlGeo, rustyMetalMat); mainBowl.position.set(gX-5, cY, 2); mainBowl.castShadow=true; scene.add(mainBowl);
+        const mainBowlHitbox = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 3.5, 2), new THREE.MeshBasicMaterial({visible: false})); mainBowlHitbox.position.set(gX-5, cY+1, 2); scene.add(mainBowlHitbox);
+
+        const chunks = []; const chunkGeo = new THREE.DodecahedronGeometry(0.5, 1);
+        for(let i=0; i<15; i++) {
+            const chunk = new THREE.Mesh(chunkGeo, meatMat); chunk.castShadow = true; chunk.userData = { state: 'BOWL' };
+            chunk.position.set(gX-5 + (Math.random()-0.5)*3, cY+0.5 + Math.random()*1, 2 + (Math.random()-0.5)*3); scene.add(chunk); chunks.push(chunk);
+        }
+        const meatMound = new THREE.Mesh(new THREE.SphereGeometry(2.8, 32, 16, 0, Math.PI*2, 0, Math.PI/2), meatMat); meatMound.position.set(0, 0.2, 0); meatMound.scale.set(0.001, 0.001, 0.001); mainBowl.add(meatMound);
+        const maxGParts = 150; const gPartMesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.08, 0.08, 0.5, 6).rotateX(Math.PI/2), meatMat, maxGParts); gPartMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(gPartMesh);
+        const gPartData = []; for(let i=0; i<maxGParts; i++) gPartData.push({ active: false, pos: new THREE.Vector3(), vel: new THREE.Vector3(), rot: new THREE.Euler() });
+
+        // --- 2. STUFFING STATION (Center: X = 0) ---
+        const sX = 0; const stufferGroup = new THREE.Group(); scene.add(stufferGroup);
+        const sBase = new THREE.Mesh(new THREE.BoxGeometry(6, 0.5, 6), rustyMetalMat); sBase.position.set(sX, cY + 0.25, -2); stufferGroup.add(sBase);
+        const sCanister = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 6, 32), rustyMetalMat); sCanister.position.set(sX, cY + 3.5, -2); stufferGroup.add(sCanister);
+        const sTop = new THREE.Mesh(new THREE.BoxGeometry(6, 1.5, 2.5), rustyMetalMat); sTop.position.set(sX, cY + 7.25, -2); stufferGroup.add(sTop);
+        const sNozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.7, 2.5, 32).rotateX(Math.PI/2), darkMetalMat); sNozzle.position.set(sX, cY + 1.0, 0); stufferGroup.add(sNozzle);
+        const nozzleTipPos = new THREE.Vector3(sX, cY + 1.0, 1.25);
+        const sTray = new THREE.Mesh(new THREE.BoxGeometry(10, 0.2, 10), rustyMetalMat); sTray.position.set(sX, cY + 0.1, 6); stufferGroup.add(sTray);
+        const sTrayHitbox = new THREE.Mesh(new THREE.BoxGeometry(10, 2, 10), new THREE.MeshBasicMaterial({visible:false})); sTrayHitbox.position.set(sX, cY+1, 6); stufferGroup.add(sTrayHitbox);
+
+        const sRod = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 10, 16), darkMetalMat); sRod.position.set(sX, cY + 8, -2); stufferGroup.add(sRod);
+        const crankGroup = new THREE.Group(); crankGroup.position.set(sX + 3, cY + 7.25, -2);
+        const cArm = new THREE.Mesh(new THREE.BoxGeometry(0.3, 3, 0.3), rustyMetalMat); cArm.position.set(0, 1.5, 0); crankGroup.add(cArm);
+        const cHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 1.5).rotateX(Math.PI/2), darkMetalMat); cHandle.position.set(0, 3, 0.75); crankGroup.add(cHandle); stufferGroup.add(crankGroup);
+
+        const waterBowl = new THREE.Mesh(bowlGeo, rustyMetalMat); waterBowl.position.set(sX+5, cY, -1); waterBowl.scale.set(0.7, 0.7, 0.7); stufferGroup.add(waterBowl);
+        const water = new THREE.Mesh(new THREE.CylinderGeometry(2.3, 2.3, 0.1, 32), new THREE.MeshPhysicalMaterial({color: 0x445544, transmission: 0.7, opacity: 1})); water.position.set(sX+5, cY+0.8, -1); stufferGroup.add(water);
+        const casingMat = new THREE.MeshPhysicalMaterial({ color: 0xddddcc, transmission: 0.5, opacity: 1, roughness: 0.6, thickness: 0.1, side: THREE.DoubleSide });
+        
+        class SquigglyCurve extends THREE.Curve { getPoint(t, target = new THREE.Vector3()) { return target.set(sX+5 + Math.sin(t*20)*1, cY+0.3 + Math.abs(Math.cos(t*15)*0.5), -1 + Math.cos(t*25)*1); } }
+        const unattachedCasing = new THREE.Mesh(new THREE.TubeGeometry(new SquigglyCurve(), 64, 0.3, 12, false), casingMat); stufferGroup.add(unattachedCasing);
+        const waterBowlHitbox = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.5, 1.5), new THREE.MeshBasicMaterial({visible:false})); waterBowlHitbox.position.copy(waterBowl.position); waterBowlHitbox.position.y += 0.5; stufferGroup.add(waterBowlHitbox);
+
+        const draggedCurve = new THREE.QuadraticBezierCurve3(new THREE.Vector3(sX+5, cY+1, -1), new THREE.Vector3(sX+2, cY+3, 0), new THREE.Vector3(sX, cY+1, 1));
+        const draggedCasing = new THREE.Mesh(new THREE.TubeGeometry(draggedCurve, 32, 0.3, 12, false), casingMat); draggedCasing.visible = false; stufferGroup.add(draggedCasing);
+        
+        const bunchedCasingGeo = new THREE.CylinderGeometry(0.4, 0.4, 2.0, 32, 32, true); const pA = bunchedCasingGeo.attributes.position; for(let i=0; i<pA.count; i++) { pA.setX(i, pA.getX(i) * (1 + 0.1*Math.sin(pA.getY(i)*40))); pA.setZ(i, pA.getZ(i) * (1 + 0.1*Math.sin(pA.getY(i)*40))); } bunchedCasingGeo.computeVertexNormals(); bunchedCasingGeo.rotateX(Math.PI/2);
+        const attachedCasing = new THREE.Mesh(bunchedCasingGeo, casingMat); attachedCasing.position.set(sX, cY+1.0, 0); attachedCasing.visible = false; stufferGroup.add(attachedCasing);
+
+        // CEREAL BOX TARGET
+        const cBoxTexCanvas = document.createElement('canvas'); cBoxTexCanvas.width=256; cBoxTexCanvas.height=256; const cbCtx = cBoxTexCanvas.getContext('2d');
+        cbCtx.fillStyle = '#aa8800'; cbCtx.fillRect(0,0,256,256); cbCtx.fillStyle = '#ff0000'; cbCtx.font = 'bold 30px Arial'; cbCtx.fillText("Bland", 80, 80); cbCtx.fillText("Flakes", 70, 120);
+        const cBoxMat = new THREE.MeshStandardMaterial({map: new THREE.CanvasTexture(cBoxTexCanvas), roughness: 0.9});
+        const cerealBoxMesh = new THREE.Mesh(new THREE.BoxGeometry(2, 3.5, 1), cBoxMat); cerealBoxMesh.castShadow = true; scene.add(cerealBoxMesh);
+        const cBoxDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(sX, cY + 2.0, 8).setLinearDamping(0.5).setAngularDamping(0.5);
+        const cBoxBody = world.createRigidBody(cBoxDesc); world.createCollider(RAPIER.ColliderDesc.cuboid(1.0, 1.75, 0.5).setMass(2.0), cBoxBody);
+
+        // --- 3. COOKING STATION (Right: X = 11) ---
+        const stoveX = 11; const stoveGroup = new THREE.Group(); scene.add(stoveGroup);
+        const stoveBase = new THREE.Mesh(new THREE.BoxGeometry(12, 1, 11), rustyMetalMat); stoveBase.position.set(stoveX, cY+0.5, 0); stoveGroup.add(stoveBase);
+        const stoveBack = new THREE.Mesh(new THREE.BoxGeometry(12, 3, 1), darkMetalMat); stoveBack.position.set(stoveX, cY+2, -5); stoveGroup.add(stoveBack);
+        
+        const burnerGeo = new THREE.TorusGeometry(1.5, 0.15, 8, 32); burnerGeo.rotateX(Math.PI/2);
+        const burnerBR = new THREE.Mesh(burnerGeo, darkMetalMat.clone()); burnerBR.position.set(stoveX+2.5, cY+1.05, -2); stoveGroup.add(burnerBR);
+        const burnerFL = new THREE.Mesh(burnerGeo, darkMetalMat.clone()); burnerFL.position.set(stoveX-2.5, cY+1.05, 2); stoveGroup.add(burnerFL);
+        
+        const dialBR = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.3).rotateX(Math.PI/2), dirtyPlasticMat); dialBR.position.set(stoveX+3, cY+2.5, -4.4); stoveGroup.add(dialBR);
+        const dialFL = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.3).rotateX(Math.PI/2), dirtyPlasticMat); dialFL.position.set(stoveX-3, cY+2.5, -4.4); stoveGroup.add(dialFL);
+        const dialFLHitbox = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 1), new THREE.MeshBasicMaterial({visible:false})); dialFLHitbox.position.copy(dialFL.position); stoveGroup.add(dialFLHitbox);
+
+        const panGeo = new THREE.LatheGeometry([new THREE.Vector2(0.001, 0), new THREE.Vector2(4.5, 0), new THREE.Vector2(5.5, 1.2), new THREE.Vector2(5.2, 1.2), new THREE.Vector2(4.3, 0.2), new THREE.Vector2(0.001, 0.2)], 64);
+        const panMat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.8, metalness: 0.2, side: THREE.DoubleSide });
+        const pan = new THREE.Group();
+        const panBase = new THREE.Mesh(panGeo, panMat); panBase.castShadow=true; pan.add(panBase);
+        const panHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.3, 6).rotateZ(Math.PI/2).translate(8, 0.8, 0), panMat); panHandle.castShadow=true; pan.add(panHandle);
+        pan.position.set(stoveX+2.5, cY+1.05, -2); scene.add(pan);
+        const panHitbox = new THREE.Mesh(new THREE.CylinderGeometry(5.5, 5.5, 2), new THREE.MeshBasicMaterial({visible:false})); panHitbox.position.y = 1; pan.add(panHitbox);
+
+        // FBO Fluid & Particles
+        const greaseGeo = new THREE.PlaneGeometry(8.6, 8.6, 128, 128).rotateX(-Math.PI/2); const pP = greaseGeo.attributes.position; for(let i=0; i<pP.count; i++){ const x=pP.getX(i), z=pP.getZ(i), d=Math.sqrt(x*x+z*z); if(d>4.3){pP.setX(i,(x/d)*4.3); pP.setZ(i,(z/d)*4.3);} } greaseGeo.computeVertexNormals();
+        const fboSize = 256; const fboOpt = { format: THREE.RGBAFormat, type: THREE.HalfFloatType, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, depthBuffer: false };
+        let rtPrev = new THREE.WebGLRenderTarget(fboSize, fboSize, fboOpt), rtCurr = new THREE.WebGLRenderTarget(fboSize, fboSize, fboOpt), rtNext = new THREE.WebGLRenderTarget(fboSize, fboSize, fboOpt), rtNorm = new THREE.WebGLRenderTarget(fboSize, fboSize, fboOpt);
+        const fCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1), fScene = new THREE.Scene(), fQuad = new THREE.Mesh(new THREE.PlaneGeometry(2,2)); fScene.add(fQuad);
+        const simMat = new THREE.ShaderMaterial({ uniforms: { u_curr:{value:null}, u_prev:{value:null}, damp:{value:0.98}, tSz:{value:new THREE.Vector2(1/fboSize, 1/fboSize)} }, vertexShader: `varying vec2 vUv; void main(){vUv=uv; gl_Position=vec4(position,1.0);}`, fragmentShader: `uniform sampler2D u_curr, u_prev; uniform float damp; uniform vec2 tSz; varying vec2 vUv; void main(){ float c=texture2D(u_curr,vUv).r, p=texture2D(u_prev,vUv).r, l=texture2D(u_curr,vUv+vec2(-tSz.x,0)).r, r=texture2D(u_curr,vUv+vec2(tSz.x,0)).r, u=texture2D(u_curr,vUv+vec2(0,-tSz.y)).r, d=texture2D(u_curr,vUv+vec2(0,tSz.y)).r; gl_FragColor=vec4((((l+r+u+d)*0.5)-p)*damp,0,0,1); }`});
+        const normMat = new THREE.ShaderMaterial({ uniforms: { u_h:{value:null}, tSz:{value:new THREE.Vector2(1/fboSize, 1/fboSize)}, sc:{value:2.5} }, vertexShader: `varying vec2 vUv; void main(){vUv=uv; gl_Position=vec4(position,1.0);}`, fragmentShader: `uniform sampler2D u_h; uniform vec2 tSz; uniform float sc; varying vec2 vUv; void main(){ float l=texture2D(u_h,vUv+vec2(-tSz.x,0)).r, r=texture2D(u_h,vUv+vec2(tSz.x,0)).r, d=texture2D(u_h,vUv+vec2(0,-tSz.y)).r, u=texture2D(u_h,vUv+vec2(0,tSz.y)).r; gl_FragColor=vec4(normalize(vec3((l-r)*sc, (d-u)*sc, 1.0))*0.5+0.5, 1.0); }`});
+        const greaseMat = new THREE.MeshPhysicalMaterial({ color: 0x881100, transparent: true, opacity: 0.0, roughness: 0.1, metalness: 0.2, transmission: 0.1, depthWrite: false, displacementMap: rtCurr.texture, displacementScale: 0.8, normalMap: rtNorm.texture });
+        const greasePool = new THREE.Mesh(greaseGeo, greaseMat); greasePool.position.y = 0.25; pan.add(greasePool);
+
+        const splatScene = new THREE.Scene(), splatCamera = new THREE.OrthographicCamera(-4.3, 4.3, 4.3, -4.3, 0, 1);
+        const sCtx = document.createElement('canvas').getContext('2d'); sCtx.canvas.width=32; sCtx.canvas.height=32; const sGrd=sCtx.createRadialGradient(16,16,0,16,16,16); sGrd.addColorStop(0,'rgba(255,0,0,0.05)'); sGrd.addColorStop(1,'rgba(255,0,0,0)'); sCtx.fillStyle=sGrd; sCtx.fillRect(0,0,32,32);
+        const splatMesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(sCtx.canvas), transparent:true, blending:THREE.AdditiveBlending, depthWrite:false, depthTest:false}), 500); splatScene.add(splatMesh);
+
+        const sPartGeo = new THREE.BufferGeometry(); const sPartPos = new Float32Array(200*3); const sPartLife = new Float32Array(200); const sPartVel = []; for(let i=0;i<200;i++){sPartPos[i*3]=999; sPartVel.push(new THREE.Vector3());} sPartGeo.setAttribute('position', new THREE.BufferAttribute(sPartPos, 3));
+        const sCtx2 = document.createElement('canvas').getContext('2d'); sCtx2.canvas.width=64; sCtx2.canvas.height=64; const grd2=sCtx2.createRadialGradient(32,32,0,32,32,32); grd2.addColorStop(0,'rgba(100,100,100,1)'); grd2.addColorStop(1,'rgba(50,50,50,0)'); sCtx2.fillStyle=grd2; sCtx2.fillRect(0,0,64,64);
+        const steamMesh = new THREE.Points(sPartGeo, new THREE.PointsMaterial({size: 4, map: new THREE.CanvasTexture(sCtx2.canvas), transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending})); scene.add(steamMesh);
+
+        // --- SAUSAGE LOGIC ---
+        let sausageMesh = null, pBones = [], pBodies = [], pAnchors = [];
+        class SausageCurve extends THREE.Curve { getPoint(t, target = new THREE.Vector3()) { return target.set(0, 0, t * 8); } }
+
+        function buildSausage() {
+            if(sausageMesh) { scene.remove(sausageMesh); pBodies.forEach(b => world.removeRigidBody(b)); }
+            const tex = generateMeatTexture('#9a2b2b', 0.3); 
+            meatMat.map = tex.map; meatMat.bumpMap = tex.bumpMap; meatMat.bumpScale = 0.08;
+
+            const curve = new SausageCurve(); const numBones = 20; 
+            pBones = []; pBodies = []; pAnchors = []; const boneRoot = new THREE.Group();
+            
+            for(let i=0; i<numBones; i++) {
+                const t = i/(numBones-1), p = curve.getPointAt(t);
+                const bone = new THREE.Bone(); boneRoot.add(bone); pBones.push(bone);
+                bone.position.copy(nozzleTipPos); bone.scale.setScalar(0.001); 
+                
+                const body = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(0, 100+i, 0).setLinearDamping(5).setAngularDamping(5));
+                world.createCollider(RAPIER.ColliderDesc.ball(0.15).setMass(1).setRestitution(0), body);
+                pBodies.push(body); pAnchors.push({ t: t, base: p.clone(), tgt: p.clone(), ext: false });
+            }
+
+            const pSeg = 150, rSeg = 16;
+            const verts=[], uvs=[], inds=[], sInds=[], sWts=[]; const frames = curve.computeFrenetFrames(pSeg, false);
+            for(let i=0; i<=pSeg; i++) {
+                const t = i/pSeg, p = curve.getPointAt(t), N=frames.normals[i], B=frames.binormals[i];
+                const bF = t*(numBones-1); let b0=Math.floor(bF), b1=Math.ceil(bF), w1=bF-b0, w0=1-w1; if(b0>=numBones)b0=numBones-1; if(b1>=numBones)b1=numBones-1;
+                let cR = 0.4; const dE=Math.min(t, 1-t); if(dE<0.02) cR*=0.01+0.99*Math.sin((dE/0.02)*Math.PI/2);
+                const sT = t * 5, dT = Math.min(sT - Math.floor(sT), Math.ceil(sT) - sT); if (dT < 0.15) cR *= 0.05 + 0.95 * Math.sin((dT / 0.15) * (Math.PI / 2));
+                for(let j=0; j<=rSeg; j++){ const th = (j/rSeg)*Math.PI*2; verts.push(p.x+cR*(Math.cos(th)*N.x+Math.sin(th)*B.x), p.y+cR*(Math.cos(th)*N.y+Math.sin(th)*B.y), p.z+cR*(Math.cos(th)*N.z+Math.sin(th)*B.z)); uvs.push(j/rSeg, t*10); sInds.push(b0,b1,0,0); sWts.push(w0,w1,0,0); }
+            }
+            for(let i=0; i<pSeg; i++) for(let j=0; j<rSeg; j++) { const a=i*(rSeg+1)+(j+1), b=i*(rSeg+1)+j, c=(i+1)*(rSeg+1)+j, d=(i+1)*(rSeg+1)+(j+1); inds.push(a,d,b,b,d,c); }
+            const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(verts,3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs,2)); geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(sInds,4)); geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sWts,4)); geo.setIndex(inds); geo.computeVertexNormals();
+            
+            sausageMesh = new THREE.SkinnedMesh(geo, meatMat); sausageMesh.add(boneRoot); sausageMesh.bind(new THREE.Skeleton(pBones)); sausageMesh.castShadow = true; sausageMesh.receiveShadow = true; sausageMesh.visible = false; scene.add(sausageMesh);
+        }
+
+        // --- FPS INTERACTION STATE ---
+        let gameState = 0; 
+        let meatInChute = 0, groundVol = 0;
+        let isGrinderOn = false, isDraggingPlunger = false;
+        let stufferDrag = false, isCranking = false, stuffLevel = 0;
+        let isDraggingPan = false, isCooking = false, cookLevel = 0;
+
+        let isLooking = false;
+        let yaw = 0, pitch = 0;
+        const previousMouse = {x: 0, y: 0};
+        let dragTarget = null;
+        let targetWalkPos = null;
+
+        function setInstruction(msg, pct) { instructionUI.innerText = msg; if(pct !== undefined) progressFill.style.width = pct + '%'; }
+        function reachHand(worldPos) {
+            const localPos = pitchObj.worldToLocal(worldPos.clone());
+            const dist = Math.min(localPos.length(), 2.5); localPos.normalize().multiplyScalar(dist);
+            anime({ targets: rightHand.position, x: localPos.x, y: localPos.y, z: localPos.z, duration: 200, direction: 'alternate', easing: 'easeInOutQuad' });
+        }
+
+        buildSausage();
+        document.getElementById('loading').style.opacity = '0';
+        setInstruction("1. GRIND IT. [Drag to look, Click floor to walk, Click objects to interact]", 0);
+
+        const raycaster = new THREE.Raycaster(); const mouse = new THREE.Vector2();
+        const planeY = new THREE.Plane(new THREE.Vector3(0,1,0), -cY);
+        const planeZ = new THREE.Plane(new THREE.Vector3(0,0,1), -0.5);
+
+        window.addEventListener('resize', () => { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+
+        window.addEventListener('pointerdown', (e) => {
+            previousMouse.x = e.clientX; previousMouse.y = e.clientY;
+            // Raycast exactly from center of camera
+            raycaster.setFromCamera(new THREE.Vector2(0, 0), camera); 
+            const hits = raycaster.intersectObjects(scene.children, true);
+            let hitDraggable = false;
+
+            if(hits.length > 0) {
+                const hitObj = hits[0].object;
+                const pt = hits[0].point;
+                const distToHit = playerGroup.position.distanceTo(pt);
+
+                if (distToHit < 10) { // Interaction Range
+                    // Check for draggables FIRST to prevent walk+drag
+                    if (gameState === 1 && hitObj === plungerHitbox) { dragTarget = 'PLUNGER'; hitDraggable = true; reachHand(pt); }
+                    if (gameState === 3 && hitObj === waterBowlHitbox) { dragTarget = 'CASING'; hitDraggable = true; unattachedCasing.visible = false; draggedCasing.visible = true; reachHand(pt); }
+                    if (gameState === 4 && hitObj.parent === crankGroup) { dragTarget = 'CRANK'; hitDraggable = true; sausageMesh.visible = true; tvText = "BLOW IT."; reachHand(pt); }
+                    if (gameState === 6 && hitObj === panHitbox) { dragTarget = 'PAN'; hitDraggable = true; reachHand(pt); }
+
+                    if (!hitDraggable) {
+                        // Click interactions
+                        if (gameState === 0 && chunks.includes(hitObj)) {
+                            if(hitObj.userData.state === 'BOWL') { hitObj.userData.state = 'TRAY'; anime({targets: hitObj.position, x: gX+(Math.random()-0.5)*3, y: cY+6, z: 0.5+(Math.random()-0.5)*2, duration: 400, easing: 'easeOutQuad'}); reachHand(pt); }
+                            else if (hitObj.userData.state === 'TRAY') { hitObj.userData.state = 'CHUTE'; meatInChute++; anime({targets: hitObj.position, x: gX, y: cY+4.5, z: 0.5, duration: 200, easing: 'easeInQuad', onComplete: ()=>hitObj.visible=false}); reachHand(pt);
+                                if(chunks.filter(c => c.userData.state === 'TRAY').length === 0) { gameState = 1; setInstruction("TURN IT ON.", 20); anime({targets: mainBowl.position, x: gX, z: 3.5, duration: 800}); anime({targets: mainBowlHitbox.position, x: gX, z: 3.5, duration: 800}); }
+                            }
+                        }
+                        else if (gameState === 1 && (hitObj === gSwitchHitbox || hitObj === gSwitchNotch)) {
+                            isGrinderOn = !isGrinderOn; anime({targets: gSwitchNotch.rotation, z: isGrinderOn ? Math.PI/4 : 0, duration: 200}); reachHand(pt);
+                            if(isGrinderOn) setInstruction("PUSH IT DOWN.", 25);
+                        }
+                        else if (gameState === 2 && hitObj === mainBowlHitbox) {
+                            gameState = 3; setInstruction("2. WILL IT BLOW? (Attach the casing)", 45); tvText = "WILL IT BLOW?"; reachHand(pt);
+                            anime({targets: mainBowl.position, x: sX, z: 4, duration: 1000}); anime({targets: meatMound.position, y: -0.5, duration: 1000}); 
+                        }
+                        else if (gameState === 5 && (hitObj === sTrayHitbox || hitObj === cerealBoxMesh)) {
+                            gameState = 6; setInstruction("3. MOVE PAN. SEAR THE FLESH.", 75); tvText = "SEAR IT."; reachHand(pt);
+                            sausageMesh.position.set(pan.position.x, pan.position.y, pan.position.z);
+                            pAnchors.forEach((a, i) => { a.base.x=0; a.base.y=0.5; a.base.z=(i/19)*5 - 2.5; pBodies[i].setTranslation({x: pan.position.x+a.base.x, y: pan.position.y+2, z: pan.position.z+a.base.z}, true); });
+                        }
+                        else if (gameState === 7 && hitObj === dialFLHitbox) {
+                            isCooking = true; anime({targets: dialFL.rotation, x: Math.PI/2 - Math.PI/4, duration: 300}); reachHand(pt);
+                            setInstruction("BURN.", 85); burnerFL.material.color.setHex(0xff3300); burnerFL.material.emissive.setHex(0xff0000);
+                        }
+                        else if (hitObj === floorMesh || hitObj === countertop) {
+                            targetWalkPos = pt.clone(); targetWalkPos.y = 0; // Set walk target
+                        }
+                    }
+                } else if (hitObj === floorMesh || hitObj === countertop) { // Walk to distant objects
+                    targetWalkPos = pt.clone(); targetWalkPos.y = 0;
+                }
+            }
+            if(!hitDraggable) isLooking = true;
+        });
+
+        window.addEventListener('pointermove', (e) => {
+            const dx = e.clientX - previousMouse.x; const dy = e.clientY - previousMouse.y;
+            
+            if (isLooking) {
+                yaw -= dx * 0.005; pitch -= dy * 0.005;
+                pitch = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1, pitch));
+                playerGroup.rotation.y = yaw; pitchObj.rotation.x = pitch;
+            } 
+            else if (dragTarget === 'PLUNGER') {
+                raycaster.setFromCamera(new THREE.Vector2(0, 0), camera); raycaster.ray.intersectPlane(planeZ, mouse);
+                let tY = Math.max(cY+3, Math.min(cY+7, plungerGroup.position.y - dy*0.05)); // Map mouse Y directly for better FPS feel
+                if(isGrinderOn && meatInChute > 0 && tY < plungerGroup.position.y) {
+                    const push = plungerGroup.position.y - tY; groundVol += push * 0.015;
+                    if(Math.random() < push*0.5) meatInChute--;
+                    meatMound.scale.setScalar(Math.max(0.001, groundVol * 1.5));
+                    for(let i=0; i<3; i++){ const p=gPartData.find(d=>!d.active); if(p){p.active=true; const ang=Math.random()*Math.PI*2, r=Math.random()*0.8; p.pos.set(gX+r*Math.cos(ang), cY+2.5, 2.1); p.vel.set((Math.random()-0.5)*1, -2-Math.random()*2, 1+Math.random()*2);}}
+                    if(groundVol >= 0.25) { dragTarget = null; gameState = 2; meatInChute=0; anime({targets: plungerGroup.position, y: cY+7, duration: 400}); setInstruction("MOVE BOWL.", 40); }
+                }
+                if(!isGrinderOn && meatInChute>0 && tY < cY+5.5) tY = cY+5.5;
+                plungerGroup.position.y = tY;
+            }
+            else if (dragTarget === 'CASING') {
+                raycaster.setFromCamera(new THREE.Vector2(0, 0), camera); raycaster.ray.intersectPlane(planeY, mouse); mouse.y = Math.max(cY+0.5, mouse.y);
+                draggedCurve.v2.set(sX+5 - dx*0.05, cY+2 - dy*0.05, -1); // Map mouse to curve end
+                draggedCurve.v1.set((sX+5+draggedCurve.v2.x)/2, cY+4, (-1+draggedCurve.v2.z)/2);
+                draggedCasing.geometry.dispose(); draggedCasing.geometry = new THREE.TubeGeometry(draggedCurve, 32, 0.3, 12, false);
+                if (draggedCurve.v2.distanceTo(nozzleTipPos) < 2.0) {
+                    dragTarget = null; draggedCasing.visible = false; gameState = 4; attachedCasing.visible = true; unattachedCasing.visible = false; setInstruction("CRANK IT.", 50);
+                }
+            }
+            else if (dragTarget === 'CRANK') {
+                crankGroup.rotation.x -= dy * 0.01; sRod.position.y = cY+8 - (stuffLevel * 5.0);
+                stuffLevel = Math.min(1.0, stuffLevel + Math.abs(dy) * 0.001);
+                attachedCasing.scale.z = Math.max(0.01, 1.0 - stuffLevel); attachedCasing.position.z = 0 - (stuffLevel * 1.5);
+                progressFill.style.width = (50 + stuffLevel*20) + '%';
+                if(stuffLevel >= 1.0) { dragTarget = null; gameState = 5; setInstruction("IT BLEW.", 70); }
+            }
+            else if (dragTarget === 'PAN') {
+                pan.position.x = Math.max(stoveX-3.5, Math.min(stoveX+3.5, pan.position.x + dx*0.02));
+                pan.position.z = Math.max(-3, Math.min(3, pan.position.z + dy*0.02));
+                if (pan.position.distanceTo(burnerFL.position) < 1.0) {
+                    pan.position.set(burnerFL.position.x, burnerFL.position.y, burnerFL.position.z);
+                    dragTarget = null; gameState = 7; sausageMesh.position.copy(pan.position);
+                    pAnchors.forEach(a => { a.base.x = pan.position.x + a.tgt.x; a.base.z = pan.position.z + a.tgt.z; });
+                    setInstruction("BURN IT.", 80);
+                }
+            }
+            previousMouse.x = e.clientX; previousMouse.y = e.clientY;
+        });
+
+        window.addEventListener('pointerup', () => {
+            isLooking = false;
+            if(dragTarget === 'PLUNGER') { anime({targets: plungerGroup.position, y: cY+7, duration: 400}); }
+            if(dragTarget === 'CASING') { draggedCasing.visible = false; unattachedCasing.visible = true; }
+            if(dragTarget === 'CRANK') { tvText = "WILL IT BLOW?"; }
+            dragTarget = null;
+        });
+
+        // --- RENDER LOOP ---
+        const clock = new THREE.Clock(); let splatCount = 0; const sDum = new THREE.Object3D();
+
+        function animate() {
+            requestAnimationFrame(animate); const delta = Math.min(clock.getDelta(), 0.1), time = clock.getElapsedTime();
+
+            // FPS Walk & Constraint Logic
+            if(targetWalkPos) {
+                const cPos = playerGroup.position.clone(); cPos.y = 0; const d = cPos.distanceTo(targetWalkPos);
+                if(d > 0.5) {
+                    const dir = targetWalkPos.clone().sub(cPos).normalize();
+                    const nPos = cPos.add(dir.multiplyScalar(12 * delta));
+                    if(nPos.distanceTo(wallAnchor) < chainMaxDist) {
+                        playerGroup.position.x = nPos.x; playerGroup.position.z = nPos.z;
+                        pitchObj.position.y = 5.5 + Math.sin(time*15)*0.2; // Head bob
+                        leftFoot.position.z = Math.sin(time*15)*0.8; rightFoot.position.z = -Math.sin(time*15)*0.8;
+                        leftFoot.position.y = 0.15 + Math.max(0, Math.sin(time*15)*0.3); rightFoot.position.y = 0.15 + Math.max(0, -Math.sin(time*15)*0.3);
+                    } else targetWalkPos = null; // Reached chain limit
+                } else targetWalkPos = null;
+            } else {
+                pitchObj.position.y = THREE.MathUtils.lerp(pitchObj.position.y, 5.5, delta*5);
+                leftFoot.position.lerp(new THREE.Vector3(-0.4, 0.15, 0), delta*10); rightFoot.position.lerp(new THREE.Vector3(0.4, 0.15, 0), delta*10);
+            }
+
+            // Animate Chain
+            const aPos = new THREE.Vector3(); rightFoot.getWorldPosition(aPos);
+            const cD = aPos.distanceTo(wallAnchor); const sag = Math.max(0, 4 - cD*0.2);
+            for(let i=0; i<chainLinks.length; i++) {
+                const t = i / (chainLinks.length-1);
+                chainLinks[i].position.set(THREE.MathUtils.lerp(aPos.x, wallAnchor.x, t), THREE.MathUtils.lerp(aPos.y, wallAnchor.y, t) - Math.sin(t*Math.PI)*sag, THREE.MathUtils.lerp(aPos.z, wallAnchor.z, t));
+                chainLinks[i].lookAt(wallAnchor); if(i%2===0) chainLinks[i].rotateZ(Math.PI/2);
+            }
+
+            // Idle hand breathing
+            if(dragTarget === null) {
+                leftHand.position.y = -0.5 + Math.sin(time*2)*0.02; rightHand.position.y = -0.5 + Math.sin(time*2.2)*0.02;
+            }
+
+            updateTVScreen(time);
+            if(window.flickerLight) { window.flickerLight.intensity = (Math.random() < 0.05) ? 0 : 50; }
+
+            // Grinder Vibration & Particles
+            if(gameState === 1 && isGrinderOn) {
+                const v = Math.sin(time*50)*0.02; gMotor.position.x = gX+v; gChute.position.x = gX+v; gExtruder.position.x = gX+v; gFaceplate.rotation.y += delta*5;
+            } else if (gameState === 1) { gMotor.position.x=gX; gChute.position.x=gX; gExtruder.position.x=gX; }
+
+            if(gameState === 1 || gameState === 2) {
+                const gDum = new THREE.Object3D();
+                for(let i=0; i<maxGParts; i++) {
+                    const p = gPartData[i];
+                    if(p.active) {
+                        p.vel.y -= 15*delta; p.pos.addScaledVector(p.vel, delta); p.rot.x+=delta;
+                        if(p.pos.y < cY+0.5+(groundVol*1.5)) p.active=false;
+                        else { gDum.position.copy(p.pos); gDum.rotation.copy(p.rot); gDum.updateMatrix(); gPartMesh.setMatrixAt(i, gDum.matrix); }
+                    } else { gDum.position.set(0,999,0); gDum.updateMatrix(); gPartMesh.setMatrixAt(i, gDum.matrix); }
+                }
+                gPartMesh.instanceMatrix.needsUpdate = true;
+            }
+
+            // Cooking Logic
+            if(isCooking && cookLevel < 1.0) {
+                cookLevel += delta * 0.04; progressFill.style.width = (80 + cookLevel*20) + '%';
+                const tC = new THREE.Color();
+                if(cookLevel<0.5) tC.lerpColors(new THREE.Color(0xffaaaa), new THREE.Color(0x3a1010), cookLevel/0.5); else tC.lerpColors(new THREE.Color(0x3a1010), new THREE.Color(0x050505), (cookLevel-0.5)/0.5);
+                meatMat.color.copy(tC); meatMat.roughness = Math.min(1.0, 0.4 + cookLevel*0.8); meatMat.bumpScale = 0.08 + cookLevel*0.4; meatMat.clearcoat = 0.9 * Math.max(0, 1 - cookLevel*1.5);
+                sausageMesh.scale.set(1 - cookLevel*0.2, 1, 1 - cookLevel*0.2);
+                greaseMat.opacity = 0.2 + cookLevel*0.7; greasePool.position.y = 0.25 + cookLevel*0.15;
+                if(cookLevel >= 1.0) { tvText = "5 OUT OF 5 RUFFALOS"; setInstruction("5 OUT OF 5 RUFFALOS. GAME OVER.", 100); isCooking = false; }
+            }
+
+            world.step();
+            const cbPos = cBoxBody.translation(), cbRot = cBoxBody.rotation(); cerealBoxMesh.position.set(cbPos.x, cbPos.y, cbPos.z); cerealBoxMesh.quaternion.set(cbRot.x, cbRot.y, cbRot.z, cbRot.w);
+
+            if(sausageMesh && pBodies.length > 0) {
+                for(let i=0; i<pBodies.length; i++) {
+                    const a = pAnchors[i], b = pBodies[i];
+                    if(gameState === 4) { 
+                        if(stuffLevel >= a.t && !a.ext) {
+                            a.ext = true; pBones[i].scale.setScalar(1); b.setTranslation({x: nozzleTipPos.x, y: nozzleTipPos.y, z: nozzleTipPos.z}, true); b.setLinvel({x:0,y:0,z:0}, true);
+                            b.applyImpulse({x: (Math.random()-0.5)*1.0, y: 1.5, z: 25.0}, true);
+                        }
+                        if(!a.ext) continue; 
+                    }
+                    if (gameState !== 4) {
+                        const p = a.base.clone();
+                        if(gameState >= 5 && cookLevel > 0) {
+                            const sY = 1 - (cookLevel*0.25), d2 = Math.sqrt((p.x-a.tgt.x)**2 + (p.z-a.tgt.z)**2); p.y = (p.y * sY) + ((d2*0.12) ** 2 * cookLevel * 0.8);
+                            if(isCooking) { p.x += Math.sin(time*25+i)*0.04; p.z += Math.cos(time*28+i)*0.04; } 
+                        }
+                        const pos = b.translation(), vel = b.linvel();
+                        b.applyImpulse({x: ((p.x-pos.x)*80 - vel.x*10)*delta, y: ((p.y-pos.y)*80 - vel.y*10)*delta, z: ((p.z-pos.z)*80 - vel.z*10)*delta}, true);
+                    }
+                    const pPos = b.translation(); pBones[i].position.set(pPos.x, pPos.y, pPos.z);
+                }
+            }
+
+            if(isCooking) {
+                splatCount = 0; 
+                for(let i=0; i<Math.floor(cookLevel*15); i++){ sDum.position.set(Math.random()*4.3*Math.cos(Math.random()*Math.PI*2), Math.random()*4.3*Math.sin(Math.random()*Math.PI*2), 0); sDum.scale.setScalar(0.5+Math.random()); sDum.updateMatrix(); splatMesh.setMatrixAt(splatCount++, sDum.matrix); }
+                pBodies.forEach((b, i) => { if(pBones[i].position.y < cY+1.5 && b.linvel().x > 0.2) { sDum.position.set(pBones[i].position.x - pan.position.x, -(pBones[i].position.z - pan.position.z), 0); sDum.scale.setScalar(1.5); sDum.updateMatrix(); splatMesh.setMatrixAt(splatCount++, sDum.matrix); }});
+                splatMesh.count = splatCount; if(splatCount>0){ splatMesh.instanceMatrix.needsUpdate=true; renderer.setRenderTarget(rtCurr); renderer.autoClear=false; renderer.render(splatScene, splatCamera); renderer.autoClear=true; }
+                fQuad.material=simMat; simMat.uniforms.u_curr.value=rtCurr.texture; simMat.uniforms.u_prev.value=rtPrev.texture; simMat.uniforms.damp.value=0.98-cookLevel*0.05; renderer.setRenderTarget(rtNext); renderer.render(fScene, fCam);
+                fQuad.material=normMat; normMat.uniforms.u_h.value=rtNext.texture; renderer.setRenderTarget(rtNorm); renderer.render(fScene, fCam);
+                const t=rtPrev; rtPrev=rtCurr; rtCurr=rtNext; rtNext=t; renderer.setRenderTarget(null);
+
+                const sPos = steamMesh.geometry.attributes.position.array; let sAct=0;
+                for(let i=0; i<200; i++) {
+                    if(sPartLife[i]<=0 && Math.random()<cookLevel*0.8) {
+                        const bIdx = Math.floor(Math.random()*pBones.length); const pt = pBones[bIdx].position;
+                        sPos[i*3]=pt.x; sPos[i*3+1]=pt.y; sPos[i*3+2]=pt.z;
+                        sPartVel[i].set((Math.random()-0.5), 1+Math.random()*2, (Math.random()-0.5)); sPartLife[i]=1;
+                    }
+                    if(sPartLife[i]>0) {
+                        sPartLife[i]-=delta*0.5; sPos[i*3]+=sPartVel[i].x*delta; sPos[i*3+1]+=sPartVel[i].y*delta; sPos[i*3+2]+=sPartVel[i].z*delta;
+                        if(sPartLife[i]<=0) sPos[i*3]=999; sAct++;
+                    }
+                }
+                steamMesh.geometry.attributes.position.needsUpdate=true; steamMesh.material.opacity = Math.max(0.1, 0.8 - (sAct/200)*0.2);
+            }
+
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+</html>

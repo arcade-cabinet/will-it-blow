@@ -18,6 +18,7 @@
       "!!**/test-results",
       "!!**/playwright-report",
       "!!**/.playwright-mcp",
+      "!!**/docs/poc",
       "!!sausage_factory.html"
     ]
   },

@@ -11,9 +11,10 @@
 import {useFrame} from '@react-three/fiber';
 import type {RapierRigidBody} from '@react-three/rapier';
 import {CapsuleCollider, RigidBody} from '@react-three/rapier';
-import {useRef} from 'react';
+import {useEffect, useRef} from 'react';
 import playerConfig from '../config/player.json';
 import {useGameStore} from '../ecs/hooks';
+import {playerPosition} from './playerPosition';
 import {useJump} from './useJump';
 import {usePhysicsMovement} from './usePhysicsMovement';
 
@@ -39,14 +40,33 @@ export const PlayerCapsule = ({moveDirection = {x: 0, z: 0}}: PlayerCapsuleProps
 
   const setPlayerPosition = useGameStore(s => s.setPlayerPosition);
 
-  // Sync Rapier body position to Koota ECS PlayerTrait each frame.
+  // Dev-only teleport hook — exposed on window so playtests and the debug
+  // bridge can reposition the player without simulating WASD input. No-op
+  // in production builds (tree-shaken by the `import.meta.env.DEV` guard).
+  useEffect(() => {
+    if (!import.meta.env.DEV || typeof window === 'undefined') return;
+    window.__WIB_TELEPORT__ = (x: number, y: number, z: number) => {
+      const body = rigidBodyRef.current;
+      if (!body) return;
+      body.setTranslation({x, y, z}, true);
+      body.setLinvel({x: 0, y: 0, z: 0}, true);
+      body.setAngvel({x: 0, y: 0, z: 0}, true);
+    };
+    return () => {
+      delete window.__WIB_TELEPORT__;
+    };
+  }, []);
+
+  // Sync Rapier body position to Koota ECS PlayerTrait + shared per-frame
+  // singleton (consumed by FPSCamera in the same tick). The ECS write feeds
+  // React-subscribed consumers; the singleton mutation is a zero-allocation
+  // hot-path hand-off that avoids the React store entirely.
   useFrame(() => {
     const body = rigidBodyRef.current;
     if (!body) return;
     const t = body.translation();
     setPlayerPosition(t.x, t.y, t.z);
-    // Also write to window for FPSCamera (original POC pattern)
-    (window as any).__playerPos = {x: t.x, y: t.y, z: t.z};
+    playerPosition.set(t.x, t.y, t.z);
   });
 
   return (

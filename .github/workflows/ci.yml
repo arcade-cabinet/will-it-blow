@@ -38,7 +38,7 @@ jobs:
       - name: Type-check
         run: pnpm typecheck
 
-      - name: Test
+      - name: Unit tests (jsdom)
         run: pnpm test
 
       - name: Build
@@ -47,5 +47,8 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Run E2E tests (headed with virtual display)
-        run: xvfb-run --auto-servernum npx playwright test
+      - name: Browser-mode component tests (real Chromium)
+        run: xvfb-run --auto-servernum pnpm test:browser
+
+      - name: End-to-end tests (Playwright)
+        run: xvfb-run --auto-servernum pnpm test:e2e

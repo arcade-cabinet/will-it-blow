@@ -38,6 +38,21 @@ let _pendingYaw: number | null = null;
 /** Module-level pitch override. null = not overridden. */
 let _pendingPitch: number | null = null;
 
+/** Latest yaw applied to the camera, exposed for debug/E2E queries. */
+let _currentYaw = 0;
+/** Latest pitch applied to the camera, exposed for debug/E2E queries. */
+let _currentPitch = -0.05;
+
+/** Current camera yaw in radians. Updated every frame. */
+export function getCurrentYaw(): number {
+  return _currentYaw;
+}
+
+/** Current camera pitch in radians. Updated every frame. */
+export function getCurrentPitch(): number {
+  return _currentPitch;
+}
+
 /**
  * Set camera yaw in radians from outside the hook (e.g. debug bridge).
  * The value is applied on the next useFrame tick.
@@ -101,5 +116,8 @@ export function useMouseLook(): void {
     camera.rotation.order = 'YXZ';
     camera.rotation.y = yawRef.current;
     camera.rotation.x = pitchRef.current;
+    // Mirror current values to module-level getters for the debug bridge.
+    _currentYaw = yawRef.current;
+    _currentPitch = pitchRef.current;
   });
 }
