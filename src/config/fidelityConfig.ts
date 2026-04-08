@@ -1,42 +1,52 @@
 /**
  * @module fidelityConfig
- * Centralized particle count and FBO size tuning for mobile-first
- * performance (T2.C).
+ * Centralized particle count, FBO size, and simulation tuning.
  *
  * WHY centralized: the Grinder, Stove, and BlowoutStation each had
- * hardcoded constants that were tuned for desktop. This module collects
- * them into one file so performance profiling adjusts one place instead
- * of three scattered files.
+ * hardcoded constants. This module collects them into one file so
+ * performance profiling or platform-specific presets adjust one place
+ * instead of three scattered files.
  *
- * The default preset targets iPhone 12-class GPUs (A14 Bionic) at 60fps
- * with all set dressing active. Desktop can raise these via a "high"
- * preset in a future settings menu.
+ * VALUES: these match the original POC (docs/poc/minigames.html) which
+ * was the design target. The POC ran fine on desktop; mobile profiling
+ * will come later as a separate performance pass with adaptive
+ * quality, NOT as a pre-emptive downgrade that sacrifices the visual
+ * signature the game was designed around.
  */
 
 export interface FidelityPreset {
-  /** Grinder: max instanced meat particles. Was 300, reduced to 150. */
+  /** Grinder: max instanced meat particles. POC target: 300. */
   grinderMaxParticles: number;
-  /** Grinder: particles spawned per drag frame. Was 5, reduced to 3. */
+  /** Grinder: particles spawned per plunger-drag frame. POC target: 5. */
   grinderSpawnPerFrame: number;
-  /** Stove: FBO ripple sim resolution (px). Kept at 128 for mobile. */
+  /** Grinder: number of raw meat chunks in the chute. POC target: 20. */
+  grinderMeatChunks: number;
+  /** Stove: FBO ripple sim resolution (px). POC target: 512. */
   stoveFboSize: number;
-  /** Stove: max instanced splat meshes. Was 100, reduced to 48. */
+  /** Stove: max instanced splat meshes for the grease pool. POC target: 1000. */
   stoveSplatInstances: number;
-  /** Blowout: max burst particles. Was 80, reduced to 48. */
+  /** Stove: grease pool displacement intensity. POC target: 1.5. */
+  stoveDisplacementScale: number;
+  /** Blowout: max burst particles. POC target: 1000. */
   blowoutParticleCount: number;
-  /** Blowout: max floor splatter stains. Was 12, reduced to 8. */
+  /** Blowout: max floor splatter stains. POC target: 50. */
   blowoutSplatterCount: number;
 }
 
 /**
- * Mobile-first fidelity preset. Targets 60fps on A14-class GPUs with
- * all set dressing + CRT shader active.
+ * POC-faithful fidelity preset — the design target.
+ *
+ * The POC's grease pool FBO at 512², 1000 splat instances, and 1000
+ * blowout particles are what make the game's visual signature. These
+ * are NOT optional polish — they are the agreed visual bar.
  */
 export const FIDELITY: FidelityPreset = {
-  grinderMaxParticles: 150,
-  grinderSpawnPerFrame: 3,
-  stoveFboSize: 128,
-  stoveSplatInstances: 48,
-  blowoutParticleCount: 48,
-  blowoutSplatterCount: 8,
+  grinderMaxParticles: 300,
+  grinderSpawnPerFrame: 5,
+  grinderMeatChunks: 20,
+  stoveFboSize: 512,
+  stoveSplatInstances: 1000,
+  stoveDisplacementScale: 1.5,
+  blowoutParticleCount: 1000,
+  blowoutSplatterCount: 50,
 };

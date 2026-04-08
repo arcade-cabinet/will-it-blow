@@ -148,7 +148,7 @@ export function Stove() {
         ior: 1.4,
         depthWrite: false,
         displacementMap: rtCurr.current.texture,
-        displacementScale: 0.2,
+        displacementScale: FIDELITY.stoveDisplacementScale,
         normalMap: rtNormal.current.texture,
         normalScale: new THREE.Vector2(1, 1),
       }),

@@ -83,14 +83,22 @@ export function Grinder() {
   const plungeStartTime = useRef<number | null>(null);
   const plungePauses = useRef(0);
 
-  // Chunk state: 0 = in bowl, 1 = on tray, 2 = in chute (ready to grind)
-  const [chunks, setChunks] = useState([
-    {id: 1, state: 0, pos: [-0.6, 0.4, 0]},
-    {id: 2, state: 0, pos: [-0.8, 0.4, 0.2]},
-    {id: 3, state: 0, pos: [-0.5, 0.5, 0.3]},
-    {id: 4, state: 0, pos: [-0.7, 0.6, -0.2]},
-    {id: 5, state: 0, pos: [-0.4, 0.4, -0.3]},
-  ]);
+  // Chunk state: 0 = in bowl, 1 = on tray, 2 = in chute (ready to grind).
+  // POC had 20 chunks; count is driven by FIDELITY.grinderMeatChunks.
+  // Positions are generated in a rough cluster around the bowl origin
+  // using the seeded RNG so the pile looks organic but is deterministic.
+  const [chunks, setChunks] = useState(() => {
+    const count = FIDELITY.grinderMeatChunks;
+    return Array.from({length: count}, (_, i) => ({
+      id: i + 1,
+      state: 0,
+      pos: [
+        -0.6 + (((i * 7) % 11) - 5) * 0.06,
+        0.4 + ((i * 3) % 5) * 0.05,
+        (((i * 13) % 9) - 4) * 0.08,
+      ] as [number, number, number],
+    }));
+  });
 
   const [bowlPos, setBowlPos] = useState<[number, number, number]>([-0.6, 0.1, 0]);
   const [bowlState, setBowlState] = useState<'SIDE' | 'UNDER'>('SIDE');
