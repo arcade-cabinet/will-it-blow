@@ -20,7 +20,7 @@
 import type {IngredientDef, IngredientTrait} from './IngredientComposition';
 import {traitSetOf} from './IngredientComposition';
 
-// ─── Types ───────────────────────────────────────────────────────────
+// --- Types -------------------------------------------------------------------
 
 export type ClueType = 'literal' | 'misdirection' | 'shock-me';
 
@@ -54,7 +54,7 @@ export interface MatchResult {
   readonly bonusCoherence: number;
 }
 
-// ─── Clue templates ──────────────────────────────────────────────────
+// --- Clue templates ----------------------------------------------------------
 
 /**
  * Literal clue: "My tummy rumbles for something X and Y".
@@ -71,16 +71,43 @@ function makeLiteralClue(traits: IngredientTrait[]): Clue {
   };
 }
 
-/** Misdirection templates — fantasy-flavour text with hidden trait lists. */
+/**
+ * Misdirection templates — fantasy-flavour text with hidden trait lists.
+ * 20+ entries for replayability. Every trait referenced here MUST exist
+ * in the VALID_TRAITS set below; the `isValidTrait` filter catches
+ * typos at runtime but we aim for zero false hits.
+ */
 const MISDIRECTION_TEMPLATES: {text: string; traits: IngredientTrait[]}[] = [
+  // --- Original 8 ---
   {text: 'I dream of walrus marinated in sprite...', traits: ['meat', 'fatty', 'sweet', 'sour']},
   {text: 'Bring me something from the deep...', traits: ['wet', 'slimy', 'cold']},
   {text: "A memory of grandmother's kitchen...", traits: ['sweet', 'soft', 'warm']},
   {text: 'The crunch of bones beneath my teeth...', traits: ['brittle', 'hard', 'crunchy']},
   {text: 'Something that screams when you cut it...', traits: ['alive', 'wet', 'natural']},
-  {text: 'I want to feel the BURN...', traits: ['spicy', 'hot' as IngredientTrait, 'dry']},
+  {text: 'I want to feel the BURN...', traits: ['spicy', 'dry', 'bright']},
   {text: 'Give me the forbidden fruit...', traits: ['sweet', 'cursed', 'plant']},
   {text: 'Metallic. Industrial. PERFECT.', traits: ['metallic', 'hard', 'processed']},
+  // --- 12 new templates for replayability ---
+  {text: 'Slippery like a lie...', traits: ['slimy', 'smooth', 'wet']},
+  {text: 'I can still hear it mooing...', traits: ['meat', 'raw', 'dead']},
+  {text: 'Dust and broken promises.', traits: ['dry', 'brittle', 'dull']},
+  {text: 'It tastes like a mistake I made in college.', traits: ['bitter', 'processed', 'cold']},
+  {text: 'Something the devil would snack on...', traits: ['cursed', 'spicy', 'unsettling']},
+  {text: 'Straight from the garden of sin.', traits: ['plant', 'natural', 'sweet']},
+  {text: 'The last meal of a condemned man.', traits: ['umami', 'salty', 'fatty']},
+  {text: 'Colder than my ex...', traits: ['cold', 'hard', 'pale']},
+  {text: 'Something you found behind a dumpster.', traits: ['absurd', 'dull', 'processed']},
+  {text: 'It glows in the dark...', traits: ['shiny', 'bright', 'cursed']},
+  {text: 'Chew on this for a while.', traits: ['fibrous', 'chunky', 'hard']},
+  {text: 'What even IS that...', traits: ['absurd', 'unsettling', 'squishy']},
+  {text: "Smoother than a con man's handshake.", traits: ['smooth', 'shiny', 'soft']},
+  {text: "Like licking a 9-volt battery...", traits: ['metallic', 'bitter', 'dry']},
+  {text: 'Something that was alive five minutes ago.', traits: ['alive', 'meat', 'squishy']},
+  {text: 'Feed me the tears of the innocent.', traits: ['salty', 'wet', 'bland']},
+  {text: 'I crave the VOID.', traits: ['cold', 'dull', 'dry', 'dead']},
+  {text: 'Make it fancy. MAKE. IT. FANCY.', traits: ['shiny', 'umami', 'cooked']},
+  {text: 'Something you would NOT put in a sausage.', traits: ['absurd', 'hard', 'never-alive']},
+  {text: "Grandpa's secret ingredient...", traits: ['bitter', 'once-alive', 'warm']},
 ];
 
 function makeMisdirectionClue(rng: () => number): Clue {
@@ -107,7 +134,7 @@ function makeShockMeClue(): Clue {
   };
 }
 
-// ─── Trait helpers ────────────────────────────────────────────────────
+// --- Trait helpers ------------------------------------------------------------
 
 /** All valid IngredientTrait values for runtime validation. */
 const VALID_TRAITS: ReadonlySet<string> = new Set([
@@ -179,7 +206,7 @@ function findSharedTraits(available: readonly IngredientDef[]): Map<IngredientTr
   return counts;
 }
 
-// ─── Public API ──────────────────────────────────────────────────────
+// --- Public API --------------------------------------------------------------
 
 /**
  * Generate a clue for the given round from the available ingredient pool.
