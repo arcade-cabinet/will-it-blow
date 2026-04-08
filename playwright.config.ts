@@ -29,6 +29,13 @@ const config: PlaywrightTestConfig = {
 
   reporter: [['html', {open: isCI ? 'never' : 'on-failure'}], ['list']],
 
+  // Drop the `{platform}` suffix from snapshot names so a single baseline
+  // (generated on whichever OS the author happens to be on) is reused on
+  // every CI runner. GPU font rasterisation still differs between macOS
+  // and Linux, so the visual regression tests set a generous
+  // `maxDiffPixels` / `threshold`.
+  snapshotPathTemplate: '{testFileDir}/{testFileName}-snapshots/{arg}-{projectName}{ext}',
+
   expect: {
     timeout: 15_000,
   },
