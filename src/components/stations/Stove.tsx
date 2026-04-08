@@ -12,6 +12,9 @@
  * Style points (T1.C): completing the cook awards flair based on the
  * final cook level. A perfect medium cook (0.5-0.7) earns "Perfect
  * Sear"; overcooking or undercooking earns less.
+ *
+ * Fidelity tuning (T2.C): FBO size and splat instance count now read
+ * from the centralized FIDELITY config for mobile-first performance.
  */
 import {Torus, useGLTF} from '@react-three/drei';
 import {useFrame, useThree} from '@react-three/fiber';
@@ -19,13 +22,16 @@ import {RigidBody} from '@react-three/rapier';
 import {useDrag} from '@use-gesture/react';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
+import {FIDELITY} from '../../config/fidelityConfig';
 import {useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
 import {useRunRng} from '../../engine/useRunRng';
 import {asset} from '../../utils/assetPath';
 import {requestHandGesture} from '../camera/handGestureStore';
 
-const fboSize = 256;
+/** T2.C: FBO size from centralized fidelity config (was hardcoded 256). */
+const fboSize = FIDELITY.stoveFboSize;
+
 const fboOptions = {
   format: THREE.RGBAFormat,
   type: THREE.HalfFloatType,
@@ -95,9 +101,11 @@ export function Stove() {
   const splatScene = useMemo(() => new THREE.Scene(), []);
   const splatCamera = useMemo(() => new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1), []);
   const splatMesh = useMemo(() => {
+    /** T2.C: splat instance count from fidelity config (was hardcoded 100). */
+    const count = FIDELITY.stoveSplatInstances;
     if (typeof document === 'undefined') {
       const mat = new THREE.MeshBasicMaterial({transparent: true, opacity: 0});
-      return new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), mat, 100);
+      return new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), mat, count);
     }
     const sCtx = document.createElement('canvas').getContext('2d');
     if (sCtx) {
@@ -116,7 +124,7 @@ export function Stove() {
       depthWrite: false,
       depthTest: false,
     });
-    return new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), mat, 100);
+    return new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), mat, count);
   }, []);
 
   useEffect(() => {

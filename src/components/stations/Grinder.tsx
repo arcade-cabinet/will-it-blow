@@ -11,6 +11,9 @@
  *
  * Style points (T1.C): completing the grind phase awards flair based
  * on how smoothly the player plunged (continuous vs stop-start).
+ *
+ * Fidelity tuning (T2.C): particle count and spawn-per-frame now read
+ * from the centralized FIDELITY config for mobile-first performance.
  */
 import {Box, Cylinder, useTexture} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
@@ -18,13 +21,15 @@ import {RigidBody} from '@react-three/rapier';
 import {useDrag} from '@use-gesture/react';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
+import {FIDELITY} from '../../config/fidelityConfig';
 import {useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
 import {useRunRng} from '../../engine/useRunRng';
 import {asset} from '../../utils/assetPath';
 import {requestHandGesture} from '../camera/handGestureStore';
 
-const MAX_PARTICLES = 300;
+/** T2.C: particle count from centralized fidelity config (was hardcoded 300). */
+const MAX_PARTICLES = FIDELITY.grinderMaxParticles;
 
 export function Grinder() {
   const [isGrinderOn, setIsGrinderOn] = useState(false);
@@ -182,9 +187,10 @@ export function Grinder() {
           });
         }
 
-        // Spawn particles -- every random draw routes through `rng`
+        // Spawn particles -- every random draw routes through `rng`.
+        // T2.C: spawn count reads from FIDELITY config (was hardcoded 5).
         const data = particlesData.current;
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < FIDELITY.grinderSpawnPerFrame; i++) {
           const p = data[particleSpawnIndex.current];
           particleSpawnIndex.current = (particleSpawnIndex.current + 1) % MAX_PARTICLES;
 

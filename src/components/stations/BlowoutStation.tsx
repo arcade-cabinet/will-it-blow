@@ -15,10 +15,14 @@
  * Determinism note (T0.A): all random jitter (tube initial pressure,
  * particle scatter, splatter positions) routes through a per-component
  * seeded RNG. Save-scummed reloads see the same blow pattern.
+ *
+ * Fidelity tuning (T2.C): particle and splatter counts now read from
+ * the centralized FIDELITY config for mobile-first performance.
  */
 import {useFrame, useThree} from '@react-three/fiber';
 import {useCallback, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
+import {FIDELITY} from '../../config/fidelityConfig';
 import {useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
 import {compositeMix} from '../../engine/IngredientComposition';
@@ -28,8 +32,9 @@ import type {createSplatterCanvas} from './blowout/CanvasTextureSplatter';
 import {CerealBoxTarget} from './blowout/CerealBoxTarget';
 import {getCompositeTier} from './blowout/compositeTier';
 
-const PARTICLE_COUNT = 80;
-const SPLATTER_COUNT = 12;
+/** T2.C: particle and splatter counts from centralized fidelity config. */
+const PARTICLE_COUNT = FIDELITY.blowoutParticleCount;
+const SPLATTER_COUNT = FIDELITY.blowoutSplatterCount;
 
 /**
  * Closure-bound RNG helper. We can't read the seeded `rng` at module
