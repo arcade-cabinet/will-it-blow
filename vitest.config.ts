@@ -86,12 +86,7 @@ export default defineConfig({
           environment: 'jsdom',
           globals: true,
           include: ['src/**/*.test.{ts,tsx}', '__tests__/**/*.test.{ts,tsx}'],
-          exclude: [
-            'e2e/**',
-            'tests/**',
-            'node_modules/**',
-            'src/**/*.browser.test.{ts,tsx}',
-          ],
+          exclude: ['e2e/**', 'tests/**', 'node_modules/**', 'src/**/*.browser.test.{ts,tsx}'],
         },
       },
 
@@ -107,10 +102,7 @@ export default defineConfig({
           // mounted component. Without this, screenshots come out
           // unstyled (raw browser defaults on `<button>` etc).
           setupFiles: ['./tests/harness/browser-setup.ts'],
-          include: [
-            'src/**/*.browser.test.{ts,tsx}',
-            'tests/**/*.browser.test.{ts,tsx}',
-          ],
+          include: ['src/**/*.browser.test.{ts,tsx}', 'tests/**/*.browser.test.{ts,tsx}'],
           // Sequential file execution + per-file isolation so each
           // browser test file gets a clean page context. Prevents
           // WebGL context limits and React-tree leaks between files.

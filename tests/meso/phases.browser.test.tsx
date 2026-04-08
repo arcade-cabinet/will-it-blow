@@ -19,7 +19,7 @@
  *   - micro layer (per-station component screenshots)
  *   - macro layer Yuka playthrough (full-scene phase strip)
  */
-import {expect, test, beforeAll, beforeEach} from 'vitest';
+import {beforeAll, beforeEach, expect, test} from 'vitest';
 import {initDebugInterface} from '../../src/debug/PlaytestGovernor';
 import type {GamePhase} from '../../src/ecs/hooks';
 import {useGameStore} from '../../src/ecs/hooks';
@@ -56,9 +56,7 @@ const ALL_PHASES = Object.keys(PHASE_TEXT) as GamePhase[];
 test('every phase produces its expected SurrealText', () => {
   for (const phase of ALL_PHASES) {
     useGameStore.getState().setGamePhase(phase);
-    expect(window.__WIB_DEBUG__?.getCurrentSurrealText(), `phase ${phase}`).toBe(
-      PHASE_TEXT[phase],
-    );
+    expect(window.__WIB_DEBUG__?.getCurrentSurrealText(), `phase ${phase}`).toBe(PHASE_TEXT[phase]);
   }
 });
 

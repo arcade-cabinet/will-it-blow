@@ -15,7 +15,7 @@
  * full-app macros confirm rendering/integration in dedicated
  * single-viewport runs.
  */
-import {expect, test, beforeAll, beforeEach} from 'vitest';
+import {beforeAll, beforeEach, expect, test} from 'vitest';
 import {initDebugInterface} from '../../src/debug/PlaytestGovernor';
 import {useGameStore} from '../../src/ecs/hooks';
 import {GoapGovernor} from '../harness/goap/GoapGovernor';

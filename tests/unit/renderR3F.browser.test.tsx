@@ -43,7 +43,10 @@ test('renderR3F mounts a scene with a live root state', async () => {
 
 test('advance(ms) pumps real frames through useFrame', async () => {
   let lastTick = 0;
-  const scene = await renderR3FAndSettle(<Counter onTick={n => void (lastTick = n)} />);
+  const onTick = (n: number) => {
+    lastTick = n;
+  };
+  const scene = await renderR3FAndSettle(<Counter onTick={onTick} />);
   const before = lastTick;
   await scene.advance(100);
   expect(lastTick).toBeGreaterThan(before);

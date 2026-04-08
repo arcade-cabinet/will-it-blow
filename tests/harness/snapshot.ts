@@ -88,9 +88,7 @@ export async function captureSnapshot(options: CaptureOptions): Promise<string> 
   if (scope === 'canvas') {
     const canvas = document.querySelector('canvas');
     if (!canvas) {
-      throw new Error(
-        'captureSnapshot: scope=canvas but no <canvas> in the DOM. Did R3F mount?',
-      );
+      throw new Error('captureSnapshot: scope=canvas but no <canvas> in the DOM. Did R3F mount?');
     }
     await page.screenshot({path, element: canvas});
   } else {

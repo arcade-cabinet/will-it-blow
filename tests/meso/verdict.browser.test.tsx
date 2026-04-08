@@ -11,11 +11,11 @@
  *
  * This test pins each branch via the perception bridge.
  */
-import {expect, test, beforeAll, beforeEach} from 'vitest';
+import {beforeAll, beforeEach, expect, test} from 'vitest';
 import {initDebugInterface} from '../../src/debug/PlaytestGovernor';
 import {useGameStore} from '../../src/ecs/hooks';
-import {AppTrait, ScoreTrait} from '../../src/ecs/traits';
 import {ecsWorld} from '../../src/ecs/kootaWorld';
+import {AppTrait, ScoreTrait} from '../../src/ecs/traits';
 
 beforeAll(() => {
   initDebugInterface();

@@ -11,8 +11,8 @@
  * exact same code path the dev server would, just with a fresh
  * React root per test.
  */
-import {expect, test, beforeAll, afterEach} from 'vitest';
-import {render, cleanup} from 'vitest-browser-react';
+import {afterEach, beforeAll, expect, test} from 'vitest';
+import {cleanup, render} from 'vitest-browser-react';
 import {App} from '../../src/App';
 import {initDebugInterface} from '../../src/debug/PlaytestGovernor';
 import {captureSnapshot} from '../harness/snapshot';
@@ -26,9 +26,7 @@ afterEach(() => {
 });
 
 function findButton(text: string): HTMLButtonElement | undefined {
-  return Array.from(document.querySelectorAll('button')).find(b =>
-    b.textContent?.includes(text),
-  );
+  return Array.from(document.querySelectorAll('button')).find(b => b.textContent?.includes(text));
 }
 
 async function settle(ms = 500): Promise<void> {

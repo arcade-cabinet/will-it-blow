@@ -24,8 +24,7 @@ export interface PhaseTextInputs {
 }
 
 export function computePhaseText(inputs: PhaseTextInputs): string {
-  const {introActive, posture, idleTime, gamePhase, finalScore, currentRound, totalRounds} =
-    inputs;
+  const {introActive, posture, idleTime, gamePhase, finalScore, currentRound, totalRounds} = inputs;
 
   if (introActive) return '';
 

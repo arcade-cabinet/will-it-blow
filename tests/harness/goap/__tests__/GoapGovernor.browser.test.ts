@@ -8,7 +8,7 @@
  * run flips the cook step to under-cooking and asserts the round
  * still terminates (the AI player doesn't get stuck).
  */
-import {expect, test, beforeAll, beforeEach} from 'vitest';
+import {beforeAll, beforeEach, expect, test} from 'vitest';
 import {initDebugInterface} from '../../../../src/debug/PlaytestGovernor';
 import {useGameStore} from '../../../../src/ecs/hooks';
 import {GoapGovernor} from '../GoapGovernor';

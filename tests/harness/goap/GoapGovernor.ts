@@ -16,9 +16,10 @@
  *
  * Every tick is recorded in an action log for the test report.
  */
+
+import type {GamePhase} from '../../../src/ecs/hooks';
 import {WIBActuator} from '../actuation/WIBActuator';
 import {WIBPerception} from '../perception/WIBPerception';
-import type {GamePhase} from '../../../src/ecs/hooks';
 import {CompleteRoundGoal, type CompleteRoundOptions} from './WIBGoals';
 
 export interface GovernorTickRecord {

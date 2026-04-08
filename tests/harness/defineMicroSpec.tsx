@@ -29,7 +29,6 @@
  */
 import {Suspense} from 'react';
 import {expect, test} from 'vitest';
-import {captureSnapshot} from './snapshot';
 import {
   countLitPixels,
   countMeshes,
@@ -37,6 +36,7 @@ import {
   renderR3FAndSettle,
   waitForR3F,
 } from './render/renderR3F';
+import {captureSnapshot} from './snapshot';
 
 export interface MicroSpec {
   /** Component or feature name; becomes the screenshot directory. */

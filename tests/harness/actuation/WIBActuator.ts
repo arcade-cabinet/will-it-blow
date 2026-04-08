@@ -20,7 +20,7 @@
  * `userEvent` handles this transparently — the goals never see it.
  */
 import {userEvent} from '@vitest/browser/context';
-import type {StationName, StationBounds} from '../../../src/debug/perception';
+import type {StationBounds, StationName} from '../../../src/debug/perception';
 
 export interface ScreenRect {
   x: number;
@@ -40,9 +40,7 @@ export class WIBActuator {
   /** Click any button whose visible text or aria-label contains `text`. */
   async clickButtonByText(text: string): Promise<void> {
     const button = Array.from(document.querySelectorAll('button')).find(
-      b =>
-        b.textContent?.includes(text) ||
-        (b.getAttribute('aria-label') ?? '').includes(text),
+      b => b.textContent?.includes(text) || (b.getAttribute('aria-label') ?? '').includes(text),
     );
     if (!button) throw new Error(`WIBActuator.clickButtonByText: no button matching "${text}"`);
     await userEvent.click(button);

@@ -11,8 +11,8 @@
  *      position via the teleport hook is reflected in the next
  *      `getPerception()` call.
  */
-import {expect, test, beforeAll, afterEach} from 'vitest';
-import {render, cleanup} from 'vitest-browser-react';
+import {afterEach, beforeAll, expect, test} from 'vitest';
+import {cleanup, render} from 'vitest-browser-react';
 import {App} from '../../src/App';
 import {initDebugInterface} from '../../src/debug/PlaytestGovernor';
 
@@ -55,7 +55,16 @@ test('getPerception() returns a frozen snapshot', async () => {
 
 test('getStationBounds() returns the design coordinates for every station', async () => {
   const debug = getDebug();
-  const stations = ['Grinder', 'Stuffer', 'Stove', 'BlowoutStation', 'Sink', 'ChoppingBlock', 'PhysicsFreezerChest', 'TV'] as const;
+  const stations = [
+    'Grinder',
+    'Stuffer',
+    'Stove',
+    'BlowoutStation',
+    'Sink',
+    'ChoppingBlock',
+    'PhysicsFreezerChest',
+    'TV',
+  ] as const;
   for (const name of stations) {
     const bounds = debug.getStationBounds(name);
     expect(bounds).toBeDefined();

@@ -20,11 +20,11 @@
  * end-to-end loop works; subsequent iterations replace each phase's
  * implementation with real pointer / drag events one at a time.
  */
-import {Goal, CompositeGoal} from 'yuka';
-import type {WIBActuator} from '../actuation/WIBActuator';
-import type {WIBPerception} from '../perception/WIBPerception';
+import {CompositeGoal, Goal} from 'yuka';
 import type {PerceptionSnapshot} from '../../../src/debug/perception';
 import type {GamePhase} from '../../../src/ecs/hooks';
+import type {WIBActuator} from '../actuation/WIBActuator';
+import type {WIBPerception} from '../perception/WIBPerception';
 
 /** Status enum mirroring Yuka's int constants for readability. */
 export const GoalStatus = {

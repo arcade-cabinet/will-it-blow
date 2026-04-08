@@ -105,8 +105,8 @@ function StateProbe({
   // Diagnostic signal so harness self-tests can verify the probe
   // actually mounted inside the Canvas tree.
   (window as unknown as {__RENDER_R3F_PROBE_COUNT__?: number}).__RENDER_R3F_PROBE_COUNT__ =
-    ((window as unknown as {__RENDER_R3F_PROBE_COUNT__?: number}).__RENDER_R3F_PROBE_COUNT__ ??
-      0) + 1;
+    ((window as unknown as {__RENDER_R3F_PROBE_COUNT__?: number}).__RENDER_R3F_PROBE_COUNT__ ?? 0) +
+    1;
   return null;
 }
 
@@ -117,10 +117,7 @@ function StateProbe({
  * the handle immediately. Call `await handle.advance()` before
  * reading `handle.getState()` on the first tick.
  */
-export function renderR3F(
-  children: React.ReactNode,
-  options: RenderR3FOptions = {},
-): R3FHandle {
+export function renderR3F(children: React.ReactNode, options: RenderR3FOptions = {}): R3FHandle {
   const {
     physics = false,
     gravity = [0, -9.81, 0],

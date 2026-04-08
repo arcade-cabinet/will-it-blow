@@ -12,7 +12,7 @@
  * external assets — every screenshot is referenced via a relative
  * path so the report is portable to any zip / artifact upload.
  */
-import {readdirSync, statSync, writeFileSync, existsSync} from 'node:fs';
+import {existsSync, readdirSync, statSync, writeFileSync} from 'node:fs';
 import {join, relative, sep} from 'node:path';
 
 const ROOT = join(process.cwd(), 'test-results', 'browser');
@@ -67,7 +67,8 @@ function groupBy<T, K extends string>(items: T[], key: (item: T) => K): Record<K
   const out = {} as Record<K, T[]>;
   for (const item of items) {
     const k = key(item);
-    (out[k] ??= []).push(item);
+    if (!out[k]) out[k] = [];
+    out[k].push(item);
   }
   return out;
 }

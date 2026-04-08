@@ -1,5 +1,5 @@
-import {useGameStore} from '../../src/ecs/hooks';
 import {BlowoutStation} from '../../src/components/stations/BlowoutStation';
+import {useGameStore} from '../../src/ecs/hooks';
 import {defineMicroSpec} from '../harness/defineMicroSpec';
 
 // BlowoutStation root group lives at world (-1.5, 0, 1.5) and only

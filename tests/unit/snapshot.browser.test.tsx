@@ -4,8 +4,8 @@
  * viewport name comes from the active Vitest browser instance.
  */
 import {expect, test} from 'vitest';
-import {captureSnapshot, captureStrip} from '../harness/snapshot';
 import {installR3FTestHooks, renderR3FAndSettle} from '../harness/render/renderR3F';
+import {captureSnapshot, captureStrip} from '../harness/snapshot';
 
 installR3FTestHooks();
 

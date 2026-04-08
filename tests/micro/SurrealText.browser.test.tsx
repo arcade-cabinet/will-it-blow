@@ -1,5 +1,5 @@
-import {useGameStore} from '../../src/ecs/hooks';
 import {SurrealText} from '../../src/components/environment/SurrealText';
+import {useGameStore} from '../../src/ecs/hooks';
 import {defineMicroSpec} from '../harness/defineMicroSpec';
 
 // SurrealText for SELECT_INGREDIENTS lives at world (-2.5, 1.5, -3.8)

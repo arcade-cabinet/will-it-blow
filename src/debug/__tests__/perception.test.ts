@@ -86,9 +86,7 @@ describe('readPerception', () => {
     expect(readPerception(makeMockState({gamePhase: 'STUFFING'})).activeStations).toEqual([
       'Stuffer',
     ]);
-    expect(readPerception(makeMockState({gamePhase: 'COOKING'})).activeStations).toEqual([
-      'Stove',
-    ]);
+    expect(readPerception(makeMockState({gamePhase: 'COOKING'})).activeStations).toEqual(['Stove']);
     expect(readPerception(makeMockState({gamePhase: 'BLOWOUT'})).activeStations).toEqual([
       'BlowoutStation',
     ]);
