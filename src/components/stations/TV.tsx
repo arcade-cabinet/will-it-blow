@@ -1,11 +1,16 @@
 /**
  * TV — Wall-mounted CRT television with Mr. Sausage "broadcasting" inside.
  *
+ * T2.A: Jigsaw Billy upgrade — red phosphor tinting, swivel servo with
+ * exponential-decay lerp, head tilt tracking (vertical camera offset),
+ * and static bursts keyed to Mr. Sausage's reaction intensity.
+ *
  * The CRT shader plane sits at the front of the tube. The `mr_sausage.glb`
  * model is placed a few centimeters behind it, vertically centered, so it
  * reads as the character on screen while the shader paints scanlines,
  * phosphor glow, and flicker on top. Mr. Sausage tracks the player's camera
- * direction on Y so he always appears to face the viewer through the glass.
+ * direction on Y (swivel) and X (tilt) so he always appears to face the
+ * viewer through the glass.
  *
  * Pointing to `createCrtMaterial` keeps the CRT effects on a standalone
  * ShaderMaterial driven by `uTime`.
@@ -15,24 +20,51 @@ import {useFrame, useThree} from '@react-three/fiber';
 import {RigidBody} from '@react-three/rapier';
 import {useLayoutEffect, useMemo, useRef} from 'react';
 import * as THREE from 'three';
+import {useGameStore} from '../../ecs/hooks';
 import {asset} from '../../utils/assetPath';
 import {createCrtMaterial} from '../effects/CrtShader';
 
 const MR_SAUSAGE_URL = asset('/models/mr_sausage.glb');
 
-/** Make the TV Mr. Sausage glow so the CRT scanlines read as overlaid on a bright subject. */
+/** TV world position — shared between placement and servo math. */
+const TV_POS: [number, number, number] = [-2.8, 1.8, 0];
+
+/**
+ * Exponential-decay servo lerp. Smoothly approaches a target angle
+ * at a given speed, frame-rate independent.
+ */
+function servoLerp(current: number, target: number, speed: number, dt: number): number {
+  return current + (target - current) * (1 - Math.exp(-speed * dt));
+}
+
+/** Reaction-to-intensity map (0 = calm, 1 = maximum agitation). */
+const REACTION_INTENSITY: Record<string, number> = {
+  idle: 0,
+  nod: 0.1,
+  talk: 0.15,
+  eating: 0.1,
+  nervous: 0.3,
+  flinch: 0.5,
+  laugh: 0.4,
+  excitement: 0.6,
+  disgust: 0.7,
+  judging: 0.8,
+};
+
+/**
+ * Tint Mr. Sausage's materials with a red phosphor emissive so the
+ * character reads as being lit by the CRT's red glow. Clones each
+ * material to avoid mutating the shared cached version from `useGLTF`.
+ */
 function prepareTvMrSausage(scene: THREE.Object3D) {
   scene.traverse(obj => {
     if ((obj as THREE.Mesh).isMesh) {
       const mesh = obj as THREE.Mesh;
-      // Clone the material so we don't mutate the shared cached one from
-      // `useGLTF` (other places in the scene also render Mr. Sausage).
       const original = mesh.material as THREE.MeshStandardMaterial;
       const cloned = original.clone();
-      // A subtle warm emissive keeps the character readable through the
-      // green CRT phosphor without washing out the existing textures.
-      cloned.emissive = new THREE.Color('#552200');
-      cloned.emissiveIntensity = 0.35;
+      // Red phosphor emissive (T2.A) — replaces the previous warm amber.
+      cloned.emissive = new THREE.Color('#ff2200');
+      cloned.emissiveIntensity = 0.3;
       cloned.toneMapped = false;
       mesh.material = cloned;
     }
@@ -44,8 +76,15 @@ export function TV() {
   const sausageRef = useRef<THREE.Group>(null);
   const {camera} = useThree();
 
-  // Load + clone the Mr. Sausage GLB once. `useGLTF` caches the result, so
-  // we clone to keep the TV instance independent of the main kitchen model.
+  // Servo state: smooth Y-rotation (swivel) and X-rotation (tilt).
+  const swivelAngle = useRef(0);
+  const tiltAngle = useRef(0);
+
+  // Read Mr. Sausage's current reaction for static burst keying.
+  const mrSausageReaction = useGameStore(state => state.mrSausageReaction);
+  const reactionIntensity = REACTION_INTENSITY[mrSausageReaction] ?? 0;
+
+  // Load + clone the Mr. Sausage GLB once.
   const {scene: originalSausageScene} = useGLTF(MR_SAUSAGE_URL) as unknown as {
     scene: THREE.Object3D;
   };
@@ -55,37 +94,52 @@ export function TV() {
     return cloned;
   }, [originalSausageScene]);
 
-  // Scale + re-center the model exactly once. The source GLB is 0.24m tall
-  // with feet at y=0. We scale to ~1.4x (≈0.34m tall) so Mr. Sausage's full
-  // torso + head read comfortably in the 0.8m screen without cropping his
-  // head at the top. Rotation faces +X (out through the CRT glass).
+  // Scale + re-center the model exactly once.
   useLayoutEffect(() => {
     const grp = sausageRef.current;
     if (!grp) return;
     const scale = 1.4;
     grp.scale.setScalar(scale);
-    // Feet at local y = -0.17 → head top at +0.17; centered in the 0.8m tube.
     grp.position.set(0.55, -0.17, 0);
     grp.rotation.set(0, Math.PI / 2, 0);
   }, []);
 
-  useFrame(state => {
+  useFrame((state, delta) => {
     const uniforms = (crtMaterial as THREE.ShaderMaterial).uniforms;
     uniforms.uTime.value = state.clock.elapsedTime;
 
-    // Turn Mr. Sausage's head toward the player — the local y rotation is
-    // offset by +π/2 so his front always tracks the camera horizontally
-    // rather than staring dead ahead through the glass.
+    // Feed reaction intensity into the CRT shader for static bursts (T2.A).
+    uniforms.uReactionIntensity.value = reactionIntensity;
+    // Boost static and flicker proportionally to reaction.
+    uniforms.uStaticIntensity.value = 0.06 + reactionIntensity * 0.15;
+    uniforms.uFlickerIntensity.value = 1.0 + reactionIntensity * 0.4;
+
+    // --- Swivel servo (T2.A) — smooth Y-rotation toward the player ---
     const grp = sausageRef.current;
     if (grp) {
-      const dx = camera.position.x - (-2.8 + 0.55);
-      const dz = camera.position.z - 0;
-      grp.rotation.y = Math.atan2(dx, dz);
+      // Compute target swivel angle (horizontal tracking).
+      const dx = camera.position.x - (TV_POS[0] + 0.55);
+      const dz = camera.position.z - TV_POS[2];
+      const targetSwivel = Math.atan2(dx, dz);
+
+      // Compute target tilt angle (vertical head tracking).
+      const dy = camera.position.y - TV_POS[1];
+      const horizontalDist = Math.sqrt(dx * dx + dz * dz);
+      const targetTilt = Math.atan2(dy, Math.max(horizontalDist, 0.1));
+      // Clamp tilt to a believable range for a CRT puppet.
+      const clampedTilt = Math.max(-0.35, Math.min(0.35, targetTilt));
+
+      // Servo lerp — speed 4 gives ~250ms settling time.
+      swivelAngle.current = servoLerp(swivelAngle.current, targetSwivel, 4, delta);
+      tiltAngle.current = servoLerp(tiltAngle.current, clampedTilt, 3, delta);
+
+      grp.rotation.y = swivelAngle.current;
+      grp.rotation.x = tiltAngle.current;
     }
   });
 
   return (
-    <group position={[-2.8, 1.8, 0]}>
+    <group position={TV_POS}>
       {/* Wall Mount */}
       <RigidBody type="fixed" colliders="cuboid">
         <mesh position={[-0.1, 0, 0]}>
@@ -125,8 +179,7 @@ export function TV() {
           <boxGeometry args={[0.8, 0.8, 0.05]} />
           <meshStandardMaterial color="#111" roughness={0.9} />
         </mesh>
-        {/* Front bezel — thin frame around the screen so the tube edge reads
-            as solid casing without occluding the Mr. Sausage inside. */}
+        {/* Front bezel — thin frame around the screen */}
         <mesh position={[0.79, 0.375, 0]}>
           <boxGeometry args={[0.04, 0.05, 1.0]} />
           <meshStandardMaterial color="#111" roughness={0.9} />
@@ -157,11 +210,10 @@ export function TV() {
         <primitive object={crtMaterial} attach="material" />
       </mesh>
 
-      {/* Green phosphor glow spilling out of the CRT into the kitchen —
-          cribbed from the original POC which used a PointLight at the TV
-          face. Provides a classic horror CRT vibe when the player walks
-          past the wall. */}
-      <pointLight position={[1.2, 0, 0]} intensity={8} distance={3.5} color="#44ff55" />
+      {/* Red phosphor glow spilling out of the CRT into the kitchen (T2.A).
+          Changed from green (#44ff55) to blood-red (#ff2200) to match the
+          Jigsaw Billy horror aesthetic. */}
+      <pointLight position={[1.2, 0, 0]} intensity={8} distance={3.5} color={0xff2200} />
     </group>
   );
 }
