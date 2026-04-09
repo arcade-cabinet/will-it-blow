@@ -69,23 +69,12 @@ console.error = (...args: unknown[]) => {
   origError(...args);
 };
 
-/**
- * Module-level signal so PresentationFlow (inside Canvas/Physics) can
- * notify App (outside Canvas) that the presentation completed.
- */
-let presentationCompleteCallback: (() => void) | null = null;
+// Presentation-complete signal lives in a shared module so App.tsx
+// (main bundle) can register a callback without statically importing
+// this lazy-loaded chunk. Re-export for backward compatibility.
+export {setPresentationCompleteCallback} from './engine/presentationSignal';
 
-function notifyPresentationComplete(): void {
-  if (presentationCompleteCallback) {
-    presentationCompleteCallback();
-    presentationCompleteCallback = null;
-  }
-}
-
-/** Register the completion callback — called by App via the ref. */
-export function setPresentationCompleteCallback(cb: (() => void) | null): void {
-  presentationCompleteCallback = cb;
-}
+import {notifyPresentationComplete} from './engine/presentationSignal';
 
 // ─── GameContent (inside Canvas + Physics) ───────────────────────────
 

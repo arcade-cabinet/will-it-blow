@@ -13,6 +13,7 @@ import {LoadingScreen} from './components/ui/LoadingScreen';
 import {TitleScreen} from './components/ui/TitleScreen';
 import {usePersistence} from './db/usePersistence';
 import {useGameStore} from './ecs/hooks';
+import {setPresentationCompleteCallback} from './engine/presentationSignal';
 
 // Lazy-load the heavy GameScene (Canvas + Physics + all stations).
 // This module contains all R3F, Three.js, Rapier, and station imports.
@@ -79,21 +80,22 @@ export function App() {
     ? {current: currentRound + 1, total: totalRounds}
     : null;
 
-  // Module-level callback for PresentationFlow completion signal.
-  // This crosses the Canvas boundary — set by GameScene internally.
-  const presentationCompleteRef = useRef<(() => void) | null>(null);
-
   // When DONE phase is reached with rounds remaining, register a
   // callback for PresentationFlow completion. When it fires, start
   // the diegetic between-rounds TV broadcast instead of the old overlay.
+  // Uses the shared presentationSignal module so the callback crosses
+  // the Canvas boundary without statically importing GameScene.
   useEffect(() => {
     if (gamePhase === 'DONE' && currentRound < totalRounds && appPhase === 'playing') {
       waitingForPresentationRef.current = true;
-      presentationCompleteRef.current = () => {
+      setPresentationCompleteCallback(() => {
         waitingForPresentationRef.current = false;
         setBetweenRounds(true);
-      };
+      });
     }
+    return () => {
+      setPresentationCompleteCallback(null);
+    };
   }, [gamePhase, currentRound, totalRounds, appPhase]);
 
   // When betweenRounds starts, auto-advance after 2.5 seconds

@@ -154,7 +154,7 @@ async function createDrizzleInstance(): Promise<void> {
         case 'get': {
           const result = await connection.query(sql, params);
           const rows = rowsToValueArrays(normalizeRows(result.values));
-          return {rows: rows[0]} as unknown as {rows: unknown[]};
+          return {rows: rows.length > 0 ? rows[0] : []};
         }
         case 'values': {
           const result = await connection.query(sql, params);
