@@ -8,9 +8,18 @@
  *   audioEngine.play('chop');
  *   audioEngine.startDrone();
  *   audioEngine.setMuffled(true);
+ *
+ * Phase stingers (E.3): playPhaseStinger(phase) fires a one-shot
+ * stinger on phase entry. Stinger audio files are pending — the
+ * routing infrastructure is ready.
+ *
+ * Per-ingredient SFX (E.1): playIngredientSFX(archetype, action)
+ * routes through a composition-based SFX picker. Audio files are
+ * pending — the routing infrastructure is ready.
  */
 
 import * as Tone from 'tone';
+import type {GamePhase} from '../ecs/hooks';
 
 export type SoundId =
   | 'chop'
@@ -27,6 +36,12 @@ export type SoundId =
   | 'phaseAdvance'
   | 'rankReveal'
   | 'ambient';
+
+/** Ingredient composition archetype for SFX routing. */
+export type IngredientArchetype = 'meat' | 'plant' | 'plastic' | 'metal' | 'liquid' | 'other';
+
+/** Action types that produce ingredient-specific SFX. */
+export type IngredientAction = 'chop' | 'grind' | 'pour' | 'hit' | 'sizzle' | 'stuff';
 
 /** Vite base path — '/' locally, '/will-it-blow/' on GitHub Pages. */
 const BASE = import.meta.env.BASE_URL;
@@ -53,6 +68,19 @@ const SOUND_MAP: Record<SoundId, string> = {
   phaseAdvance: withBase('/audio/pour_2.ogg'),
   rankReveal: withBase('/audio/verdict-unsettling.ogg'),
   ambient: withBase('/audio/ambient-horror.ogg'),
+};
+
+/**
+ * Phase stinger fallback map. When dedicated stinger audio files are
+ * added to /audio/stingers/, this map routes each phase to its stinger.
+ * Until then, phase transitions play the generic 'phaseAdvance' sound.
+ */
+const PHASE_STINGER_FALLBACK: Partial<Record<GamePhase, SoundId>> = {
+  CHOPPING: 'chop',
+  GRINDING: 'grind',
+  COOKING: 'sizzle',
+  BLOWOUT: 'burst',
+  DONE: 'rankReveal',
 };
 
 class AudioEngineImpl {
@@ -169,6 +197,45 @@ class AudioEngineImpl {
   setMuffled(muffled: boolean): void {
     if (!this.filter) return;
     this.filter.frequency.rampTo(muffled ? 400 : 8000, 0.5);
+  }
+
+  /**
+   * Play a one-shot stinger for a phase transition (E.3).
+   * Uses dedicated stinger audio when available, falling back to
+   * existing SFX that match the phase's mood.
+   */
+  playPhaseStinger(phase: GamePhase): void {
+    if (!this._initialized || this.muted) return;
+    // TODO: When dedicated stinger files land in /audio/stingers/,
+    // load them as `stinger_SELECT_INGREDIENTS.ogg` etc. and play
+    // the phase-specific file here. Until then, use fallbacks.
+    const fallback = PHASE_STINGER_FALLBACK[phase];
+    if (fallback) {
+      this.play(fallback);
+    } else {
+      this.play('phaseAdvance');
+    }
+  }
+
+  /**
+   * Play an ingredient-specific SFX based on composition archetype (E.1).
+   * Routes through a per-archetype SFX bank when audio files are available.
+   * Until then, falls back to generic action sounds.
+   */
+  playIngredientSFX(_archetype: IngredientArchetype, action: IngredientAction): void {
+    if (!this._initialized || this.muted) return;
+    // TODO: When per-archetype SFX banks land in /audio/ingredients/,
+    // pick from the archetype-specific set. Until then, map actions
+    // to the nearest existing sound.
+    const actionMap: Record<IngredientAction, SoundId> = {
+      chop: 'chop',
+      grind: 'grind',
+      pour: 'squelch',
+      hit: 'strike',
+      sizzle: 'sizzle',
+      stuff: 'squelch',
+    };
+    this.play(actionMap[action] ?? 'chop');
   }
 
   /** Clean up all Tone.js nodes. */
