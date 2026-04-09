@@ -8,13 +8,16 @@
  *    (SELECT_INGREDIENTS) and display it via surrealTextBridge
  * 3. Evaluate the selection at round end (DONE phase) — disgust on
  *    mismatch, fridge depletion on match, win/lose branching
- * 4. Dev shortcuts: N → next phase, P → prev phase
+ * 4. Dev shortcuts: N -> next phase, P -> prev phase
+ * 5. E.1: Fire phase transition stingers via AudioEngine
+ * 6. E.2: Fire Mr. Sausage reaction audio via AudioEngine
  *
  * The orchestrator is mounted OUTSIDE the Canvas (no R3F context)
  * but inside the Suspense that guards the playing phase.
  */
 import {useEffect, useRef} from 'react';
 import {type GamePhase, useGameStore} from '../ecs/hooks';
+import {audioEngine} from './AudioEngine';
 import {generateClue, matchSelection} from './ClueGenerator';
 import {INGREDIENTS} from './IngredientComposition';
 import {createRunRngOrFallback} from './RunSeed';
@@ -84,15 +87,37 @@ export function GameOrchestrator() {
   const hungerDisgustMeter = useGameStore(s => s.hungerDisgustMeter);
   const hungerDisgustThreshold = useGameStore(s => s.hungerDisgustThreshold);
   const selectedIngredientIds = useGameStore(s => s.selectedIngredientIds);
+  const mrSausageReaction = useGameStore(s => s.mrSausageReaction);
 
   // Track the previous phase to detect transitions.
   const prevPhaseRef = useRef<GamePhase | null>(null);
+
+  // E.2: Track the previous reaction to detect changes.
+  const prevReactionRef = useRef<string>('idle');
 
   // Initialize demands + hunger state on mount.
   useEffect(() => {
     generateDemands();
     initializeHungerState();
   }, [generateDemands, initializeHungerState]);
+
+  // ── E.1: Phase transition stingers ──────────────────────────────────
+  // Fire a procedural Tone.js stinger whenever the game phase changes.
+  // Skips the initial mount (prevPhaseRef starts null).
+  useEffect(() => {
+    if (prevPhaseRef.current !== null && gamePhase !== prevPhaseRef.current) {
+      audioEngine.playPhaseStinger(gamePhase);
+    }
+  }, [gamePhase]);
+
+  // ── E.2: Mr. Sausage reaction audio ────────────────────────────────
+  // Fire a reaction audio cue whenever Mr. Sausage's reaction changes.
+  useEffect(() => {
+    if (mrSausageReaction !== prevReactionRef.current) {
+      prevReactionRef.current = mrSausageReaction;
+      audioEngine.playReactionAudio(mrSausageReaction);
+    }
+  }, [mrSausageReaction]);
 
   // ── Clue generation on SELECT_INGREDIENTS entry ──────────────────
   useEffect(() => {
@@ -102,7 +127,7 @@ export function GameOrchestrator() {
       const available = resolveIds(fridgeIds);
 
       if (available.length === 0) {
-        // Fridge is empty → PLAYER WINS!
+        // Fridge is empty -> PLAYER WINS!
         enqueueSurrealMessage('The fridge is empty. You are free.', 'ceiling', 100);
         setMrSausageReaction('disgust');
         setTimeout(() => setAppPhase('results'), 3000);

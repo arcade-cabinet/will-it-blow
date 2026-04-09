@@ -53,7 +53,9 @@ export function ProceduralIngredient({type, position}: IngredientProps) {
           receiveShadow kept so they catch station/ceiling shadows. */}
       {shapeIndex === 0 && <Box args={[0.2, 0.2, 0.2]} material={material} receiveShadow />}
       {shapeIndex === 1 && <Sphere args={[0.15, 16, 16]} material={material} receiveShadow />}
-      {shapeIndex === 2 && <Cylinder args={[0.1, 0.1, 0.2, 16]} material={material} receiveShadow />}
+      {shapeIndex === 2 && (
+        <Cylinder args={[0.1, 0.1, 0.2, 16]} material={material} receiveShadow />
+      )}
     </RigidBody>
   );
 }
