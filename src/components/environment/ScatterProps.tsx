@@ -56,13 +56,8 @@ export function ScatterProps() {
               colliders="hull"
               mass={0.1}
             >
-              <mesh
-                geometry={item.node.geometry}
-                material={item.mat}
-                castShadow
-                receiveShadow
-                scale={1.5}
-              />
+              {/* D.3: Set dressing — no castShadow (reduces shadow map load). */}
+              <mesh geometry={item.node.geometry} material={item.mat} scale={1.5} />
             </RigidBody>
           ),
       )}

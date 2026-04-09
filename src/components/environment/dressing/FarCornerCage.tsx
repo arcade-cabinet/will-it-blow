@@ -1,6 +1,10 @@
 /**
  * FarCornerCage — a horror cage placed in the far corner of the kitchen,
  * barely visible in the gloom, suggesting something was kept here (T2.B).
+ *
+ * D.3: No castShadow — set dressing in the far corner; the cage's
+ * silhouette is already readable from the dim amber point light inside.
+ * receiveShadow kept so floor shadows from stations fall on it naturally.
  */
 
 import {useGLTF} from '@react-three/drei';
@@ -16,7 +20,7 @@ export function FarCornerCage() {
 
   return (
     <group name="far-corner-cage" position={[-3.0, 0, 2.5]} rotation={[0, 0.4, 0]}>
-      <primitive object={cloned} scale={0.9} castShadow receiveShadow />
+      <primitive object={cloned} scale={0.9} receiveShadow />
       {/* Dim amber point light inside the cage for mood */}
       <pointLight position={[0, 0.5, 0]} intensity={0.5} distance={1.5} color="#aa6600" />
     </group>

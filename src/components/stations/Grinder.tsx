@@ -322,7 +322,6 @@ export function Grinder() {
             <mesh
               key={chunk.id}
               position={new THREE.Vector3(...chunk.pos)}
-              castShadow
               onClick={() => handleChunkClick(chunk.id)}
             >
               <dodecahedronGeometry args={[0.08, 1]} />

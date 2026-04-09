@@ -49,15 +49,11 @@ export function ProceduralIngredient({type, position}: IngredientProps) {
 
   return (
     <RigidBody position={position} colliders="hull" restitution={0.2} friction={0.8}>
-      {shapeIndex === 0 && (
-        <Box args={[0.2, 0.2, 0.2]} material={material} castShadow receiveShadow />
-      )}
-      {shapeIndex === 1 && (
-        <Sphere args={[0.15, 16, 16]} material={material} castShadow receiveShadow />
-      )}
-      {shapeIndex === 2 && (
-        <Cylinder args={[0.1, 0.1, 0.2, 16]} material={material} castShadow receiveShadow />
-      )}
+      {/* D.3: Small fridge items — no castShadow (too many small casters).
+          receiveShadow kept so they catch station/ceiling shadows. */}
+      {shapeIndex === 0 && <Box args={[0.2, 0.2, 0.2]} material={material} receiveShadow />}
+      {shapeIndex === 1 && <Sphere args={[0.15, 16, 16]} material={material} receiveShadow />}
+      {shapeIndex === 2 && <Cylinder args={[0.1, 0.1, 0.2, 16]} material={material} receiveShadow />}
     </RigidBody>
   );
 }
