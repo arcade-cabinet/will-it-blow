@@ -1,15 +1,15 @@
 {
-  "SELECT_INGREDIENTS": { "color": "#e8c878", "intensity": 8 },
-  "CHOPPING": { "color": "#d8a898", "intensity": 6 },
-  "FILL_GRINDER": { "color": "#c8b8a8", "intensity": 5 },
-  "GRINDING": { "color": "#c8a8a8", "intensity": 7 },
-  "MOVE_BOWL": { "color": "#c8c8c8", "intensity": 4 },
-  "ATTACH_CASING": { "color": "#c8c8c8", "intensity": 4 },
-  "STUFFING": { "color": "#c8b8b8", "intensity": 5 },
-  "TIE_CASING": { "color": "#c8b8b8", "intensity": 5 },
-  "BLOWOUT": { "color": "#ffffff", "intensity": 15 },
-  "MOVE_SAUSAGE": { "color": "#c8c8c8", "intensity": 4 },
-  "MOVE_PAN": { "color": "#d8b888", "intensity": 6 },
-  "COOKING": { "color": "#e8a868", "intensity": 10 },
-  "DONE": { "color": "#8888cc", "intensity": 8 }
+  "SELECT_INGREDIENTS": { "color": "#e8c878", "intensity": 8, "fogDensity": 0.014 },
+  "CHOPPING": { "color": "#d8a898", "intensity": 6, "fogDensity": 0.018 },
+  "FILL_GRINDER": { "color": "#c8b8a8", "intensity": 5, "fogDensity": 0.018 },
+  "GRINDING": { "color": "#c8a8a8", "intensity": 7, "fogDensity": 0.020 },
+  "MOVE_BOWL": { "color": "#c8c8c8", "intensity": 4, "fogDensity": 0.018 },
+  "ATTACH_CASING": { "color": "#c8c8c8", "intensity": 4, "fogDensity": 0.018 },
+  "STUFFING": { "color": "#c8b8b8", "intensity": 5, "fogDensity": 0.018 },
+  "TIE_CASING": { "color": "#c8b8b8", "intensity": 5, "fogDensity": 0.018 },
+  "BLOWOUT": { "color": "#ffffff", "intensity": 15, "fogDensity": 0.030 },
+  "MOVE_SAUSAGE": { "color": "#c8c8c8", "intensity": 4, "fogDensity": 0.018 },
+  "MOVE_PAN": { "color": "#d8b888", "intensity": 6, "fogDensity": 0.018 },
+  "COOKING": { "color": "#e8a868", "intensity": 10, "fogDensity": 0.022 },
+  "DONE": { "color": "#8888cc", "intensity": 8, "fogDensity": 0.016 }
 }
