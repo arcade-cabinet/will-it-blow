@@ -20,12 +20,15 @@
  *      THREE.Object3D bounding boxes every tick — expensive and
  *      brittle when components mount asynchronously.
  *
- * Keep this file in sync with the world coordinates in `App.tsx`.
+ * Keep this file in sync with the world coordinates in `App.tsx`
+ * and the root <group position={...}> in each station component.
+ *
+ * Last reconciled: 2026-04-08 (matched against actual component positions).
  */
 import type {GamePhase, GameState, Posture} from '../ecs/hooks';
 import {computePhaseText} from './phaseText';
 
-// ── Station bounds — world coordinates from App.tsx ─────────────────
+// ── Station bounds — world coordinates from component root groups ────
 
 export interface StationBounds {
   /** Centre point in world space `(x, y, z)`. */
@@ -46,40 +49,55 @@ export type StationName =
   | 'PhysicsFreezerChest'
   | 'TV';
 
-/** Hardcoded design positions — keep in sync with `src/App.tsx`. */
+/**
+ * Station bounds — reconciled with actual component root positions.
+ *
+ * Source positions (root <group position={...}> in each component):
+ *   Grinder:              [-1.5, 0.4, -1.0]
+ *   Stuffer:              [-2.8, 0.4, 2]
+ *   Stove:                [2.8, 0.0, 0]
+ *   BlowoutStation:       [-1.5, 0, 1.5]
+ *   Sink:                 [-1.5, 0.4, -1.0]
+ *   ChoppingBlock:        [1.5, 0.4, 0]
+ *   PhysicsFreezerChest:  [-1.5, 0.0, -3.2]
+ *   TV (TV_POS):          [-2.8, 1.8, 0]
+ *
+ * Centers are offset slightly above the root to target the interactive
+ * zone (where the player reaches).
+ */
 const STATION_BOUNDS: Record<StationName, StationBounds> = {
   Grinder: {
-    center: [-2.5, 1.0, -1.0],
-    halfExtents: [0.4, 0.8, 0.4],
+    center: [-1.5, 0.8, -1.0],
+    halfExtents: [0.4, 0.6, 0.4],
     activePhases: ['FILL_GRINDER', 'GRINDING'],
   },
   Stuffer: {
-    center: [0, 1.0, -3.5],
-    halfExtents: [0.5, 0.8, 0.4],
+    center: [-2.8, 0.8, 2.0],
+    halfExtents: [0.5, 0.6, 0.5],
     activePhases: ['MOVE_BOWL', 'ATTACH_CASING', 'STUFFING', 'TIE_CASING'],
   },
   Stove: {
-    center: [2.5, 0.9, -2.5],
+    center: [2.8, 0.5, 0.0],
     halfExtents: [0.5, 0.4, 0.5],
     activePhases: ['MOVE_PAN', 'COOKING'],
   },
   BlowoutStation: {
-    center: [2.5, 1.0, 1.0],
-    halfExtents: [0.5, 0.8, 0.4],
+    center: [-1.5, 0.5, 1.5],
+    halfExtents: [0.5, 0.5, 0.4],
     activePhases: ['BLOWOUT'],
   },
   Sink: {
-    center: [-2.5, 0.9, 2.0],
+    center: [-1.5, 0.8, -1.0],
     halfExtents: [0.5, 0.4, 0.5],
     activePhases: [],
   },
   ChoppingBlock: {
-    center: [2.5, 0.9, -0.5],
-    halfExtents: [0.6, 0.2, 0.4],
+    center: [1.5, 0.6, 0.0],
+    halfExtents: [0.6, 0.3, 0.4],
     activePhases: ['CHOPPING'],
   },
   PhysicsFreezerChest: {
-    center: [-2.5, 0.5, -3.0],
+    center: [-1.5, 0.4, -3.2],
     halfExtents: [0.6, 0.4, 0.5],
     activePhases: ['SELECT_INGREDIENTS'],
   },
