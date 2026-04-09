@@ -5,10 +5,12 @@
  * have ONE place that translates "click on the grinder" into actual
  * pointer events. Two layers of strict discipline:
  *
- *   1. **Real events only** — every method dispatches via the
+ *   1. **Real events preferred** — most methods dispatch via the
  *      `@vitest/browser/context` `userEvent` API which uses
- *      Playwright's underlying mouse/keyboard primitives. No
- *      synthetic event creation, no `dispatchEvent()`.
+ *      Playwright's underlying mouse/keyboard primitives.
+ *      Exception: `clickPoint()` uses synthetic `dispatchEvent()`
+ *      on the canvas because `userEvent` cannot target arbitrary
+ *      (x, y) coordinates for R3F raycasting.
  *
  *   2. **Coordinate math is centralised** — converting world-space
  *      station bounds to screen pixels happens here, not in the
@@ -47,19 +49,54 @@ export class WIBActuator {
   }
 
   /**
-   * Click an arbitrary screen point. Used by station interactions
-   * where there's no DOM element — the click target is a 3D mesh
-   * inside the R3F canvas.
+   * Click an arbitrary point on the canvas. Translates (x, y) page
+   * coordinates into a real pointer event sequence on the canvas element.
    *
-   * Prefer `clickButtonByText` whenever a DOM affordance exists.
+   * The R3F raycaster picks up the event and routes it to the topmost
+   * mesh under the cursor. This enables GOAP goals that interact with
+   * 3D meshes directly (e.g., clicking tie-casing dots, station meshes).
+   *
+   * @param x — page X coordinate (pixels from left edge of page)
+   * @param y — page Y coordinate (pixels from top edge of page)
    */
-  async clickPoint(_x: number, _y: number): Promise<void> {
-    // Vitest browser's userEvent doesn't expose `click(x, y)` —
-    // for canvas clicks we need to dispatch a real PointerEvent
-    // on the canvas itself. The R3F raycaster picks up the event
-    // and routes it to the topmost mesh under the cursor. Implement
-    // when the first canvas-click goal needs it.
-    throw new Error('WIBActuator.clickPoint not yet implemented');
+  async clickPoint(x: number, y: number): Promise<void> {
+    const canvas = document.querySelector('canvas');
+    if (!canvas) throw new Error('WIBActuator.clickPoint: no <canvas> found');
+
+    const clientX = x;
+    const clientY = y;
+
+    // Dispatch a complete pointer event sequence so R3F's event system
+    // picks it up: pointerdown → pointerup → click. R3F listens for
+    // 'pointermove', 'pointerdown', 'pointerup', and 'click' on the
+    // canvas to fire raycasted events on meshes.
+    const commonInit: PointerEventInit = {
+      clientX,
+      clientY,
+      screenX: clientX,
+      screenY: clientY,
+      bubbles: true,
+      cancelable: true,
+      pointerId: 1,
+      pointerType: 'mouse',
+      isPrimary: true,
+      button: 0,
+      buttons: 1,
+    };
+
+    canvas.dispatchEvent(new PointerEvent('pointerdown', commonInit));
+    canvas.dispatchEvent(new PointerEvent('pointerup', {...commonInit, buttons: 0}));
+    canvas.dispatchEvent(
+      new MouseEvent('click', {
+        clientX,
+        clientY,
+        screenX: clientX,
+        screenY: clientY,
+        bubbles: true,
+        cancelable: true,
+        button: 0,
+      }),
+    );
   }
 
   /** Type a text string via the keyboard. */

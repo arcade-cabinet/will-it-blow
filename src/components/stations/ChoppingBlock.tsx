@@ -5,9 +5,11 @@
  * a "Rapid Chop" flair point (design pillar #5: style points throughout).
  */
 import {Box, Cylinder, useTexture} from '@react-three/drei';
+import {useFrame} from '@react-three/fiber';
 import {RigidBody} from '@react-three/rapier';
 import {useDrag} from '@use-gesture/react';
 import {useRef, useState} from 'react';
+import type * as THREE from 'three';
 import {useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
 import {asset} from '../../utils/assetPath';
@@ -104,14 +106,50 @@ export function ChoppingBlock() {
         </Cylinder>
       </RigidBody>
 
-      {/* Visual Indicator of Chopping */}
+      {/* Pulsing "chop here" target ring — visible only during CHOPPING phase */}
+      {gamePhase === 'CHOPPING' && <ChopTargetRing />}
+
+      {/* Chop progress: small meat chunks accumulate on the surface */}
       {chopCount > 0 && (
         <group position={[0, 0.45, 0]}>
-          <Box args={[0.2, 0.05, 0.2]}>
-            <meshStandardMaterial color="#aa2222" roughness={0.6} />
-          </Box>
+          {Array.from({length: chopCount}, (_, i) => (
+            <Box
+              key={i}
+              args={[0.08, 0.04, 0.08]}
+              position={[
+                Math.cos((i / REQUIRED_CHOPS) * Math.PI * 2) * 0.2,
+                i * 0.02,
+                Math.sin((i / REQUIRED_CHOPS) * Math.PI * 2) * 0.2,
+              ]}
+            >
+              <meshStandardMaterial color="#822424" roughness={0.8} />
+            </Box>
+          ))}
         </group>
       )}
     </group>
+  );
+}
+
+/** Pulsing emissive ring that guides the player to chop on the block surface. */
+function ChopTargetRing() {
+  const ringRef = useRef<THREE.Mesh>(null);
+  useFrame(state => {
+    if (!ringRef.current) return;
+    const pulse = 0.4 + Math.sin(state.clock.elapsedTime * 4) * 0.3;
+    (ringRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = pulse;
+  });
+  return (
+    <mesh ref={ringRef} position={[0, 0.43, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <ringGeometry args={[0.25, 0.35, 32]} />
+      <meshStandardMaterial
+        color="#ff2200"
+        emissive="#ff2200"
+        emissiveIntensity={0.5}
+        transparent
+        opacity={0.6}
+        depthWrite={false}
+      />
+    </mesh>
   );
 }

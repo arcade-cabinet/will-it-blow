@@ -7,7 +7,7 @@
  * 2. The snapshot is fully frozen — including nested objects and
  *    arrays — so the GOAP planner cannot accidentally mutate the
  *    game's source-of-truth state through the perception channel.
- * 3. Station bounds match the design constants in `App.tsx`.
+ * 3. Station bounds match the actual component positions.
  * 4. `surrealText` matches what the in-scene `SurrealText` component
  *    would render for the same state.
  * 5. `activeStations` filters correctly to the phase's active set.
@@ -126,25 +126,35 @@ describe('readPerception', () => {
 
   it('emits the wake-up text in the prone intro state', () => {
     const snapshot = readPerception(makeMockState({posture: 'prone', idleTime: 0}));
-    expect(snapshot.surrealText).toBe('Wake up');
+    expect(snapshot.surrealText).toBe('Come on, time to get up');
   });
 
   it('emits the impatient hint after sitting too long', () => {
     const snapshot = readPerception(makeMockState({posture: 'sitting', idleTime: 12}));
     expect(snapshot.surrealText).toBe("Use the arrow keys for God's sake");
   });
+
+  it('emits the intro text when introActive is true', () => {
+    const snapshot = readPerception(makeMockState({introActive: true}));
+    expect(snapshot.surrealText).toBe('Hey, wake up lazybones');
+  });
 });
 
 describe('readStationBounds', () => {
-  it('returns the design coordinates for the Grinder', () => {
+  it('returns the reconciled coordinates for the Grinder', () => {
     const bounds = readStationBounds('Grinder');
-    expect(bounds.center).toEqual([-2.5, 1.0, -1.0]);
+    expect(bounds.center).toEqual([-1.5, 0.8, -1.0]);
     expect(bounds.activePhases).toContain('GRINDING');
   });
 
-  it('returns the design coordinates for the Stove', () => {
+  it('returns the reconciled coordinates for the Stove', () => {
     const bounds = readStationBounds('Stove');
-    expect(bounds.center[0]).toBeCloseTo(2.5);
+    expect(bounds.center[0]).toBeCloseTo(2.8);
     expect(bounds.activePhases).toContain('COOKING');
+  });
+
+  it('returns the correct coordinates for the TV', () => {
+    const bounds = readStationBounds('TV');
+    expect(bounds.center).toEqual([-2.8, 1.8, 0]);
   });
 });

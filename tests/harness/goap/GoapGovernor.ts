@@ -15,6 +15,9 @@
  *   5. Repeat until phase = DONE or a max-tick guard fires.
  *
  * Every tick is recorded in an action log for the test report.
+ * Goal errors are caught and logged — they never propagate as
+ * unhandled exceptions. Failed goals produce a tick record with
+ * the error reason for diagnostic clarity.
  */
 
 import type {GamePhase} from '../../../src/ecs/hooks';
@@ -27,6 +30,8 @@ export interface GovernorTickRecord {
   phase: GamePhase;
   goalName: string;
   durationMs: number;
+  /** Present when a goal returns `{ok: false}` or throws. */
+  error?: string;
 }
 
 export interface GovernorRunResult {
@@ -89,7 +94,26 @@ export class GoapGovernor {
       if (!goal) break;
 
       const tickStart = performance.now();
-      await goal.run({perception: this.perception, actuator: this.actuator});
+      let error: string | undefined;
+
+      try {
+        const result = await goal.run({perception: this.perception, actuator: this.actuator});
+        if (!result.ok) {
+          error = result.reason ?? 'goal returned ok:false';
+          console.warn(
+            `[GoapGovernor] Goal ${goal.constructor.name} failed at phase ${snapshot.gamePhase}: ${error}`,
+          );
+        }
+      } catch (err) {
+        error = err instanceof Error ? err.message : String(err);
+        console.warn(
+          `[GoapGovernor] Goal ${goal.constructor.name} threw at phase ${snapshot.gamePhase}: ${error}`,
+        );
+        // Do not re-throw — log it and continue the tick loop.
+        // The governor advances nothing on a failed goal, so the
+        // next tick will re-perceive the same phase and try again.
+      }
+
       const tickMs = performance.now() - tickStart;
 
       const record: GovernorTickRecord = {
@@ -97,6 +121,7 @@ export class GoapGovernor {
         phase: snapshot.gamePhase,
         goalName: goal.constructor.name,
         durationMs: tickMs,
+        ...(error ? {error} : {}),
       };
       log.push(record);
       this.options.onTick(record);

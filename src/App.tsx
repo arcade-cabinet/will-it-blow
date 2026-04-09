@@ -11,12 +11,15 @@ import {Suspense, useCallback, useEffect, useRef, useState} from 'react';
 import {PCFShadowMap} from 'three';
 import {IntroSequence} from './components/camera/IntroSequence';
 import {PlayerHands} from './components/camera/PlayerHands';
-import {TieGesture} from './components/challenges/TieGesture';
+import {TieCasingDots} from './components/challenges/TieCasingDots';
 import {MrSausage3D} from './components/characters/MrSausage3D';
 import {SwipeFPSControls} from './components/controls/SwipeFPSControls';
 import {BasementRoom} from './components/environment/BasementRoom';
+import {DisgustIndicator} from './components/environment/DisgustIndicator';
 import {SlaughterhouseDressing} from './components/environment/dressing/SlaughterhouseDressing';
+import {EndgameEnvironment} from './components/environment/EndgameEnvironment';
 import {FlickeringFluorescent} from './components/environment/FlickeringFluorescent';
+import {PhaseLighting} from './components/environment/PhaseLighting';
 import {Prop} from './components/environment/Prop';
 import {ScatterProps} from './components/environment/ScatterProps';
 import {SurrealText} from './components/environment/SurrealText';
@@ -36,7 +39,6 @@ import {Stuffer} from './components/stations/Stuffer';
 import {TV} from './components/stations/TV';
 import {GameOverScreen} from './components/ui/GameOverScreen';
 import {LoadingScreen} from './components/ui/LoadingScreen';
-import {RoundTransition} from './components/ui/RoundTransition';
 import {TitleScreen} from './components/ui/TitleScreen';
 import {usePersistence} from './db/usePersistence';
 import {useGameStore} from './ecs/hooks';
@@ -45,6 +47,7 @@ import {GameOrchestrator} from './engine/GameOrchestrator';
 import {FPSCamera} from './player/FPSCamera';
 import {PlayerCapsule} from './player/PlayerCapsule';
 import {useInput} from './player/useInput';
+import {setPitch, setYaw} from './player/useMouseLook';
 
 // Rapier WASM is loaded by <Physics> internally.
 // The fixRapierWasm() Vite plugin rewrites the broken import.meta.url
@@ -90,15 +93,40 @@ function notifyPresentationComplete(): void {
   }
 }
 
+/** Type for the between-rounds TV broadcast signal. */
+export type BroadcastSignal = {current: number; total: number} | null;
+
 /** 3D scene content: physics world, stations, props, camera, and controls. */
-function GameContent() {
+function GameContent({broadcastRound}: {broadcastRound: BroadcastSignal}) {
   const introActive = useGameStore(state => state.introActive);
   const mrSausageReaction = useGameStore(state => state.mrSausageReaction);
   const gamePhase = useGameStore(state => state.gamePhase);
+  const posture = useGameStore(state => state.posture);
   const {moveDirection} = useInput();
 
   // Block movement during intro sequence
   const effectiveMove = introActive ? {x: 0, z: 0} : moveDirection;
+
+  // ── C.1: Lead player to the first clue ──────────────────────────────
+  // One-shot camera nudge: when the player first stands up and enters
+  // SELECT_INGREDIENTS, smoothly rotate the camera to face the back
+  // wall where the pinned clue lives. Only fires once per game.
+  const clueNudgeFiredRef = useRef(false);
+  useEffect(() => {
+    if (
+      !clueNudgeFiredRef.current &&
+      posture === 'standing' &&
+      gamePhase === 'SELECT_INGREDIENTS' &&
+      !introActive
+    ) {
+      clueNudgeFiredRef.current = true;
+      // Yaw 0 = facing -Z = back wall where the pinned clue surface is.
+      // Slight leftward offset (-0.3) to aim at the clue surface position
+      // which is at x=-1.0 on the back wall.
+      setYaw(-0.3);
+      setPitch(0);
+    }
+  }, [posture, gamePhase, introActive]);
 
   // Initialize Tone.js audio on mount and start the horror drone
   useEffect(() => {
@@ -128,7 +156,7 @@ function GameContent() {
         <SurrealText />
         <KitchenSetPieces />
         <PhysicsFreezerChest />
-        <TV />
+        <TV broadcastRound={broadcastRound} />
         <ChoppingBlock />
 
         {/* Stations */}
@@ -158,8 +186,23 @@ function GameContent() {
           reaction={mrSausageReaction}
         />
 
+        {/* Diegetic disgust meter — pressure gauge on wall near TV.
+            Player sees their proximity to failure at all times. */}
+        <DisgustIndicator />
+
+        {/* Win/lose environmental sequences: warm amber for escape,
+            red overhead for failure. */}
+        <EndgameEnvironment />
+
+        {/* Per-phase lighting mood — color temperature shifts */}
+        <PhaseLighting />
+
         {/* Ceiling Trapdoor */}
         <TrapDoorAnimation position={[0, 3, 0]} />
+
+        {/* Diegetic tie-casing interaction — pulsing dots on casing ends.
+            Replaces the old HTML TieGesture overlay (pillar 7 compliance). */}
+        {gamePhase === 'TIE_CASING' && <TieCasingDots />}
 
         {/* Presentation climax (T1.B): plate on rope descends during DONE phase.
             The full 12-second presentation must complete BEFORE the round
@@ -205,33 +248,47 @@ export function App() {
   const currentRound = useGameStore(state => state.currentRound);
   const totalRounds = useGameStore(state => state.totalRounds);
   const nextRound = useGameStore(state => state.nextRound);
-  const [showRoundTransition, setShowRoundTransition] = useState(false);
 
   // Track whether we're waiting for the presentation to finish before
-  // showing the round transition. This prevents the race where the
-  // round transition would appear immediately on entering DONE, before
-  // the 12-second presentation sequence has played.
+  // triggering the diegetic between-rounds broadcast on the TV.
   const waitingForPresentationRef = useRef(false);
+
+  // Between-rounds broadcast: after presentation completes and more rounds
+  // remain, the TV shows "ROUND X OF Y" for 2.5 seconds, then nextRound().
+  // No HTML overlay — the transition is entirely diegetic via the TV.
+  const [betweenRounds, setBetweenRounds] = useState(false);
 
   usePersistence();
 
+  // Derive broadcast signal from betweenRounds state. Passed as a prop
+  // to GameContent so it crosses the Canvas boundary reactively.
+  const broadcastSignal: BroadcastSignal = betweenRounds
+    ? {current: currentRound + 1, total: totalRounds}
+    : null;
+
   // When DONE phase is reached with rounds remaining, register a
-  // callback for PresentationFlow completion instead of immediately
-  // showing the round transition.
+  // callback for PresentationFlow completion. When it fires, start
+  // the diegetic between-rounds TV broadcast instead of the old overlay.
   useEffect(() => {
     if (gamePhase === 'DONE' && currentRound < totalRounds && appPhase === 'playing') {
       waitingForPresentationRef.current = true;
       presentationCompleteCallback = () => {
         waitingForPresentationRef.current = false;
-        setShowRoundTransition(true);
+        setBetweenRounds(true);
       };
     }
   }, [gamePhase, currentRound, totalRounds, appPhase]);
 
-  const handleRoundTransitionComplete = useCallback(() => {
-    setShowRoundTransition(false);
-    nextRound();
-  }, [nextRound]);
+  // When betweenRounds starts, auto-advance after 2.5 seconds
+  // (the TV broadcast plays for this duration, then the next round begins).
+  useEffect(() => {
+    if (!betweenRounds) return;
+    const timer = setTimeout(() => {
+      setBetweenRounds(false);
+      nextRound();
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [betweenRounds, nextRound]);
 
   return (
     <div
@@ -287,26 +344,12 @@ export function App() {
             <pointLight position={[0, 0.4, 0]} intensity={12} distance={6} color="#b8c8c4" />
 
             <Suspense fallback={null}>
-              <GameContent />
+              <GameContent broadcastRound={broadcastSignal} />
             </Suspense>
           </Canvas>
 
           {/* Invisible touch overlay for mobile FPS controls */}
           <SwipeFPSControls />
-
-          {/* Tie Gesture overlay -- only shown during TIE_CASING phase */}
-          {gamePhase === 'TIE_CASING' && (
-            <TieGesture onComplete={() => useGameStore.getState().setGamePhase('BLOWOUT')} />
-          )}
-
-          {/* Round transition overlay -- shown AFTER presentation completes */}
-          {showRoundTransition && (
-            <RoundTransition
-              roundNumber={currentRound + 1}
-              totalRounds={totalRounds}
-              onComplete={handleRoundTransitionComplete}
-            />
-          )}
 
           {/* GameOrchestrator -- non-visual state machine, outside Canvas */}
           <GameOrchestrator />

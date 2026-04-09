@@ -343,10 +343,11 @@ export function Stove() {
 
       {/* Burners & Pans */}
       <group position={[-0.4, 0.9, -0.4]}>
-        {/* Frying Pan (Draggable) */}
+        {/* Frying Pan (Draggable) — pulsing glow during MOVE_PAN to guide player */}
         {pan.scene && (
           <group {...bindPan()} position={panPos}>
             <primitive object={pan.scene.clone()} scale={0.7} position={[0, -0.02, 0]} />
+            {gamePhase === 'MOVE_PAN' && <PanGlowRing />}
             {/* Grease Pool inside the pan */}
             {(gamePhase === 'COOKING' || gamePhase === 'DONE') &&
               burnerLevels[0] > 0 &&
@@ -417,6 +418,32 @@ export function Stove() {
         </group>
       </group>
     </group>
+  );
+}
+
+/**
+ * Pulsing emissive ring around the frying pan during MOVE_PAN phase.
+ * Tells the player "pick me up and put me on a burner."
+ */
+function PanGlowRing() {
+  const ref = useRef<THREE.Mesh>(null);
+  useFrame(state => {
+    if (!ref.current) return;
+    const pulse = 0.3 + Math.sin(state.clock.elapsedTime * 3) * 0.25;
+    (ref.current.material as THREE.MeshStandardMaterial).emissiveIntensity = pulse;
+  });
+  return (
+    <mesh ref={ref} position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <ringGeometry args={[0.2, 0.28, 32]} />
+      <meshStandardMaterial
+        color="#ff8800"
+        emissive="#ff6600"
+        emissiveIntensity={0.4}
+        transparent
+        opacity={0.5}
+        depthWrite={false}
+      />
+    </mesh>
   );
 }
 

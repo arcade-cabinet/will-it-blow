@@ -19,6 +19,9 @@
  * synthetic `__WIB_DEBUG__.actions.advancePhase()` shortcut so the
  * end-to-end loop works; subsequent iterations replace each phase's
  * implementation with real pointer / drag events one at a time.
+ *
+ * All goals return `GoalResult` — `{ok: boolean, reason?: string}`.
+ * No goal should throw; errors are captured as `{ok: false, reason}`.
  */
 import {CompositeGoal, Goal} from 'yuka';
 import type {PerceptionSnapshot} from '../../../src/debug/perception';
@@ -39,6 +42,12 @@ export interface GoalContext {
   actuator: WIBActuator;
 }
 
+/** Standardized goal result. All goals return this instead of bare booleans. */
+export interface GoalResult {
+  ok: boolean;
+  reason?: string;
+}
+
 /**
  * Base class — every WIB goal extends this so they share an
  * async-aware execute hook on top of Yuka's synchronous one.
@@ -46,10 +55,11 @@ export interface GoalContext {
 export class WIBGoal extends Goal {
   /**
    * Run the goal's logic against the live perception + actuator.
-   * Returns true on success, false to fall through to the next goal.
+   * Returns `{ok: true}` on success, `{ok: false, reason}` on failure.
+   * Never throws — errors are captured as failed results.
    */
-  async run(_ctx: GoalContext): Promise<boolean> {
-    return true;
+  async run(_ctx: GoalContext): Promise<GoalResult> {
+    return {ok: true};
   }
 }
 
@@ -63,16 +73,29 @@ export class WIBGoal extends Goal {
  * events; this synthetic baseline exists so the governor's tick loop
  * is testable end-to-end before the actuator implementations land.
  */
+/**
+ * Safely run a debug-action callback, capturing exceptions as
+ * `{ok: false, reason}` so goal implementations honour the
+ * "never throws" contract documented on WIBGoal.run().
+ */
+function safeRun(fn: (debug: NonNullable<typeof window.__WIB_DEBUG__>) => void): GoalResult {
+  const debug = window.__WIB_DEBUG__;
+  if (!debug) return {ok: false, reason: '__WIB_DEBUG__ missing'};
+  try {
+    fn(debug);
+    return {ok: true};
+  } catch (err) {
+    return {ok: false, reason: err instanceof Error ? err.message : String(err)};
+  }
+}
+
 export class SyntheticAdvanceGoal extends WIBGoal {
   constructor(public readonly forPhase: GamePhase) {
     super();
   }
 
-  override async run(_ctx: GoalContext): Promise<boolean> {
-    const debug = window.__WIB_DEBUG__;
-    if (!debug) throw new Error('SyntheticAdvanceGoal: __WIB_DEBUG__ missing');
-    debug.actions.advancePhase();
-    return true;
+  override async run(_ctx: GoalContext): Promise<GoalResult> {
+    return safeRun(d => d.actions.advancePhase());
   }
 }
 
@@ -82,64 +105,58 @@ export class SyntheticAdvanceGoal extends WIBGoal {
  * three default ingredient ids.
  */
 export class SelectIngredientsGoal extends WIBGoal {
-  override async run(_ctx: GoalContext): Promise<boolean> {
-    const debug = window.__WIB_DEBUG__;
-    if (!debug) return false;
-    debug.actions.selectIngredient('banana');
-    debug.actions.selectIngredient('steak');
-    debug.actions.selectIngredient('bread');
-    debug.actions.advancePhase();
-    return true;
+  override async run(_ctx: GoalContext): Promise<GoalResult> {
+    return safeRun(d => {
+      d.actions.selectIngredient('banana');
+      d.actions.selectIngredient('steak');
+      d.actions.selectIngredient('bread');
+      d.actions.advancePhase();
+    });
   }
 }
 
 export class ChopGoal extends WIBGoal {
-  override async run(_ctx: GoalContext): Promise<boolean> {
-    const debug = window.__WIB_DEBUG__;
-    if (!debug) return false;
-    for (let i = 0; i < 5; i += 1) debug.actions.doChop();
-    debug.actions.advancePhase();
-    return true;
+  override async run(_ctx: GoalContext): Promise<GoalResult> {
+    return safeRun(d => {
+      for (let i = 0; i < 5; i += 1) d.actions.doChop();
+      d.actions.advancePhase();
+    });
   }
 }
 
 export class FillGrinderGoal extends WIBGoal {
-  override async run(_ctx: GoalContext): Promise<boolean> {
-    const debug = window.__WIB_DEBUG__;
-    if (!debug) return false;
-    debug.actions.fillGrinder();
-    debug.actions.advancePhase();
-    return true;
+  override async run(_ctx: GoalContext): Promise<GoalResult> {
+    return safeRun(d => {
+      d.actions.fillGrinder();
+      d.actions.advancePhase();
+    });
   }
 }
 
 export class StuffGoal extends WIBGoal {
-  override async run(_ctx: GoalContext): Promise<boolean> {
-    const debug = window.__WIB_DEBUG__;
-    if (!debug) return false;
-    debug.actions.fillStuffer();
-    debug.actions.advancePhase();
-    return true;
+  override async run(_ctx: GoalContext): Promise<GoalResult> {
+    return safeRun(d => {
+      d.actions.fillStuffer();
+      d.actions.advancePhase();
+    });
   }
 }
 
 export class TieGoal extends WIBGoal {
-  override async run(_ctx: GoalContext): Promise<boolean> {
-    const debug = window.__WIB_DEBUG__;
-    if (!debug) return false;
-    debug.actions.tieCasing();
-    debug.actions.advancePhase();
-    return true;
+  override async run(_ctx: GoalContext): Promise<GoalResult> {
+    return safeRun(d => {
+      d.actions.tieCasing();
+      d.actions.advancePhase();
+    });
   }
 }
 
 export class BlowoutGoal extends WIBGoal {
-  override async run(_ctx: GoalContext): Promise<boolean> {
-    const debug = window.__WIB_DEBUG__;
-    if (!debug) return false;
-    debug.actions.triggerBlowout();
-    debug.actions.advancePhase();
-    return true;
+  override async run(_ctx: GoalContext): Promise<GoalResult> {
+    return safeRun(d => {
+      d.actions.triggerBlowout();
+      d.actions.advancePhase();
+    });
   }
 }
 
@@ -147,23 +164,21 @@ export class CookGoal extends WIBGoal {
   constructor(public readonly targetCookLevel = 0.75) {
     super();
   }
-  override async run(_ctx: GoalContext): Promise<boolean> {
-    const debug = window.__WIB_DEBUG__;
-    if (!debug) return false;
-    debug.actions.setCookLevel(this.targetCookLevel);
-    debug.actions.advancePhase();
-    return true;
+  override async run(_ctx: GoalContext): Promise<GoalResult> {
+    return safeRun(d => {
+      d.actions.setCookLevel(this.targetCookLevel);
+      d.actions.advancePhase();
+    });
   }
 }
 
 /** Adversarial cook — under-cooks for the hostile playthrough. */
 export class UnderCookGoal extends WIBGoal {
-  override async run(_ctx: GoalContext): Promise<boolean> {
-    const debug = window.__WIB_DEBUG__;
-    if (!debug) return false;
-    debug.actions.setCookLevel(0.05);
-    debug.actions.advancePhase();
-    return true;
+  override async run(_ctx: GoalContext): Promise<GoalResult> {
+    return safeRun(d => {
+      d.actions.setCookLevel(0.05);
+      d.actions.advancePhase();
+    });
   }
 }
 

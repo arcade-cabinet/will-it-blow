@@ -14,11 +14,17 @@
  * to CHOPPING is driven by the current clue's `ingredientCountHint`.
  * Literal clues hint the exact count (1-4); shock-me clues (hint=0)
  * let the player pick any number and tap the fridge door to confirm.
+ *
+ * Fridge door polish (C.2):
+ * - Door is locked (non-interactive) outside SELECT_INGREDIENTS
+ * - During SELECT_INGREDIENTS, the door glows faintly on its edges
+ * - Door-tap confirm for shock-me clues shows a bright green flash
  */
 import {useGLTF} from '@react-three/drei';
+import {useFrame} from '@react-three/fiber';
 import {RigidBody} from '@react-three/rapier';
 import {useDrag} from '@use-gesture/react';
-import {useMemo, useRef, useState} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
 import {useGameStore} from '../../ecs/hooks';
 import type {Clue} from '../../engine/ClueGenerator';
@@ -123,46 +129,103 @@ export function PhysicsFreezerChest() {
         <meshBasicMaterial color="#aaccff" transparent opacity={0.1} depthWrite={false} />
       </mesh>
 
-      {/* Fridge door — tappable surface for shock-me clues (hint=0).
-          When ingredientCountHint is 0, the player can pick any number
-          of ingredients and tap the door to confirm and advance. */}
-      <FridgeDoorConfirm />
+      {/* Fridge door — interactive surface with phase-gated behavior.
+          C.2: locked outside SELECT_INGREDIENTS, glows when active,
+          flashes on shock-me confirm. */}
+      <FridgeDoorOverlay />
     </group>
   );
 }
 
 /**
- * Invisible tappable plane on the fridge door. Only active during
- * SELECT_INGREDIENTS when the clue's ingredientCountHint is 0 (shock-me)
- * and the player has selected at least 1 ingredient.
+ * Fridge door overlay — visible at all times with phase-driven behavior.
+ *
+ * Outside SELECT_INGREDIENTS: dark, locked appearance (no interaction).
+ * During SELECT_INGREDIENTS: faint edge glow indicating interactability.
+ * Shock-me confirm (hint=0): tapping flashes the door bright green.
  */
-function FridgeDoorConfirm() {
+function FridgeDoorOverlay() {
   const gamePhase = useGameStore(state => state.gamePhase);
   const setGamePhase = useGameStore(state => state.setGamePhase);
   const selectedIngredientIds = useGameStore(state => state.selectedIngredientIds);
 
+  const matRef = useRef<THREE.MeshStandardMaterial>(null);
+  const confirmFlashRef = useRef(0); // countdown for the flash animation
+  const phaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clean up the phase-advance timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (phaseTimerRef.current) clearTimeout(phaseTimerRef.current);
+    };
+  }, []);
+
+  const isActive = gamePhase === 'SELECT_INGREDIENTS';
+  const hint = isActive ? getIngredientCountHint() : -1;
+  const canConfirm = isActive && hint === 0 && selectedIngredientIds.length >= 1;
+
   const handleClick = () => {
-    if (gamePhase !== 'SELECT_INGREDIENTS') return;
-    const hint = getIngredientCountHint();
-    // Only the door-confirm works for shock-me (hint=0) with at least 1 pick.
-    if (hint === 0 && selectedIngredientIds.length >= 1) {
+    if (!canConfirm) return;
+    // Trigger flash effect
+    confirmFlashRef.current = 0.5; // 0.5 seconds of flash
+    // Advance to CHOPPING after a brief visual beat
+    phaseTimerRef.current = setTimeout(() => {
       setGamePhase('CHOPPING');
-    }
+    }, 200);
   };
 
-  // Only render the tappable surface when relevant.
-  if (gamePhase !== 'SELECT_INGREDIENTS') return null;
-  const hint = getIngredientCountHint();
-  if (hint !== 0) return null;
+  useFrame((state, delta) => {
+    if (!matRef.current) return;
+    const t = state.clock.elapsedTime;
+
+    // Confirm flash countdown
+    if (confirmFlashRef.current > 0) {
+      confirmFlashRef.current -= delta;
+      // Flash: bright green
+      matRef.current.color.setStyle('#44ff44');
+      matRef.current.emissive.setStyle('#44ff44');
+      matRef.current.emissiveIntensity = 0.8;
+      matRef.current.opacity = 0.4;
+      return;
+    }
+
+    if (isActive) {
+      // Pulsing edge glow during SELECT_INGREDIENTS
+      const pulse = 0.08 + Math.sin(t * 2) * 0.04;
+      if (canConfirm) {
+        // Green glow when ready to confirm
+        matRef.current.color.setStyle('#44ff44');
+        matRef.current.emissive.setStyle('#44ff44');
+        matRef.current.emissiveIntensity = 0.3 + Math.sin(t * 3) * 0.15;
+        matRef.current.opacity = pulse + 0.05;
+      } else {
+        // Subtle red glow when interactable but not confirmable
+        matRef.current.color.setStyle('#FF1744');
+        matRef.current.emissive.setStyle('#FF1744');
+        matRef.current.emissiveIntensity = 0.1;
+        matRef.current.opacity = pulse;
+      }
+    } else {
+      // Locked: dim, dark appearance
+      matRef.current.color.setStyle('#222222');
+      matRef.current.emissive.setStyle('#000000');
+      matRef.current.emissiveIntensity = 0;
+      matRef.current.opacity = 0.05;
+    }
+  });
 
   return (
     <mesh position={[0, 0.8, 0.6]} onClick={handleClick}>
       <planeGeometry args={[1.4, 1.0]} />
-      <meshBasicMaterial
-        color={selectedIngredientIds.length >= 1 ? '#44ff44' : '#888888'}
+      <meshStandardMaterial
+        ref={matRef}
+        color="#222222"
+        emissive="#000000"
+        emissiveIntensity={0}
         transparent
-        opacity={0.15}
+        opacity={0.05}
         depthWrite={false}
+        toneMapped={false}
       />
     </mesh>
   );
@@ -192,7 +255,7 @@ function FreezerIngredient({def, miscNodes, frostMat: _frostMat}: any) {
 
     // When released, check if we've reached the required count.
     // ingredientCountHint > 0: auto-advance at that count.
-    // ingredientCountHint === 0: player must tap fridge door (handled by FridgeDoorConfirm).
+    // ingredientCountHint === 0: player must tap fridge door (handled by FridgeDoorOverlay).
     if (!active && gamePhase === 'SELECT_INGREDIENTS') {
       const hint = getIngredientCountHint();
       if (hint > 0 && selectedIngredientIds.length >= hint - 1) {

@@ -6,6 +6,9 @@
  *
  * Keep this in sync with `SurrealText.tsx` — there's a unit test that
  * pins both implementations to the same output for every game phase.
+ *
+ * Last reconciled: 2026-04-08 (matched line-by-line with SurrealText.tsx
+ * phaseContent useMemo).
  */
 import type {GamePhase, Posture} from '../ecs/hooks';
 
@@ -26,11 +29,11 @@ export interface PhaseTextInputs {
 export function computePhaseText(inputs: PhaseTextInputs): string {
   const {introActive, posture, idleTime, gamePhase, finalScore, currentRound, totalRounds} = inputs;
 
-  if (introActive) return '';
+  if (introActive) return 'Hey, wake up lazybones';
 
   if (posture === 'prone') {
-    if (idleTime > 10) return 'Try sitting up';
-    return 'Wake up';
+    if (idleTime > 10) return "Use the arrow keys for God's sake";
+    return 'Come on, time to get up';
   }
   if (posture === 'sitting') {
     if (idleTime > 10) return "Use the arrow keys for God's sake";

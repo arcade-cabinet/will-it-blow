@@ -81,8 +81,12 @@ title → difficulty → intro (blink/wake-up) → walk kitchen → 13 GamePhase
 Phases: SELECT_INGREDIENTS → CHOPPING → FILL_GRINDER → GRINDING → MOVE_BOWL → ATTACH_CASING → STUFFING → TIE_CASING → BLOWOUT → MOVE_SAUSAGE → MOVE_PAN → COOKING → DONE
 
 ### Testing
-- **Vitest** for unit tests
-- **Playwright** for E2E tests
+- **Vitest** for jsdom unit tests (`pnpm test`)
+- **Vitest browser mode** with Playwright provider for 4-tier browser validation (`pnpm test:browser`)
+  - See `docs/testing/deep-browser-validation.md` for the full harness reference
+  - Tiers: unit → micro → meso → macro (Yuka GOAP playthroughs)
+  - 4 viewports: desktop-1280, mobile-390, tablet-768, uhd-3840
+- `pnpm test:browser:src` for colocated browser tests under `src/`
 
 ## Key Files
 
@@ -117,6 +121,7 @@ pnpm test:browser:micro     # per-component isolation chunk
 pnpm test:browser:meso      # phase + flow chunk
 pnpm test:browser:macro     # Yuka GOAP playthrough chunk
 pnpm test:browser:harness   # harness self-tests
+pnpm test:browser:src       # colocated browser tests under src/
 pnpm report:browser         # rebuild test-results/browser/report.html
 pnpm typecheck              # tsc --noEmit
 pnpm lint                   # biome check

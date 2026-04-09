@@ -3,7 +3,7 @@
  * Diegetic in-world UI text -- renders instructions and state-driven messages
  * as 3D text meshes on kitchen surfaces NEAR the active station for each phase.
  *
- * Four text layers:
+ * Five text layers:
  * 1. **Phase instruction** — on the wall/floor near the current station
  * 2. **Demands** — always on the ceiling so the player can glance up any time
  * 3. **Mr. Sausage taunt** — on the left wall near the TV
@@ -12,6 +12,9 @@
  *    `enqueueSurrealMessage()` from anywhere in the codebase). These use
  *    the full MOUNTED->SEEN->READING->DROPPING->REMOVED FSM with a
  *    slide-down animation during the DROPPING phase.
+ * 5. **Pinned clue** — the active clue is ALWAYS rendered on the wall facing
+ *    the fridge, even if the player isn't looking at it. Other surreal
+ *    messages use the transient cameraSurface picker; the clue is pinned.
  *
  * Text is blood-red (#FF1744) with a pulsing glow.
  *
@@ -116,6 +119,16 @@ const CEILING_SURFACE: SurfacePlacement = {
 const TV_WALL_SURFACE: SurfacePlacement = {
   position: [-2.9, 1.2, 0.8],
   rotation: [0, Math.PI / 2, 0],
+};
+
+/**
+ * Pinned clue surface — on the back wall near the fridge (left side),
+ * slightly lower and to the right of the SELECT_INGREDIENTS phase text
+ * so both are readable simultaneously.
+ */
+const PINNED_CLUE_SURFACE: SurfacePlacement = {
+  position: [-1.0, 1.0, -3.8],
+  rotation: [0, 0, 0],
 };
 
 /**
@@ -309,11 +322,12 @@ interface BridgeMessageEntry extends MessageEntry {
  * Manages the queue of surreal 3D text messages displayed in the scene.
  * Derives message content from game phase, posture, demands, and score state.
  *
- * Four concurrent text layers:
+ * Five concurrent text layers:
  * 1. Phase instruction on the wall/floor near the active station
  * 2. Demands on the ceiling (persistent)
  * 3. Mr. Sausage taunt near the TV on the left wall
  * 4. Bridge messages (from surrealTextBridge — clues, verdicts, effects)
+ * 5. Pinned clue on the fridge-facing wall (always visible during gameplay)
  */
 export function SurrealText() {
   const introActive = useGameStore(state => state.introActive);
@@ -324,6 +338,7 @@ export function SurrealText() {
   const mrSausageDemands = useGameStore(state => state.mrSausageDemands);
   const currentRound = useGameStore(state => state.currentRound);
   const totalRounds = useGameStore(state => state.totalRounds);
+  const hungerCurrentClueJson = useGameStore(state => state.hungerCurrentClueJson);
 
   // Per-run seeded RNG for taunt picks. Same seed -> same line order.
   const tauntRng = useRunRng('SurrealText.taunt');
@@ -475,6 +490,54 @@ export function SurrealText() {
     }
   }, [tauntContent]);
 
+  // -- Pinned clue (layer 5 — always on fridge-facing wall) ----------------
+  //
+  // The active clue is ALWAYS visible on the back wall near the fridge
+  // during SELECT_INGREDIENTS. Unlike bridge messages, this doesn't cycle
+  // through the FSM — it persists until the phase changes away from
+  // SELECT_INGREDIENTS or the clue changes.
+
+  const [clueMessages, setClueMessages] = useState<MessageEntry[]>([]);
+
+  const clueText = useMemo(() => {
+    if (posture !== 'standing' || introActive) return '';
+    if (gamePhase !== 'SELECT_INGREDIENTS') return '';
+    if (!hungerCurrentClueJson || hungerCurrentClueJson === 'null') return '';
+    try {
+      const clue = JSON.parse(hungerCurrentClueJson);
+      return clue.text ?? '';
+    } catch {
+      return '';
+    }
+  }, [posture, introActive, gamePhase, hungerCurrentClueJson]);
+
+  useEffect(() => {
+    if (clueText) {
+      setClueMessages(prev => {
+        if (prev.some(m => m.active && m.text === clueText)) return prev;
+        const updated = prev.map(m => ({...m, active: false}));
+        return [
+          ...updated,
+          {
+            id: nextId++,
+            text: clueText,
+            active: true,
+            surface: PINNED_CLUE_SURFACE,
+            fontSize: 0.25,
+            maxWidth: 3.5,
+          },
+        ];
+      });
+    } else {
+      setClueMessages(prev => prev.map(m => ({...m, active: false})));
+    }
+  }, [clueText]);
+
+  const removeClueMessage = useCallback(
+    (id: number) => setClueMessages(prev => prev.filter(m => m.id !== id)),
+    [],
+  );
+
   // -- Bridge messages (layer 4 — from surrealTextBridge) ------------------
   //
   // Bridge messages use the full MOUNTED->SEEN->READING->DROPPING->REMOVED
@@ -616,6 +679,19 @@ export function SurrealText() {
           text={m.text}
           isDismissing={!m.active}
           onDead={() => removeTauntMessage(m.id)}
+          surface={m.surface}
+          fontSize={m.fontSize}
+          maxWidth={m.maxWidth}
+        />
+      ))}
+
+      {/* Pinned clue — always on the fridge-facing wall during SELECT_INGREDIENTS */}
+      {clueMessages.map(m => (
+        <SurrealMessage
+          key={m.id}
+          text={m.text}
+          isDismissing={!m.active}
+          onDead={() => removeClueMessage(m.id)}
           surface={m.surface}
           fontSize={m.fontSize}
           maxWidth={m.maxWidth}
