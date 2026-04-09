@@ -16,6 +16,7 @@ import {MrSausage3D} from './components/characters/MrSausage3D';
 import {SwipeFPSControls} from './components/controls/SwipeFPSControls';
 import {BasementRoom} from './components/environment/BasementRoom';
 import {DisgustIndicator} from './components/environment/DisgustIndicator';
+import {EndgameEnvironment} from './components/environment/EndgameEnvironment';
 import {SlaughterhouseDressing} from './components/environment/dressing/SlaughterhouseDressing';
 import {FlickeringFluorescent} from './components/environment/FlickeringFluorescent';
 import {Prop} from './components/environment/Prop';
@@ -198,6 +199,10 @@ function GameContent() {
         {/* Diegetic disgust meter — pressure gauge on wall near TV.
             Player sees their proximity to failure at all times. */}
         <DisgustIndicator />
+
+        {/* Win/lose environmental sequences: warm amber for escape,
+            red overhead for failure. */}
+        <EndgameEnvironment />
 
         {/* Ceiling Trapdoor */}
         <TrapDoorAnimation position={[0, 3, 0]} />
