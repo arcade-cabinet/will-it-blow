@@ -7,47 +7,40 @@
  * - Web: jeep-sqlite custom element backed by sql.js + IndexedDB
  * - iOS/Android: native SQLite via the Capacitor plugin
  *
- * Ported from arcade-cabinet/grailguard/src/db/client.ts which runs in
- * production on both iOS and web. The old dual-path sql.js/capacitorAdapter
- * approach had sync/async mismatches and untested shim code — this replaces
- * it with the proven single-path architecture.
+ * IMPORTANT: all heavy imports (@capacitor/core, @capacitor-community/sqlite,
+ * jeep-sqlite/loader, drizzle-orm/sqlite-proxy) are LAZY (dynamic import)
+ * so that modules which transitively import db/client don't trigger WASM
+ * loading at module-evaluation time. This is critical for browser tests
+ * where no WASM files are served.
  */
-import {Capacitor} from '@capacitor/core';
-import {
-  CapacitorSQLite,
-  SQLiteConnection,
-  type SQLiteDBConnection,
-} from '@capacitor-community/sqlite';
-import {drizzle, type SqliteRemoteDatabase} from 'drizzle-orm/sqlite-proxy';
+import type {SqliteRemoteDatabase} from 'drizzle-orm/sqlite-proxy';
 import * as schema from './schema';
 
 const DB_NAME = 'willitblow';
 const DB_VERSION = 1;
 
-let sqliteManager: SQLiteConnection | null = null;
-let sqliteDb: SQLiteDBConnection | null = null;
+// Lazy-loaded singletons — populated on first initDatabase() call.
+let sqliteManager: any = null;
+let sqliteDb: any = null;
 let drizzleInstance: SqliteRemoteDatabase<typeof schema> | null = null;
 let initPromise: Promise<void> | null = null;
 
-function isWebPlatform() {
+async function isWebPlatform(): Promise<boolean> {
+  const {Capacitor} = await import('@capacitor/core');
   return Capacitor.getPlatform() === 'web';
 }
 
-function getBaseAssetPath() {
+function getBaseAssetPath(): string {
   const base = import.meta.env.BASE_URL ?? '/';
   return `${base.endsWith('/') ? base : `${base}/`}assets`;
 }
 
-/**
- * Ensure the jeep-sqlite custom element is registered and appended to
- * the DOM. Only runs on web — native platforms use the plugin directly.
- *
- * The `customElements.whenDefined` await is critical: without it, the
- * capacitor-sqlite connection can race against jeep-sqlite's internal
- * WASM init and produce transaction errors.
- */
-async function ensureJeepSqliteElement() {
-  if (!isWebPlatform() || typeof window === 'undefined' || typeof document === 'undefined') {
+async function ensureJeepSqliteElement(): Promise<void> {
+  if (
+    !(await isWebPlatform()) ||
+    typeof window === 'undefined' ||
+    typeof document === 'undefined'
+  ) {
     return;
   }
 
@@ -64,16 +57,18 @@ async function ensureJeepSqliteElement() {
   await customElements.whenDefined('jeep-sqlite');
 }
 
-async function openConnection(): Promise<SQLiteDBConnection> {
+async function openConnection(): Promise<any> {
   if (sqliteDb) return sqliteDb;
 
   await ensureJeepSqliteElement();
+
+  const {CapacitorSQLite, SQLiteConnection} = await import('@capacitor-community/sqlite');
 
   if (!sqliteManager) {
     sqliteManager = new SQLiteConnection(CapacitorSQLite);
   }
 
-  if (isWebPlatform()) {
+  if (await isWebPlatform()) {
     await sqliteManager.initWebStore();
   }
 
@@ -98,8 +93,6 @@ function rowsToValueArrays(rows: unknown[]): unknown[][] {
   });
 }
 
-// ─── Migration SQL ───────────────────────────────────────────────────
-
 const MIGRATION_SQL = `
 CREATE TABLE IF NOT EXISTS "game_session" (
   "id" integer PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -109,7 +102,6 @@ CREATE TABLE IF NOT EXISTS "game_session" (
   "final_score" real,
   "rank" text
 );
-
 CREATE TABLE IF NOT EXISTS "round_scores" (
   "id" integer PRIMARY KEY AUTOINCREMENT NOT NULL,
   "session_id" integer NOT NULL REFERENCES "game_session"("id"),
@@ -118,13 +110,11 @@ CREATE TABLE IF NOT EXISTS "round_scores" (
   "demand_bonus" real,
   "round_total" real
 );
-
 CREATE TABLE IF NOT EXISTS "used_combos" (
   "id" integer PRIMARY KEY AUTOINCREMENT NOT NULL,
   "session_id" integer NOT NULL REFERENCES "game_session"("id"),
   "ingredient_combo" text NOT NULL
 );
-
 CREATE TABLE IF NOT EXISTS "player_stats" (
   "id" integer PRIMARY KEY AUTOINCREMENT NOT NULL,
   "total_games_played" integer NOT NULL DEFAULT 0,
@@ -132,7 +122,6 @@ CREATE TABLE IF NOT EXISTS "player_stats" (
   "best_rank" text,
   "total_play_time" integer NOT NULL DEFAULT 0
 );
-
 CREATE TABLE IF NOT EXISTS "settings" (
   "key" text PRIMARY KEY NOT NULL,
   "value" text NOT NULL
@@ -146,15 +135,14 @@ function splitSqlStatements(sql: string): string[] {
     .filter(s => s.length > 0);
 }
 
-// ─── Drizzle instance ────────────────────────────────────────────────
-
-async function createDrizzleInstance() {
+async function createDrizzleInstance(): Promise<void> {
   const connection = await openConnection();
 
-  // Run DDL migrations before creating the drizzle instance.
   const statements = splitSqlStatements(MIGRATION_SQL);
   const set = statements.map(statement => ({statement, values: [] as unknown[]}));
   await connection.executeSet(set, false);
+
+  const {drizzle} = await import('drizzle-orm/sqlite-proxy');
 
   drizzleInstance = drizzle<typeof schema>(
     async (sql, params, method) => {
@@ -183,11 +171,6 @@ async function createDrizzleInstance() {
   );
 }
 
-// ─── Public API ──────────────────────────────────────────────────────
-
-/**
- * Initialize the database. Safe to call multiple times — cached.
- */
 export async function initDatabase(): Promise<void> {
   if (drizzleInstance) return;
   if (!initPromise) {
@@ -198,16 +181,11 @@ export async function initDatabase(): Promise<void> {
   await initPromise;
 }
 
-/** Persist web IndexedDB store. No-op on native. */
 export async function persistDatabase(): Promise<void> {
-  if (!sqliteManager || !sqliteDb || !isWebPlatform()) return;
+  if (!sqliteManager || !sqliteDb || !(await isWebPlatform())) return;
   await sqliteManager.saveToStore(DB_NAME);
 }
 
-/**
- * Async getter — back-compat with existing `getDb()` callers.
- * Calls `initDatabase()` then returns the drizzle proxy instance.
- */
 export async function getDb(): Promise<SqliteRemoteDatabase<typeof schema>> {
   await initDatabase();
   if (!drizzleInstance) {
@@ -216,8 +194,16 @@ export async function getDb(): Promise<SqliteRemoteDatabase<typeof schema>> {
   return drizzleInstance;
 }
 
-/** Reset cached instances (for tests). */
-export function resetDbClient() {
+export const db = new Proxy({} as SqliteRemoteDatabase<typeof schema>, {
+  get(_target, prop) {
+    if (!drizzleInstance) {
+      throw new Error('Database not initialized. Call initDatabase() first.');
+    }
+    return (drizzleInstance as unknown as Record<string | symbol, unknown>)[prop];
+  },
+});
+
+export function resetDbClient(): void {
   drizzleInstance = null;
   sqliteDb = null;
   sqliteManager = null;
