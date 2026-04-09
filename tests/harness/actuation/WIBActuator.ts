@@ -61,7 +61,6 @@ export class WIBActuator {
     const canvas = document.querySelector('canvas');
     if (!canvas) throw new Error('WIBActuator.clickPoint: no <canvas> found');
 
-    const rect = canvas.getBoundingClientRect();
     const clientX = x;
     const clientY = y;
 
@@ -85,15 +84,17 @@ export class WIBActuator {
 
     canvas.dispatchEvent(new PointerEvent('pointerdown', commonInit));
     canvas.dispatchEvent(new PointerEvent('pointerup', {...commonInit, buttons: 0}));
-    canvas.dispatchEvent(new MouseEvent('click', {
-      clientX,
-      clientY,
-      screenX: clientX,
-      screenY: clientY,
-      bubbles: true,
-      cancelable: true,
-      button: 0,
-    }));
+    canvas.dispatchEvent(
+      new MouseEvent('click', {
+        clientX,
+        clientY,
+        screenX: clientX,
+        screenY: clientY,
+        bubbles: true,
+        cancelable: true,
+        button: 0,
+      }),
+    );
   }
 
   /** Type a text string via the keyboard. */
@@ -117,7 +118,6 @@ export class WIBActuator {
   projectStationToScreen(_bounds: StationBounds, _stationName: StationName): ScreenRect {
     const canvas = document.querySelector('canvas');
     if (!canvas) throw new Error('WIBActuator.projectStationToScreen: no <canvas> found');
-    const rect = canvas.getBoundingClientRect();
     return {
       x: rect.left + rect.width / 2,
       y: rect.top + rect.height / 2,

@@ -12,7 +12,7 @@
 import type {ThreeEvent} from '@react-three/fiber';
 import {useFrame} from '@react-three/fiber';
 import {useCallback, useRef, useState} from 'react';
-import * as THREE from 'three';
+import type * as THREE from 'three';
 import {useGameStore} from '../../ecs/hooks';
 import {requestHandGesture} from '../camera/handGestureStore';
 
@@ -41,7 +41,7 @@ function TieDot({
   const meshRef = useRef<THREE.Mesh>(null);
   const matRef = useRef<THREE.MeshStandardMaterial>(null);
 
-  useFrame((state) => {
+  useFrame(state => {
     if (!matRef.current || tied) return;
     const t = state.clock.elapsedTime;
     const pulse = PULSE_MIN + (Math.sin(t * PULSE_SPEED) * 0.5 + 0.5) * (PULSE_MAX - PULSE_MIN);
@@ -59,12 +59,7 @@ function TieDot({
   );
 
   return (
-    <mesh
-      ref={meshRef}
-      position={position}
-      onClick={handleClick}
-      visible={!tied}
-    >
+    <mesh ref={meshRef} position={position} onClick={handleClick} visible={!tied}>
       <sphereGeometry args={[DOT_RADIUS, 16, 16]} />
       <meshStandardMaterial
         ref={matRef}

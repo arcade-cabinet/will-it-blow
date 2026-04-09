@@ -17,7 +17,7 @@
  */
 import {useFrame} from '@react-three/fiber';
 import {useRef} from 'react';
-import * as THREE from 'three';
+import type * as THREE from 'three';
 import {useGameStore} from '../../ecs/hooks';
 
 export function EndgameEnvironment() {
@@ -33,7 +33,7 @@ export function EndgameEnvironment() {
   const isWinning = gamePhase === 'DONE' && hungerFridgeIds.length === 0;
   const isLosing = hungerDisgustMeter >= hungerDisgustThreshold;
 
-  useFrame((state) => {
+  useFrame(state => {
     if (posture !== 'standing') return;
     const t = state.clock.elapsedTime;
 

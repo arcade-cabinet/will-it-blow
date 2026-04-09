@@ -33,19 +33,11 @@ function disgustColor(ratio: number): THREE.Color {
   if (ratio < 0.5) {
     // Green to yellow
     const t = ratio / 0.5;
-    return new THREE.Color().lerpColors(
-      new THREE.Color('#22cc44'),
-      new THREE.Color('#cccc22'),
-      t,
-    );
+    return new THREE.Color().lerpColors(new THREE.Color('#22cc44'), new THREE.Color('#cccc22'), t);
   }
   // Yellow to deep red
   const t = (ratio - 0.5) / 0.5;
-  return new THREE.Color().lerpColors(
-    new THREE.Color('#cccc22'),
-    new THREE.Color('#cc1111'),
-    t,
-  );
+  return new THREE.Color().lerpColors(new THREE.Color('#cccc22'), new THREE.Color('#cc1111'), t);
 }
 
 export function DisgustIndicator() {
@@ -79,7 +71,7 @@ export function DisgustIndicator() {
     return new THREE.ShapeGeometry(shape);
   }, []);
 
-  useFrame((state) => {
+  useFrame(state => {
     // Only visible when standing (player is playing)
     if (groupRef.current) {
       groupRef.current.visible = posture === 'standing';
@@ -145,12 +137,7 @@ export function DisgustIndicator() {
       {/* Circular frame (dark metal ring) */}
       <mesh>
         <ringGeometry args={[0.19, 0.22, 32]} />
-        <meshStandardMaterial
-          ref={frameMatRef}
-          color="#333"
-          metalness={0.7}
-          roughness={0.4}
-        />
+        <meshStandardMaterial ref={frameMatRef} color="#333" metalness={0.7} roughness={0.4} />
       </mesh>
 
       {/* Background plate */}

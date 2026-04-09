@@ -62,12 +62,6 @@ export function PhaseLighting() {
   });
 
   return (
-    <pointLight
-      ref={lightRef}
-      position={[0, 2.2, 0]}
-      intensity={0}
-      distance={8}
-      color="#c8c8c8"
-    />
+    <pointLight ref={lightRef} position={[0, 2.2, 0]} intensity={0} distance={8} color="#c8c8c8" />
   );
 }
