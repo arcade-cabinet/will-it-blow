@@ -11,7 +11,7 @@ import {Suspense, useCallback, useEffect, useRef, useState} from 'react';
 import {PCFShadowMap} from 'three';
 import {IntroSequence} from './components/camera/IntroSequence';
 import {PlayerHands} from './components/camera/PlayerHands';
-import {TieGesture} from './components/challenges/TieGesture';
+import {TieCasingDots} from './components/challenges/TieCasingDots';
 import {MrSausage3D} from './components/characters/MrSausage3D';
 import {SwipeFPSControls} from './components/controls/SwipeFPSControls';
 import {BasementRoom} from './components/environment/BasementRoom';
@@ -161,6 +161,10 @@ function GameContent() {
         {/* Ceiling Trapdoor */}
         <TrapDoorAnimation position={[0, 3, 0]} />
 
+        {/* Diegetic tie-casing interaction — pulsing dots on casing ends.
+            Replaces the old HTML TieGesture overlay (pillar 7 compliance). */}
+        {gamePhase === 'TIE_CASING' && <TieCasingDots />}
+
         {/* Presentation climax (T1.B): plate on rope descends during DONE phase.
             The full 12-second presentation must complete BEFORE the round
             transition overlay appears. */}
@@ -293,11 +297,6 @@ export function App() {
 
           {/* Invisible touch overlay for mobile FPS controls */}
           <SwipeFPSControls />
-
-          {/* Tie Gesture overlay -- only shown during TIE_CASING phase */}
-          {gamePhase === 'TIE_CASING' && (
-            <TieGesture onComplete={() => useGameStore.getState().setGamePhase('BLOWOUT')} />
-          )}
 
           {/* Round transition overlay -- shown AFTER presentation completes */}
           {showRoundTransition && (
