@@ -1,3 +1,14 @@
+<!--
+title: Deep Browser Validation
+domain: testing
+status: active
+engine: react-three-fiber
+last-verified: 2026-04-08
+depends-on: AGENTS.md, vitest.config.ts
+agent-context: Reference for the four-tier browser validation suite (unit, micro, meso, macro) and the Yuka GOAP governor architecture. All browser tests use @vitest/browser with the Playwright provider.
+summary: Four-tier browser validation harness (unit/micro/meso/macro) running in real headless Chromium across 4 viewports, with a Yuka GOAP governor for full-playthrough macro tests.
+-->
+
 # Deep Browser Validation
 
 The `tests/` directory hosts a four-tier validation suite that runs every
@@ -10,7 +21,7 @@ the hood) so the entire stack lives behind a single test runner.
 
 ```
 macro    full playthroughs driven by the Yuka GOAP governor
-  meso   single phase, single station, title→difficulty flow,
+  meso   single phase, single station, title->difficulty flow,
          intro sequence, verdict screen
     micro  one R3F component in isolation via renderR3F() harness
       unit  pure logic that needs WebGL/Rapier but no game state
@@ -124,31 +135,31 @@ flow through Playwright's underlying primitives.
 ## The Yuka GOAP governor
 
 `tests/harness/goap/GoapGovernor.ts` is the AI player. It runs a
-classic perceive → select-goal → execute → settle loop:
+classic perceive -> select-goal -> execute -> settle loop:
 
 ```
-   ┌──────────────────────────┐
-   │  GoapGovernor.tick()     │
-   └────────────┬─────────────┘
-                ▼
-    ┌──────────────────────┐         ┌─────────────────────┐
-    │  WIBPerception       │ ◀────── │  __WIB_DEBUG__      │
-    │  .observe()          │         │  .getPerception()   │
-    └──────────┬───────────┘         └─────────────────────┘
-               │  PerceptionSnapshot
-               ▼
-    ┌──────────────────────────┐
-    │  CompleteRoundGoal       │
-    │  .selectGoalForPhase()   │
-    └──────────┬───────────────┘
-               │  WIBGoal
-               ▼
-    ┌──────────────────────────┐         ┌─────────────────────┐
-    │  goal.run({              │         │   Real Playwright   │
-    │    perception, actuator  │ ──────▶ │   page.mouse / keys │
-    │  })                      │         │   via @vitest/      │
-    └──────────────────────────┘         │   browser/context   │
-                                         └─────────────────────┘
+   +----------------------------+
+   |  GoapGovernor.tick()       |
+   +------------+---------------+
+                v
+    +------------------------+         +-----------------------+
+    |  WIBPerception         | <------ |  __WIB_DEBUG__        |
+    |  .observe()            |         |  .getPerception()     |
+    +----------+-------------+         +-----------------------+
+               |  PerceptionSnapshot
+               v
+    +----------------------------+
+    |  CompleteRoundGoal         |
+    |  .selectGoalForPhase()     |
+    +----------+-----------------+
+               |  WIBGoal
+               v
+    +----------------------------+         +-----------------------+
+    |  goal.run({                |         |   Real Playwright     |
+    |    perception, actuator    | ------> |   page.mouse / keys   |
+    |  })                        |         |   via @vitest/        |
+    +----------------------------+         |   browser/context     |
+                                           +-----------------------+
 ```
 
 Top-level goal: `CompleteRoundGoal` extends Yuka's `CompositeGoal`.
@@ -168,6 +179,6 @@ for actual pointer events one at a time.
 
 `pnpm report:browser` rebuilds `test-results/browser/report.html` —
 a single self-contained HTML page that walks `test-results/browser/`
-and groups every captured screenshot by layer → feature → viewport.
+and groups every captured screenshot by layer -> feature -> viewport.
 Open it directly in a browser to scan for visual regressions; no
 build step or external assets.
