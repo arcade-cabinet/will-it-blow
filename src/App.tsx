@@ -45,6 +45,7 @@ import {GameOrchestrator} from './engine/GameOrchestrator';
 import {FPSCamera} from './player/FPSCamera';
 import {PlayerCapsule} from './player/PlayerCapsule';
 import {useInput} from './player/useInput';
+import {setPitch, setYaw} from './player/useMouseLook';
 
 // Rapier WASM is loaded by <Physics> internally.
 // The fixRapierWasm() Vite plugin rewrites the broken import.meta.url
@@ -103,6 +104,7 @@ function GameContent() {
   const introActive = useGameStore(state => state.introActive);
   const mrSausageReaction = useGameStore(state => state.mrSausageReaction);
   const gamePhase = useGameStore(state => state.gamePhase);
+  const posture = useGameStore(state => state.posture);
   const {moveDirection} = useInput();
 
   // Block movement during intro sequence
@@ -113,6 +115,27 @@ function GameContent() {
   // gamePhase (which changes when nextRound fires), so the TV picks up
   // the broadcast prop naturally.
   const broadcastRound = betweenRoundsBroadcast;
+
+  // ── C.1: Lead player to the first clue ──────────────────────────────
+  // One-shot camera nudge: when the player first stands up and enters
+  // SELECT_INGREDIENTS, smoothly rotate the camera to face the back
+  // wall where the pinned clue lives. Only fires once per game.
+  const clueNudgeFiredRef = useRef(false);
+  useEffect(() => {
+    if (
+      !clueNudgeFiredRef.current &&
+      posture === 'standing' &&
+      gamePhase === 'SELECT_INGREDIENTS' &&
+      !introActive
+    ) {
+      clueNudgeFiredRef.current = true;
+      // Yaw 0 = facing -Z = back wall where the pinned clue surface is.
+      // Slight leftward offset (-0.3) to aim at the clue surface position
+      // which is at x=-1.0 on the back wall.
+      setYaw(-0.3);
+      setPitch(0);
+    }
+  }, [posture, gamePhase, introActive]);
 
   // Initialize Tone.js audio on mount and start the horror drone
   useEffect(() => {
