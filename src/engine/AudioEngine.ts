@@ -1,9 +1,11 @@
 /**
  * @module AudioEngine
- * Tone.js-based audio engine for Will It Blow?
- * Sample playback, procedural horror drone, reverb/filter effects chain,
- * phase stingers, Mr. Sausage reaction audio, and per-archetype
- * ingredient SFX — all via Tone.js synthesis when audio files don't exist.
+ * Hybrid audio engine for Will It Blow? — OGG samples as PRIMARY sources,
+ * Tone.js synthesis as FALLBACK when samples fail to load.
+ *
+ * The hand-picked sfx_*.ogg files in public/audio/ are the authoritative
+ * audio for gameplay. Tone.js procedural synths exist as a safety net so
+ * gameplay is never silent even on devices that can't decode OGG.
  *
  * Usage:
  *   await audioEngine.initialize();
@@ -21,6 +23,10 @@
  * E.3 — Per-ingredient SFX: playIngredientSFX(archetype, action)
  * routes through archetype-specific Tone.js synths so each decomposition
  * type has a distinct sound character.
+ *
+ * E.4 — Station SFX: station-specific OGG playback for boiling, chopping,
+ * wet mixing, pouring, sizzle loops, and pan clangs. These are PRIMARY;
+ * the existing Tone.js players in SOUND_MAP are FALLBACK.
  */
 
 import * as Tone from 'tone';
@@ -43,6 +49,19 @@ export type SoundId =
   | 'rankReveal'
   | 'ambient';
 
+/**
+ * Station-specific SFX IDs for hand-picked OGG samples.
+ * These are PRIMARY — played instead of generic SOUND_MAP entries.
+ */
+export type StationSfxId =
+  | 'sfx_boiling'
+  | 'sfx_chop_1'
+  | 'sfx_chop_2'
+  | 'sfx_mix_wet'
+  | 'sfx_pan_clang'
+  | 'sfx_pour'
+  | 'sfx_sizzle_loop';
+
 /** Ingredient composition archetype for SFX routing. */
 export type IngredientArchetype = 'meat' | 'plant' | 'plastic' | 'metal' | 'liquid' | 'other';
 
@@ -63,7 +82,7 @@ function withBase(path: string): string {
   return `${BASE}${path.startsWith('/') ? path.slice(1) : path}`;
 }
 
-/** Maps each SoundId to its OGG file path under /audio/ */
+/** Maps each SoundId to its OGG file path under /audio/ (FALLBACK sources) */
 const SOUND_MAP: Record<SoundId, string> = {
   chop: withBase('/audio/chop_1.ogg'),
   grind: withBase('/audio/mix_dry_1.ogg'),
@@ -81,6 +100,20 @@ const SOUND_MAP: Record<SoundId, string> = {
   ambient: withBase('/audio/ambient-horror.ogg'),
 };
 
+/**
+ * Maps station SFX IDs to their hand-picked OGG file paths.
+ * These are the PRIMARY audio sources for gameplay interactions.
+ */
+const STATION_SFX_MAP: Record<StationSfxId, string> = {
+  sfx_boiling: withBase('/audio/sfx_boiling.ogg'),
+  sfx_chop_1: withBase('/audio/sfx_chop_1.ogg'),
+  sfx_chop_2: withBase('/audio/sfx_chop_2.ogg'),
+  sfx_mix_wet: withBase('/audio/sfx_mix_wet.ogg'),
+  sfx_pan_clang: withBase('/audio/sfx_pan_clang.ogg'),
+  sfx_pour: withBase('/audio/sfx_pour.ogg'),
+  sfx_sizzle_loop: withBase('/audio/sfx_sizzle_loop.ogg'),
+};
+
 class AudioEngineImpl {
   private _initialized = false;
   private muted = false;
@@ -89,8 +122,14 @@ class AudioEngineImpl {
   private filter: Tone.Filter | null = null;
   private reverb: Tone.Reverb | null = null;
 
-  // Sample players
+  // Sample players (fallback)
   private players: Map<SoundId, Tone.Player> = new Map();
+
+  // Station SFX players (PRIMARY)
+  private stationPlayers: Map<StationSfxId, Tone.Player> = new Map();
+
+  // Alternating chop index for sfx_chop_1 / sfx_chop_2
+  private chopAlternator = 0;
 
   // Procedural horror drone
   private fmSynth: Tone.FMSynth | null = null;
@@ -129,10 +168,16 @@ class AudioEngineImpl {
     this.filter.connect(this.reverb);
     this.reverb.connect(Tone.getDestination());
 
-    // Create sample players for all sounds
+    // Create fallback sample players for all generic sounds
     for (const [id, url] of Object.entries(SOUND_MAP)) {
       const player = new Tone.Player({url}).connect(this.filter);
       this.players.set(id as SoundId, player);
+    }
+
+    // Create PRIMARY station SFX players from hand-picked OGGs
+    for (const [id, url] of Object.entries(STATION_SFX_MAP)) {
+      const player = new Tone.Player({url}).connect(this.filter);
+      this.stationPlayers.set(id as StationSfxId, player);
     }
 
     // Procedural horror drone synths
@@ -209,6 +254,121 @@ class AudioEngineImpl {
     this._initialized = true;
   }
 
+  // --- Station SFX (PRIMARY) --------------------------------------------------
+
+  /**
+   * Try to play a station SFX OGG. Returns true if played, false if
+   * the sample wasn't loaded (caller should fall back to Tone.js).
+   */
+  private tryPlayStationSfx(id: StationSfxId, loop = false): boolean {
+    const player = this.stationPlayers.get(id);
+    if (!player?.loaded) return false;
+    player.loop = loop;
+    player.start();
+    return true;
+  }
+
+  /** Stop a station SFX loop. */
+  private stopStationSfx(id: StationSfxId): void {
+    const player = this.stationPlayers.get(id);
+    if (player) player.stop();
+  }
+
+  // --- Public Station SFX API ------------------------------------------------
+
+  /**
+   * Play a chop sound. PRIMARY: alternates between sfx_chop_1 and sfx_chop_2.
+   * FALLBACK: generic chop_1.ogg via Tone.Player.
+   */
+  playChop(): void {
+    if (!this._initialized || this.muted) return;
+    const sfxId: StationSfxId = this.chopAlternator % 2 === 0 ? 'sfx_chop_1' : 'sfx_chop_2';
+    this.chopAlternator++;
+    if (!this.tryPlayStationSfx(sfxId)) {
+      this.play('chop');
+    }
+  }
+
+  /**
+   * Play boiling sound. PRIMARY: sfx_boiling.ogg one-shot.
+   * FALLBACK: boiling_1.ogg via generic player.
+   */
+  playBoiling(): void {
+    if (!this._initialized || this.muted) return;
+    if (!this.tryPlayStationSfx('sfx_boiling')) {
+      this.play('pressure');
+    }
+  }
+
+  /**
+   * Start sizzle loop. PRIMARY: sfx_sizzle_loop.ogg looped.
+   * FALLBACK: sizzle_1.ogg loop via generic player.
+   */
+  startSizzleLoop(): void {
+    if (!this._initialized || this.muted) return;
+    if (!this.tryPlayStationSfx('sfx_sizzle_loop', true)) {
+      this.loop('sizzle');
+    }
+  }
+
+  /** Stop sizzle loop (both primary and fallback). */
+  stopSizzleLoop(): void {
+    this.stopStationSfx('sfx_sizzle_loop');
+    this.stop('sizzle');
+  }
+
+  /**
+   * Play wet mixing sound. PRIMARY: sfx_mix_wet.ogg.
+   * FALLBACK: mix_wet_1.ogg via generic player.
+   */
+  playMixWet(): void {
+    if (!this._initialized || this.muted) return;
+    if (!this.tryPlayStationSfx('sfx_mix_wet')) {
+      this.play('squelch');
+    }
+  }
+
+  /**
+   * Start wet mixing loop. PRIMARY: sfx_mix_wet.ogg looped.
+   * FALLBACK: squelch loop via generic player.
+   */
+  startMixWetLoop(): void {
+    if (!this._initialized || this.muted) return;
+    if (!this.tryPlayStationSfx('sfx_mix_wet', true)) {
+      this.loop('squelch');
+    }
+  }
+
+  /** Stop wet mixing loop. */
+  stopMixWetLoop(): void {
+    this.stopStationSfx('sfx_mix_wet');
+    this.stop('squelch');
+  }
+
+  /**
+   * Play pan clang. PRIMARY: sfx_pan_clang.ogg.
+   * FALLBACK: pots_and_pans_1.ogg via generic player.
+   */
+  playPanClang(): void {
+    if (!this._initialized || this.muted) return;
+    if (!this.tryPlayStationSfx('sfx_pan_clang')) {
+      this.play('burst');
+    }
+  }
+
+  /**
+   * Play pour sound. PRIMARY: sfx_pour.ogg.
+   * FALLBACK: pour_1.ogg via generic player.
+   */
+  playPour(): void {
+    if (!this._initialized || this.muted) return;
+    if (!this.tryPlayStationSfx('sfx_pour')) {
+      this.play('success');
+    }
+  }
+
+  // --- Generic sample playback (FALLBACK layer) ---
+
   /** Play a sample once (one-shot). */
   play(sound: string): void {
     if (!this._initialized || this.muted) return;
@@ -235,10 +395,13 @@ class AudioEngineImpl {
     player.stop();
   }
 
-  /** Stop all looping samples. */
+  /** Stop all looping samples (both generic and station). */
   stopAll(): void {
     if (!this._initialized) return;
     for (const player of this.players.values()) {
+      player.stop();
+    }
+    for (const player of this.stationPlayers.values()) {
       player.stop();
     }
   }
@@ -484,6 +647,11 @@ class AudioEngineImpl {
     }
     this.players.clear();
 
+    for (const player of this.stationPlayers.values()) {
+      player.dispose();
+    }
+    this.stationPlayers.clear();
+
     this.fmSynth?.dispose();
     this.fmSynth = null;
     this.noiseSynth?.dispose();
@@ -521,15 +689,15 @@ class AudioEngineImpl {
     this.play(name);
   }
 
-  playChop(): void {
-    this.play('chop');
-  }
-
+  /**
+   * Set sizzle level. Starts or stops the PRIMARY sizzle loop.
+   * Level > 0 starts sfx_sizzle_loop.ogg; 0 stops it.
+   */
   setSizzleLevel(level: number): void {
     if (level > 0) {
-      this.loop('sizzle');
+      this.startSizzleLoop();
     } else {
-      this.stop('sizzle');
+      this.stopSizzleLoop();
     }
   }
 

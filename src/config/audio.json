@@ -4,7 +4,9 @@
       { "url": "/audio/chop_1.ogg", "volume": -5 },
       { "url": "/audio/chop_2.ogg", "volume": -5 },
       { "url": "/audio/chop_3.ogg", "volume": -5 },
-      { "url": "/audio/chop_9.ogg", "volume": -5 }
+      { "url": "/audio/chop_9.ogg", "volume": -5 },
+      { "url": "/audio/sfx_chop_1.ogg", "volume": -4 },
+      { "url": "/audio/sfx_chop_2.ogg", "volume": -4 }
     ],
     "sizzle": [
       { "url": "/audio/sizzle_1.ogg", "volume": -15 },
@@ -14,19 +16,22 @@
     ],
     "sizzleLoop": [
       { "url": "/audio/sizzle_loop_1.ogg", "volume": -20, "loop": true },
-      { "url": "/audio/sizzle_loop_2.ogg", "volume": -20, "loop": true }
+      { "url": "/audio/sizzle_loop_2.ogg", "volume": -20, "loop": true },
+      { "url": "/audio/sfx_sizzle_loop.ogg", "volume": -18, "loop": true }
     ],
     "boiling": [
       { "url": "/audio/boiling_1.ogg", "volume": -15 },
       { "url": "/audio/boiling_2.ogg", "volume": -15 },
       { "url": "/audio/boiling_3.ogg", "volume": -15 },
-      { "url": "/audio/boiling_4.ogg", "volume": -15 }
+      { "url": "/audio/boiling_4.ogg", "volume": -15 },
+      { "url": "/audio/sfx_boiling.ogg", "volume": -12 }
     ],
     "pour": [
       { "url": "/audio/pour_1.ogg", "volume": -10 },
       { "url": "/audio/pour_2.ogg", "volume": -10 },
       { "url": "/audio/pour_3.ogg", "volume": -10 },
-      { "url": "/audio/pour_6.ogg", "volume": -10 }
+      { "url": "/audio/pour_6.ogg", "volume": -10 },
+      { "url": "/audio/sfx_pour.ogg", "volume": -8 }
     ],
     "peel": [
       { "url": "/audio/peel_1.ogg", "volume": -8 },
@@ -38,7 +43,8 @@
     ],
     "mixWet": [
       { "url": "/audio/mix_wet_1.ogg", "volume": -10 },
-      { "url": "/audio/mix_wet_2.ogg", "volume": -10 }
+      { "url": "/audio/mix_wet_2.ogg", "volume": -10 },
+      { "url": "/audio/sfx_mix_wet.ogg", "volume": -8 }
     ],
     "potsAndPans": [
       { "url": "/audio/pots_and_pans_1.ogg", "volume": -8 },

@@ -20,6 +20,10 @@
  * intensity are now driven by the composite mix of the player's
  * ingredient selection, so different ingredient combos produce
  * visibly different frying behaviour.
+ *
+ * E.4: Audio uses sfx_sizzle_loop.ogg and sfx_boiling.ogg as PRIMARY
+ * sources, sfx_pan_clang.ogg when the pan lands on a burner.
+ * Tone.js synthesis is FALLBACK only.
  */
 import {Torus, useGLTF} from '@react-three/drei';
 import {useFrame, useThree} from '@react-three/fiber';
@@ -68,6 +72,9 @@ export function Stove() {
 
   // Track whether we've already awarded the cook flair (once per phase).
   const cookFlairAwarded = useRef(false);
+
+  // Track whether boiling SFX has been triggered this cook session.
+  const boilingSfxPlayed = useRef(false);
 
   // Composition-driven colour and sizzle intensity.
   const mix = useCompositeMix();
@@ -197,6 +204,7 @@ export function Stove() {
   const prevPhaseRef = useRef(gamePhase);
   if (gamePhase === 'COOKING' && prevPhaseRef.current !== 'COOKING') {
     cookFlairAwarded.current = false;
+    boilingSfxPlayed.current = false;
   }
   prevPhaseRef.current = gamePhase;
 
@@ -217,6 +225,8 @@ export function Stove() {
         0.5
       ) {
         setPanPos(new THREE.Vector3(0, 0, 0.8));
+        // E.4: Pan landing clang — PRIMARY sfx_pan_clang.ogg
+        audioEngine.playPanClang();
         setGamePhase('COOKING');
       } else {
         setPanPos(new THREE.Vector3(0.8, 0, 0));
@@ -231,6 +241,8 @@ export function Stove() {
     return 0.6 + mix.moisture * 0.6 + mix.fat * 0.4;
   }, [mix]);
 
+  // E.4: Use PRIMARY sizzle loop. setSizzleLevel now routes through
+  // sfx_sizzle_loop.ogg with Tone.js fallback.
   const updateSizzle = (l1: number, l2: number) => {
     if (gamePhase === 'COOKING') {
       audioEngine.setSizzleLevel(Math.max(l1, l2) * sizzleMultiplier);
@@ -264,6 +276,13 @@ export function Stove() {
       if (maxHeat > 0) {
         const nextCook = Math.min(1.0, cookLevel + maxHeat * delta * 0.1); // Takes 10s at full heat
         setCookLevel(nextCook);
+
+        // E.4: Trigger boiling SFX once per cook session when heat is significant
+        if (!boilingSfxPlayed.current && maxHeat > 0.3) {
+          boilingSfxPlayed.current = true;
+          audioEngine.playBoiling();
+        }
+
         if (nextCook >= 1.0 && !cookFlairAwarded.current) {
           cookFlairAwarded.current = true;
           // Award flair based on the heat level at completion.

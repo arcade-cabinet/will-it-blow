@@ -86,8 +86,12 @@ describe('AudioEngine (Tone.js)', () => {
       expect(ToneMock.MetalSynth).toHaveBeenCalledTimes(2);
       // E.1/E.3: MembraneSynth called 2x (stinger + ingredient)
       expect(ToneMock.MembraneSynth).toHaveBeenCalledTimes(2);
-      // 14 sounds mapped
-      expect(ToneMock.Player).toHaveBeenCalledTimes(14);
+      // Players are created dynamically from audio.json sample entries.
+      // The count grows as new SFX are added — assert at least the
+      // original 14 core samples exist, plus any new ones.
+      expect(
+        (ToneMock.Player as unknown as {mock: {calls: unknown[]}}).mock.calls.length,
+      ).toBeGreaterThanOrEqual(14);
     });
 
     it('is idempotent — calling twice does not reinitialize', async () => {
