@@ -91,6 +91,13 @@ export interface RenderR3FOptions {
    * 16-context limit in dense test files.
    */
   preserveDrawingBuffer?: boolean;
+  /**
+   * When true, the StateProbe increments `__RENDER_R3F_PROBE_COUNT__`
+   * on every render. Default **false** to avoid cross-test contamination
+   * of render counts. Tests that depend on render counts should opt in
+   * explicitly.
+   */
+  probeRenderCount?: boolean;
   testId?: string;
 }
 
@@ -107,7 +114,7 @@ export interface R3FHandle {
   unmount(): void;
 }
 
-// ─── Internal: mutable state holder + probe ──────────────────────────
+// ─── Internal: mutable state holder + probe ���─────────────────────────
 
 interface StateHolder {
   state: RootState | null;
@@ -117,9 +124,11 @@ interface StateHolder {
 function StateProbe({
   holder,
   cameraTarget,
+  trackRenderCount,
 }: {
   holder: StateHolder;
   cameraTarget?: [number, number, number];
+  trackRenderCount: boolean;
 }) {
   // `useThree` returns the live root state — the one R3F recomputes
   // on every internal state change. Writing it into the holder on
@@ -137,10 +146,13 @@ function StateProbe({
   }
 
   // Diagnostic signal so harness self-tests can verify the probe
-  // actually mounted inside the Canvas tree.
-  (window as unknown as {__RENDER_R3F_PROBE_COUNT__?: number}).__RENDER_R3F_PROBE_COUNT__ =
-    ((window as unknown as {__RENDER_R3F_PROBE_COUNT__?: number}).__RENDER_R3F_PROBE_COUNT__ ?? 0) +
-    1;
+  // actually mounted inside the Canvas tree. Gated behind
+  // probeRenderCount to avoid cross-test contamination.
+  if (trackRenderCount) {
+    (window as unknown as {__RENDER_R3F_PROBE_COUNT__?: number}).__RENDER_R3F_PROBE_COUNT__ =
+      ((window as unknown as {__RENDER_R3F_PROBE_COUNT__?: number}).__RENDER_R3F_PROBE_COUNT__ ??
+        0) + 1;
+  }
   return null;
 }
 
@@ -168,6 +180,7 @@ export function renderR3F(children: React.ReactNode, options: RenderR3FOptions =
     backgroundColor = DEFAULT_BACKGROUND_COLOR,
     fogDensity = DEFAULT_FOG_DENSITY,
     fogColor = DEFAULT_FOG_COLOR,
+    probeRenderCount = false,
     testId,
   } = options;
 
@@ -192,7 +205,11 @@ export function renderR3F(children: React.ReactNode, options: RenderR3FOptions =
         <Suspense fallback={null}>
           {physics ? <Physics gravity={gravity}>{children}</Physics> : children}
         </Suspense>
-        <StateProbe holder={holder} cameraTarget={cameraTarget} />
+        <StateProbe
+          holder={holder}
+          cameraTarget={cameraTarget}
+          trackRenderCount={probeRenderCount}
+        />
       </Canvas>
     </div>,
   );
