@@ -89,7 +89,9 @@ describe('AudioEngine (Tone.js)', () => {
       // Players are created dynamically from audio.json sample entries.
       // The count grows as new SFX are added — assert at least the
       // original 14 core samples exist, plus any new ones.
-      expect(ToneMock.Player.mock.calls.length).toBeGreaterThanOrEqual(14);
+      expect(
+        (ToneMock.Player as unknown as {mock: {calls: unknown[]}}).mock.calls.length,
+      ).toBeGreaterThanOrEqual(14);
     });
 
     it('is idempotent — calling twice does not reinitialize', async () => {
