@@ -17,6 +17,7 @@ import {SwipeFPSControls} from './components/controls/SwipeFPSControls';
 import {BasementRoom} from './components/environment/BasementRoom';
 import {DisgustIndicator} from './components/environment/DisgustIndicator';
 import {EndgameEnvironment} from './components/environment/EndgameEnvironment';
+import {PhaseLighting} from './components/environment/PhaseLighting';
 import {SlaughterhouseDressing} from './components/environment/dressing/SlaughterhouseDressing';
 import {FlickeringFluorescent} from './components/environment/FlickeringFluorescent';
 import {Prop} from './components/environment/Prop';
@@ -203,6 +204,9 @@ function GameContent() {
         {/* Win/lose environmental sequences: warm amber for escape,
             red overhead for failure. */}
         <EndgameEnvironment />
+
+        {/* Per-phase lighting mood — color temperature shifts */}
+        <PhaseLighting />
 
         {/* Ceiling Trapdoor */}
         <TrapDoorAnimation position={[0, 3, 0]} />
