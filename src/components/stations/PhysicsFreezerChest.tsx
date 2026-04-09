@@ -18,13 +18,13 @@
  * Fridge door polish (C.2):
  * - Door is locked (non-interactive) outside SELECT_INGREDIENTS
  * - During SELECT_INGREDIENTS, the door glows faintly on its edges
- * - Door-tap confirm for shock-me clues shows a red->green flash
+ * - Door-tap confirm for shock-me clues shows a bright green flash
  */
 import {useGLTF} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
 import {RigidBody} from '@react-three/rapier';
 import {useDrag} from '@use-gesture/react';
-import {useMemo, useRef, useState} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
 import {useGameStore} from '../../ecs/hooks';
 import type {Clue} from '../../engine/ClueGenerator';
@@ -142,7 +142,7 @@ export function PhysicsFreezerChest() {
  *
  * Outside SELECT_INGREDIENTS: dark, locked appearance (no interaction).
  * During SELECT_INGREDIENTS: faint edge glow indicating interactability.
- * Shock-me confirm (hint=0): tapping flashes the door red->green.
+ * Shock-me confirm (hint=0): tapping flashes the door bright green.
  */
 function FridgeDoorOverlay() {
   const gamePhase = useGameStore(state => state.gamePhase);
@@ -151,6 +151,14 @@ function FridgeDoorOverlay() {
 
   const matRef = useRef<THREE.MeshStandardMaterial>(null);
   const confirmFlashRef = useRef(0); // countdown for the flash animation
+  const phaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clean up the phase-advance timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (phaseTimerRef.current) clearTimeout(phaseTimerRef.current);
+    };
+  }, []);
 
   const isActive = gamePhase === 'SELECT_INGREDIENTS';
   const hint = isActive ? getIngredientCountHint() : -1;
@@ -161,7 +169,7 @@ function FridgeDoorOverlay() {
     // Trigger flash effect
     confirmFlashRef.current = 0.5; // 0.5 seconds of flash
     // Advance to CHOPPING after a brief visual beat
-    setTimeout(() => {
+    phaseTimerRef.current = setTimeout(() => {
       setGamePhase('CHOPPING');
     }, 200);
   };

@@ -26,18 +26,23 @@ const NEEDLE_ARC = Math.PI * 0.8; // ~144 degrees
 /** Start angle (pointing left = green). */
 const NEEDLE_START = Math.PI * 0.4;
 
+/** Pre-allocated color instances to avoid per-frame allocations. */
+const COLOR_GREEN = new THREE.Color('#22cc44');
+const COLOR_YELLOW = new THREE.Color('#cccc22');
+const COLOR_RED = new THREE.Color('#cc1111');
+const _tempColor = new THREE.Color();
+
 /**
  * Map a 0-1 ratio to a color on the green->yellow->red gradient.
+ * Writes into a reusable Color to avoid GC pressure inside useFrame.
  */
 function disgustColor(ratio: number): THREE.Color {
   if (ratio < 0.5) {
-    // Green to yellow
     const t = ratio / 0.5;
-    return new THREE.Color().lerpColors(new THREE.Color('#22cc44'), new THREE.Color('#cccc22'), t);
+    return _tempColor.lerpColors(COLOR_GREEN, COLOR_YELLOW, t);
   }
-  // Yellow to deep red
   const t = (ratio - 0.5) / 0.5;
-  return new THREE.Color().lerpColors(new THREE.Color('#cccc22'), new THREE.Color('#cc1111'), t);
+  return _tempColor.lerpColors(COLOR_YELLOW, COLOR_RED, t);
 }
 
 export function DisgustIndicator() {
@@ -51,14 +56,19 @@ export function DisgustIndicator() {
   const frameMatRef = useRef<THREE.MeshStandardMaterial>(null);
   const groupRef = useRef<THREE.Group>(null);
 
-  // Arc geometry for the colored background sweep
-  const arcGeo = useMemo(() => {
+  // Arc shape for the colored background sweep.
+  // Returns a Shape (not ShapeGeometry) so R3F's <shapeGeometry> manages
+  // GPU lifecycle and disposal automatically.
+  const arcShape = useMemo(() => {
     const shape = new THREE.Shape();
     const segments = 32;
     const innerR = 0.12;
     const outerR = 0.18;
+    // Start at the first outer-arc point (avoids origin artifact)
+    const startAngle = NEEDLE_START;
+    shape.moveTo(Math.cos(startAngle) * outerR, Math.sin(startAngle) * outerR);
     // Outer arc
-    for (let i = 0; i <= segments; i++) {
+    for (let i = 1; i <= segments; i++) {
       const angle = NEEDLE_START - (i / segments) * NEEDLE_ARC;
       shape.lineTo(Math.cos(angle) * outerR, Math.sin(angle) * outerR);
     }
@@ -68,7 +78,7 @@ export function DisgustIndicator() {
       shape.lineTo(Math.cos(angle) * innerR, Math.sin(angle) * innerR);
     }
     shape.closePath();
-    return new THREE.ShapeGeometry(shape);
+    return shape;
   }, []);
 
   useFrame(state => {
@@ -148,7 +158,7 @@ export function DisgustIndicator() {
 
       {/* Colored arc sweep */}
       <mesh position={[0, 0, 0.001]}>
-        <primitive object={arcGeo} attach="geometry" />
+        <shapeGeometry args={[arcShape]} />
         <meshStandardMaterial
           ref={arcMatRef}
           color="#22cc44"
@@ -179,7 +189,7 @@ export function DisgustIndicator() {
         </mesh>
       </group>
 
-      {/* Label: "DISGUST" in small text below the gauge */}
+      {/* Red indicator strip below the gauge face */}
       <mesh position={[0, -0.25, 0.001]}>
         <planeGeometry args={[0.2, 0.04]} />
         <meshStandardMaterial

@@ -11,7 +11,7 @@
  */
 import type {ThreeEvent} from '@react-three/fiber';
 import {useFrame} from '@react-three/fiber';
-import {useCallback, useRef, useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import type * as THREE from 'three';
 import {useGameStore} from '../../ecs/hooks';
 import {requestHandGesture} from '../camera/handGestureStore';
@@ -85,6 +85,15 @@ export function TieCasingDots() {
   const [leftTied, setLeftTied] = useState(false);
   const [rightTied, setRightTied] = useState(false);
   const completedRef = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clean up the phase-advance timeout on unmount to prevent
+  // stale state updates if the component is torn down early.
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
 
   const handleLeftTie = useCallback(() => {
     if (leftTied || completedRef.current) return;
@@ -104,7 +113,7 @@ export function TieCasingDots() {
       completedRef.current = true;
       setCasingTied(true);
       // Small delay to let the visual settle before phase change
-      setTimeout(() => {
+      timerRef.current = setTimeout(() => {
         setGamePhase('BLOWOUT');
       }, 400);
     }

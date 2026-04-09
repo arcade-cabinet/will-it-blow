@@ -93,16 +93,11 @@ function notifyPresentationComplete(): void {
   }
 }
 
-/**
- * Module-level signal for the between-rounds TV broadcast.
- * App sets this when betweenRounds is active; GameContent reads it
- * each frame to pass the broadcast prop to the TV component.
- * Crosses the Canvas boundary without re-renders.
- */
-let betweenRoundsBroadcast: {current: number; total: number} | null = null;
+/** Type for the between-rounds TV broadcast signal. */
+export type BroadcastSignal = {current: number; total: number} | null;
 
 /** 3D scene content: physics world, stations, props, camera, and controls. */
-function GameContent() {
+function GameContent({broadcastRound}: {broadcastRound: BroadcastSignal}) {
   const introActive = useGameStore(state => state.introActive);
   const mrSausageReaction = useGameStore(state => state.mrSausageReaction);
   const gamePhase = useGameStore(state => state.gamePhase);
@@ -111,12 +106,6 @@ function GameContent() {
 
   // Block movement during intro sequence
   const effectiveMove = introActive ? {x: 0, z: 0} : moveDirection;
-
-  // Read between-rounds broadcast signal. This is a module-level ref
-  // that crosses the Canvas boundary. We trigger re-render by reading
-  // gamePhase (which changes when nextRound fires), so the TV picks up
-  // the broadcast prop naturally.
-  const broadcastRound = betweenRoundsBroadcast;
 
   // ── C.1: Lead player to the first clue ──────────────────────────────
   // One-shot camera nudge: when the player first stands up and enters
@@ -271,15 +260,11 @@ export function App() {
 
   usePersistence();
 
-  // Sync betweenRounds state to module-level signal so GameContent can
-  // pass it to the TV component across the Canvas boundary.
-  useEffect(() => {
-    if (betweenRounds) {
-      betweenRoundsBroadcast = {current: currentRound + 1, total: totalRounds};
-    } else {
-      betweenRoundsBroadcast = null;
-    }
-  }, [betweenRounds, currentRound, totalRounds]);
+  // Derive broadcast signal from betweenRounds state. Passed as a prop
+  // to GameContent so it crosses the Canvas boundary reactively.
+  const broadcastSignal: BroadcastSignal = betweenRounds
+    ? {current: currentRound + 1, total: totalRounds}
+    : null;
 
   // When DONE phase is reached with rounds remaining, register a
   // callback for PresentationFlow completion. When it fires, start
@@ -359,7 +344,7 @@ export function App() {
             <pointLight position={[0, 0.4, 0]} intensity={12} distance={6} color="#b8c8c4" />
 
             <Suspense fallback={null}>
-              <GameContent />
+              <GameContent broadcastRound={broadcastSignal} />
             </Suspense>
           </Canvas>
 

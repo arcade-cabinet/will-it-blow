@@ -5,10 +5,12 @@
  * have ONE place that translates "click on the grinder" into actual
  * pointer events. Two layers of strict discipline:
  *
- *   1. **Real events only** — every method dispatches via the
+ *   1. **Real events preferred** — most methods dispatch via the
  *      `@vitest/browser/context` `userEvent` API which uses
- *      Playwright's underlying mouse/keyboard primitives. No
- *      synthetic event creation, no `dispatchEvent()`.
+ *      Playwright's underlying mouse/keyboard primitives.
+ *      Exception: `clickPoint()` uses synthetic `dispatchEvent()`
+ *      on the canvas because `userEvent` cannot target arbitrary
+ *      (x, y) coordinates for R3F raycasting.
  *
  *   2. **Coordinate math is centralised** — converting world-space
  *      station bounds to screen pixels happens here, not in the
@@ -118,6 +120,7 @@ export class WIBActuator {
   projectStationToScreen(_bounds: StationBounds, _stationName: StationName): ScreenRect {
     const canvas = document.querySelector('canvas');
     if (!canvas) throw new Error('WIBActuator.projectStationToScreen: no <canvas> found');
+    const rect = canvas.getBoundingClientRect();
     return {
       x: rect.left + rect.width / 2,
       y: rect.top + rect.height / 2,

@@ -114,7 +114,7 @@ export interface R3FHandle {
   unmount(): void;
 }
 
-// ─── Internal: mutable state holder + probe ���─────────────────────────
+// ─── Internal: mutable state holder + probe ────────────────────────────
 
 interface StateHolder {
   state: RootState | null;
