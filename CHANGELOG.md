@@ -1,5 +1,39 @@
 # Changelog
 
+## [1.6.0](https://github.com/arcade-cabinet/will-it-blow/compare/v1.5.0...v1.6.0) (2026-04-09)
+
+
+### Features
+
+* Capacitor + R3F pivot — complete game with automated playtesting ([1e585ae](https://github.com/arcade-cabinet/will-it-blow/commit/1e585ae5785844bd81dcccf8ef9d90721f976251))
+* deep hierarchical validation + Zoombinis-in-Hell deduction loop + polish pass ([1058e37](https://github.com/arcade-cabinet/will-it-blow/commit/1058e37520cbb60b3951b8cb9bbf80903b4eb236))
+* diegetic UI restoration + review drift fixes + gameplay flow polish ([#54](https://github.com/arcade-cabinet/will-it-blow/issues/54)) ([b51b358](https://github.com/arcade-cabinet/will-it-blow/commit/b51b358c948883cd0fd5469aae0f74bf0abd0620))
+* dual-zone touch controls (move left / look right) ([#33](https://github.com/arcade-cabinet/will-it-blow/issues/33)) ([ce22ada](https://github.com/arcade-cabinet/will-it-blow/commit/ce22ada2e5f657711e5581e4a4e38716a3831019))
+* mobile optimization — grailguard sqlite stack, code-split, sfx wiring ([#56](https://github.com/arcade-cabinet/will-it-blow/issues/56)) ([8fa9a0f](https://github.com/arcade-cabinet/will-it-blow/commit/8fa9a0f0271ceff35c0ebd42ce706f7d0466857a))
+* phase-directed diegetic text — dialogue appears near active station ([#45](https://github.com/arcade-cabinet/will-it-blow/issues/45)) ([7402458](https://github.com/arcade-cabinet/will-it-blow/commit/74024589c4633603aa9d00c8c3769b442ce31341))
+* swipe/tap FPS controls + loading flash fix ([#32](https://github.com/arcade-cabinet/will-it-blow/issues/32)) ([00fc449](https://github.com/arcade-cabinet/will-it-blow/commit/00fc4497e38682676be9110ca2719ee616419da2))
+* visual polish + procedural sound design (Phase D+E) ([#55](https://github.com/arcade-cabinet/will-it-blow/issues/55)) ([8499f43](https://github.com/arcade-cabinet/will-it-blow/commit/8499f43d465fea71484f861e0c1f9a5c75858236))
+
+
+### Bug Fixes
+
+* add packageManager field for CI pnpm setup, skip tsc in build ([#37](https://github.com/arcade-cabinet/will-it-blow/issues/37)) ([6e77f9f](https://github.com/arcade-cabinet/will-it-blow/commit/6e77f9f84c4bd5e1782bd39a7e187207ca21a7d7))
+* camera initial rotation looks UP at ceiling during intro ([#49](https://github.com/arcade-cabinet/will-it-blow/issues/49)) ([d2e6022](https://github.com/arcade-cabinet/will-it-blow/commit/d2e60224ec06b018cf4463c6067439bc3fc9779c))
+* ceiling visible — box slab geometry + emissive + bounce light ([#51](https://github.com/arcade-cabinet/will-it-blow/issues/51)) ([74d9d38](https://github.com/arcade-cabinet/will-it-blow/commit/74d9d3867258e5a4d55f4975744fe4322c5aee9e))
+* comprehensive visual QA — SurrealText rendering, camera pitch, code splitting, fog, intro timing ([#50](https://github.com/arcade-cabinet/will-it-blow/issues/50)) ([e8a906a](https://github.com/arcade-cabinet/will-it-blow/commit/e8a906aeedc47da4132c32aed6c1d9083859fafb))
+* deployment polish — LFS, responsive canvas, intro sequence, FPS movement ([#41](https://github.com/arcade-cabinet/will-it-blow/issues/41)) ([6cafed4](https://github.com/arcade-cabinet/will-it-blow/commit/6cafed4c18288edaedff1f627aa6218eaddfb6fa))
+* enable Git LFS checkout in CI/CD for GitHub Pages ([#39](https://github.com/arcade-cabinet/will-it-blow/issues/39)) ([06fc47a](https://github.com/arcade-cabinet/will-it-blow/commit/06fc47afc31ca32be1eb8aa36600a824dc57aa70))
+* headed Playwright with xvfb, remove LFS for web assets ([#42](https://github.com/arcade-cabinet/will-it-blow/issues/42)) ([0fd1840](https://github.com/arcade-cabinet/will-it-blow/commit/0fd1840ca7bb7d8f82768cbfaf57aa1c3660aac5))
+* intro camera looks UP at ceiling, posture-based eye height ([#46](https://github.com/arcade-cabinet/will-it-blow/issues/46)) ([0b95ae8](https://github.com/arcade-cabinet/will-it-blow/commit/0b95ae88e803f1fcd7fa5211e008a9d0bbf404e5))
+* intro looks up at ceiling, SurrealText centered on ceiling, freezer ingredients contained ([#43](https://github.com/arcade-cabinet/will-it-blow/issues/43)) ([d7aee26](https://github.com/arcade-cabinet/will-it-blow/commit/d7aee26065c02012a2d3a363b1c7570ffe7411fa))
+* intro looks up at ceiling, SurrealText centered on ceiling, freezer ingredients contained ([#44](https://github.com/arcade-cabinet/will-it-blow/issues/44)) ([6c088dc](https://github.com/arcade-cabinet/will-it-blow/commit/6c088dc02e5b56cadf5e8d4b2a4272202094202d))
+* PR [#52](https://github.com/arcade-cabinet/will-it-blow/issues/52) review + polish — camera eye fix, Mr. Sausage CRT, Vitest browser mode ([#52](https://github.com/arcade-cabinet/will-it-blow/issues/52)) ([8119228](https://github.com/arcade-cabinet/will-it-blow/commit/81192284e6083a6c9a21da148697f9c451095254))
+* prefix all asset paths with BASE_URL for GitHub Pages ([#38](https://github.com/arcade-cabinet/will-it-blow/issues/38)) ([be8f35e](https://github.com/arcade-cabinet/will-it-blow/commit/be8f35ea56a5833cd0484bfdfbf911a23f606424))
+* read introActive from store.getState() in useFrame to avoid stale closure ([#48](https://github.com/arcade-cabinet/will-it-blow/issues/48)) ([819762c](https://github.com/arcade-cabinet/will-it-blow/commit/819762ceb79d8b1e1d47242e4c59991e5abc7761))
+* use sql-wasm.wasm instead of sql-wasm-browser.wasm (LFS pointer issue) ([#40](https://github.com/arcade-cabinet/will-it-blow/issues/40)) ([ebf01f1](https://github.com/arcade-cabinet/will-it-blow/commit/ebf01f1c1081a17f6216fb6190bccae69b29b990))
+* useMouseLook yields to IntroSequence — camera looks UP at ceiling ([#47](https://github.com/arcade-cabinet/will-it-blow/issues/47)) ([17c71f9](https://github.com/arcade-cabinet/will-it-blow/commit/17c71f9371ce9217ba7d1b3e89acc07871135418))
+* visual polish + GLB artifact mesh culling ([#30](https://github.com/arcade-cabinet/will-it-blow/issues/30)) ([faeb864](https://github.com/arcade-cabinet/will-it-blow/commit/faeb86492cfefadfe0f75e87cbe49eb292db06da))
+
 ## [1.5.0](https://github.com/arcade-cabinet/will-it-blow/compare/v1.4.0...v1.5.0) (2026-03-03)
 
 
