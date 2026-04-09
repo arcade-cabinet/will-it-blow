@@ -5,6 +5,11 @@
  * exponential-decay lerp, head tilt tracking (vertical camera offset),
  * and static bursts keyed to Mr. Sausage's reaction intensity.
  *
+ * Between-rounds broadcast: when `broadcastRound` is set, the CRT displays
+ * "ROUND X OF Y" text on the screen plane via drei <Text>, the Mr. Sausage
+ * model hides, and the static intensity ramps up. This replaces the old
+ * full-screen RoundTransition HTML overlay (pillar 7 compliance).
+ *
  * The CRT shader plane sits at the front of the tube. The `mr_sausage.glb`
  * model is placed a few centimeters behind it, vertically centered, so it
  * reads as the character on screen while the shader paints scanlines,
@@ -15,7 +20,7 @@
  * Pointing to `createCrtMaterial` keeps the CRT effects on a standalone
  * ShaderMaterial driven by `uTime`.
  */
-import {useGLTF} from '@react-three/drei';
+import {Text, useGLTF} from '@react-three/drei';
 import {useFrame, useThree} from '@react-three/fiber';
 import {RigidBody} from '@react-three/rapier';
 import {useLayoutEffect, useMemo, useRef} from 'react';
@@ -71,7 +76,12 @@ function prepareTvMrSausage(scene: THREE.Object3D) {
   });
 }
 
-export function TV() {
+interface TVProps {
+  /** When set, show between-rounds broadcast instead of Mr. Sausage. */
+  broadcastRound?: {current: number; total: number} | null;
+}
+
+export function TV({broadcastRound = null}: TVProps) {
   const crtMaterial = useMemo(() => createCrtMaterial('crt-tv', {overlay: true}), []);
   const sausageRef = useRef<THREE.Group>(null);
   const {camera} = useThree();
@@ -83,6 +93,8 @@ export function TV() {
   // Read Mr. Sausage's current reaction for static burst keying.
   const mrSausageReaction = useGameStore(state => state.mrSausageReaction);
   const reactionIntensity = REACTION_INTENSITY[mrSausageReaction] ?? 0;
+
+  const isBroadcasting = broadcastRound != null;
 
   // Load + clone the Mr. Sausage GLB once.
   const {scene: originalSausageScene} = useGLTF(MR_SAUSAGE_URL) as unknown as {
@@ -108,33 +120,45 @@ export function TV() {
     const uniforms = (crtMaterial as THREE.ShaderMaterial).uniforms;
     uniforms.uTime.value = state.clock.elapsedTime;
 
-    // Feed reaction intensity into the CRT shader for static bursts (T2.A).
-    uniforms.uReactionIntensity.value = reactionIntensity;
-    // Boost static and flicker proportionally to reaction.
-    uniforms.uStaticIntensity.value = 0.06 + reactionIntensity * 0.15;
-    uniforms.uFlickerIntensity.value = 1.0 + reactionIntensity * 0.4;
+    if (isBroadcasting) {
+      // Between-rounds mode: heavy static + full flicker.
+      uniforms.uReactionIntensity.value = 0.9;
+      uniforms.uStaticIntensity.value = 0.25;
+      uniforms.uFlickerIntensity.value = 1.8;
+    } else {
+      // Feed reaction intensity into the CRT shader for static bursts (T2.A).
+      uniforms.uReactionIntensity.value = reactionIntensity;
+      // Boost static and flicker proportionally to reaction.
+      uniforms.uStaticIntensity.value = 0.06 + reactionIntensity * 0.15;
+      uniforms.uFlickerIntensity.value = 1.0 + reactionIntensity * 0.4;
+    }
 
     // --- Swivel servo (T2.A) — smooth Y-rotation toward the player ---
     const grp = sausageRef.current;
     if (grp) {
-      // Compute target swivel angle (horizontal tracking).
-      const dx = camera.position.x - (TV_POS[0] + 0.55);
-      const dz = camera.position.z - TV_POS[2];
-      const targetSwivel = Math.atan2(dx, dz);
+      // Hide Mr. Sausage during broadcasts
+      grp.visible = !isBroadcasting;
 
-      // Compute target tilt angle (vertical head tracking).
-      const dy = camera.position.y - TV_POS[1];
-      const horizontalDist = Math.sqrt(dx * dx + dz * dz);
-      const targetTilt = Math.atan2(dy, Math.max(horizontalDist, 0.1));
-      // Clamp tilt to a believable range for a CRT puppet.
-      const clampedTilt = Math.max(-0.35, Math.min(0.35, targetTilt));
+      if (!isBroadcasting) {
+        // Compute target swivel angle (horizontal tracking).
+        const dx = camera.position.x - (TV_POS[0] + 0.55);
+        const dz = camera.position.z - TV_POS[2];
+        const targetSwivel = Math.atan2(dx, dz);
 
-      // Servo lerp — speed 4 gives ~250ms settling time.
-      swivelAngle.current = servoLerp(swivelAngle.current, targetSwivel, 4, delta);
-      tiltAngle.current = servoLerp(tiltAngle.current, clampedTilt, 3, delta);
+        // Compute target tilt angle (vertical head tracking).
+        const dy = camera.position.y - TV_POS[1];
+        const horizontalDist = Math.sqrt(dx * dx + dz * dz);
+        const targetTilt = Math.atan2(dy, Math.max(horizontalDist, 0.1));
+        // Clamp tilt to a believable range for a CRT puppet.
+        const clampedTilt = Math.max(-0.35, Math.min(0.35, targetTilt));
 
-      grp.rotation.y = swivelAngle.current;
-      grp.rotation.x = tiltAngle.current;
+        // Servo lerp — speed 4 gives ~250ms settling time.
+        swivelAngle.current = servoLerp(swivelAngle.current, targetSwivel, 4, delta);
+        tiltAngle.current = servoLerp(tiltAngle.current, clampedTilt, 3, delta);
+
+        grp.rotation.y = swivelAngle.current;
+        grp.rotation.x = tiltAngle.current;
+      }
     }
   });
 
@@ -169,7 +193,7 @@ export function TV() {
           <boxGeometry args={[0.8, 0.05, 1.0]} />
           <meshStandardMaterial color="#111" roughness={0.9} />
         </mesh>
-        {/* Left (−Z side) */}
+        {/* Left (-Z side) */}
         <mesh position={[0.4, 0, -0.5]} castShadow receiveShadow>
           <boxGeometry args={[0.8, 0.8, 0.05]} />
           <meshStandardMaterial color="#111" roughness={0.9} />
@@ -202,6 +226,37 @@ export function TV() {
       <group ref={sausageRef}>
         <primitive object={sausageScene} />
       </group>
+
+      {/* Between-rounds broadcast text — rendered ON the CRT screen plane.
+          Uses drei <Text> positioned just in front of the CRT shader so
+          it reads as part of the TV display. Nosifer horror font, blood-red. */}
+      {isBroadcasting && (
+        <group position={[0.82, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
+          <Text
+            fontSize={0.12}
+            maxWidth={0.55}
+            lineHeight={1.4}
+            font={asset('/fonts/Nosifer-Regular.ttf')}
+            anchorX="center"
+            anchorY="middle"
+            textAlign="center"
+            color="#FF1744"
+            outlineColor="#000000"
+            outlineWidth={0.005}
+            characters="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 /"
+          >
+            {`ROUND ${broadcastRound.current}\nOF ${broadcastRound.total}`}
+            <meshStandardMaterial
+              transparent
+              depthWrite={false}
+              roughness={0.5}
+              emissive="#FF1744"
+              emissiveIntensity={1.5}
+              toneMapped={false}
+            />
+          </Text>
+        </group>
+      )}
 
       {/* CRT screen shader plane — renders in front of Mr. Sausage with
           scanlines, flicker, phosphor glow and chromatic aberration. */}

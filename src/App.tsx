@@ -36,7 +36,6 @@ import {Stuffer} from './components/stations/Stuffer';
 import {TV} from './components/stations/TV';
 import {GameOverScreen} from './components/ui/GameOverScreen';
 import {LoadingScreen} from './components/ui/LoadingScreen';
-import {RoundTransition} from './components/ui/RoundTransition';
 import {TitleScreen} from './components/ui/TitleScreen';
 import {usePersistence} from './db/usePersistence';
 import {useGameStore} from './ecs/hooks';
@@ -90,6 +89,14 @@ function notifyPresentationComplete(): void {
   }
 }
 
+/**
+ * Module-level signal for the between-rounds TV broadcast.
+ * App sets this when betweenRounds is active; GameContent reads it
+ * each frame to pass the broadcast prop to the TV component.
+ * Crosses the Canvas boundary without re-renders.
+ */
+let betweenRoundsBroadcast: {current: number; total: number} | null = null;
+
 /** 3D scene content: physics world, stations, props, camera, and controls. */
 function GameContent() {
   const introActive = useGameStore(state => state.introActive);
@@ -99,6 +106,12 @@ function GameContent() {
 
   // Block movement during intro sequence
   const effectiveMove = introActive ? {x: 0, z: 0} : moveDirection;
+
+  // Read between-rounds broadcast signal. This is a module-level ref
+  // that crosses the Canvas boundary. We trigger re-render by reading
+  // gamePhase (which changes when nextRound fires), so the TV picks up
+  // the broadcast prop naturally.
+  const broadcastRound = betweenRoundsBroadcast;
 
   // Initialize Tone.js audio on mount and start the horror drone
   useEffect(() => {
@@ -128,7 +141,7 @@ function GameContent() {
         <SurrealText />
         <KitchenSetPieces />
         <PhysicsFreezerChest />
-        <TV />
+        <TV broadcastRound={broadcastRound} />
         <ChoppingBlock />
 
         {/* Stations */}
@@ -209,33 +222,51 @@ export function App() {
   const currentRound = useGameStore(state => state.currentRound);
   const totalRounds = useGameStore(state => state.totalRounds);
   const nextRound = useGameStore(state => state.nextRound);
-  const [showRoundTransition, setShowRoundTransition] = useState(false);
 
   // Track whether we're waiting for the presentation to finish before
-  // showing the round transition. This prevents the race where the
-  // round transition would appear immediately on entering DONE, before
-  // the 12-second presentation sequence has played.
+  // triggering the diegetic between-rounds broadcast on the TV.
   const waitingForPresentationRef = useRef(false);
+
+  // Between-rounds broadcast: after presentation completes and more rounds
+  // remain, the TV shows "ROUND X OF Y" for 2.5 seconds, then nextRound().
+  // No HTML overlay — the transition is entirely diegetic via the TV.
+  const [betweenRounds, setBetweenRounds] = useState(false);
 
   usePersistence();
 
+  // Sync betweenRounds state to module-level signal so GameContent can
+  // pass it to the TV component across the Canvas boundary.
+  useEffect(() => {
+    if (betweenRounds) {
+      betweenRoundsBroadcast = {current: currentRound + 1, total: totalRounds};
+    } else {
+      betweenRoundsBroadcast = null;
+    }
+  }, [betweenRounds, currentRound, totalRounds]);
+
   // When DONE phase is reached with rounds remaining, register a
-  // callback for PresentationFlow completion instead of immediately
-  // showing the round transition.
+  // callback for PresentationFlow completion. When it fires, start
+  // the diegetic between-rounds TV broadcast instead of the old overlay.
   useEffect(() => {
     if (gamePhase === 'DONE' && currentRound < totalRounds && appPhase === 'playing') {
       waitingForPresentationRef.current = true;
       presentationCompleteCallback = () => {
         waitingForPresentationRef.current = false;
-        setShowRoundTransition(true);
+        setBetweenRounds(true);
       };
     }
   }, [gamePhase, currentRound, totalRounds, appPhase]);
 
-  const handleRoundTransitionComplete = useCallback(() => {
-    setShowRoundTransition(false);
-    nextRound();
-  }, [nextRound]);
+  // When betweenRounds starts, auto-advance after 2.5 seconds
+  // (the TV broadcast plays for this duration, then the next round begins).
+  useEffect(() => {
+    if (!betweenRounds) return;
+    const timer = setTimeout(() => {
+      setBetweenRounds(false);
+      nextRound();
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [betweenRounds, nextRound]);
 
   return (
     <div
@@ -297,15 +328,6 @@ export function App() {
 
           {/* Invisible touch overlay for mobile FPS controls */}
           <SwipeFPSControls />
-
-          {/* Round transition overlay -- shown AFTER presentation completes */}
-          {showRoundTransition && (
-            <RoundTransition
-              roundNumber={currentRound + 1}
-              totalRounds={totalRounds}
-              onComplete={handleRoundTransitionComplete}
-            />
-          )}
 
           {/* GameOrchestrator -- non-visual state machine, outside Canvas */}
           <GameOrchestrator />
