@@ -1,11 +1,11 @@
 <!--
 title: Deep Browser Validation
-domain: testing
-status: active
-engine: react-three-fiber
+domain: reference
+status: current
+engine: r3f
 last-verified: 2026-04-08
-depends-on: AGENTS.md, vitest.config.ts
-agent-context: Reference for the four-tier browser validation suite (unit, micro, meso, macro) and the Yuka GOAP governor architecture. All browser tests use @vitest/browser with the Playwright provider.
+depends-on: [AGENTS.md, vitest.config.ts]
+agent-context: challenge-dev, doc-keeper
 summary: Four-tier browser validation harness (unit/micro/meso/macro) running in real headless Chromium across 4 viewports, with a Yuka GOAP governor for full-playthrough macro tests.
 -->
 
@@ -137,7 +137,7 @@ flow through Playwright's underlying primitives.
 `tests/harness/goap/GoapGovernor.ts` is the AI player. It runs a
 classic perceive -> select-goal -> execute -> settle loop:
 
-```
+```text
    +----------------------------+
    |  GoapGovernor.tick()       |
    +------------+---------------+

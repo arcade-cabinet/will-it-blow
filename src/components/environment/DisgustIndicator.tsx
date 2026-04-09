@@ -81,7 +81,7 @@ export function DisgustIndicator() {
     return shape;
   }, []);
 
-  useFrame(state => {
+  useFrame((state, delta) => {
     // Only visible when standing (player is playing)
     if (groupRef.current) {
       groupRef.current.visible = posture === 'standing';
@@ -94,9 +94,11 @@ export function DisgustIndicator() {
     // Needle rotation
     if (needleRef.current) {
       const targetAngle = NEEDLE_START - ratio * NEEDLE_ARC;
-      // Smooth toward target
+      // Delta-scaled smoothing: frame-rate independent equivalent of
+      // the fixed 0.08 factor at 60 fps.
+      const smoothing = 1 - (1 - 0.08) ** (delta * 60);
       const current = needleRef.current.rotation.z;
-      needleRef.current.rotation.z += (targetAngle - current) * 0.08;
+      needleRef.current.rotation.z += (targetAngle - current) * smoothing;
 
       // Vibrate when critical (>75%)
       if (ratio > 0.75) {

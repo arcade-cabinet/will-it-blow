@@ -51,6 +51,9 @@ export function installR3FTestHooks(): void {
   afterEach(() => {
     cleanup();
     playerPosition.set(0, 0, 0);
+    // Reset render-count probe to prevent cross-test leakage when
+    // trackRenderCount / probeRenderCount was enabled.
+    (window as unknown as {__RENDER_R3F_PROBE_COUNT__?: number}).__RENDER_R3F_PROBE_COUNT__ = 0;
   });
 }
 

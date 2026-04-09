@@ -1,11 +1,11 @@
 <!--
 title: Post-Merge Roadmap — From Green Loop to Shippable
-domain: planning
-status: proposed
-engine: react-three-fiber
+domain: plan
+status: current
+engine: r3f
 last-verified: 2026-04-08
-depends-on: AGENTS.md, docs/plans/2026-04-08-lost-requirements-restoration.md
-agent-context: This is the authoritative task list for the `feat/post-merge-polish` branch. Every agent working in this branch should start here, pick the next unblocked task, and leave the list consistent with ground truth when done.
+depends-on: [AGENTS.md, 2026-04-08-lost-requirements-restoration.md]
+agent-context: scene-architect, challenge-dev, store-warden, asset-pipeline, doc-keeper
 summary: Comprehensive plan covering gameplay flow polish, diegetic UI restoration, visual polish, sound design, mobile optimization, and release prep after PR #53 merged.
 -->
 
@@ -679,7 +679,7 @@ regression on desktop.
 
 ## Task dependencies
 
-```
+```text
 A.1 TieGesture diegetic       ← blocks nothing
 A.2 RoundTransition diegetic  ← blocks nothing
 A.3 Delete dead UI            ← blocks nothing

@@ -87,14 +87,6 @@ export function TieCasingDots() {
   const completedRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Clean up the phase-advance timeout on unmount to prevent
-  // stale state updates if the component is torn down early.
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
-
   const handleLeftTie = useCallback(() => {
     if (leftTied || completedRef.current) return;
     requestHandGesture('tap_left');
@@ -107,8 +99,10 @@ export function TieCasingDots() {
     setRightTied(true);
   }, [rightTied]);
 
-  // Check completion — advance to BLOWOUT when both are tied
-  useFrame(() => {
+  // Check completion — advance to BLOWOUT when both are tied.
+  // Runs as a useEffect rather than useFrame because completion depends
+  // on discrete React state, not continuous per-frame animation data.
+  useEffect(() => {
     if (leftTied && rightTied && !completedRef.current) {
       completedRef.current = true;
       setCasingTied(true);
@@ -117,7 +111,10 @@ export function TieCasingDots() {
         setGamePhase('BLOWOUT');
       }, 400);
     }
-  });
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [leftTied, rightTied, setCasingTied, setGamePhase]);
 
   const headPos: [number, number, number] = [
     SAUSAGE_CENTER[0],
