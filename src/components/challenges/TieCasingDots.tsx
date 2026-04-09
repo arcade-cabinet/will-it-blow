@@ -8,6 +8,9 @@
  * component calls setCasingTied(true) and advances to BLOWOUT.
  *
  * Zero HTML. Zero overlays. Fully diegetic per pillar 7.
+ *
+ * D.2: Emissive tuning — interaction guides pulse subtly (0.3-0.8) so
+ * they don't compete with the TV or fluorescents for visual dominance.
  */
 import type {ThreeEvent} from '@react-three/fiber';
 import {useFrame} from '@react-three/fiber';
@@ -24,9 +27,10 @@ const HEAD_OFFSET = 1.2;
 const TAIL_OFFSET = -1.2;
 
 const DOT_RADIUS = 0.12;
+/** D.2: Tuned to be subtle — interaction guides, not beacons. */
 const PULSE_SPEED = 3.0;
-const PULSE_MIN = 0.4;
-const PULSE_MAX = 2.5;
+const PULSE_MIN = 0.3;
+const PULSE_MAX = 0.8;
 
 /** A single pulsing dot that responds to pointer clicks. */
 function TieDot({

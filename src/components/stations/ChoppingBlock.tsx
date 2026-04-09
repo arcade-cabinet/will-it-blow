@@ -3,6 +3,9 @@
  * The chopping station — player chops ingredients on a blood-stained
  * stump via tap/swipe. Completing all chops in quick succession earns
  * a "Rapid Chop" flair point (design pillar #5: style points throughout).
+ *
+ * D.2: Emissive tuning — ChopTargetRing pulse range normalized to
+ * 0.3-0.8 (subtle interaction guide, not a beacon).
  */
 import {Box, Cylinder, useTexture} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
@@ -131,12 +134,15 @@ export function ChoppingBlock() {
   );
 }
 
-/** Pulsing emissive ring that guides the player to chop on the block surface. */
+/**
+ * Pulsing emissive ring that guides the player to chop on the block surface.
+ * D.2: Pulse range 0.3-0.8 — subtle interaction guide.
+ */
 function ChopTargetRing() {
   const ringRef = useRef<THREE.Mesh>(null);
   useFrame(state => {
     if (!ringRef.current) return;
-    const pulse = 0.4 + Math.sin(state.clock.elapsedTime * 4) * 0.3;
+    const pulse = 0.3 + Math.sin(state.clock.elapsedTime * 4) * 0.25;
     (ringRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = pulse;
   });
   return (
@@ -145,9 +151,9 @@ function ChopTargetRing() {
       <meshStandardMaterial
         color="#ff2200"
         emissive="#ff2200"
-        emissiveIntensity={0.5}
+        emissiveIntensity={0.3}
         transparent
-        opacity={0.6}
+        opacity={0.5}
         depthWrite={false}
       />
     </mesh>
