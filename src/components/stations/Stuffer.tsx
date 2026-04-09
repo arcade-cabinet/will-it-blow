@@ -16,6 +16,9 @@
  *
  * D.1: Uses shared kitchenSteel material for consistent stainless-steel
  * look across all stations.
+ *
+ * E.4: Audio uses sfx_mix_wet.ogg as PRIMARY loop during STUFFING,
+ * with Tone.js squelch synthesis as fallback.
  */
 import {Box, Cylinder} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
@@ -120,15 +123,16 @@ export function Stuffer() {
     [],
   );
 
-  // Loop squelch sound during STUFFING phase, stop when leaving
+  // E.4: Loop PRIMARY sfx_mix_wet.ogg during STUFFING, stop when leaving.
+  // Falls back to Tone.js squelch synthesis if sample unavailable.
   useEffect(() => {
     if (gamePhase === 'STUFFING') {
-      audioEngine.loop('squelch');
+      audioEngine.startMixWetLoop();
     } else {
-      audioEngine.stop('squelch');
+      audioEngine.stopMixWetLoop();
     }
     return () => {
-      audioEngine.stop('squelch');
+      audioEngine.stopMixWetLoop();
     };
   }, [gamePhase]);
 

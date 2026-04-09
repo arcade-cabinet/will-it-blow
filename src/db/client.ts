@@ -1,11 +1,104 @@
 /**
  * @module db/client
- * Dual SQLite client — sql.js (WASM) for web/dev, @capacitor-community/sqlite for native.
- * Exposes an async `getDb()` because sql.js must load its WASM binary before use.
+ * SQLite client using the grailguard-proven stack:
+ *   @capacitor-community/sqlite → jeep-sqlite (web) → drizzle-orm/sqlite-proxy
+ *
+ * Single code path for ALL platforms:
+ * - Web: jeep-sqlite custom element backed by sql.js + IndexedDB
+ * - iOS/Android: native SQLite via the Capacitor plugin
+ *
+ * Ported from arcade-cabinet/grailguard/src/db/client.ts which runs in
+ * production on both iOS and web. The old dual-path sql.js/capacitorAdapter
+ * approach had sync/async mismatches and untested shim code — this replaces
+ * it with the proven single-path architecture.
  */
-
-import type {SQLJsDatabase} from 'drizzle-orm/sql-js';
+import {Capacitor} from '@capacitor/core';
+import {
+  CapacitorSQLite,
+  SQLiteConnection,
+  type SQLiteDBConnection,
+} from '@capacitor-community/sqlite';
+import {drizzle, type SqliteRemoteDatabase} from 'drizzle-orm/sqlite-proxy';
 import * as schema from './schema';
+
+const DB_NAME = 'willitblow';
+const DB_VERSION = 1;
+
+let sqliteManager: SQLiteConnection | null = null;
+let sqliteDb: SQLiteDBConnection | null = null;
+let drizzleInstance: SqliteRemoteDatabase<typeof schema> | null = null;
+let initPromise: Promise<void> | null = null;
+
+function isWebPlatform() {
+  return Capacitor.getPlatform() === 'web';
+}
+
+function getBaseAssetPath() {
+  const base = import.meta.env.BASE_URL ?? '/';
+  return `${base.endsWith('/') ? base : `${base}/`}assets`;
+}
+
+/**
+ * Ensure the jeep-sqlite custom element is registered and appended to
+ * the DOM. Only runs on web — native platforms use the plugin directly.
+ *
+ * The `customElements.whenDefined` await is critical: without it, the
+ * capacitor-sqlite connection can race against jeep-sqlite's internal
+ * WASM init and produce transaction errors.
+ */
+async function ensureJeepSqliteElement() {
+  if (!isWebPlatform() || typeof window === 'undefined' || typeof document === 'undefined') {
+    return;
+  }
+
+  const {defineCustomElements} = await import('jeep-sqlite/loader');
+  await defineCustomElements(window);
+
+  let jeepSqlite = document.querySelector('jeep-sqlite');
+  if (!jeepSqlite) {
+    jeepSqlite = document.createElement('jeep-sqlite');
+    jeepSqlite.setAttribute('wasmpath', getBaseAssetPath());
+    document.body.appendChild(jeepSqlite);
+  }
+
+  await customElements.whenDefined('jeep-sqlite');
+}
+
+async function openConnection(): Promise<SQLiteDBConnection> {
+  if (sqliteDb) return sqliteDb;
+
+  await ensureJeepSqliteElement();
+
+  if (!sqliteManager) {
+    sqliteManager = new SQLiteConnection(CapacitorSQLite);
+  }
+
+  if (isWebPlatform()) {
+    await sqliteManager.initWebStore();
+  }
+
+  const existingConnection = (await sqliteManager.isConnection(DB_NAME, false)).result;
+  sqliteDb = existingConnection
+    ? await sqliteManager.retrieveConnection(DB_NAME, false)
+    : await sqliteManager.createConnection(DB_NAME, false, 'no-encryption', DB_VERSION, false);
+
+  await sqliteDb.open();
+  return sqliteDb;
+}
+
+function normalizeRows(values: unknown[] | undefined): unknown[] {
+  return Array.isArray(values) ? values : [];
+}
+
+function rowsToValueArrays(rows: unknown[]): unknown[][] {
+  return rows.map(row => {
+    if (Array.isArray(row)) return row;
+    if (row && typeof row === 'object') return Object.values(row as Record<string, unknown>);
+    return [row];
+  });
+}
+
+// ─── Migration SQL ───────────────────────────────────────────────────
 
 const MIGRATION_SQL = `
 CREATE TABLE IF NOT EXISTS "game_session" (
@@ -46,72 +139,87 @@ CREATE TABLE IF NOT EXISTS "settings" (
 );
 `;
 
-type DbInstance = SQLJsDatabase<typeof schema>;
+function splitSqlStatements(sql: string): string[] {
+  return sql
+    .split(';')
+    .map(s => s.trim())
+    .filter(s => s.length > 0);
+}
 
-let dbInstance: DbInstance | null = null;
-let dbPromise: Promise<DbInstance> | null = null;
+// ─── Drizzle instance ────────────────────────────────────────────────
+
+async function createDrizzleInstance() {
+  const connection = await openConnection();
+
+  // Run DDL migrations before creating the drizzle instance.
+  const statements = splitSqlStatements(MIGRATION_SQL);
+  const set = statements.map(statement => ({statement, values: [] as unknown[]}));
+  await connection.executeSet(set, false);
+
+  drizzleInstance = drizzle<typeof schema>(
+    async (sql, params, method) => {
+      switch (method) {
+        case 'run': {
+          const result = await connection.run(sql, params, false);
+          return {rows: result.changes?.values ?? []};
+        }
+        case 'get': {
+          const result = await connection.query(sql, params);
+          const rows = rowsToValueArrays(normalizeRows(result.values));
+          return {rows: rows[0]} as unknown as {rows: unknown[]};
+        }
+        case 'values': {
+          const result = await connection.query(sql, params);
+          return {rows: rowsToValueArrays(normalizeRows(result.values))};
+        }
+        case 'all':
+        default: {
+          const result = await connection.query(sql, params);
+          return {rows: rowsToValueArrays(normalizeRows(result.values))};
+        }
+      }
+    },
+    {schema},
+  );
+}
+
+// ─── Public API ──────────────────────────────────────────────────────
 
 /**
- * Get the Drizzle database instance. Lazily initializes the correct driver:
- * - Native (Capacitor): @capacitor-community/sqlite
- * - Web/dev/test: sql.js (WASM SQLite in browser)
- *
- * The promise is cached so concurrent callers share the same init.
+ * Initialize the database. Safe to call multiple times — cached.
  */
-export async function getDb(): Promise<DbInstance> {
-  if (dbInstance) return dbInstance;
-  if (dbPromise) return dbPromise;
-
-  dbPromise = initDb();
-  dbInstance = await dbPromise;
-  dbPromise = null;
-  return dbInstance;
+export async function initDatabase(): Promise<void> {
+  if (drizzleInstance) return;
+  if (!initPromise) {
+    initPromise = createDrizzleInstance().finally(() => {
+      initPromise = null;
+    });
+  }
+  await initPromise;
 }
 
-async function initDb(): Promise<DbInstance> {
-  // Check for Capacitor native platform (iOS/Android)
-  const isNative = await detectNativePlatform();
-
-  if (isNative) {
-    const {createCapacitorDb} = await import('./capacitorAdapter');
-    // Encryption is set to 'no-encryption' in the adapter. This is intentional:
-    // this is a single-player game and the database only stores local high scores
-    // and gameplay stats — no sensitive or personal data requiring encryption.
-    const sqliteDb = await createCapacitorDb('willitblow');
-    await sqliteDb.exec(MIGRATION_SQL);
-    const {drizzle} = await import('drizzle-orm/sql-js');
-    return drizzle(sqliteDb as any, {schema});
-  }
-
-  // Web / dev / test — use sql.js (WASM)
-  const initSqlJs = (await import('sql.js')).default;
-  const base = import.meta.env.BASE_URL; // '/' locally, '/will-it-blow/' on Pages
-  const SQL = await initSqlJs({
-    // sql.js requests sql-wasm-browser.wasm by default, but we override
-    // to use sql-wasm.wasm which is more reliably served (no LFS issues)
-    locateFile: () => `${base}sql-wasm.wasm`,
-  });
-  const sqlJsDb = new SQL.Database();
-  sqlJsDb.run(MIGRATION_SQL);
-  const {drizzle} = await import('drizzle-orm/sql-js');
-  return drizzle(sqlJsDb, {schema});
+/** Persist web IndexedDB store. No-op on native. */
+export async function persistDatabase(): Promise<void> {
+  if (!sqliteManager || !sqliteDb || !isWebPlatform()) return;
+  await sqliteManager.saveToStore(DB_NAME);
 }
 
 /**
- * Detect whether we're running on a native Capacitor platform.
- * Safely handles environments where @capacitor/core is not available.
+ * Async getter — back-compat with existing `getDb()` callers.
+ * Calls `initDatabase()` then returns the drizzle proxy instance.
  */
-async function detectNativePlatform(): Promise<boolean> {
-  try {
-    const {Capacitor} = await import('@capacitor/core');
-    return Capacitor.isNativePlatform();
-  } catch {
-    return false;
+export async function getDb(): Promise<SqliteRemoteDatabase<typeof schema>> {
+  await initDatabase();
+  if (!drizzleInstance) {
+    throw new Error('Database not initialized after initDatabase()');
   }
+  return drizzleInstance;
 }
 
-/** Reset the cached DB instance (useful for tests). */
+/** Reset cached instances (for tests). */
 export function resetDbClient() {
-  dbInstance = null;
-  dbPromise = null;
+  drizzleInstance = null;
+  sqliteDb = null;
+  sqliteManager = null;
+  initPromise = null;
 }

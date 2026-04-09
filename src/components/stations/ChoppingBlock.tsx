@@ -1,11 +1,17 @@
 /**
  * @module ChoppingBlock
- * The chopping station — player chops ingredients on a blood-stained
+ * The chopping station -- player chops ingredients on a blood-stained
  * stump via tap/swipe. Completing all chops in quick succession earns
  * a "Rapid Chop" flair point (design pillar #5: style points throughout).
  *
- * D.2: Emissive tuning — ChopTargetRing pulse range normalized to
+ * D.2: Emissive tuning -- ChopTargetRing pulse range normalized to
  * 0.3-0.8 (subtle interaction guide, not a beacon).
+ *
+ * E.4: Chop audio uses PRIMARY sfx_chop_1/sfx_chop_2 alternating,
+ * with Tone.js synthesis as fallback.
+ *
+ * E.5: grime_base_opacity.jpg applied as alphaMap on the cutting surface
+ * for additional depth and worn-blood texture.
  */
 import {Box, Cylinder, useTexture} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
@@ -25,10 +31,11 @@ const REQUIRED_CHOPS = 5;
 const RAPID_CHOP_WINDOW_MS = 3000;
 
 export function ChoppingBlock() {
-  const [colorMap, normalMap, roughnessMap] = useTexture([
+  const [colorMap, normalMap, roughnessMap, opacityMap] = useTexture([
     asset('/textures/grime_base_color.jpg'),
     asset('/textures/grime_base_normal.jpg'),
     asset('/textures/grime_base_roughness.jpg'),
+    asset('/textures/grime_base_opacity.jpg'),
   ]);
 
   const gamePhase = useGameStore(state => state.gamePhase);
@@ -39,6 +46,7 @@ export function ChoppingBlock() {
 
   const doChop = () => {
     if (gamePhase === 'CHOPPING') {
+      // E.4: PRIMARY sfx_chop_1/sfx_chop_2 alternating, FALLBACK Tone.js
       audioEngine.playChop();
       setChopCount(c => {
         // Alternate the swinging hand so the chop feels less robotic.
@@ -89,7 +97,7 @@ export function ChoppingBlock() {
         </Cylinder>
       </RigidBody>
 
-      {/* Cutting Surface (Grimey/Bloody) */}
+      {/* Cutting Surface (Grimey/Bloody) — E.5: opacityMap adds depth */}
       <RigidBody type="fixed" colliders="hull">
         {/* @ts-ignore */}
         <Cylinder
@@ -104,6 +112,8 @@ export function ChoppingBlock() {
             map={colorMap}
             normalMap={normalMap}
             roughnessMap={roughnessMap}
+            alphaMap={opacityMap}
+            transparent
             color="#662222" // Blood stained
           />
         </Cylinder>

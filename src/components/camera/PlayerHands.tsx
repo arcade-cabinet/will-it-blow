@@ -36,8 +36,11 @@
  *  5. **Size calibration.** The raw GLB is in Blender units (~38
  *     units wide). The scale factor reduces that to roughly 0.04
  *     so the hands fit the eye-level FPS frame.
+ *
+ *  6. **E.5: hands_base.png** is applied as a diffuse texture map to
+ *     all meshes in the rig, overlaying the PSX base skin tone.
  */
-import {useAnimations, useGLTF} from '@react-three/drei';
+import {useAnimations, useGLTF, useTexture} from '@react-three/drei';
 import {useFrame, useThree} from '@react-three/fiber';
 import {useEffect, useMemo, useRef} from 'react';
 import * as THREE from 'three';
@@ -66,6 +69,9 @@ export function PlayerHands() {
   const posture = useGameStore(s => s.posture);
   const introActive = useGameStore(s => s.introActive);
 
+  // E.5: Load hands_base.png as diffuse texture for the PSX arms.
+  const handsBaseTexture = useTexture(asset('/textures/hands_base.png'));
+
   // `useGLTF` returns the parsed GLTF with `animations` + `scene`.
   // `useAnimations` wires up the AnimationMixer and exposes a
   // named `.actions` dict we drive in `useFrame`.
@@ -78,6 +84,7 @@ export function PlayerHands() {
   // Clone the scene so multiple <PlayerHands> mounts (tests, dev
   // HMR reloads) don't share skeletons. One instance in production
   // but tests may mount the canvas multiple times in a file.
+  // E.5: Apply hands_base.png as diffuse map on all mesh materials.
   const clonedScene = useMemo(() => {
     const clone = gltf.scene.clone(true);
     clone.traverse(o => {
@@ -85,10 +92,20 @@ export function PlayerHands() {
       if (mesh.isMesh) {
         mesh.frustumCulled = false; // hands stay visible even at edge-of-view
         mesh.castShadow = false; // no ghost-arm shadows on walls
+        // Apply hands_base texture as the diffuse map
+        if (mesh.material && handsBaseTexture) {
+          const mat = mesh.material as THREE.MeshStandardMaterial;
+          if (mat.isMeshStandardMaterial) {
+            const cloneMat = mat.clone();
+            cloneMat.map = handsBaseTexture;
+            cloneMat.needsUpdate = true;
+            mesh.material = cloneMat;
+          }
+        }
       }
     });
     return clone;
-  }, [gltf.scene]);
+  }, [gltf.scene, handsBaseTexture]);
 
   // Animation state is held in refs so `useFrame` can mutate without
   // churning the React tree. `activeGesture` is the currently-playing
@@ -224,7 +241,7 @@ export function PlayerHands() {
     <group ref={group} visible={visible}>
       {/*
         Scale + face-forward rotation. The GLB authors the rig
-        pointing down +Z in Blender; we rotate π around Y so the
+        pointing down +Z in Blender; we rotate pi around Y so the
         arms face the camera's forward axis (-Z in Three.js).
       */}
       <group scale={HAND_SCALE} rotation={[0, Math.PI, 0]}>

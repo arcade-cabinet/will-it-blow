@@ -3,12 +3,15 @@
  * Liquid pouring mechanics for kitchen station interactions. Renders an
  * interactive bottle that tilts on pointer-down and streams a translucent
  * liquid column. Only visible during FILL_GRINDER and ATTACH_CASING phases.
+ *
+ * E.4: Plays sfx_pour.ogg as PRIMARY audio when pouring starts.
  */
 import {Cone, Cylinder} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
 import {useMemo, useRef, useState} from 'react';
 import * as THREE from 'three';
 import {useGameStore} from '../../ecs/hooks';
+import {audioEngine} from '../../engine/AudioEngine';
 
 /**
  * Interactive liquid bottle with pour animation.
@@ -36,6 +39,16 @@ export function LiquidPourer({position = [0, 0, 0]}: {position?: [number, number
       }),
     [],
   );
+
+  const handlePourStart = () => {
+    setIsPouring(true);
+    // E.4: PRIMARY sfx_pour.ogg, FALLBACK Tone.js pour synthesis
+    audioEngine.playPour();
+  };
+
+  const handlePourEnd = () => {
+    setIsPouring(false);
+  };
 
   useFrame((state, delta) => {
     if (!bottleRef.current) return;
@@ -69,9 +82,9 @@ export function LiquidPourer({position = [0, 0, 0]}: {position?: [number, number
       <group
         ref={bottleRef}
         position={[0, 0.6, 0]}
-        onPointerDown={() => setIsPouring(true)}
-        onPointerUp={() => setIsPouring(false)}
-        onPointerOut={() => setIsPouring(false)}
+        onPointerDown={handlePourStart}
+        onPointerUp={handlePourEnd}
+        onPointerOut={handlePourEnd}
       >
         {/* Bottle Body */}
         <Cylinder args={[0.15, 0.15, 0.4, 16]} position={[0, -0.2, 0]}>
