@@ -3,16 +3,16 @@
  * runtime, plus a **multi-viewport browser matrix** baked directly into
  * the `browser` project.
  *
- *  ┌─ unit ──────────────── jsdom, fast, pure logic ───────────────────┐
- *  ├─ browser ─┬─ desktop-1280 (1280×720)                              │
- *  │           ├─ mobile-390  (390×844, touch)                         │
- *  │           ├─ tablet-768  (768×1024)                               │
- *  │           └─ uhd-3840    (3840×2160, devicePixelRatio=1)          │
- *  └───────────┴────────────────────────────────────────────────────────┘
+ *  +- unit -------------------- jsdom, fast, pure logic ----------------+
+ *  +- browser -+- desktop-1280 (1280x720)                              |
+ *  |           +- mobile-390  (390x844, touch, isMobile)               |
+ *  |           +- tablet-768  (768x1024)                               |
+ *  |           +- uhd-3840    (3840x2160, devicePixelRatio=1)          |
+ *  +-----------+-------------------------------------------------------|
  *
- * `pnpm test`          → unit only (historical default, still fast)
- * `pnpm test:browser`  → every browser-test file × every viewport
- * `pnpm test:all`      → both projects
+ * `pnpm test`          -> unit only (historical default, still fast)
+ * `pnpm test:browser`  -> every browser-test file x every viewport
+ * `pnpm test:all`      -> both projects
  *
  * The browser project runs HEADLESS (`headless: true`). Modern Chromium's
  * "new headless" shell (Playwright >=1.46) no longer throttles
@@ -44,14 +44,24 @@ const CHROMIUM_LAUNCH_ARGS = [
 ];
 
 /** Every viewport size we test at. Driven into a Vitest browser instance. */
-const VIEWPORTS = [
+interface ViewportDef {
+  name: string;
+  width: number;
+  height: number;
+  /** Pass hasTouch: true for touch-capable viewports. */
+  hasTouch?: boolean;
+  /** Pass isMobile: true for mobile device emulation. */
+  isMobile?: boolean;
+}
+
+const VIEWPORTS: readonly ViewportDef[] = [
   {name: 'desktop-1280', width: 1280, height: 720},
-  {name: 'mobile-390', width: 390, height: 844},
+  {name: 'mobile-390', width: 390, height: 844, hasTouch: true, isMobile: true},
   {name: 'tablet-768', width: 768, height: 1024},
   // 4K is split out with DPR forced to 1 — at the default DPR the
   // backing texture would blow past Chromium's 16 MP limit.
   {name: 'uhd-3840', width: 3840, height: 2160},
-] as const;
+];
 
 const browserAlias = {
   'react-native': path.resolve(__dirname, 'src/__mocks__/react-native.tsx'),
@@ -116,7 +126,7 @@ export default defineConfig({
           browser: {
             enabled: true,
             provider: 'playwright',
-            // Headless (the "new" headless shell in Playwright ≥1.46)
+            // Headless (the "new" headless shell in Playwright >=1.46)
             // is fast AND doesn't background-throttle as long as the
             // `--disable-background-*` launch flags are set. Vitest
             // also refuses to run multiple headed instances
@@ -134,6 +144,11 @@ export default defineConfig({
               // Clamp DPR on the 4K project so the back-buffer stays
               // under the GPU's max texture size.
               deviceScaleFactor: vp.name === 'uhd-3840' ? 1 : undefined,
+              // Touch and mobile emulation for phone viewports.
+              // Ensures pointer events use touch targets and the
+              // browser reports navigator.maxTouchPoints > 0.
+              ...(vp.hasTouch ? {hasTouch: true} : {}),
+              ...(vp.isMobile ? {isMobile: true} : {}),
             })),
           },
         },
