@@ -89,8 +89,11 @@ export function GameOrchestrator() {
   const selectedIngredientIds = useGameStore(s => s.selectedIngredientIds);
   const mrSausageReaction = useGameStore(s => s.mrSausageReaction);
 
-  // Track the previous phase to detect transitions.
+  // Track the previous phase to detect transitions (used by clue generation).
   const prevPhaseRef = useRef<GamePhase | null>(null);
+
+  // E.1: Separate ref for stinger so it doesn't race with clue generation.
+  const prevStingerPhaseRef = useRef<GamePhase | null>(null);
 
   // E.2: Track the previous reaction to detect changes.
   const prevReactionRef = useRef<string>('idle');
@@ -103,11 +106,12 @@ export function GameOrchestrator() {
 
   // ── E.1: Phase transition stingers ──────────────────────────────────
   // Fire a procedural Tone.js stinger whenever the game phase changes.
-  // Skips the initial mount (prevPhaseRef starts null).
+  // Uses its own ref to avoid coupling with clue-generation logic below.
   useEffect(() => {
-    if (prevPhaseRef.current !== null && gamePhase !== prevPhaseRef.current) {
+    if (prevStingerPhaseRef.current !== null && gamePhase !== prevStingerPhaseRef.current) {
       audioEngine.playPhaseStinger(gamePhase);
     }
+    prevStingerPhaseRef.current = gamePhase;
   }, [gamePhase]);
 
   // ── E.2: Mr. Sausage reaction audio ────────────────────────────────

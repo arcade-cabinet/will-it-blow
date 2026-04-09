@@ -57,7 +57,7 @@ export function ScatterProps() {
               mass={0.1}
             >
               {/* D.3: Set dressing — no castShadow (reduces shadow map load). */}
-              <mesh geometry={item.node.geometry} material={item.mat} scale={1.5} />
+              <mesh geometry={item.node.geometry} material={item.mat} scale={1.5} receiveShadow />
             </RigidBody>
           ),
       )}

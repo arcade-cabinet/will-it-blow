@@ -201,7 +201,15 @@ describe('AudioEngine (Tone.js)', () => {
   describe('playReactionAudio()', () => {
     it('fires audio for each reaction type without error', async () => {
       await engine.initialize();
-      const reactions = ['nod', 'disgust', 'excitement', 'laugh', 'flinch', 'judging', 'idle'];
+      const reactions = [
+        'nod',
+        'disgust',
+        'excitement',
+        'laugh',
+        'flinch',
+        'judging',
+        'idle',
+      ] as const;
       for (const r of reactions) {
         expect(() => engine.playReactionAudio(r)).not.toThrow();
       }

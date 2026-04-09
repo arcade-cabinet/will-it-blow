@@ -142,7 +142,7 @@ function ChopTargetRing() {
   const ringRef = useRef<THREE.Mesh>(null);
   useFrame(state => {
     if (!ringRef.current) return;
-    const pulse = 0.3 + Math.sin(state.clock.elapsedTime * 4) * 0.25;
+    const pulse = 0.55 + Math.sin(state.clock.elapsedTime * 4) * 0.25;
     (ringRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = pulse;
   });
   return (

@@ -24,6 +24,7 @@
  */
 
 import * as Tone from 'tone';
+import type {Reaction} from '../characters/reactions';
 import type {GamePhase} from '../ecs/hooks';
 
 export type SoundId =
@@ -48,8 +49,11 @@ export type IngredientArchetype = 'meat' | 'plant' | 'plastic' | 'metal' | 'liqu
 /** Action types that produce ingredient-specific SFX. */
 export type IngredientAction = 'chop' | 'grind' | 'pour' | 'hit' | 'sizzle' | 'stuff';
 
-/** Mr. Sausage reaction types that produce audio cues. */
-export type ReactionType = 'nod' | 'disgust' | 'excitement' | 'laugh' | 'flinch' | 'judging';
+/**
+ * Mr. Sausage reaction types that produce audio cues.
+ * Re-exported from the canonical {@link Reaction} type for convenience.
+ */
+export type ReactionType = Reaction;
 
 /** Vite base path — '/' locally, '/will-it-blow/' on GitHub Pages. */
 const BASE = import.meta.env.BASE_URL;
@@ -354,7 +358,7 @@ class AudioEngineImpl {
    * - flinch: sharp startled yelp (high, short)
    * - judging: slow ominous low drone burst
    */
-  playReactionAudio(reaction: string): void {
+  playReactionAudio(reaction: Reaction): void {
     if (!this._initialized || this.muted) return;
     if (!this.reactionFM) return;
 
