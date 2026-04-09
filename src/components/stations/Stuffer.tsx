@@ -13,8 +13,11 @@
  * Style points (T1.C): completing the stuffing in a single continuous
  * crank awards "Smooth Stuff" flair. Interrupted cranking gets a
  * lesser "Stuffing Complete" award.
+ *
+ * D.1: Uses shared kitchenSteel material for consistent stainless-steel
+ * look across all stations.
  */
-import {Box, Cylinder, useTexture} from '@react-three/drei';
+import {Box, Cylinder} from '@react-three/drei';
 import {useFrame} from '@react-three/fiber';
 import {RigidBody} from '@react-three/rapier';
 import {useDrag} from '@use-gesture/react';
@@ -23,7 +26,7 @@ import * as THREE from 'three';
 import {useGameStore} from '../../ecs/hooks';
 import {audioEngine} from '../../engine/AudioEngine';
 import {compositeMix} from '../../engine/IngredientComposition';
-import {asset} from '../../utils/assetPath';
+import {useKitchenSteelMaterial} from '../../materials/kitchenSteel';
 import {requestHandGesture} from '../camera/handGestureStore';
 
 class SquigglyCurve extends THREE.Curve<THREE.Vector3> {
@@ -75,24 +78,8 @@ export function Stuffer() {
   // Track crank continuity for flair scoring.
   const crankPauses = useRef(0);
 
-  const [metalMap, metalNormal, metalRough] = useTexture([
-    asset('/textures/concrete_color.jpg'),
-    asset('/textures/concrete_normal.jpg'),
-    asset('/textures/concrete_roughness.jpg'),
-  ]);
-
-  const metalMat = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        map: metalMap,
-        normalMap: metalNormal,
-        roughnessMap: metalRough,
-        color: '#aaa',
-        metalness: 0.9,
-        roughness: 0.3,
-      }),
-    [metalMap, metalNormal, metalRough],
-  );
+  // D.1: Shared kitchen steel material (normalized metalness/roughness).
+  const metalMat = useKitchenSteelMaterial();
 
   // --- Composition-driven casing material (T0.B) ---
   const mix = useMemo(() => compositeMix(currentRoundSelection), [currentRoundSelection]);
@@ -297,7 +284,7 @@ export function Stuffer() {
       {/* Threaded Rod */}
       <mesh ref={rodRef} position={[0, 1.0, 0]}>
         <cylinderGeometry args={[0.03, 0.03, 1.5, 16]} />
-        <meshStandardMaterial color="#888" metalness={0.8} roughness={0.5} />
+        <meshStandardMaterial color={metalMat.color} metalness={0.85} roughness={0.5} />
       </mesh>
 
       {/* Crank */}

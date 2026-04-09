@@ -18,6 +18,11 @@
  *
  * Fidelity tuning (T2.C): particle and splatter counts now read from
  * the centralized FIDELITY config for mobile-first performance.
+ *
+ * D.3: Removed castShadow from the spot light — 1000 instanced
+ * particles generating shadow map entries was the primary cause of
+ * the 4K CI performance regression. The spot light provides dramatic
+ * fill without shadow casting.
  */
 import {useFrame, useThree} from '@react-three/fiber';
 import {useCallback, useMemo, useRef, useState} from 'react';
@@ -284,7 +289,7 @@ export function BlowoutStation() {
         <circleGeometry args={[0.6, 32]} />
         <meshStandardMaterial color="#3a3a3a" roughness={1} metalness={0} />
       </mesh>
-      {/* Target ring */}
+      {/* Target ring — D.2: subtle interaction guide (emissive 0.3) */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.002, 0]}>
         <ringGeometry args={[0.55, 0.6, 32]} />
         <meshStandardMaterial
@@ -374,14 +379,15 @@ export function BlowoutStation() {
         </mesh>
       ))}
 
-      {/* Spot light on the slam zone for dramatic effect */}
+      {/* D.3: Spot light without castShadow — dramatic fill only.
+          Removing shadow casting from this light eliminates the per-particle
+          shadow map entries that caused the 4K CI regression. */}
       <spotLight
         position={[0, 3, 0]}
         angle={0.4}
         penumbra={0.6}
         intensity={2}
         color="#ffddcc"
-        castShadow
         target-position={[0, 0, 0]}
       />
     </group>

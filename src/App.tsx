@@ -19,6 +19,7 @@ import {DisgustIndicator} from './components/environment/DisgustIndicator';
 import {SlaughterhouseDressing} from './components/environment/dressing/SlaughterhouseDressing';
 import {EndgameEnvironment} from './components/environment/EndgameEnvironment';
 import {FlickeringFluorescent} from './components/environment/FlickeringFluorescent';
+import {PhaseFog} from './components/environment/PhaseFog';
 import {PhaseLighting} from './components/environment/PhaseLighting';
 import {Prop} from './components/environment/Prop';
 import {ScatterProps} from './components/environment/ScatterProps';
@@ -196,6 +197,10 @@ function GameContent({broadcastRound}: {broadcastRound: BroadcastSignal}) {
 
         {/* Per-phase lighting mood — color temperature shifts */}
         <PhaseLighting />
+
+        {/* D.4: Per-phase fog density — denser during BLOWOUT (smoke/dust),
+            lighter during SELECT_INGREDIENTS (clearer fridge view). */}
+        <PhaseFog />
 
         {/* Ceiling Trapdoor */}
         <TrapDoorAnimation position={[0, 3, 0]} />

@@ -2,6 +2,9 @@
  * BearTrapByMattress — an open bear trap placed next to the mattress
  * in the kitchen corner, a silent threat the player has to step
  * around (T2.B).
+ *
+ * D.3: No castShadow — small set dressing prop on the floor.
+ * receiveShadow kept so it catches shadows from nearby stations.
  */
 
 import {useGLTF} from '@react-three/drei';
@@ -17,7 +20,7 @@ export function BearTrapByMattress() {
 
   return (
     <group name="bear-trap-mattress" position={[2.5, 0.01, 2.5]} rotation={[0, 1.2, 0]}>
-      <primitive object={cloned} scale={0.6} castShadow receiveShadow />
+      <primitive object={cloned} scale={0.6} receiveShadow />
     </group>
   );
 }

@@ -1,49 +1,21 @@
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 
-vi.mock('tone', () => ({
-  start: vi.fn().mockResolvedValue(undefined),
-  getDestination: vi.fn().mockReturnValue({}),
-  Player: vi.fn().mockImplementation(() => ({
-    connect: vi.fn().mockReturnThis(),
-    start: vi.fn(),
-    stop: vi.fn(),
-    dispose: vi.fn(),
-    loaded: true,
-    loop: false,
-  })),
-  Reverb: vi.fn().mockImplementation(() => ({
-    connect: vi.fn().mockReturnThis(),
-    toDestination: vi.fn().mockReturnThis(),
-    dispose: vi.fn(),
-  })),
-  Filter: vi.fn().mockImplementation(() => ({
-    connect: vi.fn().mockReturnThis(),
-    dispose: vi.fn(),
-    frequency: {rampTo: vi.fn()},
-  })),
-  FMSynth: vi.fn().mockImplementation(() => ({
+/** Shared synth mock factory. */
+function mockSynth() {
+  return {
     connect: vi.fn().mockReturnThis(),
     triggerAttack: vi.fn(),
     triggerRelease: vi.fn(),
+    triggerAttackRelease: vi.fn(),
     dispose: vi.fn(),
-  })),
-  NoiseSynth: vi.fn().mockImplementation(() => ({
-    connect: vi.fn().mockReturnThis(),
-    triggerAttack: vi.fn(),
-    triggerRelease: vi.fn(),
-    dispose: vi.fn(),
-  })),
-}));
+  };
+}
 
-// Re-import fresh audioEngine for each test by using dynamic import
-// We need a factory since audioEngine is a singleton with internal state
-async function createFreshEngine() {
-  // Reset modules to get a fresh singleton
-  vi.resetModules();
-
-  // Re-register the mock after resetModules
-  vi.doMock('tone', () => ({
+/** Shared Tone.js mock factory — all synth types included (E.1/E.2/E.3). */
+function createToneMock() {
+  return {
     start: vi.fn().mockResolvedValue(undefined),
+    now: vi.fn().mockReturnValue(0),
     getDestination: vi.fn().mockReturnValue({}),
     Player: vi.fn().mockImplementation(() => ({
       connect: vi.fn().mockReturnThis(),
@@ -63,19 +35,23 @@ async function createFreshEngine() {
       dispose: vi.fn(),
       frequency: {rampTo: vi.fn()},
     })),
-    FMSynth: vi.fn().mockImplementation(() => ({
-      connect: vi.fn().mockReturnThis(),
-      triggerAttack: vi.fn(),
-      triggerRelease: vi.fn(),
-      dispose: vi.fn(),
-    })),
-    NoiseSynth: vi.fn().mockImplementation(() => ({
-      connect: vi.fn().mockReturnThis(),
-      triggerAttack: vi.fn(),
-      triggerRelease: vi.fn(),
-      dispose: vi.fn(),
-    })),
-  }));
+    FMSynth: vi.fn().mockImplementation(() => mockSynth()),
+    NoiseSynth: vi.fn().mockImplementation(() => mockSynth()),
+    MetalSynth: vi.fn().mockImplementation(() => mockSynth()),
+    MembraneSynth: vi.fn().mockImplementation(() => mockSynth()),
+  };
+}
+
+vi.mock('tone', () => createToneMock());
+
+// Re-import fresh audioEngine for each test by using dynamic import
+// We need a factory since audioEngine is a singleton with internal state
+async function createFreshEngine() {
+  // Reset modules to get a fresh singleton
+  vi.resetModules();
+
+  // Re-register the mock after resetModules
+  vi.doMock('tone', () => createToneMock());
 
   const mod = await import('../AudioEngine');
   return mod.audioEngine;
@@ -96,15 +72,20 @@ describe('AudioEngine (Tone.js)', () => {
       expect(engine.initialized).toBe(true);
     });
 
-    it('creates Filter, Reverb, Players, FMSynth, and NoiseSynth', async () => {
+    it('creates Filter, Reverb, Players, and all synths', async () => {
       await engine.initialize();
 
-      // Grab the mocked Tone from the module's perspective
       const ToneMock = await import('tone');
       expect(ToneMock.Filter).toHaveBeenCalledTimes(1);
       expect(ToneMock.Reverb).toHaveBeenCalledTimes(1);
-      expect(ToneMock.FMSynth).toHaveBeenCalledTimes(1);
-      expect(ToneMock.NoiseSynth).toHaveBeenCalledTimes(1);
+      // E.1/E.2: FMSynth called 2x (drone + reaction)
+      expect(ToneMock.FMSynth).toHaveBeenCalledTimes(2);
+      // E.1/E.3: NoiseSynth called 3x (drone + stinger + ingredient)
+      expect(ToneMock.NoiseSynth).toHaveBeenCalledTimes(3);
+      // E.1: MetalSynth called 2x (stinger + ingredient)
+      expect(ToneMock.MetalSynth).toHaveBeenCalledTimes(2);
+      // E.1/E.3: MembraneSynth called 2x (stinger + ingredient)
+      expect(ToneMock.MembraneSynth).toHaveBeenCalledTimes(2);
       // 14 sounds mapped
       expect(ToneMock.Player).toHaveBeenCalledTimes(14);
     });
@@ -184,6 +165,67 @@ describe('AudioEngine (Tone.js)', () => {
 
     it('does nothing before initialization', () => {
       expect(() => engine.setMuffled(true)).not.toThrow();
+    });
+  });
+
+  describe('playPhaseStinger()', () => {
+    it('fires a stinger for each phase without error', async () => {
+      await engine.initialize();
+      const phases = [
+        'SELECT_INGREDIENTS',
+        'CHOPPING',
+        'FILL_GRINDER',
+        'GRINDING',
+        'STUFFING',
+        'TIE_CASING',
+        'BLOWOUT',
+        'COOKING',
+        'DONE',
+        'MOVE_BOWL',
+        'ATTACH_CASING',
+        'MOVE_SAUSAGE',
+        'MOVE_PAN',
+      ] as const;
+      for (const phase of phases) {
+        expect(() => engine.playPhaseStinger(phase)).not.toThrow();
+      }
+    });
+
+    it('does nothing when muted', async () => {
+      await engine.initialize();
+      engine.setMuted(true);
+      expect(() => engine.playPhaseStinger('CHOPPING')).not.toThrow();
+    });
+  });
+
+  describe('playReactionAudio()', () => {
+    it('fires audio for each reaction type without error', async () => {
+      await engine.initialize();
+      const reactions = [
+        'nod',
+        'disgust',
+        'excitement',
+        'laugh',
+        'flinch',
+        'judging',
+        'idle',
+      ] as const;
+      for (const r of reactions) {
+        expect(() => engine.playReactionAudio(r)).not.toThrow();
+      }
+    });
+  });
+
+  describe('playIngredientSFX()', () => {
+    it('fires archetype-specific SFX without error', async () => {
+      await engine.initialize();
+      const archetypes = ['meat', 'plant', 'plastic', 'metal', 'liquid', 'other'] as const;
+      const actions = ['chop', 'grind', 'pour', 'hit', 'sizzle', 'stuff'] as const;
+      for (const a of archetypes) {
+        for (const act of actions) {
+          expect(() => engine.playIngredientSFX(a, act)).not.toThrow();
+        }
+      }
     });
   });
 

@@ -3,6 +3,9 @@
  * toaster, utensil holder, knife holder, cutting board (T2.B).
  *
  * Groups multiple models onto a single shelf_small.glb base.
+ *
+ * D.3: No castShadow on individual shelf items — set dressing.
+ * The shelf base receives shadows so station shadows fall on it.
  */
 
 import {useGLTF} from '@react-three/drei';
@@ -31,7 +34,7 @@ export function WallShelf() {
 
   return (
     <group name="wall-shelf" position={[3.35, 1.4, -0.5]} rotation={[0, -Math.PI / 2, 0]}>
-      <primitive object={shelfClone} scale={0.8} castShadow receiveShadow />
+      <primitive object={shelfClone} scale={0.8} receiveShadow />
       {/* Items sitting on the shelf */}
       <primitive object={toasterClone} position={[-0.2, 0.15, 0]} scale={0.5} />
       <primitive object={utensilClone} position={[0.15, 0.15, 0]} scale={0.5} />

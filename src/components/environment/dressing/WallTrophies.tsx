@@ -4,6 +4,9 @@
  *
  * Loads each model via useGLTF and places it at its configured position.
  * All models are static set dressing — no physics, no interaction.
+ *
+ * D.3: No castShadow — wall trophies are set dressing, not worth
+ * the shadow map cost.
  */
 
 import {useGLTF} from '@react-three/drei';
@@ -31,9 +34,7 @@ function WallTrophyItem({
   const {scene} = useGLTF(asset(path)) as unknown as {scene: THREE.Object3D};
   const cloned = useMemo(() => scene.clone(true), [scene]);
 
-  return (
-    <primitive object={cloned} position={position} rotation={rotation} scale={scale} castShadow />
-  );
+  return <primitive object={cloned} position={position} rotation={rotation} scale={scale} />;
 }
 
 export function WallTrophies() {
