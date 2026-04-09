@@ -21,10 +21,10 @@ defineMicroSpec({
   // and a useFrame loop that touches every frame. On CI's xvfb +
   // Mesa-backed ANGLE at 4K, the shadow pre-pass over 1000 instances
   // dominates frame time. 3 of 4 viewports complete in 30-45s on CI
-  // (vs <1s locally); uhd-3840 alone can push past that, so cap the
-  // test timeout generously.
-  settleTimeoutMs: 30_000,
-  testTimeoutMs: 90_000,
+  // (vs <1s locally); uhd-3840 alone regularly hits 85-95s due to
+  // CI runner load variance.
+  settleTimeoutMs: 45_000,
+  testTimeoutMs: 120_000,
   // Skip the lit-pixel sanity check — the dark cereal box +
   // dimly-lit tube can dip below the threshold in headless GL,
   // and mesh count is already a strong signal here.
